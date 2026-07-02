@@ -9,12 +9,12 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { outputFolder: 'e2e-report' }]],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
+  webServer: process.env.CI || process.env.PLAYWRIGHT_BASE_URL ? undefined : {
     command: 'npx vite --port 5173',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,

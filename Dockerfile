@@ -11,6 +11,8 @@ COPY apps/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     adduser --disabled-password --gecos '' appuser
 COPY apps/api/ apps/api/
+COPY controllers/ controllers/
+COPY modules/ modules/
 COPY packages/ packages/
 COPY --from=frontend /build/dist/ apps/web-vue/dist/
 EXPOSE 8070
