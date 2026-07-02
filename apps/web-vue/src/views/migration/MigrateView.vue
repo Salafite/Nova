@@ -94,7 +94,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import api from '../../services/api'
+import { api } from '../../api/client.js'
 
 const dir = computed(() => localStorage.getItem('nova_locale') === 'ar-EG' ? 'rtl' : 'ltr')
 const locale = computed(() => localStorage.getItem('nova_locale') || 'en')
