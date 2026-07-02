@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from datetime import datetime, date
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from modules.core.services.base import CrudService
@@ -57,6 +58,8 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
     def _json_safe(obj):
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
         raise TypeError(f'Object of type {type(obj)} is not JSON serializable')
 
     @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
