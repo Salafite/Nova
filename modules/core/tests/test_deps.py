@@ -8,10 +8,10 @@ class TestGetCurrentUser:
         from packages.auth.deps import get_current_user
         creds = MagicMock()
         creds.credentials = valid_token
-        with patch('auth.deps.get_user_by_id', return_value=sample_user):
+        with patch('packages.auth.deps.get_user_by_id', return_value=sample_user):
             user = get_current_user(creds)
-            assert user['id'] == 1
-            assert user['username'] == 'testuser'
+        assert user['id'] == 1
+        assert user['username'] == 'testuser'
 
     def test_raises_on_invalid_token(self):
         from packages.auth.deps import get_current_user
@@ -25,7 +25,7 @@ class TestGetCurrentUser:
         from packages.auth.deps import get_current_user
         creds = MagicMock()
         creds.credentials = valid_token
-        with patch('auth.deps.get_user_by_id', return_value=None):
+        with patch('packages.auth.deps.get_user_by_id', return_value=None):
             with pytest.raises(HTTPException) as exc:
                 get_current_user(creds)
             assert exc.value.status_code == 401

@@ -164,7 +164,7 @@ class MigrationService:
             release_connection(conn)
 
     def _load_stored(self, batch_id):
-        from packages.database.connection import get_connection
+        from packages.database.connection import get_connection, release_connection
         conn = get_connection()
         try:
             with conn.cursor() as cur:
@@ -175,7 +175,7 @@ class MigrationService:
             release_connection(conn)
 
     def _drop_storage(self, batch_id):
-        from packages.database.connection import get_connection
+        from packages.database.connection import get_connection, release_connection
         conn = get_connection()
         try:
             with conn.cursor() as cur:

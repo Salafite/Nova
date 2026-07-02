@@ -13,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from controllers import all_routers
 from packages.auth.controller import router as auth_router
 from packages.ws.handlers import router as ws_router
@@ -70,6 +70,8 @@ if STATIC_DIR:
 
     @app.get('/{full_path:path}')
     async def serve_spa(full_path: str):
+        if full_path.startswith('api/'):
+            return JSONResponse({'detail': 'Not Found'}, status_code=404)
         file_path = STATIC_DIR / full_path
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))

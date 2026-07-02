@@ -14,8 +14,8 @@ from packages.auth.jwt import create_access_token, create_refresh_token, decode_
 
 @pytest.fixture
 def mock_db():
-    with patch('database.connection.get_connection', return_value=_mock_conn):
-        with patch('database.connection.release_connection'):
+    with patch('packages.database.connection.get_connection', return_value=_mock_conn):
+        with patch('packages.database.connection.release_connection'):
             yield
 
 
