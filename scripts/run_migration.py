@@ -7,8 +7,12 @@ sys.path.insert(0, str(ROOT))
 
 DB_URL = os.environ.get('DATABASE_URL')
 if not DB_URL:
-    print('FATAL: Set DATABASE_URL env var (e.g. postgresql://user:pass@host/db)')
-    sys.exit(1)
+    host = os.environ.get('DB_HOST', 'localhost')
+    port = os.environ.get('DB_PORT', '5432')
+    dbname = os.environ.get('DB_NAME', 'Stage')
+    user = os.environ.get('DB_USER', 'postgres')
+    password = os.environ.get('DB_PASSWORD', '')
+    DB_URL = f'postgresql://{user}:{password}@{host}:{port}/{dbname}'
 
 try:
     import psycopg2
@@ -30,7 +34,7 @@ def mark_applied(cursor, seq, filename, sql):
     )
 
 def main():
-    conn = psycopg2.connect(DB_URL)
+    conn = psycopg2.connect(DB_URL, sslmode=os.environ.get('DB_SSLMODE', 'require'))
     conn.autocommit = False
     cur = conn.cursor()
 
