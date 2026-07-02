@@ -402,6 +402,7 @@ CREATE TABLE IF NOT EXISTS "Nova".t0021 (
     email         VARCHAR(200),
     role          VARCHAR(30) NOT NULL DEFAULT 'Viewer',
     permissions   TEXT[] DEFAULT '{}',
+    business_id   INT,
     status        VARCHAR(20) NOT NULL DEFAULT 'Active',
     last_login    TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
