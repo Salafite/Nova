@@ -13,3 +13,4 @@ stripe>=8.0
 resend>=0.8
 posthog>=3.0
 sentry-sdk>=2.0
+python-multipart>=0.0.9
