@@ -11,12 +11,15 @@ _pool = SimpleConnectionPool(
     dbname=os.getenv('DB_NAME', 'Stage'),
     user=os.getenv('DB_USER', 'postgres'),
     password=os.getenv('DB_PASSWORD', ''),
-    options=f'-c search_path="{os.getenv("DB_SCHEMA", "Nova")}"'
+    sslmode=os.getenv('DB_SSLMODE', 'require')
 )
 
 
 def get_connection():
-    return _pool.getconn()
+    conn = _pool.getconn()
+    with conn.cursor() as cur:
+        cur.execute(f'SET search_path TO {os.getenv("DB_SCHEMA", "Nova")}')
+    return conn
 
 
 def release_connection(conn):
