@@ -12,7 +12,9 @@ router = APIRouter(prefix='/api/billing', tags=['Billing'])
 
 @router.post('/create-checkout')
 def checkout(body: dict, user: dict = Depends(get_current_user)):
-    business_id = user.get('business_id', 1)
+    business_id = user.get('business_id')
+    if not business_id:
+        raise HTTPException(401, 'business_id not found in token')
     success_url = body.get('success_url', 'http://localhost:5173/admin/subscription')
     cancel_url = body.get('cancel_url', 'http://localhost:5173/admin/subscription')
     result = create_checkout_session(business_id, success_url, cancel_url)
@@ -23,7 +25,9 @@ def checkout(body: dict, user: dict = Depends(get_current_user)):
 
 @router.post('/create-portal')
 def portal(body: dict, user: dict = Depends(get_current_user)):
-    business_id = user.get('business_id', 1)
+    business_id = user.get('business_id')
+    if not business_id:
+        raise HTTPException(401, 'business_id not found in token')
     return_url = body.get('return_url', 'http://localhost:5173/admin/subscription')
     result = create_portal_session(business_id, return_url)
     if result.get('error'):
@@ -43,5 +47,7 @@ async def webhook(request: Request):
 
 @router.get('/subscription')
 def subscription(user: dict = Depends(get_current_user)):
-    business_id = user.get('business_id', 1)
+    business_id = user.get('business_id')
+    if not business_id:
+        raise HTTPException(401, 'business_id not found in token')
     return get_subscription_status(business_id)

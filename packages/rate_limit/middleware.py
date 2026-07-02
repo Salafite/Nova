@@ -1,4 +1,5 @@
 import time
+import threading
 from collections import defaultdict
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -21,6 +22,7 @@ def _classify(path, method):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
+        self._lock = threading.Lock()
         self._buckets = defaultdict(lambda: defaultdict(list))
 
     async def dispatch(self, request, call_next):
@@ -29,17 +31,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         limit, window = RATE_LIMITS.get(category, (50, 1))
         now = time.time()
 
-        bucket = self._buckets[client_ip][category]
-        bucket[:] = [t for t in bucket if t > now - window]
+        with self._lock:
+            bucket = self._buckets[client_ip][category]
+            bucket[:] = [t for t in bucket if t > now - window]
+            if len(bucket) >= limit:
+                retry_after = int(bucket[0] - now + window) if bucket else 1
+                return JSONResponse(
+                    status_code=429,
+                    content={'detail': 'Rate limit exceeded. Try again later.'},
+                    headers={'Retry-After': str(max(retry_after, 1))},
+                )
+            bucket.append(now)
 
-        if len(bucket) >= limit:
-            retry_after = int(bucket[0] - now + window) if bucket else 1
-            return JSONResponse(
-                status_code=429,
-                content={'detail': 'Rate limit exceeded. Try again later.'},
-                headers={'Retry-After': str(retry_after)},
-            )
-
-        bucket.append(now)
         response = await call_next(request)
         return response

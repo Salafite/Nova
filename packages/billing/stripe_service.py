@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime, timezone
 from modules.core.repositories.base import CrudRepository
@@ -84,21 +85,33 @@ def _get_subscription(business_id: int) -> dict | None:
     rows = SUBSCRIPTION_REPO.list(filters={'setting_key': f'subscription_{business_id}'})
     if not rows:
         return None
-    import json
     try:
         return json.loads(rows[0]['setting_value'])
-    except (json.JSONDecodeError, KeyError, IndexError):
+    except (json.JSONDecodeError, KeyError):
         return None
 
 
 def _save_subscription(business_id: int, data: dict):
-    import json
     key = f'subscription_{business_id}'
     existing = SUBSCRIPTION_REPO.list(filters={'setting_key': key})
     if existing:
         SUBSCRIPTION_REPO.update(existing[0]['id'], {'setting_value': json.dumps(data), 'group_name': 'Billing'})
     else:
         SUBSCRIPTION_REPO.create({'setting_key': key, 'setting_value': json.dumps(data), 'group_name': 'Billing'})
+
+
+def _update_subscription_status_by_customer(customer_id: str, new_status: str):
+    rows = SUBSCRIPTION_REPO.list()
+    for row in rows:
+        try:
+            val = json.loads(row['setting_value'])
+            if val.get('stripe_customer_id') == customer_id:
+                val['status'] = new_status
+                val['updated_at'] = datetime.now(timezone.utc).isoformat()
+                SUBSCRIPTION_REPO.update(row['id'], {'setting_value': json.dumps(val)})
+                return
+        except (json.JSONDecodeError, KeyError):
+            continue
 
 
 def _handle_checkout_completed(session):
@@ -114,35 +127,11 @@ def _handle_checkout_completed(session):
 
 
 def _handle_invoice_paid(invoice):
-    customer_id = invoice.get('customer', '')
-    rows = SUBSCRIPTION_REPO.list()
-    for row in rows:
-        import json
-        try:
-            val = json.loads(row['setting_value'])
-            if val.get('stripe_customer_id') == customer_id:
-                val['status'] = 'active'
-                val['updated_at'] = datetime.now(timezone.utc).isoformat()
-                SUBSCRIPTION_REPO.update(row['id'], {'setting_value': json.dumps(val)})
-                break
-        except (json.JSONDecodeError, KeyError):
-            continue
+    _update_subscription_status_by_customer(invoice.get('customer', ''), 'active')
 
 
 def _handle_invoice_payment_failed(invoice):
-    customer_id = invoice.get('customer', '')
-    rows = SUBSCRIPTION_REPO.list()
-    for row in rows:
-        import json
-        try:
-            val = json.loads(row['setting_value'])
-            if val.get('stripe_customer_id') == customer_id:
-                val['status'] = 'past_due'
-                val['updated_at'] = datetime.now(timezone.utc).isoformat()
-                SUBSCRIPTION_REPO.update(row['id'], {'setting_value': json.dumps(val)})
-                break
-        except (json.JSONDecodeError, KeyError):
-            continue
+    _update_subscription_status_by_customer(invoice.get('customer', ''), 'past_due')
 
 
 _WEBHOOK_HANDLERS = {

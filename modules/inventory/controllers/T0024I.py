@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from packages.database.connection import get_connection, release_connection
 from packages.auth.deps import get_current_user
 
@@ -28,7 +28,6 @@ def category_product_counts():
 @router.put('/rename')
 def rename_category(old_name: str, new_name: str):
     if not old_name or not new_name:
-        from fastapi import HTTPException
         raise HTTPException(400, 'Both old_name and new_name are required')
     conn = get_connection()
     try:

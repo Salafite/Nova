@@ -20,7 +20,6 @@ def upload_csv(
         raise HTTPException(400, 'Invalid column_mapping JSON')
     content = file.file.read().decode('utf-8-sig')
     preview = migration_service.upload_csv(entity_type, content, mapping)
-    migration_service.store_preview(preview['batch_id'], preview.pop('sample', []))
     return preview
 
 @router.post('/commit')

@@ -175,12 +175,11 @@ class MigrationService:
             release_connection(conn)
 
     def _drop_storage(self, batch_id):
+        from packages.database.connection import get_connection
+        conn = get_connection()
         try:
-            from packages.database.connection import get_connection
-            conn = get_connection()
             with conn.cursor() as cur:
                 cur.execute(f'DROP TABLE IF EXISTS {self._storage_table(batch_id)}')
                 conn.commit()
+        finally:
             release_connection(conn)
-        except Exception:
-            pass

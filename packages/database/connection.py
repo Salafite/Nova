@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
 
@@ -20,3 +21,12 @@ def get_connection():
 
 def release_connection(conn):
     _pool.putconn(conn)
+
+
+@contextmanager
+def db_connection():
+    conn = get_connection()
+    try:
+        yield conn
+    finally:
+        release_connection(conn)
