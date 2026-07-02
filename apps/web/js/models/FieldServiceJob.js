@@ -1,0 +1,1 @@
+﻿window.FieldServiceJobModel = class FieldServiceJob {constructor(d){Object.assign(this,d)}}

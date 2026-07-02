@@ -1,0 +1,60 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Production Planning</h2>
+<p class="text-body-md text-on-surface-variant mt-1">Manage planned orders and view demand forecasts.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.planning.showCreateForm()">
+<span class="material-symbols-outlined text-[18px]">add</span>
+New Plan
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter mb-xl items-stretch">
+<!-- Planned Orders Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Planned Orders</h3>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-semibold">Plan #</th>
+<th class="px-lg py-sm font-semibold">Product</th>
+<th class="px-lg py-sm font-semibold">Qty</th>
+<th class="px-lg py-sm font-semibold">Start Date</th>
+<th class="px-lg py-sm font-semibold">End Date</th>
+<th class="px-lg py-sm font-semibold text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{planRows}}
+</tbody>
+</table>
+</div>
+</div>
+<!-- Demand Forecast Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Demand Forecast</h3>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-semibold">Product</th>
+<th class="px-lg py-sm font-semibold text-right">Forecast Qty</th>
+<th class="px-lg py-sm font-semibold text-right">Confidence</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{forecastRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>

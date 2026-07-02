@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings | Nova ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .settings-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .settings-card:hover {
+            border-color: #5d3fd3;
+            background-color: rgba(93, 63, 211, 0.02);
+        }
+        .custom-toggle:checked + .toggle-dot {
+            transform: translateX(100%);
+            background-color: white;
+        }
+        .custom-toggle:checked {
+            background-color: #451ebb;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#5d3fd3",
+                        "surface-container-high": "#e1e8fd",
+                        "background": "#f9f9ff",
+                        "on-tertiary-fixed": "#151c27",
+                        "on-tertiary-container": "#ced4e4",
+                        "on-secondary-container": "#006e6e",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#141b2b",
+                        "inverse-primary": "#cabeff",
+                        "primary": "#451ebb",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f1f3ff",
+                        "primary-fixed": "#e6deff",
+                        "on-error": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary-fixed-variant": "#4723be",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "tertiary-container": "#555c69",
+                        "on-background": "#141b2b",
+                        "surface-container": "#e9edff",
+                        "secondary-fixed": "#93f2f2",
+                        "error-container": "#ffdad6",
+                        "outline": "#797586",
+                        "outline-variant": "#c9c4d7",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "secondary-container": "#90efef",
+                        "on-primary-container": "#d8ceff",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#484554",
+                        "surface-variant": "#dce2f7",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "secondary": "#006a6a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#edf0ff",
+                        "surface-dim": "#d3daef",
+                        "primary-fixed-dim": "#cabeff",
+                        "on-primary-fixed": "#1c0062",
+                        "tertiary": "#3d4551",
+                        "surface-container-highest": "#dce2f7",
+                        "surface": "#f9f9ff",
+                        "surface-tint": "#6042d6",
+                        "on-secondary-fixed": "#002020",
+                        "inverse-surface": "#293040",
+                        "on-secondary-fixed-variant": "#004f4f"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "base": "4px",
+                        "gutter": "16px",
+                        "margin-desktop": "32px",
+                        "md": "16px",
+                        "max-width": "1440px",
+                        "xs": "4px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface">
+<!-- SideNavBar (JSON Derived) -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-50">
+<div class="px-md mb-xl flex items-center gap-sm">
+<div class="w-8 h-8 bg-primary-container rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[20px]">factory</span>
+</div>
+<div>
+<h1 class="font-title-md text-title-md text-primary leading-tight">Global ERP</h1>
+<p class="text-[10px] font-label-md text-on-surface-variant tracking-wider uppercase">Manufacturing Suite</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col px-sm gap-1">
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">apps</span>
+<span class="font-label-md text-label-md">Foundation</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">handshake</span>
+<span class="font-label-md text-label-md">CRM</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span class="font-label-md text-label-md">Procurement</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">factory</span>
+<span class="font-label-md text-label-md">Manufacturing</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-md text-label-md">Accounting</span>
+</a>
+</nav>
+<div class="mt-auto px-sm flex flex-col gap-1">
+<a class="flex items-center gap-md px-md py-sm rounded text-primary border-l-4 border-primary bg-primary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar (JSON Derived) -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-16 bg-surface border-b border-outline-variant flex justify-between items-center px-margin-desktop z-40">
+<div class="flex items-center gap-xl">
+<h2 class="font-headline-lg text-headline-lg font-bold text-primary">Global ERP</h2>
+<nav class="flex gap-lg items-center">
+<a class="text-on-surface-variant hover:text-primary transition-all font-label-md text-label-md" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-label-md text-label-md" href="#">Reports</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-label-md text-label-md" href="#">Timeline</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-body-md focus:outline-none focus:border-primary w-64 transition-all" placeholder="Search resources..." type="text"/>
+</div>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors">
+<span class="material-symbols-outlined">language</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant cursor-pointer">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate executive in a modern office environment. The lighting is bright and clean, emphasizing a high-end enterprise aesthetic. The background is softly blurred, showing a high-tech manufacturing dashboard. The user wears a crisp white shirt, symbolizing efficiency and professionalism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHW3jkurc1yCyd-2AWJ6cb7AsGPujul61e67Zp2oHs8DFi6mY9h5BhzqqxOVi3736dkLkBijdc4GakwWqxyuUI7efH-_LZezIngYWb7h6aWFZJ-OFRxrOk8edvdj7ZZzp0T-bAxSUWzVLeuRABQFJUA-DZHGDl_BCNkz1-O5itlMRhexi8L3Jkk2Qm2MSLQ69r7G4k5iEImqAydXRRHAWqqCKyc_cysysodWrsV2FeUIs3NQVUHpSREU4CiGH9xJOnvjtR8zoUhY8"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-[240px] pt-16 min-h-screen bg-background p-margin-desktop">
+<div class="max-w-[1200px] mx-auto">
+<header class="mb-xl flex justify-between items-end">
+<div>
+<nav class="flex text-on-surface-variant font-label-md mb-2 items-center gap-1">
+<a class="hover:text-primary" href="#">System</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-on-surface">Configuration</span>
+</nav>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">System Settings</h3>
+<p class="text-body-md text-on-surface-variant">Manage global ERP configurations and organizational preferences.</p>
+</div>
+<div class="flex gap-md">
+<button class="px-lg py-2 border border-primary text-primary rounded-lg font-label-md hover:bg-primary/5 transition-all">Discard Changes</button>
+<button class="px-lg py-2 bg-primary text-white rounded-lg font-label-md hover:shadow-lg hover:shadow-primary/20 transition-all active:translate-y-[1px]">Save All Changes</button>
+</div>
+</header>
+<!-- Settings Grid -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Navigation Column (Internal) -->
+<nav class="col-span-3 flex flex-col gap-sm">
+<a class="p-md bg-primary-container text-white rounded-xl flex items-center justify-between group shadow-lg shadow-primary/10" href="#company">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined">business</span>
+<span class="font-label-md font-semibold">Company Profile</span>
+</div>
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</a>
+<a class="p-md hover:bg-surface-container-high rounded-xl flex items-center justify-between group transition-colors" href="#operational">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">settings_applications</span>
+<span class="font-label-md text-on-surface-variant group-hover:text-primary">Operational Controls</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline-variant">chevron_right</span>
+</a>
+<a class="p-md hover:bg-surface-container-high rounded-xl flex items-center justify-between group transition-colors" href="#security">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">verified_user</span>
+<span class="font-label-md text-on-surface-variant group-hover:text-primary">Security &amp; Access</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline-variant">chevron_right</span>
+</a>
+<a class="p-md hover:bg-surface-container-high rounded-xl flex items-center justify-between group transition-colors" href="#preferences">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">palette</span>
+<span class="font-label-md text-on-surface-variant group-hover:text-primary">App Preferences</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-outline-variant">chevron_right</span>
+</a>
+<div class="mt-xl pt-xl border-t border-outline-variant px-md">
+<h4 class="font-label-md text-outline uppercase tracking-widest text-[10px] mb-4">Quick Links</h4>
+<ul class="space-y-4">
+<li><a class="text-body-md text-primary flex items-center gap-2 hover:underline" href="#"><span class="material-symbols-outlined text-[16px]">history</span>Audit Logs</a></li>
+<li><a class="text-body-md text-primary flex items-center gap-2 hover:underline" href="#"><span class="material-symbols-outlined text-[16px]">groups</span>User Directory</a></li>
+</ul>
+</div>
+</nav>
+<!-- Content Column -->
+<div class="col-span-9 flex flex-col gap-gutter">
+<!-- Company Profile Section -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm settings-card" id="company">
+<div class="flex items-center justify-between mb-xl">
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Company Profile</h4>
+<p class="text-body-md text-on-surface-variant">Update your organization's core identification and branding.</p>
+</div>
+<button class="p-2 bg-surface-container hover:bg-surface-variant rounded-lg transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-xl">
+<div class="space-y-gutter">
+<div>
+<label class="block font-label-md text-on-surface-variant mb-1">Company Name</label>
+<input class="w-full bg-background border border-outline-variant rounded-lg p-md text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" type="text" value="Global Manufacturing Corp"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-1">Company Registration Number</label>
+<input class="w-full bg-background border border-outline-variant rounded-lg p-md text-body-md font-data-mono" type="text" value="GMC-9982-X"/>
+</div>
+</div>
+<div class="flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-xl bg-background p-xl">
+<div class="w-20 h-20 bg-primary-container/10 rounded-full flex items-center justify-center mb-md">
+<span class="material-symbols-outlined text-primary text-[40px]" style="font-variation-settings: 'FILL' 1;">upload_file</span>
+</div>
+<span class="font-label-md text-primary">Upload New Logo</span>
+<span class="text-[10px] text-outline mt-1">PNG, JPG up to 10MB</span>
+</div>
+</div>
+<div class="mt-xl pt-xl border-t border-outline-variant flex items-center justify-between">
+<div>
+<h5 class="font-body-lg font-semibold mb-1">System Language</h5>
+<p class="text-body-md text-on-surface-variant">Choose the interface language for all users.</p>
+</div>
+<div class="flex gap-2 p-1 bg-surface-container-low border border-outline-variant rounded-xl">
+<button class="px-lg py-2 bg-white text-primary font-label-md rounded-lg shadow-sm border border-outline-variant">English (US)</button>
+<button class="px-lg py-2 text-on-surface-variant font-label-md rounded-lg hover:bg-surface-variant/20">العربية (Arabic)</button>
+</div>
+</div>
+</section>
+<!-- Operational Controls -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm settings-card" id="operational">
+<h4 class="font-title-md text-title-md text-on-surface mb-xl">Operational Controls</h4>
+<div class="space-y-xl">
+<div class="flex items-center justify-between">
+<div class="flex gap-md">
+<div class="w-10 h-10 bg-on-secondary-container/10 text-on-secondary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<h5 class="font-body-lg font-semibold">Automatic Invoicing</h5>
+<p class="text-body-md text-on-surface-variant">Generate invoices immediately after manufacturing completion.</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only custom-toggle" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant rounded-full transition-colors"></div>
+<div class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex gap-md">
+<div class="w-10 h-10 bg-primary-container/10 text-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+</div>
+<div>
+<h5 class="font-body-lg font-semibold">Batch Tracking</h5>
+<p class="text-body-md text-on-surface-variant">Enforce mandatory batch IDs for all raw material arrivals.</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only custom-toggle" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant rounded-full transition-colors"></div>
+<div class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div>
+</label>
+</div>
+<div class="bg-surface-container-low p-md rounded-xl border border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-secondary-fixed-variant">info</span>
+<span class="text-body-md italic text-on-surface-variant">Advanced manufacturing rules can be configured in the module settings.</span>
+</div>
+<button class="text-primary font-label-md flex items-center gap-1 hover:underline">
+                                    Manage Rules <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Security & Access -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm settings-card" id="security">
+<div class="flex items-center gap-md mb-xl">
+<span class="material-symbols-outlined text-error text-[32px]">security</span>
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Security &amp; Access</h4>
+<p class="text-body-md text-on-surface-variant">Protect your enterprise data with multi-layered authentication.</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-gutter">
+<div class="p-lg bg-surface border border-outline-variant rounded-xl flex flex-col justify-between h-40">
+<div class="flex justify-between">
+<h5 class="font-body-lg font-semibold">Multi-Factor (MFA)</h5>
+<span class="px-2 py-1 bg-on-secondary-container/10 text-on-secondary-container rounded text-[10px] font-bold uppercase tracking-widest">Recommended</span>
+</div>
+<p class="text-body-md text-on-surface-variant mb-2">Require a verification code in addition to password.</p>
+<button class="w-full py-2 bg-primary text-white rounded-lg font-label-md">Enable MFA</button>
+</div>
+<div class="p-lg bg-surface border border-outline-variant rounded-xl flex flex-col justify-between h-40">
+<h5 class="font-body-lg font-semibold">Role Matrix</h5>
+<p class="text-body-md text-on-surface-variant mb-2">Define granular permissions for various user groups.</p>
+<a class="w-full py-2 border border-outline text-on-surface-variant rounded-lg font-label-md text-center hover:bg-surface-variant/20 transition-all" href="#">View Permissions</a>
+</div>
+</div>
+</section>
+<!-- App Preferences -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm settings-card" id="preferences">
+<h4 class="font-title-md text-title-md text-on-surface mb-xl">App Preferences</h4>
+<div class="space-y-xl"><div class="pb-md border-b border-outline-variant">
+<label class="block font-label-md text-on-surface-variant mb-3">Navigation Style</label>
+<div class="grid grid-cols-2 gap-md">
+<button class="flex flex-col items-start gap-2 p-md border border-primary bg-primary/5 rounded-xl text-left transition-all">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">apps</span>
+<span class="font-label-md font-semibold">App Grid (Odoo Style)</span>
+</div>
+<p class="text-[10px] text-on-surface-variant leading-tight">A modular, icon-based launcher</p>
+</button>
+<button class="flex flex-col items-start gap-2 p-md border border-outline-variant rounded-xl text-left hover:border-primary transition-all">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant">side_navigation</span>
+<span class="font-label-md">Sidebar Navigation</span>
+</div>
+<p class="text-[10px] text-on-surface-variant leading-tight">Classic persistent left-hand navigation</p>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<h5 class="font-body-lg font-semibold">Dark Mode</h5>
+<p class="text-body-md text-on-surface-variant">Switch the interface to a high-contrast dark theme.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only custom-toggle" id="dark-mode-toggle" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant rounded-full transition-colors"></div>
+<div class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<h5 class="font-body-lg font-semibold">Push Notifications</h5>
+<p class="text-body-md text-on-surface-variant">Receive alerts for manufacturing delays and approvals.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only custom-toggle" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant rounded-full transition-colors"></div>
+<div class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div>
+</label>
+</div>
+<div class="pt-md">
+<label class="block font-label-md text-on-surface-variant mb-3">Density Level</label>
+<div class="grid grid-cols-3 gap-md">
+<button class="flex flex-col items-center gap-2 p-md border border-primary bg-primary/5 rounded-xl">
+<span class="material-symbols-outlined">density_small</span>
+<span class="font-label-md">Compact</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-md border border-outline-variant rounded-xl hover:border-primary transition-all">
+<span class="material-symbols-outlined">density_medium</span>
+<span class="font-label-md">Standard</span>
+</button>
+<button class="flex flex-col items-center gap-2 p-md border border-outline-variant rounded-xl hover:border-primary transition-all">
+<span class="material-symbols-outlined">density_large</span>
+<span class="font-label-md">Spacious</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interactions and Dark Mode Simulation
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        darkModeToggle.addEventListener('change', (e) => {
+            if(e.target.checked) {
+                document.documentElement.classList.add('dark');
+                // Note: In a real app, you would switch all colors to their dark variant from the config
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Smooth scrolling for settings sections
+        document.querySelectorAll('nav a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Active section highlighter
+        window.addEventListener('scroll', () => {
+            let current = "";
+            const sections = document.querySelectorAll('section');
+            const navItems = document.querySelectorAll('nav.col-span-3 a');
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 120) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('bg-primary-container', 'text-white', 'shadow-lg', 'shadow-primary/10');
+                item.classList.add('hover:bg-surface-container-high');
+                item.querySelector('span:first-child').classList.add('text-on-surface-variant');
+                item.querySelector('span:first-child').classList.remove('text-white');
+                item.querySelector('span:nth-child(2)').classList.add('text-on-surface-variant');
+                item.querySelector('span:nth-child(2)').classList.remove('text-white');
+
+                if (item.getAttribute('href').includes(current)) {
+                    item.classList.add('bg-primary-container', 'text-white', 'shadow-lg', 'shadow-primary/10');
+                    item.classList.remove('hover:bg-surface-container-high');
+                    item.querySelector('span:first-child').classList.remove('text-on-surface-variant');
+                    item.querySelector('span:first-child').classList.add('text-white');
+                    item.querySelector('span:nth-child(2)').classList.remove('text-on-surface-variant');
+                    item.querySelector('span:nth-child(2)').classList.add('text-white', 'font-semibold');
+                }
+            });
+        });
+    </script>
+</body></html>

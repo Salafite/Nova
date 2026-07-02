@@ -1,0 +1,43 @@
+<!-- Page Header & Filter Bar -->
+<div class="space-y-md mb-lg">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Sales Orders</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage and track your global sales transactions.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex-1 sm:flex-none flex items-center justify-center gap-xs px-md py-sm bg-primary text-on-primary rounded-xl hover:opacity-90 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">add</span>
+New Order
+</button>
+</div>
+</div>
+<!-- Bento Filter Bar -->
+<div class="bg-white border border-outline-variant rounded-xl p-md flex flex-wrap gap-md items-center shadow-sm">
+<div class="flex-1 min-w-[240px] relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input type="text" id="salesSearch" placeholder="Search Order ID or Customer..." class="w-full pl-[40px] pr-md py-sm border border-outline-variant rounded-lg focus:border-primary focus:ring-primary-container text-body-md outline-none" oninput="controllers.sales.search(this.value)">
+</div>
+</div>
+</div>
+<!-- Data Table Section -->
+<div class="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col h-full max-h-[600px]">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant sticky top-0 z-10">
+<tr>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Order ID</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Customer</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Date</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Items</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Amount</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{rows}}
+</tbody>
+</table>
+</div>
+</div>

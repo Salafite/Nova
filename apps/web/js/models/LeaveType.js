@@ -1,0 +1,1 @@
+﻿window.LeaveTypeModel = class LeaveType {constructor(data){Object.assign(this,data);}}

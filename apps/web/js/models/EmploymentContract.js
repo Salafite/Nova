@@ -1,0 +1,1 @@
+﻿window.EmploymentContractModel = class EmploymentContract {constructor(data){Object.assign(this,data);}}

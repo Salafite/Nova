@@ -1,0 +1,1 @@
+﻿window.DispatchService = class DispatchService {}

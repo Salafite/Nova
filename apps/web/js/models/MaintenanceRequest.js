@@ -1,0 +1,1 @@
+﻿window.MaintenanceRequestModel = class MaintenanceRequest {constructor(d){Object.assign(this,d)}}

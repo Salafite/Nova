@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+
+<html class="light" dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dce2f7;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #451ebb;
+        }
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#dce2f7",
+                        "surface-container-low": "#f1f3ff",
+                        "background": "#f9f9ff",
+                        "on-primary": "#ffffff",
+                        "on-background": "#141b2b",
+                        "secondary-container": "#90efef",
+                        "surface-tint": "#6042d6",
+                        "on-secondary-fixed": "#002020",
+                        "surface": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#d8ceff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#3d4551",
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff",
+                        "inverse-primary": "#cabeff",
+                        "error": "#ba1a1a",
+                        "primary-container": "#5d3fd3",
+                        "primary": "#451ebb",
+                        "outline-variant": "#c9c4d7",
+                        "secondary": "#006a6a",
+                        "on-primary-fixed": "#1c0062",
+                        "inverse-on-surface": "#edf0ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#d3daef",
+                        "on-secondary-container": "#006e6e",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-container": "#ced4e4",
+                        "inverse-surface": "#293040",
+                        "surface-container-high": "#e1e8fd",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-primary-fixed-variant": "#4723be",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#555c69",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "primary-fixed": "#e6deff",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "outline": "#797586",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "secondary-fixed": "#93f2f2",
+                        "on-surface-variant": "#484554",
+                        "surface-container": "#e9edff",
+                        "on-surface": "#141b2b",
+                        "surface-bright": "#f9f9ff",
+                        "on-tertiary-fixed": "#151c27"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "max-width": "1440px",
+                        "lg": "24px",
+                        "margin-mobile": "16px",
+                        "md": "16px",
+                        "margin-desktop": "32px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "data-mono": ["JetBrains Mono"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md min-h-screen">
+<!-- Global SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] rtl:right-0 rtl:left-auto bg-surface-container-lowest border-r border-outline-variant flex flex-col h-full py-lg z-50" id="side-nav">
+<div class="px-md mb-xl flex items-center gap-sm">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1">factory</span>
+</div>
+<div>
+<h1 class="font-title-md text-title-md text-primary leading-tight">Global ERP</h1>
+<p class="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold">Manufacturing Suite</p>
+</div>
+</div>
+<nav class="flex-1 px-sm space-y-1">
+<!-- Mapping JSON tab_labels and icons -->
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined">apps</span>
+<span>Foundation</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined">handshake</span>
+<span>CRM</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined">factory</span>
+<span>Manufacturing</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-primary border-l-4 border-primary bg-primary-container/10 transition-colors duration-200 ease-in-out rounded-r-lg group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span>Accounting</span>
+</a>
+</nav>
+<div class="px-sm pt-xl border-t border-outline-variant mt-auto">
+<button class="w-full bg-primary text-on-primary py-sm px-md rounded font-label-md text-label-md flex items-center justify-center gap-xs press-effect mb-xl">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Add Module
+            </button>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out rounded-lg group" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Support</span>
+</a>
+</div>
+</aside>
+<!-- Global TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] rtl:left-0 rtl:right-auto z-40 bg-surface border-b border-outline-variant flex justify-between items-center h-16 px-margin-desktop ml-[240px] rtl:mr-[240px] rtl:ml-0">
+<div class="flex items-center gap-xl w-1/2">
+<h2 class="font-headline-lg text-headline-lg font-bold text-primary whitespace-nowrap">Global ERP</h2>
+<div class="relative w-full max-w-md group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-full text-body-md focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all" placeholder="Search inventory, SKUs, or zones..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<nav class="hidden lg:flex items-center gap-lg mr-lg">
+<a class="font-label-md text-label-md text-primary font-bold border-b-2 border-primary pb-1" href="#">Dashboard</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-all pb-1" href="#">Reports</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-all pb-1" href="#">Timeline</a>
+</nav>
+<button class="bg-primary text-on-primary px-lg py-2 rounded-lg font-label-md text-label-md press-effect">Create New</button>
+<div class="flex items-center gap-md border-l border-outline-variant pl-lg">
+<button class="text-on-surface-variant hover:text-primary transition-all material-symbols-outlined">language</button>
+<button class="text-on-surface-variant hover:text-primary transition-all material-symbols-outlined relative">
+                    notifications
+                    <span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a female logistics manager in a modern office, wearing business casual attire with soft studio lighting, against a blurred warehouse control room background. The overall aesthetic is clean, sharp, and corporate modern." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3D9cbM5LshtOZqScekUu44ZU3ZuHvPNg2wOZKPtj6Bo0btEUIGXj1G3qv43FK7PrMApKlADaBbBOr8ypPU1H3Cc0O0j84VWzAIc3OjFVplVK4evTe6GxqfOQBVh3du4QEyywYtxwHKq6g1g_4pYllnyD8eyqBdjn_w186LVWhOhPVyojdLQFA3MAfe6PA3GXPwvkFAN38vE3UF5_V93d_Wlq9tBQqMwR3Cgj436Sb4kbXfzrNOG2jCzRfIXvqjUoxih7vnQIhZRo"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] rtl:mr-[240px] rtl:ml-0 pt-24 p-margin-desktop">
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end mb-xl">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-background">Warehouse Management</h3>
+<p class="text-on-surface-variant mt-1">Live overview of Zone W-44 Capacity &amp; Throughput</p>
+</div>
+<div class="flex gap-md">
+<button class="bg-surface-container-high px-lg py-2 rounded font-label-md text-label-md flex items-center gap-xs hover:bg-surface-variant transition-colors border border-outline-variant" id="lang-toggle">
+<span class="material-symbols-outlined text-[18px]">translate</span>
+                    EN / AR Toggle
+                </button>
+<button class="bg-surface-container-high px-lg py-2 rounded font-label-md text-label-md flex items-center gap-xs hover:bg-surface-variant transition-colors border border-outline-variant">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                    Filter
+                </button>
+</div>
+</div>
+<!-- Bento Grid: Zone Utilization -->
+<div class="grid grid-cols-12 gap-gutter mb-xl">
+<!-- Receiving Zone -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest p-lg border border-outline-variant rounded-xl group hover:border-primary transition-all">
+<div class="flex justify-between items-start mb-lg">
+<div class="p-3 rounded-lg bg-primary-container/10 text-primary">
+<span class="material-symbols-outlined">download</span>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">Zone A-1</span>
+</div>
+<h4 class="font-title-md text-title-md mb-xs">Receiving</h4>
+<p class="text-on-surface-variant text-body-md mb-lg">Inbound logistics processing</p>
+<div class="space-y-md">
+<div class="flex justify-between text-label-md font-label-md">
+<span class="text-on-surface-variant">Capacity</span>
+<span class="text-on-background">78%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary transition-all duration-1000" style="width: 78%"></div>
+</div>
+<div class="flex justify-between pt-sm">
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold">Incoming</p>
+<p class="font-data-mono text-title-md">14</p>
+</div>
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold">Processed</p>
+<p class="font-data-mono text-title-md">42</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Storage -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest p-lg border border-outline-variant rounded-xl group hover:border-secondary transition-all">
+<div class="flex justify-between items-start mb-lg">
+<div class="p-3 rounded-lg bg-secondary/10 text-secondary">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">Zone B-12</span>
+</div>
+<h4 class="font-title-md text-title-md mb-xs">Main Storage</h4>
+<p class="text-on-surface-variant text-body-md mb-lg">Standard ambient goods</p>
+<div class="space-y-md">
+<div class="flex justify-between text-label-md font-label-md">
+<span class="text-on-surface-variant">Capacity</span>
+<span class="text-on-background">92%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary transition-all duration-1000" style="width: 92%"></div>
+</div>
+<div class="flex justify-between pt-sm">
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold">Active SKUs</p>
+<p class="font-data-mono text-title-md">2,481</p>
+</div>
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold">Turnover</p>
+<p class="font-data-mono text-title-md">4.2x</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Cold Storage -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest p-lg border border-outline-variant rounded-xl group hover:border-error transition-all">
+<div class="flex justify-between items-start mb-lg">
+<div class="p-3 rounded-lg bg-error/10 text-error">
+<span class="material-symbols-outlined">ac_unit</span>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">Zone C-0</span>
+</div>
+<h4 class="font-title-md text-title-md mb-xs">Cold Storage</h4>
+<p class="text-on-surface-variant text-body-md mb-lg">Perishables &amp; Temp Control</p>
+<div class="space-y-md">
+<div class="flex justify-between text-label-md font-label-md">
+<span class="text-on-surface-variant">Capacity</span>
+<span class="text-on-background">45%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-error transition-all duration-1000" style="width: 45%"></div>
+</div>
+<div class="flex justify-between pt-sm">
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold">Temperature</p>
+<p class="font-data-mono text-title-md">-18°C</p>
+</div>
+<div class="text-center">
+<p class="text-on-surface-variant text-[10px] uppercase font-bold">Alerts</p>
+<p class="font-data-mono text-title-md text-error">0</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Inventory Table Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-lg border-b border-outline-variant flex justify-between items-center">
+<div class="flex items-center gap-md">
+<h4 class="font-title-md text-title-md">Live Inventory</h4>
+<span class="px-2 py-1 bg-surface-container-high rounded text-[10px] font-bold text-on-surface-variant uppercase">342 active items</span>
+</div>
+<div class="flex gap-sm">
+<button class="p-2 hover:bg-surface-variant transition-all rounded-lg material-symbols-outlined text-outline">download</button>
+<button class="p-2 hover:bg-surface-variant transition-all rounded-lg material-symbols-outlined text-outline">more_vert</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left rtl:text-right border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">SKU</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Description</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Location</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Status</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant text-right">Quantity</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Last Update</th>
+</tr>
+</thead>
+<tbody>
+<tr class="hover:bg-primary/5 transition-colors border-b border-outline-variant group">
+<td class="p-md font-data-mono text-data-mono text-primary">WRH-8821-X</td>
+<td class="p-md font-body-md text-body-md">Precision Ball Bearings (Grade A)</td>
+<td class="p-md">
+<span class="px-2 py-1 bg-surface-variant/50 text-[11px] font-bold rounded">B-12-04-A</span>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                                    In Stock
+                                </span>
+</td>
+<td class="p-md font-data-mono text-right">1,240</td>
+<td class="p-md text-on-surface-variant text-sm">2 mins ago</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors border-b border-outline-variant group">
+<td class="p-md font-data-mono text-data-mono text-primary">WRH-1034-L</td>
+<td class="p-md font-body-md text-body-md">Industrial Grade Lubricant (20L)</td>
+<td class="p-md">
+<span class="px-2 py-1 bg-surface-variant/50 text-[11px] font-bold rounded">C-01-02-D</span>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 bg-amber-600 rounded-full"></span>
+                                    Low Stock
+                                </span>
+</td>
+<td class="p-md font-data-mono text-right">12</td>
+<td class="p-md text-on-surface-variant text-sm">15 mins ago</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors border-b border-outline-variant group">
+<td class="p-md font-data-mono text-data-mono text-primary">WRH-9912-M</td>
+<td class="p-md font-body-md text-body-md">Hydraulic Control Module V2</td>
+<td class="p-md">
+<span class="px-2 py-1 bg-surface-variant/50 text-[11px] font-bold rounded">A-14-01-B</span>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center gap-1 text-primary bg-primary-container/10 px-2 py-1 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 bg-primary rounded-full"></span>
+                                    Reserved
+                                </span>
+</td>
+<td class="p-md font-data-mono text-right">45</td>
+<td class="p-md text-on-surface-variant text-sm">1 hour ago</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors border-b border-outline-variant group">
+<td class="p-md font-data-mono text-data-mono text-primary">WRH-0044-T</td>
+<td class="p-md font-body-md text-body-md">Structural Steel Beam (Type-L)</td>
+<td class="p-md">
+<span class="px-2 py-1 bg-surface-variant/50 text-[11px] font-bold rounded">B-02-09-C</span>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full text-[11px] font-bold">
+<span class="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                                    In Stock
+                                </span>
+</td>
+<td class="p-md font-data-mono text-right">892</td>
+<td class="p-md text-on-surface-variant text-sm">3 hours ago</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-lg bg-surface-container-low flex justify-between items-center">
+<p class="text-on-surface-variant text-sm">Showing 1 to 4 of 342 entries</p>
+<div class="flex gap-xs">
+<button class="p-2 border border-outline-variant rounded hover:bg-surface-container transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-10 h-10 bg-primary text-on-primary rounded font-bold">1</button>
+<button class="w-10 h-10 border border-outline-variant rounded hover:bg-surface-container transition-colors">2</button>
+<button class="w-10 h-10 border border-outline-variant rounded hover:bg-surface-container transition-colors">3</button>
+<button class="p-2 border border-outline-variant rounded hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Secondary Visual Section: Activity Heatmap & Trends -->
+<div class="grid grid-cols-12 gap-gutter mt-xl">
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest p-lg border border-outline-variant rounded-xl relative overflow-hidden">
+<div class="flex justify-between items-center mb-lg relative z-10">
+<h4 class="font-title-md text-title-md">Warehouse Activity Flow</h4>
+<div class="flex gap-sm">
+<span class="flex items-center gap-xs text-[10px] uppercase font-bold text-on-surface-variant">
+<span class="w-2 h-2 bg-primary rounded-full"></span> Incoming
+                        </span>
+<span class="flex items-center gap-xs text-[10px] uppercase font-bold text-on-surface-variant">
+<span class="w-2 h-2 bg-secondary rounded-full"></span> Outgoing
+                        </span>
+</div>
+</div>
+<!-- Simulated Visualization Area -->
+<div class="h-64 flex items-end gap-2 px-md">
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[60%] relative group">
+<div class="absolute bottom-0 left-0 w-full bg-primary h-[40%] rounded-t-lg group-hover:brightness-110 transition-all"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all text-[10px] font-bold">MON</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[75%] relative group">
+<div class="absolute bottom-0 left-0 w-full bg-primary h-[55%] rounded-t-lg group-hover:brightness-110 transition-all"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all text-[10px] font-bold">TUE</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[90%] relative group">
+<div class="absolute bottom-0 left-0 w-full bg-primary h-[70%] rounded-t-lg group-hover:brightness-110 transition-all"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all text-[10px] font-bold">WED</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[65%] relative group">
+<div class="absolute bottom-0 left-0 w-full bg-primary h-[35%] rounded-t-lg group-hover:brightness-110 transition-all"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all text-[10px] font-bold">THU</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[80%] relative group">
+<div class="absolute bottom-0 left-0 w-full bg-primary h-[60%] rounded-t-lg group-hover:brightness-110 transition-all"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all text-[10px] font-bold">FRI</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[40%] relative group">
+<div class="absolute bottom-0 left-0 w-full bg-primary h-[20%] rounded-t-lg group-hover:brightness-110 transition-all"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all text-[10px] font-bold">SAT</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[30%] relative group">
+<div class="absolute bottom-0 left-0 w-full bg-primary h-[15%] rounded-t-lg group-hover:brightness-110 transition-all"></div>
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all text-[10px] font-bold">SUN</div>
+</div>
+</div>
+<!-- Abstract Background Shader-like effect -->
+<div class="absolute inset-0 pointer-events-none opacity-[0.03]">
+<div class="w-full h-full bg-[radial-gradient(circle_at_50%_50%,#451ebb_0%,transparent_70%)]"></div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 bg-surface-container-lowest p-lg border border-outline-variant rounded-xl flex flex-col justify-between overflow-hidden">
+<div>
+<h4 class="font-title-md text-title-md mb-lg">Safety Compliance</h4>
+<div class="space-y-lg">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full border-4 border-primary/20 flex items-center justify-center text-primary font-bold">98</div>
+<div>
+<p class="font-label-md text-label-md">Occupational Safety Score</p>
+<p class="text-xs text-on-surface-variant">Last audit 3 days ago</p>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full border-4 border-secondary/20 flex items-center justify-center text-secondary font-bold">142</div>
+<div>
+<p class="font-label-md text-label-md">Days Incident Free</p>
+<p class="text-xs text-on-surface-variant">Company record: 210 days</p>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-xl pt-lg border-t border-outline-variant">
+<div class="w-full h-32 bg-cover bg-center rounded-lg relative" data-alt="A macro-photography style close up of a industrial bar code scanner being held by a gloved hand in a dimly lit, high-tech warehouse. The scene features cool blue and deep purple lighting, emphasizing precision and modern logistics technology. Minimalist and professional atmosphere." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDqmVBzlsc2Lrj9bAbntUUyjyIoSFzKxj_DheijNOqBGs43en04Zqd-BzB3vPA1Ji8xPLsOvawnvhok3BagEY_BfGHhoNqsQ4ZwWk2Yax8EfdML1cpe6r1IPzWO68DwnRoC_JTsom1MHq2ghE0A2YPy1cxALLgKOVBlpqJnhMemWtV_pTIamEIH-r9j-YjAA1TndZoyJzRb97uhMeQU-ltDaH-UowGnq-amGjStph0YegFo_DzdB_yUaU4mcrYUMuJuc0Q72yXnBJE')">
+<div class="absolute inset-0 bg-primary/40 rounded-lg flex items-center justify-center">
+<button class="bg-white/90 backdrop-blur text-primary px-lg py-2 rounded font-bold press-effect">Audit Log</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB for quick actions -->
+<button class="fixed bottom-margin-desktop right-margin-desktop w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center press-effect z-50 group">
+<span class="material-symbols-outlined transition-transform group-hover:rotate-90">add</span>
+<div class="absolute bottom-16 right-0 flex flex-col gap-sm opacity-0 pointer-events-none group-focus:opacity-100 group-focus:pointer-events-auto transition-all">
+</div></button><button class="w-48 bg-surface border border-outline-variant px-md py-2 rounded-lg text-left shadow-md flex items-center gap-md hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">local_shipping</span>
+<span>Log Shipment</span>
+</button>
+<button class="w-48 bg-surface border border-outline-variant px-md py-2 rounded-lg text-left shadow-md flex items-center gap-md hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">inventory</span>
+<span>Adjust Stock</span>
+</button>
+<script>
+        // RTL Toggle Logic
+        const langToggle = document.getElementById('lang-toggle');
+        const html = document.documentElement;
+        const sideNav = document.getElementById('side-nav');
+
+        langToggle.addEventListener('click', () => {
+            const isRtl = html.getAttribute('dir') === 'rtl';
+            if (isRtl) {
+                html.setAttribute('dir', 'ltr');
+                langToggle.innerText = 'EN / AR Toggle';
+            } else {
+                html.setAttribute('dir', 'rtl');
+                langToggle.innerText = 'تبديل اللغة';
+            }
+        });
+
+        // Hover Micro-interactions for table rows
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.cursor = 'pointer';
+            });
+        });
+    </script>
+</body></html>

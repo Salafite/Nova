@@ -1,0 +1,1 @@
+﻿window.StoreConnectionModel = class StoreConnection {constructor(d){Object.assign(this,d)}}

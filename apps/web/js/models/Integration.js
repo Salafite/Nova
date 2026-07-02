@@ -1,0 +1,1 @@
+﻿window.IntegrationModel = class Integration {constructor(d){Object.assign(this,d)}}

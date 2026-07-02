@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova Analytics | Executive Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#6042d6",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "background": "#f9f9ff",
+                    "surface-container-low": "#f1f3ff",
+                    "on-primary": "#ffffff",
+                    "on-surface-variant": "#484554",
+                    "primary-fixed-dim": "#cabeff",
+                    "tertiary": "#3d4551",
+                    "on-primary-fixed-variant": "#4723be",
+                    "tertiary-fixed": "#dce2f3",
+                    "on-surface": "#141b2b",
+                    "inverse-primary": "#cabeff",
+                    "error-container": "#ffdad6",
+                    "surface": "#f9f9ff",
+                    "on-tertiary-container": "#ced4e4",
+                    "surface-variant": "#dce2f7",
+                    "outline-variant": "#c9c4d7",
+                    "on-tertiary-fixed": "#151c27",
+                    "inverse-surface": "#293040",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "surface-container-high": "#e1e8fd",
+                    "surface-bright": "#f9f9ff",
+                    "primary-container": "#5d3fd3",
+                    "on-secondary-fixed": "#002020",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#d3daef",
+                    "tertiary-container": "#555c69",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#dce2f7",
+                    "on-primary-container": "#d8ceff",
+                    "on-error-container": "#93000a",
+                    "outline": "#797586",
+                    "on-secondary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#e6deff",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "surface-container": "#e9edff",
+                    "on-secondary-container": "#006e6e",
+                    "secondary": "#006a6a",
+                    "inverse-on-surface": "#edf0ff",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#93f2f2",
+                    "primary": "#451ebb",
+                    "on-background": "#141b2b",
+                    "secondary-container": "#90efef",
+                    "on-primary-fixed": "#1c0062"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "max-width": "1440px",
+                    "lg": "24px",
+                    "margin-desktop": "32px",
+                    "md": "16px",
+                    "margin-mobile": "16px",
+                    "gutter": "16px",
+                    "base": "4px",
+                    "xl": "32px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "title-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f9f9ff;
+            color: #141b2b;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+        }
+        .high-density-table tr:hover {
+            background-color: rgba(93, 63, 211, 0.04);
+        }
+        /* Custom scrollbar for ERP density */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c9c4d7;
+            border-radius: 10px;
+        }
+        .chart-bar {
+            transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background">
+<!-- Top Navigation Anchor -->
+<header class="w-full top-0 sticky z-[60] bg-surface border-b border-outline-variant flex items-center justify-between px-margin-mobile h-14">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary p-2 hover:bg-surface-container-low transition-colors rounded-full" data-icon="menu">menu</button>
+<span class="font-title-md text-title-md font-bold text-primary">Nova Analytics</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="font-label-md text-label-md px-3 py-1 border border-outline rounded-lg text-on-surface hover:bg-surface-container-low transition-colors" id="lang-toggle">
+                AR
+            </button>
+<div class="h-8 w-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-label-md">
+                AD
+            </div>
+</div>
+</header>
+<div class="flex h-[calc(100vh-56px)] overflow-hidden">
+<!-- Navigation Drawer (Desktop) -->
+<aside class="hidden md:flex flex-col h-full py-lg h-full w-60 bg-surface-container-lowest border-r border-outline-variant transition-all duration-200 ease-in-out">
+<div class="px-md mb-xl">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<div>
+<h2 class="font-label-md text-label-md font-bold text-on-surface">Director Analytics</h2>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Global Markets</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-sm">
+<a class="flex items-center gap-md px-md py-2 bg-primary-container text-on-primary-container rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Executive Overview
+                </a>
+<a class="flex items-center gap-md px-md py-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+                    Sales Performance
+                </a>
+<a class="flex items-center gap-md px-md py-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+                    Operational Risk
+                </a>
+<a class="flex items-center gap-md px-md py-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+                    Financial Health
+                </a>
+<a class="flex items-center gap-md px-md py-2 text-on-surface-variant hover:bg-surface-container transition-colors rounded-full font-label-md text-label-md mt-auto" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    User Settings
+                </a>
+</nav>
+<div class="px-md pt-lg border-t border-outline-variant">
+<p class="text-[10px] text-outline text-center">SYSTEM VERSION v2.4.0</p>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-1 overflow-y-auto bg-background p-md md:p-xl pb-24 md:pb-xl">
+<!-- Header Section -->
+<section class="mb-lg flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Executive Overview</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Real-time performance metrics for Nova ERP Ecosystem.</p>
+</div>
+<div class="flex items-center gap-sm">
+<button class="bg-surface border border-outline-variant px-md py-base rounded flex items-center gap-xs text-on-surface font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                        Last 30 Days
+                    </button>
+<button class="bg-primary text-on-primary px-md py-base rounded flex items-center gap-xs font-label-md text-label-md shadow-sm active:translate-y-px transition-all">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export Report
+                    </button>
+</div>
+</section>
+<!-- KPIs Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md mb-lg">
+<!-- Revenue Card -->
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-sm">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Total Revenue</p>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-full">payments</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">$1.2M</h3>
+<div class="mt-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary text-[16px]">trending_up</span>
+<span class="text-secondary font-label-md text-label-md">+8.4%</span>
+<span class="text-outline font-label-md text-label-md">vs last month</span>
+</div>
+</div>
+<!-- Pass Rate Card -->
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-sm">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Global Pass Rate</p>
+<span class="material-symbols-outlined text-secondary bg-secondary-fixed p-2 rounded-full">verified_user</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">94.2%</h3>
+<div class="mt-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-error text-[16px]">trending_down</span>
+<span class="text-error font-label-md text-label-md">-0.5%</span>
+<span class="text-outline font-label-md text-label-md">vs last week</span>
+</div>
+</div>
+<!-- Projects Card -->
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-sm">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Active Projects</p>
+<span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-full">assignment</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">12</h3>
+<div class="mt-md flex items-center gap-xs">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-surface-dim overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a diverse team member for an enterprise dashboard, high-key lighting, minimalist corporate background, iris purple accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBVNMBTuUdM1JabIQinldFlO-hrQw-WhybOjQqDBWZ-W0lJXKQO27LAXrYoCFTcLS7UL3ZqriUO-egR44qn4qplT8TfJ6iRtHUs9NaCAitk2sSPbwUOlrCzWMXNISdHyTUDB0DXXEhgmkCwebVqOkKvVTJ6tXlFi-6VocAEfWoIRav3N2kIqEfcmxndhxxlP7XDqKIzjg2-cB7uaenPpTj5cwodtYZ3j1MA0kbs1HycT5fmCIkMzK2Z828Wqsq0Yu1LFNHZ9gzAN4"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-surface-dim overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up profile picture of a tech professional in a clean minimalist office setting, soft corporate lighting, professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuANGnF7Bpxyz9TJ0dyTLrezuMLSehAI4UUzXiAtyxaapJ1f3uNWpe9XFx2yWAEKv45CcWdVg12slmjUVuIEye6gz2w8z3FEIOM25NcFlRBtP8Xw0Lcu5UavGX4R_79L8KGwrC1NkcRPGFiMWxJO-DdFnswUmS7mq34-CkMzk7Q18n8gcPYrXUKLfMQQ7jU2EpBJ4uVWhMaViIxeS4OMr_8XSMjMmQMApxLsh-lZICBty_zG3P0g7IH3qgsl2872lFABDR3xtDHxGxs"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-primary-container text-[10px] text-white flex items-center justify-center font-bold">+4</div>
+</div>
+<span class="text-outline font-label-md text-label-md ml-xs">Ongoing tasks</span>
+</div>
+</div>
+</div>
+<!-- Detailed Analysis Section -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Efficiency Chart (8/12) -->
+<div class="lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-lg p-lg shadow-sm">
+<div class="flex items-center justify-between mb-xl">
+<h4 class="font-title-md text-title-md text-on-surface">Weekly Efficiency Metrics</h4>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs">
+<span class="w-3 h-3 rounded-full bg-primary-container"></span>
+<span class="font-label-md text-label-md text-on-surface-variant">Output</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="w-3 h-3 rounded-full bg-secondary-container"></span>
+<span class="font-label-md text-label-md text-on-surface-variant">Goal</span>
+</div>
+</div>
+</div>
+<div class="h-64 flex items-end justify-between gap-sm px-md pb-md relative border-b border-outline-variant">
+<!-- Chart Lines (Back) -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-md opacity-20">
+<div class="border-t border-outline w-full"></div>
+<div class="border-t border-outline w-full"></div>
+<div class="border-t border-outline w-full"></div>
+<div class="border-t border-outline w-full"></div>
+</div>
+<!-- Bar Groups -->
+<div class="flex-1 flex items-end justify-center gap-xs group h-full relative">
+<div class="chart-bar w-4 md:w-8 bg-primary-container rounded-t-sm" style="height: 65%;"></div>
+<div class="chart-bar w-4 md:w-8 bg-secondary-container rounded-t-sm" style="height: 45%;"></div>
+<span class="absolute -bottom-6 font-label-md text-label-md text-on-surface-variant">Mon</span>
+</div>
+<div class="flex-1 flex items-end justify-center gap-xs group h-full relative">
+<div class="chart-bar w-4 md:w-8 bg-primary-container rounded-t-sm" style="height: 80%;"></div>
+<div class="chart-bar w-4 md:w-8 bg-secondary-container rounded-t-sm" style="height: 60%;"></div>
+<span class="absolute -bottom-6 font-label-md text-label-md text-on-surface-variant">Tue</span>
+</div>
+<div class="flex-1 flex items-end justify-center gap-xs group h-full relative">
+<div class="chart-bar w-4 md:w-8 bg-primary-container rounded-t-sm" style="height: 95%;"></div>
+<div class="chart-bar w-4 md:w-8 bg-secondary-container rounded-t-sm" style="height: 85%;"></div>
+<span class="absolute -bottom-6 font-label-md text-label-md text-on-surface-variant">Wed</span>
+</div>
+<div class="flex-1 flex items-end justify-center gap-xs group h-full relative">
+<div class="chart-bar w-4 md:w-8 bg-primary-container rounded-t-sm" style="height: 40%;"></div>
+<div class="chart-bar w-4 md:w-8 bg-secondary-container rounded-t-sm" style="height: 70%;"></div>
+<span class="absolute -bottom-6 font-label-md text-label-md text-on-surface-variant">Thu</span>
+</div>
+<div class="flex-1 flex items-end justify-center gap-xs group h-full relative">
+<div class="chart-bar w-4 md:w-8 bg-primary-container rounded-t-sm" style="height: 75%;"></div>
+<div class="chart-bar w-4 md:w-8 bg-secondary-container rounded-t-sm" style="height: 55%;"></div>
+<span class="absolute -bottom-6 font-label-md text-label-md text-on-surface-variant">Fri</span>
+</div>
+<div class="flex-1 flex items-end justify-center gap-xs group h-full relative">
+<div class="chart-bar w-4 md:w-8 bg-primary-container rounded-t-sm" style="height: 30%;"></div>
+<div class="chart-bar w-4 md:w-8 bg-secondary-container rounded-t-sm" style="height: 25%;"></div>
+<span class="absolute -bottom-6 font-label-md text-label-md text-on-surface-variant">Sat</span>
+</div>
+</div>
+</div>
+<!-- Recent Inspections (4/12) -->
+<div class="lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-lg shadow-sm">
+<div class="flex items-center justify-between mb-lg">
+<h4 class="font-title-md text-title-md text-on-surface">Recent Inspections</h4>
+<button class="text-primary font-label-md text-label-md hover:underline">See all</button>
+</div>
+<div class="space-y-md">
+<!-- Inspection Item -->
+<div class="flex items-center justify-between p-md border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors rounded-lg">
+<div class="flex items-center gap-md">
+<div class="p-2 bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">inventory_2</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface font-bold">Logistics Hub A</p>
+<p class="text-[10px] text-outline">Oct 12, 14:30</p>
+</div>
+</div>
+<span class="px-2 py-base bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded uppercase">Pass</span>
+</div>
+<!-- Inspection Item -->
+<div class="flex items-center justify-between p-md border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors rounded-lg">
+<div class="flex items-center gap-md">
+<div class="p-2 bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">factory</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface font-bold">North Production</p>
+<p class="text-[10px] text-outline">Oct 12, 11:15</p>
+</div>
+</div>
+<span class="px-2 py-base bg-error-container text-on-error-container text-[10px] font-bold rounded uppercase">Fail</span>
+</div>
+<!-- Inspection Item -->
+<div class="flex items-center justify-between p-md border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors rounded-lg">
+<div class="flex items-center gap-md">
+<div class="p-2 bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">biotech</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface font-bold">R&amp;D Lab 4</p>
+<p class="text-[10px] text-outline">Oct 11, 09:45</p>
+</div>
+</div>
+<span class="px-2 py-base bg-surface-container-high text-on-surface-variant text-[10px] font-bold rounded uppercase">Pending</span>
+</div>
+<!-- Inspection Item -->
+<div class="flex items-center justify-between p-md border-b border-outline-variant last:border-0 hover:bg-surface-container-low transition-colors rounded-lg">
+<div class="flex items-center gap-md">
+<div class="p-2 bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">local_shipping</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface font-bold">Fleet Maintenance</p>
+<p class="text-[10px] text-outline">Oct 10, 16:20</p>
+</div>
+</div>
+<span class="px-2 py-base bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded uppercase">Pass</span>
+</div>
+</div>
+</div>
+</div>
+<!-- High Density Data Table -->
+<section class="mt-lg bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex items-center justify-between">
+<h4 class="font-title-md text-title-md text-on-surface">Financial Transactions</h4>
+<div class="flex items-center gap-sm">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="pl-8 pr-md py-1 bg-surface border border-outline-variant rounded font-label-md text-label-md focus:ring-2 focus:ring-primary-container outline-none w-48" placeholder="Search..." type="text"/>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left high-density-table">
+<thead class="bg-surface-container-high text-on-surface-variant">
+<tr>
+<th class="px-lg py-sm font-label-md text-label-md font-semibold">REF #</th>
+<th class="px-lg py-sm font-label-md text-label-md font-semibold">ENTITY</th>
+<th class="px-lg py-sm font-label-md text-label-md font-semibold text-right">AMOUNT</th>
+<th class="px-lg py-sm font-label-md text-label-md font-semibold">DATE</th>
+<th class="px-lg py-sm font-label-md text-label-md font-semibold">STATUS</th>
+<th class="px-lg py-sm font-label-md text-label-md font-semibold"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr>
+<td class="px-lg py-md font-data-mono text-data-mono text-primary font-bold">TXN-00412</td>
+<td class="px-lg py-md font-body-md text-body-md">Global Prime Solutions</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-right">$45,200.00</td>
+<td class="px-lg py-md font-body-md text-body-md text-on-surface-variant">2023-10-12</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-2 py-base bg-secondary-container text-on-secondary-container rounded-full text-[10px] font-bold">
+<span class="w-1 h-1 rounded-full bg-on-secondary-container"></span> COMPLETE
+                                    </span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+<tr>
+<td class="px-lg py-md font-data-mono text-data-mono text-primary font-bold">TXN-00413</td>
+<td class="px-lg py-md font-body-md text-body-md">Vertex Industrial Ltd</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-right">$12,450.50</td>
+<td class="px-lg py-md font-body-md text-body-md text-on-surface-variant">2023-10-12</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-2 py-base bg-surface-container-high text-on-surface-variant rounded-full text-[10px] font-bold">
+<span class="w-1 h-1 rounded-full bg-outline"></span> PROCESSING
+                                    </span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+<tr>
+<td class="px-lg py-md font-data-mono text-data-mono text-primary font-bold">TXN-00414</td>
+<td class="px-lg py-md font-body-md text-body-md">Arc Dynamics Corp</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-right">$8,120.00</td>
+<td class="px-lg py-md font-body-md text-body-md text-on-surface-variant">2023-10-11</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center gap-xs px-2 py-base bg-error-container text-on-error-container rounded-full text-[10px] font-bold">
+<span class="w-1 h-1 rounded-full bg-error"></span> REJECTED
+                                    </span>
+</td>
+<td class="px-lg py-md text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary transition-colors">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-lg py-sm bg-surface-container-lowest border-t border-outline-variant flex items-center justify-between">
+<p class="font-label-md text-label-md text-on-surface-variant">Showing 1-3 of 24 transactions</p>
+<div class="flex items-center gap-xs">
+<button class="p-1 hover:bg-surface-container transition-colors rounded"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-1 hover:bg-surface-container transition-colors rounded"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Floating Action Button -->
+<button class="fixed bottom-20 md:bottom-lg right-lg w-14 h-14 bg-primary-container text-on-primary-container rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'wght' 600;">add</span>
+</button>
+<!-- Bottom Navigation Bar (Mobile only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 bg-surface border-t border-outline-variant z-50 h-16">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="font-label-md text-label-md">KPIs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-label-md text-label-md">Trends</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-md text-label-md">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant relative" href="#">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="font-label-md text-label-md">Alerts</span>
+<span class="absolute top-0 right-2 w-2 h-2 bg-error rounded-full"></span>
+</a>
+</nav>
+<script>
+        // Language Toggle Logic
+        const langToggle = document.getElementById('lang-toggle');
+        const html = document.documentElement;
+        
+        langToggle.addEventListener('click', () => {
+            if (html.dir === 'ltr') {
+                html.dir = 'rtl';
+                html.lang = 'ar';
+                langToggle.innerText = 'EN';
+                // Note: Real implementation would require text translations
+            } else {
+                html.dir = 'ltr';
+                html.lang = 'en';
+                langToggle.innerText = 'AR';
+            }
+        });
+
+        // Micro-interactions for chart bars
+        document.querySelectorAll('.chart-bar').forEach(bar => {
+            bar.addEventListener('mouseenter', () => {
+                bar.style.filter = 'brightness(1.2)';
+                bar.style.cursor = 'pointer';
+            });
+            bar.addEventListener('mouseleave', () => {
+                bar.style.filter = 'brightness(1.0)';
+            });
+        });
+    </script>
+</body></html>

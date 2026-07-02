@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Work Orders - ERP Central</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#141b2b",
+                    "surface-bright": "#f9f9ff",
+                    "on-tertiary-fixed": "#151c27",
+                    "tertiary-container": "#555c69",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "primary-fixed": "#e6deff",
+                    "surface-container-high": "#e1e8fd",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "on-primary-fixed-variant": "#4723be",
+                    "tertiary-fixed": "#dce2f3",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#293040",
+                    "on-tertiary-container": "#ced4e4",
+                    "surface-container": "#e9edff",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "secondary-fixed": "#93f2f2",
+                    "on-surface-variant": "#484554",
+                    "outline": "#797586",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "secondary": "#006a6a",
+                    "on-primary-fixed": "#1c0062",
+                    "inverse-on-surface": "#edf0ff",
+                    "error": "#ba1a1a",
+                    "primary-container": "#5d3fd3",
+                    "primary": "#451ebb",
+                    "outline-variant": "#c9c4d7",
+                    "inverse-primary": "#cabeff",
+                    "primary-fixed-dim": "#cabeff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#006e6e",
+                    "surface-dim": "#d3daef",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "secondary-container": "#90efef",
+                    "on-background": "#141b2b",
+                    "surface-variant": "#dce2f7",
+                    "surface-container-low": "#f1f3ff",
+                    "background": "#f9f9ff",
+                    "on-primary": "#ffffff",
+                    "on-primary-container": "#d8ceff",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#3d4551",
+                    "surface-container-highest": "#dce2f7",
+                    "surface": "#f9f9ff",
+                    "on-tertiary": "#ffffff",
+                    "surface-tint": "#6042d6",
+                    "on-secondary-fixed": "#002020"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "gutter": "16px",
+                    "sm": "8px",
+                    "xs": "4px",
+                    "max-width": "1440px",
+                    "lg": "24px",
+                    "margin-mobile": "16px",
+                    "md": "16px",
+                    "margin-desktop": "32px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "display-lg": ["Inter"],
+                    "title-md": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #F9FAFB;
+            font-family: 'Inter', sans-serif;
+            color: #141b2b;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+            font-size: 20px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface overflow-hidden">
+<!-- Nova SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-surface-container-low border-r border-outline-variant flex flex-col py-md z-50">
+<div class="px-md mb-xl">
+<h1 class="font-title-md text-title-md font-bold text-on-surface">ERP Central</h1>
+<p class="font-label-md text-label-md text-on-surface-variant opacity-70">Enterprise Resource Planning</p>
+</div>
+<nav class="flex-1 space-y-1 px-sm overflow-y-auto custom-scrollbar">
+<!-- Active Tab: Manufacturing -->
+<a class="flex items-center px-md py-sm text-primary font-bold border-r-4 border-primary bg-primary-container/10 transition-colors duration-150 translate-x-1" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="factory">factory</span>
+<span class="font-label-md text-label-md">Manufacturing</span>
+</a>
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined mr-md text-on-surface-variant group-hover:text-primary" data-icon="payments">payments</span>
+<span class="font-label-md text-label-md">Finance</span>
+</a>
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined mr-md text-on-surface-variant group-hover:text-primary" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined mr-md text-on-surface-variant group-hover:text-primary" data-icon="handshake">handshake</span>
+<span class="font-label-md text-label-md">CRM</span>
+</a>
+</nav>
+<div class="px-sm mt-auto pt-md border-t border-outline-variant">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-2 px-md font-label-md text-label-md rounded-lg hover:bg-primary-container transition-colors press-effect">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+                New Module
+            </button>
+<div class="mt-md space-y-1">
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Workspace -->
+<div class="ml-[240px] flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="sticky top-0 w-full h-16 bg-surface border-b border-outline-variant flex justify-between items-center px-margin-desktop z-40">
+<div class="flex items-center gap-xl flex-1">
+<span class="font-headline-lg text-headline-lg font-black text-primary">Global ERP</span>
+<div class="relative w-full max-w-md ml-xl">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-1.5 pl-10 pr-4 font-body-md text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="Search orders, SKU or workstations..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<nav class="flex gap-md mr-md border-r border-outline-variant pr-lg">
+<button class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md">EN</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors font-body-md text-body-md">AR</button>
+</nav>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-transform press-effect" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-transform press-effect" data-icon="apps">apps</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a senior manufacturing administrator with silver hair and glasses, wearing a sharp corporate navy blazer, set against a clean, softly lit office background with hints of technological interfaces. High-end lighting, clean aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJ5a2384FS0PcHRU4DfeQtWWVkU5MO3WZEbpQbqW3ediTJDoNXhCAmOw_ldQqqDqieY45fsdQQu8OqivAeG0EUYsc-y36OTg9Ycait8bW393WJwrSFnMN_9ihjf4d1Ty3cuYcjSBnHzP4QYnriS7U6Z52-i2V09LvrtSbovaOI3xMjCLkLdOxHflwZn4Oox4gT-slcNCJWhjF6hAZuX_fdgyaxrZyZKIPNefd5ySvN2Jrox6LkC-wmWWcGC8Hcois03nBdgI4jJq4"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<main class="flex-1 overflow-y-auto p-margin-desktop custom-scrollbar">
+<!-- Page Header Section -->
+<div class="flex justify-between items-end mb-lg">
+<div>
+<nav class="flex items-center gap-2 text-on-surface-variant mb-1">
+<span class="font-label-md text-label-md">Manufacturing</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="font-label-md text-label-md font-bold text-primary">Work Orders</span>
+</nav>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Work Order Management</h2>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-2 bg-white border border-outline-variant px-md py-2 font-label-md text-label-md rounded hover:bg-surface-variant transition-colors press-effect">
+<span class="material-symbols-outlined">download</span>
+                        Export
+                    </button>
+<button class="flex items-center gap-2 bg-primary text-on-primary px-md py-2 font-label-md text-label-md rounded hover:shadow-md transition-all press-effect">
+<span class="material-symbols-outlined">add</span>
+                        Create Work Order
+                    </button>
+</div>
+</div>
+<!-- Dashboard Stats Summary (High-Density) -->
+<div class="grid grid-cols-4 gap-gutter mb-lg">
+<div class="bg-white border border-outline-variant p-md rounded-lg shadow-sm">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Total Active</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">142</span>
+<span class="text-secondary font-label-md text-label-md flex items-center"><span class="material-symbols-outlined text-sm">arrow_upward</span> 12%</span>
+</div>
+</div>
+<div class="bg-white border border-outline-variant p-md rounded-lg shadow-sm border-l-4 border-l-secondary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">In Progress</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">84</span>
+<span class="text-on-surface-variant font-label-md text-label-md">60% of total</span>
+</div>
+</div>
+<div class="bg-white border border-outline-variant p-md rounded-lg shadow-sm border-l-4 border-l-primary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Pending</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">45</span>
+<span class="text-error font-label-md text-label-md flex items-center"><span class="material-symbols-outlined text-sm">priority_high</span> High Priority</span>
+</div>
+</div>
+<div class="bg-white border border-outline-variant p-md rounded-lg shadow-sm border-l-4 border-l-outline">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Completed (24h)</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">29</span>
+<span class="text-secondary font-label-md text-label-md flex items-center"><span class="material-symbols-outlined text-sm">check_circle</span> Daily Goal Met</span>
+</div>
+</div>
+</div>
+<!-- Filters Bar -->
+<div class="bg-white border border-outline-variant p-sm mb-xs rounded-t-lg flex items-center gap-gutter">
+<div class="flex-1 flex gap-md">
+<div class="relative group">
+<select class="appearance-none bg-surface-container-low border border-outline-variant rounded pl-md pr-8 py-1.5 font-label-md text-label-md focus:ring-1 focus:ring-primary outline-none cursor-pointer hover:border-primary transition-colors">
+<option>All Statuses</option>
+<option>In Progress</option>
+<option>Pending</option>
+<option>Draft</option>
+<option>Completed</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant" style="font-size: 16px;">expand_more</span>
+</div>
+<div class="relative group">
+<select class="appearance-none bg-surface-container-low border border-outline-variant rounded pl-md pr-8 py-1.5 font-label-md text-label-md focus:ring-1 focus:ring-primary outline-none cursor-pointer hover:border-primary transition-colors">
+<option>All Workstations</option>
+<option>Assembly Line A</option>
+<option>Assembly Line B</option>
+<option>CNC Machining</option>
+<option>Quality Assurance</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant" style="font-size: 16px;">expand_more</span>
+</div>
+<div class="relative group">
+<input class="bg-surface-container-low border border-outline-variant rounded px-md py-1.5 font-label-md text-label-md focus:ring-1 focus:ring-primary outline-none hover:border-primary transition-colors" type="date"/>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Displaying 1-12 of 142</span>
+<div class="flex border border-outline-variant rounded overflow-hidden">
+<button class="p-1.5 bg-surface-variant hover:bg-outline-variant transition-colors"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-1.5 bg-white hover:bg-surface-variant transition-colors border-l border-outline-variant"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-white border border-outline-variant rounded-b-lg overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead class="bg-gray-50 border-b border-outline-variant">
+<tr>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider w-8">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Order ID</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Product / SKU</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Workstation</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Quantity</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Progress</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Status</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-md py-3">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono text-primary font-bold">WO-2023-0041</span>
+</td>
+<td class="px-md py-3">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold">T-Series Compressor Blade</span>
+<span class="font-label-md text-label-md text-on-surface-variant">SKU: ENG-0041-TB</span>
+</div>
+</td>
+<td class="px-md py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" style="font-size: 18px;">precision_manufacturing</span>
+<span class="font-body-md text-body-md">CNC Machining Unit 4</span>
+</div>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono">500 / 1,200 units</span>
+</td>
+<td class="px-md py-3">
+<div class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden max-w-[100px]">
+<div class="bg-secondary h-full" style="width: 42%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">42%</span>
+</td>
+<td class="px-md py-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-[11px] bg-secondary-container text-on-secondary-container font-bold uppercase">In Progress</span>
+</td>
+<td class="px-md py-3 text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary press-effect">more_vert</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-md py-3">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono text-primary font-bold">WO-2023-0042</span>
+</td>
+<td class="px-md py-3">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold">Optical Sensor Housing</span>
+<span class="font-label-md text-label-md text-on-surface-variant">SKU: OPT-SH-992</span>
+</div>
+</td>
+<td class="px-md py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" style="font-size: 18px;">conveyor_belt</span>
+<span class="font-body-md text-body-md">Assembly Line B</span>
+</div>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono">0 / 8,000 units</span>
+</td>
+<td class="px-md py-3">
+<div class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden max-w-[100px]">
+<div class="bg-primary h-full" style="width: 0%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">0%</span>
+</td>
+<td class="px-md py-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-[11px] bg-surface-container-highest text-on-tertiary-fixed-variant font-bold uppercase">Pending</span>
+</td>
+<td class="px-md py-3 text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary press-effect">more_vert</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-md py-3">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono text-primary font-bold">WO-2023-0043</span>
+</td>
+<td class="px-md py-3">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold">Alloy Wheel Rim v2</span>
+<span class="font-label-md text-label-md text-on-surface-variant">SKU: WHL-A2-RIM</span>
+</div>
+</td>
+<td class="px-md py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" style="font-size: 18px;">precision_manufacturing</span>
+<span class="font-body-md text-body-md">CNC Machining Unit 1</span>
+</div>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono">1,500 / 1,500 units</span>
+</td>
+<td class="px-md py-3">
+<div class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden max-w-[100px]">
+<div class="bg-secondary h-full" style="width: 100%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">100%</span>
+</td>
+<td class="px-md py-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-[11px] bg-secondary text-white font-bold uppercase">Completed</span>
+</td>
+<td class="px-md py-3 text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary press-effect">more_vert</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-md py-3">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono text-primary font-bold">WO-2023-0044</span>
+</td>
+<td class="px-md py-3">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold">Control PCB Assembly</span>
+<span class="font-label-md text-label-md text-on-surface-variant">SKU: PCB-CTRL-X</span>
+</div>
+</td>
+<td class="px-md py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" style="font-size: 18px;">high_quality</span>
+<span class="font-body-md text-body-md">QA Station 3</span>
+</div>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono">245 / 300 units</span>
+</td>
+<td class="px-md py-3">
+<div class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden max-w-[100px]">
+<div class="bg-secondary h-full" style="width: 81.6%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">81.6%</span>
+</td>
+<td class="px-md py-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-[11px] bg-secondary-container text-on-secondary-container font-bold uppercase">In Progress</span>
+</td>
+<td class="px-md py-3 text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary press-effect">more_vert</button>
+</td>
+</tr>
+<!-- Row 5 (Urgent) -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-md py-3">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono text-primary font-bold">WO-2023-0045</span>
+</td>
+<td class="px-md py-3">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold">Exhaust Manifold Gasket</span>
+<span class="font-label-md text-label-md text-on-surface-variant">SKU: EXH-GSK-09</span>
+</div>
+</td>
+<td class="px-md py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" style="font-size: 18px;">settings_input_component</span>
+<span class="font-body-md text-body-md">Die-Casting Unit 2</span>
+</div>
+</td>
+<td class="px-md py-3">
+<span class="font-data-mono text-data-mono">12 / 5,000 units</span>
+</td>
+<td class="px-md py-3">
+<div class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden max-w-[100px]">
+<div class="bg-error h-full" style="width: 0.2%"></div>
+</div>
+<span class="font-label-md text-label-md text-error font-bold">Halted</span>
+</td>
+<td class="px-md py-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-[11px] bg-error-container text-on-error-container font-bold uppercase">Issue Logged</span>
+</td>
+<td class="px-md py-3 text-right">
+<button class="material-symbols-outlined text-outline hover:text-primary press-effect">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Contextual Sidebar / Order Detail (Overlay Pattern) -->
+<div class="fixed right-0 top-16 h-[calc(100vh-64px)] w-[400px] bg-white border-l border-outline-variant shadow-xl translate-x-full transition-transform duration-300 z-30 overflow-y-auto p-xl" id="detailPane">
+<div class="flex justify-between items-center mb-xl">
+<h3 class="font-title-md text-title-md font-bold">Order WO-2023-0041</h3>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary" onclick="toggleDetail()">close</button>
+</div>
+<div class="space-y-xl">
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-sm">Current Progress</p>
+<div class="flex items-center justify-between mb-2">
+<span class="font-headline-lg text-headline-lg font-black text-secondary">42%</span>
+<span class="font-body-md text-body-md">700 units remaining</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-3 overflow-hidden">
+<div class="bg-secondary h-full" style="width: 42%"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-md border-t border-outline-variant pt-lg">
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase">Start Date</p>
+<p class="font-body-md text-body-md font-semibold">Oct 12, 2023</p>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase">Est. Completion</p>
+<p class="font-body-md text-body-md font-semibold">Oct 28, 2023</p>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase">Priority</p>
+<p class="font-body-md text-body-md font-semibold flex items-center gap-1 text-primary"><span class="material-symbols-outlined text-sm">stars</span> High</p>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase">Manager</p>
+<p class="font-body-md text-body-md font-semibold">Sarah Jenkins</p>
+</div>
+</div>
+<div class="border-t border-outline-variant pt-lg">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-md">Timeline Activities</p>
+<div class="space-y-md">
+<div class="flex gap-md">
+<div class="flex flex-col items-center">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<div class="w-0.5 h-full bg-outline-variant"></div>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold">Shift Start: Batch 04</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Unit 4 processed 120 units.</p>
+<span class="font-label-md text-label-md opacity-50">Today, 08:45 AM</span>
+</div>
+</div>
+<div class="flex gap-md">
+<div class="flex flex-col items-center">
+<div class="w-2 h-2 rounded-full bg-outline"></div>
+<div class="w-0.5 h-full bg-outline-variant"></div>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold">Quality Check Passed</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Batch 03 (50 units) verified.</p>
+<span class="font-label-md text-label-md opacity-50">Yesterday, 04:12 PM</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-sm pt-xl">
+<button class="w-full bg-primary text-on-primary py-2.5 rounded font-label-md text-label-md font-bold transition-all press-effect">Update Production</button>
+<button class="w-full border border-outline text-on-surface py-2.5 rounded font-label-md text-label-md hover:bg-surface-variant transition-all press-effect">View Full BOM</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<script>
+        // Micro-interactions and UI Logic
+        function toggleDetail() {
+            const pane = document.getElementById('detailPane');
+            pane.classList.toggle('translate-x-full');
+        }
+
+        // Row interaction
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('click', (e) => {
+                // Ignore if clicked on checkbox or meatball menu
+                if (e.target.type === 'checkbox' || e.target.textContent === 'more_vert') return;
+                
+                // Simulate focus state on row
+                document.querySelectorAll('tbody tr').forEach(r => r.classList.remove('bg-primary-container/10', 'border-l-4', 'border-primary'));
+                row.classList.add('bg-primary-container/10', 'border-l-4', 'border-primary');
+                
+                // Open detail pane
+                const pane = document.getElementById('detailPane');
+                pane.classList.remove('translate-x-full');
+            });
+        });
+
+        // Close pane when clicking outside (on main content)
+        document.querySelector('main').addEventListener('click', (e) => {
+            const pane = document.getElementById('detailPane');
+            if (!pane.contains(e.target) && !e.target.closest('tbody tr')) {
+                pane.classList.add('translate-x-full');
+            }
+        });
+    </script>
+</body></html>

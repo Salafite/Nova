@@ -1,0 +1,1 @@
+﻿window.MobileCartModel = class MobileCart {constructor(d){Object.assign(this,d)}}

@@ -1,0 +1,63 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<!-- Welcome Header -->
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Manufacturing Overview</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Real-time facility metrics and work order tracking.</p>
+</div>
+<div class="flex gap-sm">
+<button class="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:opacity-90 transition-all flex items-center gap-2 press-effect" onclick="controllers.manufacturing.showCreateForm()">
+<span class="material-symbols-outlined text-[18px]">add</span>
+Create Order
+</button>
+</div>
+</div>
+<!-- Dashboard Body: Visual Metrics & Tables -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-stretch mb-xl">
+<!-- Efficiency Chart / BOM -->
+<div class="lg:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col shadow-sm">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">BOM (Bill of Materials)</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Product</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Components</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{bomRows}}
+</tbody>
+</table>
+</div>
+</div>
+<!-- Work Orders Table -->
+<div class="lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Recent Work Orders</h3>
+<div class="flex gap-2">
+<button class="text-primary font-label-md text-label-md hover:underline">View All</button>
+</div>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Order ID</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Product</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Qty</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Due Date</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{orderRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>

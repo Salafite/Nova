@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP - Mobile Analytics Dashboard</title>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "background": "#f9f9ff",
+                    "surface-container": "#e9edff",
+                    "surface-container-low": "#f1f3ff",
+                    "tertiary": "#3d4551",
+                    "on-secondary-container": "#006e6e",
+                    "primary-fixed-dim": "#cabeff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#002020",
+                    "primary-container": "#5d3fd3",
+                    "surface-container-highest": "#dce2f7",
+                    "inverse-surface": "#293040",
+                    "on-background": "#141b2b",
+                    "error": "#ba1a1a",
+                    "outline": "#797586",
+                    "on-error": "#ffffff",
+                    "secondary-container": "#90efef",
+                    "outline-variant": "#c9c4d7",
+                    "inverse-primary": "#cabeff",
+                    "primary": "#451ebb",
+                    "on-tertiary-container": "#ced4e4",
+                    "tertiary-container": "#555c69",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "on-primary-container": "#d8ceff",
+                    "surface-tint": "#6042d6",
+                    "inverse-on-surface": "#edf0ff",
+                    "secondary": "#006a6a",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#93f2f2",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#4723be",
+                    "tertiary-fixed": "#dce2f3",
+                    "on-surface-variant": "#484554",
+                    "surface-variant": "#dce2f7",
+                    "surface-dim": "#d3daef",
+                    "on-surface": "#141b2b",
+                    "surface-bright": "#f9f9ff",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#1c0062",
+                    "surface": "#f9f9ff",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "primary-fixed": "#e6deff",
+                    "on-tertiary-fixed": "#151c27",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "surface-container-high": "#e1e8fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "margin-mobile": "16px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "xs": "4px",
+                    "max-width": "1440px",
+                    "lg": "24px",
+                    "gutter": "16px",
+                    "xl": "32px",
+                    "margin-desktop": "32px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "title-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #f9f9ff;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+        }
+        .bento-card {
+            border: 1px solid #E5E7EB;
+            transition: transform 0.1s ease;
+        }
+        .bento-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface">
+<!-- TopAppBar -->
+<header class="bg-surface-container-lowest dark:bg-surface-container-low border-b border-outline-variant dark:border-outline docked full-width top-0 fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-14">
+<div class="flex items-center gap-3">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors p-2 rounded-full active:translate-y-[1px] transition-transform duration-100">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed-dim tracking-tight">ERP Systems</h1>
+</div>
+<button class="text-primary dark:text-primary-fixed-dim font-semibold px-3 py-1 rounded-lg border border-outline-variant hover:bg-surface-container-highest transition-colors active:translate-y-[1px]">
+            EN/AR
+        </button>
+</header>
+<!-- Main Canvas -->
+<main class="pt-20 pb-24 px-margin-mobile max-w-full overflow-x-hidden">
+<!-- Welcome Header -->
+<section class="mb-lg">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-xs">Nova Analytics</h2>
+<p class="text-on-surface-variant font-body-md">Performance overview for Q3 2024</p>
+</section>
+<!-- KPI Vertical Stack -->
+<div class="grid grid-cols-1 gap-md">
+<!-- KPI Card: Total Revenue -->
+<div class="bento-card bg-surface-container-lowest p-md rounded-xl shadow-sm flex flex-col gap-sm">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Revenue</span>
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined">payments</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-title-md text-title-md font-bold text-on-surface">$1.24M</span>
+<span class="text-secondary text-xs font-semibold flex items-center">
+<span class="material-symbols-outlined text-sm">arrow_upward</span> 12%
+                    </span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1 mt-2">
+<div class="bg-primary h-1 rounded-full" style="width: 75%"></div>
+</div>
+</div>
+<!-- KPI Card: Active Orders -->
+<div class="bento-card bg-surface-container-lowest p-md rounded-xl shadow-sm flex flex-col gap-sm">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Active Orders</span>
+<div class="w-10 h-10 bg-secondary-container rounded-lg flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-title-md text-title-md font-bold text-on-surface">842</span>
+<span class="text-error text-xs font-semibold flex items-center">
+<span class="material-symbols-outlined text-sm">arrow_downward</span> 3%
+                    </span>
+</div>
+<p class="text-xs text-on-surface-variant italic">14 pending fulfillment</p>
+</div>
+<!-- KPI Card: Inventory Health -->
+<div class="bento-card bg-surface-container-lowest p-md rounded-xl shadow-sm flex flex-col gap-sm">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Inventory Health</span>
+<div class="w-10 h-10 bg-tertiary-container rounded-lg flex items-center justify-center text-on-tertiary-container">
+<span class="material-symbols-outlined">health_and_safety</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-title-md text-title-md font-bold text-on-surface">94.2%</span>
+</div>
+<div class="flex gap-1 mt-1">
+<div class="h-2 flex-1 bg-primary rounded-full"></div>
+<div class="h-2 flex-1 bg-primary rounded-full"></div>
+<div class="h-2 flex-1 bg-primary rounded-full"></div>
+<div class="h-2 flex-1 bg-surface-container rounded-full"></div>
+</div>
+</div>
+<!-- Sales Performance Line Chart -->
+<div class="bento-card bg-surface-container-lowest p-md rounded-xl shadow-sm col-span-1">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-title-md text-body-lg font-bold text-on-surface">Sales Performance</h3>
+<button class="text-primary text-xs font-bold">Details</button>
+</div>
+<div class="chart-container flex items-end justify-between gap-1 pb-4">
+<!-- Simple CSS Bar Chart as Placeholder for Line Chart Visual -->
+<div class="w-full bg-primary/10 rounded-t h-[40%]"></div>
+<div class="w-full bg-primary/20 rounded-t h-[60%]"></div>
+<div class="w-full bg-primary/30 rounded-t h-[55%]"></div>
+<div class="w-full bg-primary/50 rounded-t h-[85%]"></div>
+<div class="w-full bg-primary/70 rounded-t h-[70%]"></div>
+<div class="w-full bg-primary rounded-t h-[100%]"></div>
+<div class="w-full bg-primary/80 rounded-t h-[65%]"></div>
+</div>
+<div class="flex justify-between text-[10px] text-on-surface-variant font-data-mono uppercase pt-2">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+<!-- Revenue by Category Donut -->
+<div class="bento-card bg-surface-container-lowest p-md rounded-xl shadow-sm overflow-hidden relative">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-title-md text-body-lg font-bold text-on-surface">Revenue by Category</h3>
+</div>
+<div class="flex items-center gap-lg">
+<!-- Simulated Donut Chart -->
+<div class="relative w-24 h-24 flex-shrink-0">
+<svg class="w-full h-full transform -rotate-90">
+<circle cx="48" cy="48" fill="transparent" r="36" stroke="#e9edff" stroke-width="12"></circle>
+<circle class="transition-all duration-1000" cx="48" cy="48" fill="transparent" r="36" stroke="#451ebb" stroke-dasharray="226" stroke-dashoffset="60" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="font-data-mono text-xs font-bold">72%</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 w-full">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-xs text-on-surface-variant">Electronics</span>
+</div>
+<span class="font-data-mono text-xs">$820k</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="text-xs text-on-surface-variant">Furniture</span>
+</div>
+<span class="font-data-mono text-xs">$210k</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-xs text-on-surface-variant">Office Supplies</span>
+</div>
+<span class="font-data-mono text-xs">$110k</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Atmospheric Image Element -->
+<div class="bento-card relative h-40 rounded-xl overflow-hidden shadow-sm">
+<div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent z-10"></div>
+<div class="absolute inset-0 w-full h-full bg-cover bg-center" data-alt="A clean, high-angle commercial shot of a modern architectural office with sleek minimalist furniture and expansive glass walls. The lighting is bright and airy, reflecting a professional enterprise atmosphere. The color palette is dominated by soft grays and iris purple accents, consistent with a high-end ERP software user experience. Deep focus and corporate modernism aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAEgGuHINXAM5Ou9FuiPcOKS8Muo0Qgn7m3lD5PraZokM7xIn2Wjr32sLCAQeqXmJTmvV_4WZugjsy0YCqN9DJ28SRgi02ExzoYo8Jy-jwlbU6vwGvhNHXLlTK5MGRpgcJOMBjikMqCoVajS9KOi0W-oEZo9boiR7KT6HTq-qegJDaekOESQeTxO-XyaPnu7JTcytahRtkNNkR4QHiYkIpYYFehB-oHYV2bCCTL1r4RTWN1-3X4npBpQS5cDBGubuIc9F3czHIRTXQ')"></div>
+<div class="absolute bottom-4 left-4 z-20">
+<p class="text-white font-title-md font-bold">Nova Cloud Insight</p>
+<p class="text-white/80 text-xs">Real-time data synchronization active</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container-lowest dark:bg-surface-container-low border-t border-outline-variant dark:border-outline font-label-md text-label-md">
+<!-- Dashboard (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full px-4 py-1 active:scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="mt-0.5">Dashboard</span>
+</a>
+<!-- Sales -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-highest transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="mt-0.5">Sales</span>
+</a>
+<!-- Inventory -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-highest transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="mt-0.5">Inventory</span>
+</a>
+<!-- More -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-highest transition-colors active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<span class="mt-0.5">More</span>
+</a>
+</nav>
+<!-- Micro-interaction Script -->
+<script>
+        document.querySelectorAll('.bento-card').forEach(card => {
+            card.addEventListener('touchstart', () => {
+                card.classList.add('brightness-95');
+            });
+            card.addEventListener('touchend', () => {
+                card.classList.remove('brightness-95');
+            });
+        });
+    </script>
+</body></html>

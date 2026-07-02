@@ -1,0 +1,1 @@
+﻿window.InventoryAnalyticsModel = class InventoryAnalytics {constructor(d){Object.assign(this,d)}}

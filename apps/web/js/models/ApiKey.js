@@ -1,0 +1,1 @@
+﻿window.ApiKeyModel = class ApiKey {constructor(d){Object.assign(this,d)}}

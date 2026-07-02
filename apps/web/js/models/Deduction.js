@@ -1,0 +1,1 @@
+﻿window.DeductionModel = class Deduction {constructor(data){Object.assign(this,data);}}

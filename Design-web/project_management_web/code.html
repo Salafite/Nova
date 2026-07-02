@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global ERP - Project Portfolio Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#e9edff",
+                    "tertiary": "#3d4551",
+                    "inverse-on-surface": "#edf0ff",
+                    "on-secondary-fixed": "#002020",
+                    "surface-container-high": "#e1e8fd",
+                    "secondary-container": "#90efef",
+                    "on-primary-fixed-variant": "#4723be",
+                    "on-primary-container": "#d8ceff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "on-secondary-container": "#006e6e",
+                    "error-container": "#ffdad6",
+                    "on-surface-variant": "#484554",
+                    "on-error": "#ffffff",
+                    "secondary-fixed": "#93f2f2",
+                    "on-tertiary-container": "#ced4e4",
+                    "background": "#f9f9ff",
+                    "surface-dim": "#d3daef",
+                    "tertiary-container": "#555c69",
+                    "surface": "#f9f9ff",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "on-tertiary": "#ffffff",
+                    "primary-fixed-dim": "#cabeff",
+                    "inverse-primary": "#cabeff",
+                    "surface-container-low": "#f1f3ff",
+                    "on-secondary": "#ffffff",
+                    "surface-variant": "#dce2f7",
+                    "primary-container": "#5d3fd3",
+                    "inverse-surface": "#293040",
+                    "surface-tint": "#6042d6",
+                    "outline-variant": "#c9c4d7",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "secondary": "#006a6a",
+                    "on-tertiary-fixed": "#151c27",
+                    "on-background": "#141b2b",
+                    "surface-container-highest": "#dce2f7",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "error": "#ba1a1a",
+                    "surface-bright": "#f9f9ff",
+                    "tertiary-fixed": "#dce2f3",
+                    "outline": "#797586",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed": "#e6deff",
+                    "on-surface": "#141b2b",
+                    "on-primary": "#ffffff",
+                    "primary": "#451ebb",
+                    "on-primary-fixed": "#1c0062"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "margin-mobile": "16px",
+                    "base": "4px",
+                    "md": "16px",
+                    "gutter": "16px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "margin-desktop": "32px",
+                    "max-width": "1440px"
+            },
+            "fontFamily": {
+                    "title-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "body-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #f9f9ff; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+        
+        /* Tonal layering depth */
+        .card-layer-1 { background-color: #ffffff; border: 1px solid #E5E7EB; }
+        .row-hover:hover { background-color: rgba(93, 63, 211, 0.02); }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- Side Navigation Bar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-lg z-50">
+<div class="px-md mb-xl flex items-center gap-sm">
+<div class="w-8 h-8 bg-primary-container rounded flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">factory</span>
+</div>
+<div>
+<h2 class="font-title-md text-title-md text-primary">Global ERP</h2>
+<p class="font-label-md text-label-md text-on-surface-variant">Manufacturing Suite</p>
+</div>
+</div>
+<nav class="flex-1 px-sm space-y-base">
+<a class="flex items-center gap-md px-md py-sm rounded transition-colors duration-200 text-on-surface-variant hover:bg-surface-variant/50" href="#">
+<span class="material-symbols-outlined">apps</span>
+<span class="font-label-md">Foundation</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-colors duration-200 text-on-surface-variant hover:bg-surface-variant/50" href="#">
+<span class="material-symbols-outlined">handshake</span>
+<span class="font-label-md">CRM</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-colors duration-200 text-primary bg-primary-container/10 border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span class="font-label-md">Procurement</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-colors duration-200 text-on-surface-variant hover:bg-surface-variant/50" href="#">
+<span class="material-symbols-outlined">factory</span>
+<span class="font-label-md">Manufacturing</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-colors duration-200 text-on-surface-variant hover:bg-surface-variant/50" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md">Inventory</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded transition-colors duration-200 text-on-surface-variant hover:bg-surface-variant/50" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-md">Accounting</span>
+</a>
+</nav>
+<div class="px-md mt-auto pt-lg space-y-base">
+<button class="w-full bg-primary text-on-primary py-sm rounded font-label-md flex items-center justify-center gap-xs hover:opacity-90 active:translate-y-[1px] transition-all">
+<span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+                Add Module
+            </button>
+<div class="pt-md">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-variant/50 rounded" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-md">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] h-16 bg-surface border-b border-outline-variant flex justify-between items-center px-margin-desktop z-40">
+<div class="flex items-center gap-lg">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style="font-size: 18px;">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary/30 text-body-md outline-none" placeholder="Search projects..." type="text"/>
+</div>
+<nav class="hidden lg:flex gap-lg">
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-title-md text-title-md" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-title-md text-title-md" href="#">Reports</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-title-md text-title-md" href="#">Timeline</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="bg-primary text-on-primary px-md py-2 rounded-lg font-label-md active:translate-y-[1px] transition-all">Create New</button>
+<div class="h-6 w-[1px] bg-outline-variant mx-sm"></div>
+<button class="text-on-surface-variant hover:bg-surface-variant/50 p-2 rounded-full">
+<span class="material-symbols-outlined">language</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-variant/50 p-2 rounded-full relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="flex items-center gap-sm ml-sm cursor-pointer hover:bg-surface-variant/20 p-1 pr-3 rounded-full transition-colors">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Professional headshot of a senior project manager, high resolution, soft studio lighting, focused gaze, corporate modernism style, clean white background, wearing a charcoal blazer, warm skin tones, crisp details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHq9p-Lx74x1-Iy4Z4iIM2IjFgDGiJbOtxmc5OKMiR4y6u3B_olRrkaBazXOxhDj3Ozy6mrm0E2fQkf8u4HsxTSM4TIIaI7vkvfRwio5iHcP6jkMkgxpwX0yVD2a1TU1hpXIesDJdbqLMoYB29Q_sr4U9W48MxtNqPFpSb2K6bHZqpsciU52kN4IAulTG7umeziyiJF09W7O04r9YmNlI1ogDCZRx82DmxvN8x1qKS37r4e2Q8h-l1YD08S103bBziLm0N_dITN0E"/>
+</div>
+<span class="font-label-md text-on-surface hidden md:block">Alex Sterling</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] pt-24 pb-12 px-margin-desktop bg-background min-h-screen">
+<!-- Header -->
+<div class="flex justify-between items-end mb-lg">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Project Portfolio Overview</h1>
+<p class="text-on-surface-variant font-body-md">Real-time status of 24 active global manufacturing initiatives.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs border border-outline px-md py-sm rounded-lg font-label-md bg-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">filter_list</span>
+                    Filter
+                </button>
+<button class="flex items-center gap-xs border border-outline px-md py-sm rounded-lg font-label-md bg-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+                    Export
+                </button>
+</div>
+</div>
+<!-- KPI Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-xl">
+<div class="card-layer-1 p-lg rounded-xl flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-on-surface-variant uppercase tracking-wider">Active Projects</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">assignment</span>
+</div>
+<div class="mt-md">
+<div class="font-headline-lg text-headline-lg">24</div>
+<div class="flex items-center gap-xs text-secondary mt-xs font-label-md">
+<span class="material-symbols-outlined" style="font-size: 14px;">trending_up</span>
+<span>+12% vs last month</span>
+</div>
+</div>
+</div>
+<div class="card-layer-1 p-lg rounded-xl flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-on-surface-variant uppercase tracking-wider">Billable Hours</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">timer</span>
+</div>
+<div class="mt-md">
+<div class="font-headline-lg text-headline-lg font-data-mono">1,842.5</div>
+<div class="flex items-center gap-xs text-on-surface-variant mt-xs font-label-md">
+<span>Current Quarter</span>
+</div>
+</div>
+</div>
+<div class="card-layer-1 p-lg rounded-xl flex flex-col justify-between border-l-4 border-l-error">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-error uppercase tracking-wider font-bold">Projects at Risk</span>
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="mt-md">
+<div class="font-headline-lg text-headline-lg text-error">03</div>
+<div class="flex items-center gap-xs text-error mt-xs font-label-md">
+<span>Requires Immediate Action</span>
+</div>
+</div>
+</div>
+<div class="card-layer-1 p-lg rounded-xl flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-on-surface-variant uppercase tracking-wider">Completed Q3</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="mt-md">
+<div class="font-headline-lg text-headline-lg">18</div>
+<div class="flex items-center gap-xs text-secondary mt-xs font-label-md">
+<span class="material-symbols-outlined" style="font-size: 14px;">check</span>
+<span>On track for goal</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-gutter">
+<!-- Project List Table -->
+<div class="xl:col-span-2 card-layer-1 rounded-xl overflow-hidden flex flex-col">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-on-surface">Recent Projects</h3>
+<button class="text-primary font-label-md hover:underline">View All Projects</button>
+</div>
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-lg py-sm font-label-md text-on-surface-variant uppercase border-b border-outline-variant">Project Name</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant uppercase border-b border-outline-variant">Client</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant uppercase border-b border-outline-variant">Priority</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant uppercase border-b border-outline-variant">Progress</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant uppercase border-b border-outline-variant">Team</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant uppercase border-b border-outline-variant">Due Date</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Project Row 1 -->
+<tr class="row-hover transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-lg font-semibold text-on-surface">Precision Turbine 500</span>
+<span class="text-label-md text-on-surface-variant">#PRJ-8821</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md text-on-surface-variant">AeroDynamics Intl.</td>
+<td class="px-lg py-md">
+<span class="bg-error/10 text-error px-sm py-0.5 rounded font-label-md">High</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-24 bg-surface-variant rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-full" style="width: 65%;"></div>
+</div>
+<span class="font-data-mono text-label-md">65%</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex -space-x-2 overflow-hidden">
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-white" data-alt="Avatar of a male software developer with glasses, minimalist style, corporate photography, soft background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSVe0vBSOYbc8wx13JoDW-Ix3x7d4OeOmTHxpF7t0w7xrIrVwscfc14KViF0ovekPbpTzKDkq2Cl47v0fGLKsLwRWqem5WHBcz1ltjpsWku3gi-Oe2OrNvxyypUr6YmMHck7cDB8jX70FopEVjRS170ZTz-9CmQvabAfnniQY1V1hfanECpOGS3f4SXwH7TvU7qZwARyq0GwOe8WJggiopryqLfOByGUGYRLayi2lqp6kYm2hOdRmAvLC8iUBuXkMWNAmOXGn4G1I"/>
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-white" data-alt="Avatar of a female mechanical engineer, professional portrait, clean aesthetic, high detail, studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWpmIAxUSQt8NKWySdnQ42J0huWSqvBEuc-BsbRyZstuKUQ0SUPxy-_9U2FxrrP_rgHayo6JynWdxvM3hfVSoyMBWvfJC9rMFe1wpOP7QnIrECMX7VPurW7OySfr0qvtHd-IIJQdaqEtzJf7NmT0kE1Kv6a0YM-uAgZ4qn2KxSBZt2TzaYDphoUyK5v0dPuEH3dP0lmanVYHLRTz26o-Vhn0piSvv2ErD_S3DoU89b__UjmtbO717o4E0PyjAU-aw8qE-Btrgge7U"/>
+<div class="h-6 w-6 rounded-full bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface ring-2 ring-white">+2</div>
+</div>
+</td>
+<td class="px-lg py-md font-data-mono text-body-md">Oct 12, 2023</td>
+</tr>
+<!-- Project Row 2 -->
+<tr class="row-hover transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-lg font-semibold text-on-surface">Solar Grid Expansion</span>
+<span class="text-label-md text-on-surface-variant">#PRJ-9044</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md text-on-surface-variant">Evergreen Power</td>
+<td class="px-lg py-md">
+<span class="bg-secondary/10 text-secondary px-sm py-0.5 rounded font-label-md">Medium</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-24 bg-surface-variant rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-full" style="width: 82%;"></div>
+</div>
+<span class="font-data-mono text-label-md">82%</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex -space-x-2 overflow-hidden">
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-white" data-alt="Portrait of an asian woman project coordinator, modern business professional, soft daylight, neutral background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlAdUNm7IwWcpZYME_GCcdZ0zPAhdF8RhrtF3ENgQESglLOypynRUmaSbmDxpACtPYXU-KSMtYZ9UchgU700_v6uiiO04bl8pcQXrYhMwL9C0pw8wtS_OVxA-iPQXDuoHL3EjkKfwX0G0vcHkyaz_f5j_f__c_g6MSTnFWwt-YlVsak7-O0gir7FHSarr3hJvN6j-1NUrZLGZfwPohemD6uZtMpvKnXgEWK4zLeTKilVV0GHMFh3E9DNS5PG1rtNIS2L2c7yBAtqM"/>
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-white" data-alt="Portrait of a diverse team leader, serious expression, high definition, professional office setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC83kG386pzYNVTpBeJnXtwAzJfWayawozFABPMlLDyQXPRay4CX8qxePaW6VccDvm6b2Jn_39J_hosqZ_014rLKA6vcsyVXUdHnVYEPJjz-yNQ42Ks-MbKqIupbqs66GOIQ5wta16Fj_3DNJYmEJDTMCDLEVeIrBFTz7kBDTznfBSWpaOeGqKv1kOUrS26gTBPadmDmmmNjNqus9f5QA8I3qIPQKVUMM7RsT-IFzoLLzJ9EyO3ZNtHOojwuUhdNIDUXqujxTkAr6k"/>
+</div>
+</td>
+<td class="px-lg py-md font-data-mono text-body-md">Nov 04, 2023</td>
+</tr>
+<!-- Project Row 3 -->
+<tr class="row-hover transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-lg font-semibold text-on-surface">Bio-Filter V3 Alpha</span>
+<span class="text-label-md text-on-surface-variant">#PRJ-7210</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md text-on-surface-variant">MedLife Systems</td>
+<td class="px-lg py-md">
+<span class="bg-on-surface-variant/10 text-on-surface-variant px-sm py-0.5 rounded font-label-md">Low</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-24 bg-surface-variant rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-full" style="width: 25%;"></div>
+</div>
+<span class="font-data-mono text-label-md">25%</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex -space-x-2 overflow-hidden">
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-white" data-alt="Close-up of a smiling tech consultant, corporate lifestyle, modern lighting, vibrant colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG97rRteI3ha4Hy8rU7vgocQ64BWFJ6O6RJnLlEFECYF0bw3jDh2Kvnoz7MW9bWPvSocGdO8H047NxPW_ilpS3dxA-dNaJoAu_3J-yY0XQvnaeY_sD6XYcAbRDm683DxV5u_rFahJez6wGcaE_HsgxEntx3tNnhxQ6j0FR0BHtXFfJGDFR80PIaQgfWQaNDj2L1moAFlxqxX9hNB6g5uWx2_VqUAIx9IT1nf2840gWddGUuk2dYm_pZM8Vc99563cu8mgQ9u8fMCk"/>
+</div>
+</td>
+<td class="px-lg py-md font-data-mono text-body-md">Dec 18, 2023</td>
+</tr>
+<!-- Project Row 4 -->
+<tr class="row-hover transition-colors">
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-lg font-semibold text-on-surface">Hydro-Pump Efficiency</span>
+<span class="text-label-md text-on-surface-variant">#PRJ-4432</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md text-on-surface-variant">City Waterworks</td>
+<td class="px-lg py-md">
+<span class="bg-error/10 text-error px-sm py-0.5 rounded font-label-md">High</span>
+</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-24 bg-surface-variant rounded-full h-1.5 overflow-hidden">
+<div class="bg-error h-full" style="width: 95%;"></div>
+</div>
+<span class="font-data-mono text-label-md">95%</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex -space-x-2 overflow-hidden">
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-white" data-alt="Professional avatar of a senior engineer, focused, industrial background blurred, high detail." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOVVIxkf9UGDf0abDRLaBbc4Plop5wvGYpZh2p0OR8ZSBDoFFUkmLVdsEIwlS_yPiQDFpTFkQaiGhN64Za3wVWu55jHkgzGD2Z9pRRGPpLHFdoWwwKUjbW7dsIcJH82DGlT7l1TWxjIOWpyn7bhHWQgjqtkj13naWJTXChZpK0cKGj-PkPrW8tfs83E8Efcd_dagjjmfMdcBGNPeYhPVSuiFVUjBzPrMv4SBCLEtPP5NYdlJ4N7Bxvdf4XiXCeH-_EuYGQ7sZt0eE"/>
+<img class="inline-block h-6 w-6 rounded-full ring-2 ring-white" data-alt="Professional avatar of a designer, creative look, minimal studio setup, crisp sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3gj1VlEJyH-iCwKzAHt2tqlnhrRXXqCHApRjpYemDrq3PZr5twym-jkjlpft2xnNLfCgrBo8juBcH21hNvTg_vwd6KspJNXrnCxqbxbWcylDe5gFEus9tk4htAVmaIJ9HbFWBFrBSaHvA-aXrqQGDWfTOcYvBMIhKnadcIGCJyCYEHudpFK6u-iAXAzvnVvMRJVWsyXEmJrLoiOhw-VcIYI1Rbc9ifmOKQSUphzNbivMIGwuyxRVoeq9vSFPB9SX3YWbCabS9wcs"/>
+</div>
+</td>
+<td class="px-lg py-md font-data-mono text-body-md">Sep 30, 2023</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Resource Allocation / Sidebar Metrics -->
+<div class="space-y-gutter">
+<!-- Resource Allocation Card -->
+<div class="card-layer-1 rounded-xl p-lg">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-title-md text-on-surface">Resource Allocation</h3>
+<span class="material-symbols-outlined text-outline">group</span>
+</div>
+<div class="space-y-md">
+<div>
+<div class="flex justify-between font-label-md mb-xs">
+<span class="text-on-surface-variant">Engineering Team</span>
+<span class="text-on-surface font-bold">92%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-2">
+<div class="bg-primary h-full rounded-full" style="width: 92%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between font-label-md mb-xs">
+<span class="text-on-surface-variant">Design &amp; R&amp;D</span>
+<span class="text-on-surface font-bold">45%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-2">
+<div class="bg-primary h-full rounded-full" style="width: 45%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between font-label-md mb-xs">
+<span class="text-on-surface-variant">Quality Control</span>
+<span class="text-on-surface font-bold">78%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-2">
+<div class="bg-primary h-full rounded-full" style="width: 78%;"></div>
+</div>
+</div>
+</div>
+<button class="w-full mt-lg border border-outline-variant py-sm rounded-lg font-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors">Manage Teams</button>
+</div>
+<!-- Recent Activity Timeline -->
+<div class="card-layer-1 rounded-xl p-lg">
+<h3 class="font-title-md text-on-surface mb-lg">Recent Activity</h3>
+<div class="space-y-lg relative">
+<!-- Timeline Line -->
+<div class="absolute left-[11px] top-2 bottom-2 w-[1px] bg-outline-variant"></div>
+<!-- Activity 1 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-primary-container/20 border border-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-size: 14px;">check</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface"><span class="font-semibold">Sarah Jenkins</span> completed Phase 1 for Turbine 500</p>
+<p class="font-label-md text-on-surface-variant">2 hours ago</p>
+</div>
+</div>
+<!-- Activity 2 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-error-container/20 border border-error flex items-center justify-center">
+<span class="material-symbols-outlined text-error" style="font-size: 14px;">warning</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface"><span class="font-semibold">System Alert:</span> Milestone delayed for Hydro-Pump</p>
+<p class="font-label-md text-on-surface-variant">5 hours ago</p>
+</div>
+</div>
+<!-- Activity 3 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-surface-container-high border border-outline flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-size: 14px;">comment</span>
+</div>
+<div>
+<p class="font-body-md text-on-surface"><span class="font-semibold">Marcus Yao</span> added a comment on Solar Grid</p>
+<p class="font-label-md text-on-surface-variant">Yesterday, 4:22 PM</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Atmospheric Element (Subtle Background Detail) -->
+<div class="fixed bottom-0 right-0 p-lg pointer-events-none opacity-20">
+<span class="material-symbols-outlined text-primary" style="font-size: 240px; font-variation-settings: 'wght' 100;">dashboard_customize</span>
+</div>
+</main>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Simple hover effect for KPI cards
+        document.querySelectorAll('.card-layer-1').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('transition-transform', 'duration-300');
+                if(!card.classList.contains('fixed')) card.style.transform = 'translateY(-2px)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Search Bar Focus Simulation
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('ring-2', 'ring-primary/20');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('ring-2', 'ring-primary/20');
+        });
+    </script>
+</body></html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Nova ERP - Mobile POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff",
+                        "tertiary-container": "#555c69",
+                        "surface-variant": "#dce2f7",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#93f2f2",
+                        "inverse-on-surface": "#edf0ff",
+                        "secondary": "#006a6a",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#151c27",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "on-primary-fixed-variant": "#4723be",
+                        "surface-container-high": "#e1e8fd",
+                        "surface-container": "#e9edff",
+                        "on-secondary": "#ffffff",
+                        "outline": "#797586",
+                        "background": "#f9f9ff",
+                        "on-primary-fixed": "#1c0062",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-primary": "#ffffff",
+                        "on-background": "#141b2b",
+                        "inverse-surface": "#293040",
+                        "on-surface": "#141b2b",
+                        "surface-bright": "#f9f9ff",
+                        "primary-fixed": "#e6deff",
+                        "on-surface-variant": "#484554",
+                        "tertiary": "#3d4551",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c9c4d7",
+                        "surface-container-low": "#f1f3ff",
+                        "on-primary-container": "#d8ceff",
+                        "surface-dim": "#d3daef",
+                        "on-tertiary-container": "#ced4e4",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "surface-tint": "#6042d6",
+                        "secondary-container": "#90efef",
+                        "on-secondary-fixed": "#002020",
+                        "surface": "#f9f9ff",
+                        "primary-container": "#5d3fd3",
+                        "on-secondary-container": "#006e6e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "inverse-primary": "#cabeff",
+                        "tertiary-fixed": "#dce2f3",
+                        "primary": "#451ebb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "max-width": "1440px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .press-effect:active { transform: translateY(1px); transition: transform 75ms ease-out; }
+        .scale-effect:active { transform: scale(0.95); transition: transform 75ms ease-out; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md overflow-hidden h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-14 bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline shrink-0 z-50">
+<div class="flex items-center gap-md">
+<button class="press-effect text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed-dim">Enterprise Suite</h1>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-9 pr-3 py-1.5 bg-surface-container-low border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/30 outline-none w-48 text-body-md" placeholder="Search items..." type="text"/>
+</div>
+<button class="press-effect font-label-md text-label-md text-primary dark:text-primary-fixed-dim border border-primary/20 px-2 py-1 rounded">
+                EN/AR
+            </button>
+</div>
+</header>
+<!-- Main POS Canvas -->
+<main class="flex-1 overflow-hidden flex flex-col relative">
+<!-- Category Chips -->
+<div class="flex gap-sm px-margin-mobile py-md overflow-x-auto hide-scrollbar shrink-0 bg-surface">
+<button class="bg-primary-container text-on-primary-container px-md py-1.5 rounded-full font-label-md text-label-md whitespace-nowrap">All Items</button>
+<button class="bg-surface-container-high text-on-surface-variant px-md py-1.5 rounded-full font-label-md text-label-md whitespace-nowrap">Electronics</button>
+<button class="bg-surface-container-high text-on-surface-variant px-md py-1.5 rounded-full font-label-md text-label-md whitespace-nowrap">Apparel</button>
+<button class="bg-surface-container-high text-on-surface-variant px-md py-1.5 rounded-full font-label-md text-label-md whitespace-nowrap">Home Goods</button>
+<button class="bg-surface-container-high text-on-surface-variant px-md py-1.5 rounded-full font-label-md text-label-md whitespace-nowrap">Hardware</button>
+<button class="bg-surface-container-high text-on-surface-variant px-md py-1.5 rounded-full font-label-md text-label-md whitespace-nowrap">Beverages</button>
+</div>
+<!-- Product Grid -->
+<div class="flex-1 overflow-y-auto px-margin-mobile pb-40">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-md mt-sm">
+<!-- Product Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col scale-effect group cursor-pointer">
+<div class="aspect-square relative overflow-hidden">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A high-end professional camera lens resting on a clean, light gray surface. The lighting is crisp and cool, highlighting the metallic textures and optical glass. The shot is minimalist and sophisticated, following an enterprise aesthetic with neutral tones and sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJhCmjcDkp-Mxm_k8KpOUd0YCB4s-NCTr9RWlvnTfeW0SveF8tGPJ4XPZQHyt9xeo-kCfD6bLpleI5R3JmAhNABVydUCT5wRjvHX0Hu41b6eMvMz7n5-emeZz44W7EbWLJ_EbvHy5p2j49pM_3F4-30IF4PuzWwjUeegio9I26cXmBU0ltbvMhIxRHnFulxtzX01t9DnY60JSQSKISbxOgdWqBbfsrzVX5OkkApAoFEO-ZonXhneGQ9jYJAuVA-tv-1ALKBoka-jg"/>
+<span class="absolute top-2 right-2 bg-secondary-container text-on-secondary-container text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">New</span>
+</div>
+<div class="p-sm flex flex-col gap-xs">
+<p class="font-label-md text-label-md text-on-surface truncate">Optical Master G-Series</p>
+<p class="font-data-mono text-data-mono text-primary font-bold">$1,299.00</p>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col scale-effect group cursor-pointer">
+<div class="aspect-square relative overflow-hidden">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A sleek, titanium-bodied smartphone floating in a void of soft lavender and deep purple gradients. The screen displays a complex data dashboard with minimalist UI elements. The lighting is cinematic, reflecting off the polished metal edges of the device." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjEneARxSP146objJWuL59vH1r6EnQgmA08BW-BJGpJ94hnO7wl3NK-xjLG30G89VAI6reVW-NdBwUwXbdOlkdtk4FYr-fh67958YuFFBdVkzwbO6INVgo81FZ4qlktdpX-SLr3fe18Uj_1Cj3LwG9b8G3r0pY1nj9A9uF1DShw6mgDZ7MBmKGkZYnI55olfW6z7UduUTD9PjCcKbNNPDqG3QEB6GiwcmiX69t11SPnBfnJC-pl1IJt-oGKnBLDxEKgHxfYzfgw24"/>
+</div>
+<div class="p-sm flex flex-col gap-xs">
+<p class="font-label-md text-label-md text-on-surface truncate">Nova Titanium Pro</p>
+<p class="font-data-mono text-data-mono text-primary font-bold">$999.50</p>
+</div>
+</div>
+<!-- Product Card 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col scale-effect group cursor-pointer">
+<div class="aspect-square relative overflow-hidden">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A stack of premium, charcoal-gray minimalist linen notebooks on a light oak desk. Beside them is a high-precision black matte fountain pen. The scene is illuminated by soft, natural window light creating gentle shadows, embodying a corporate elegance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1lsG6Y8aW5hMPqCZ7eyPN2eRWwev1XQ79iMCDgdWynv3B8WqCG7L9WgR82VRadEnOt5qKoXCzXpRI90y3c7T6Ty7LtjBVA7f0_7J_S9yI80IgEaRHra9FW5Hba5nhivikC0HDQhsE7OeSTnTGhaoTrWCAUMbWE2ruNq2RmRD44xf-dE26vVuS6jz3WnZmKWq5jg2JN-qfTf3ayGQDFVmQ7QZi4nv0_SWspusKjeqIJnLd3196VrJih4UuwEi_FBRaojR_WgZ_3rQ"/>
+<span class="absolute top-2 right-2 bg-error-container text-on-error-container text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Sale</span>
+</div>
+<div class="p-sm flex flex-col gap-xs">
+<p class="font-label-md text-label-md text-on-surface truncate">Executive Journal Set</p>
+<p class="font-data-mono text-data-mono text-primary font-bold">$45.00</p>
+</div>
+</div>
+<!-- Product Card 4 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col scale-effect group cursor-pointer">
+<div class="aspect-square relative overflow-hidden">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A pair of high-fidelity wireless noise-canceling headphones in a matte navy finish. They are presented on a minimalist metal stand against a clean, corporate white background with subtle blue-toned shadows. The design is modern, functional, and premium." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZ5GT2Pqgo5ja7qCjQz4R-1QtCzf_g9LsSGKO5dmq4tfz0FbnliHKAIf5K0DOdViLQ5rYuiGcdAbBapsrUtdyf1LaCPvXpxjB_EBh1jkyQb0f14DPKPj3dGJY8SGinjJV_FywM2uz-KVuL0P6w5t-0IC_LyYeprmYhzVJs1lYqjIRhyPOBCcK7v2RdcLW8ZlH-fb1v88JyYbdHqWB5RLiwI9FAEaaABXqEFW1JV5a2AZLOeVymiYICiPUehjabGKb1CtYP4nDpjAQ"/>
+</div>
+<div class="p-sm flex flex-col gap-xs">
+<p class="font-label-md text-label-md text-on-surface truncate">Sonic-V ANC Headphones</p>
+<p class="font-data-mono text-data-mono text-primary font-bold">$349.99</p>
+</div>
+</div>
+<!-- Product Card 5 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col scale-effect group cursor-pointer">
+<div class="aspect-square relative overflow-hidden">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="A sophisticated smart coffee machine with a touch-screen interface, dispensing a perfect espresso into a glass cup. The setting is a bright, modern corporate breakroom with marble countertops and warm ambient lighting. The aesthetic is efficient and high-tech." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC33MlLLlwBIoD_ExgQkoIWdlmVJ0jh0fILTJDHbH78sE3EYm4XPP-HJFKPnqXvHob6Co3nmaYmrHs_wRPTd8iIWxe666Kyi7Slwj8VNer8tiBHaJbaK3nL8z7CeshP3JWoWC6kml08ZuJ9bHMORgVW7DgptfWLD2QTtPIcqdQqJhh3u0PkTwjsv1kWuT5j0T4ibIQljd5KY0plzDx_VccBqSKcrEuwUfYoP0m_zbnbWRwhOiZ0PJfM-B2RAq4zt2CFkdlc1c4oCA0"/>
+</div>
+<div class="p-sm flex flex-col gap-xs">
+<p class="font-label-md text-label-md text-on-surface truncate">AutoBrew Elite ERP</p>
+<p class="font-data-mono text-data-mono text-primary font-bold">$520.00</p>
+</div>
+</div>
+<!-- Product Card 6 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col scale-effect group cursor-pointer">
+<div class="aspect-square relative overflow-hidden">
+<img class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" data-alt="Minimalist ergonomic mechanical keyboard with clean white keys and a silver aluminum base. The backlight is a subtle iris purple. The photo is taken from a low angle on a clean desk, highlighting the premium build quality and modern design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDt106kpx6givL5o05-cmSL24zQTgrB7ensKyz7zHoqRpRaQ4JBuugaqCseAGQTn5IfIHnD8wBWQIgO1zqrORfvSWb70D-bZ1jIfaGu1qzchWVfwfoYqf8L5-rqBsA0f3w313Q_JtmAxFeZpu6Be9rA4S1ilEX_RFKARDsqrbRKfN_BdjaTWFmcoiuFFou__9ljaT3Cy2l2__Yf6FgzRUf7KLH7uB7eFc9R5ZllIyd-8_SFxxaBD_4p32b-DzuDfcCx2KDntkYmUQ4"/>
+</div>
+<div class="p-sm flex flex-col gap-xs">
+<p class="font-label-md text-label-md text-on-surface truncate">Tactile Workhorse K2</p>
+<p class="font-data-mono text-data-mono text-primary font-bold">$180.00</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Cart Summary / Keypad -->
+<div class="fixed bottom-16 left-0 w-full transition-all duration-300 ease-in-out z-40 bg-surface border-t border-outline-variant shadow-2xl translate-y-[calc(100%-64px)]" id="pos-drawer">
+<!-- Handle & Summary Bar -->
+<div class="h-16 flex items-center justify-between px-margin-mobile cursor-pointer" id="drawer-toggle">
+<div class="flex items-center gap-md">
+<div class="relative">
+<span class="material-symbols-outlined text-primary">shopping_cart</span>
+<span class="absolute -top-1 -right-1 bg-error text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">3</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase">Current Order</p>
+<p class="font-title-md text-title-md font-bold text-primary">$2,343.99</p>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="bg-primary text-white font-label-md text-label-md px-lg py-2 rounded-lg press-effect">CHECKOUT</button>
+<span class="material-symbols-outlined text-on-surface-variant transition-transform" id="chevron">keyboard_arrow_up</span>
+</div>
+</div>
+<!-- Expanded Drawer Content (Grid Layout) -->
+<div class="h-[618px] flex flex-col md:flex-row bg-surface overflow-hidden">
+<!-- Order Items List -->
+<div class="flex-1 overflow-y-auto border-r border-outline-variant p-md">
+<h3 class="font-label-md text-label-md text-on-surface-variant mb-md border-b pb-sm">CART ITEMS</h3>
+<div class="flex flex-col gap-md">
+<div class="flex justify-between items-center bg-surface-container-low p-sm rounded-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-surface-container-highest rounded-md flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">photo</span>
+</div>
+<div>
+<p class="font-label-md text-label-md font-semibold">Nova Titanium Pro</p>
+<p class="text-[10px] text-on-surface-variant">QTY: 1</p>
+</div>
+</div>
+<p class="font-data-mono text-data-mono">$999.50</p>
+</div>
+<div class="flex justify-between items-center bg-surface-container-low p-sm rounded-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-surface-container-highest rounded-md flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">photo</span>
+</div>
+<div>
+<p class="font-label-md text-label-md font-semibold">Optical Master G-Series</p>
+<p class="text-[10px] text-on-surface-variant">QTY: 1</p>
+</div>
+</div>
+<p class="font-data-mono text-data-mono">$1,299.00</p>
+</div>
+<div class="flex justify-between items-center bg-surface-container-low p-sm rounded-lg border-2 border-primary/20">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-surface-container-highest rounded-md flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">photo</span>
+</div>
+<div>
+<p class="font-label-md text-label-md font-semibold">Sonic-V ANC Headphones</p>
+<p class="text-[10px] text-primary font-bold">QTY: 2 (EDITING)</p>
+</div>
+</div>
+<p class="font-data-mono text-data-mono">$699.98</p>
+</div>
+</div>
+</div>
+<!-- Numeric Keypad Section -->
+<div class="w-full md:w-80 bg-surface-container-low p-md flex flex-col gap-md">
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-sm flex items-end justify-between">
+<span class="text-[10px] text-on-surface-variant font-bold uppercase">Quantity</span>
+<span class="text-2xl font-data-mono text-primary">2</span>
+</div>
+<div class="grid grid-cols-3 gap-sm flex-1">
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">1</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">2</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">3</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">4</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">5</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">6</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">7</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">8</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">9</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">.</button>
+<button class="bg-surface-container-highest rounded-lg h-12 flex items-center justify-center font-title-md text-title-md press-effect">0</button>
+<button class="bg-error-container text-on-error-container rounded-lg h-12 flex items-center justify-center press-effect">
+<span class="material-symbols-outlined">backspace</span>
+</button>
+</div>
+<button class="w-full bg-secondary text-white py-3 rounded-lg font-bold press-effect">APPLY QUANTITY</button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-16 px-xs bg-surface dark:bg-surface-dim border-t border-outline-variant dark:border-outline">
+<div class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-full px-3 py-1 press-effect scale-95 duration-75">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="font-label-md text-label-md">POS</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container duration-75">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-label-md">Catalog</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container duration-75">
+<span class="material-symbols-outlined">warehouse</span>
+<span class="font-label-md text-label-md">Warehouse</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container duration-75">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">CRM</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container duration-75">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="font-label-md text-label-md">Suppliers</span>
+</div>
+</nav>
+<script>
+        const drawer = document.getElementById('pos-drawer');
+        const toggle = document.getElementById('drawer-toggle');
+        const chevron = document.getElementById('chevron');
+        let isOpen = false;
+
+        toggle.addEventListener('click', () => {
+            isOpen = !isOpen;
+            if (isOpen) {
+                drawer.style.transform = 'translateY(0)';
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                drawer.style.transform = 'translateY(calc(100% - 64px))';
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        });
+
+        // RTL Support Toggle Logic (Simulated)
+        const langToggle = document.querySelector('button.font-label-md');
+        langToggle.addEventListener('click', () => {
+            const currentDir = document.documentElement.dir;
+            if (currentDir === 'ltr') {
+                document.documentElement.dir = 'rtl';
+                langToggle.innerText = 'AR/EN';
+            } else {
+                document.documentElement.dir = 'ltr';
+                langToggle.innerText = 'EN/AR';
+            }
+        });
+    </script>
+</body></html>

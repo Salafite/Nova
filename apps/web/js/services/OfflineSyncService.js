@@ -1,0 +1,1 @@
+﻿window.OfflineSyncService = class OfflineSyncService {}

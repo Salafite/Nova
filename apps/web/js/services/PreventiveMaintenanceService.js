@@ -1,0 +1,1 @@
+﻿window.PreventiveMaintenanceService = class PreventiveMaintenanceService{schedule(a){return {status:'scheduled',asset:a}}}

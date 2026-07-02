@@ -1,0 +1,1 @@
+﻿window.ProvisioningService = class ProvisioningService {}

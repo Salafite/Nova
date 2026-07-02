@@ -1,0 +1,109 @@
+<!-- Quick Actions Section -->
+<section>
+<h2 class="font-label-md text-label-md text-on-surface-variant mb-md uppercase tracking-wider">Quick Actions</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<button class="action-btn flex items-center justify-center gap-sm bg-primary text-on-primary py-md px-lg rounded-xl font-body-md font-bold hover:bg-primary-container transition-all press-effect shadow-sm" onclick="app.loadModule('pos')">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span>Open POS System</span>
+</button>
+<button class="action-btn flex items-center justify-center gap-sm bg-surface-container-lowest text-primary border border-primary py-md px-lg rounded-xl font-body-md font-bold hover:bg-surface-container-high transition-all press-effect" onclick="app.loadModule('products')">
+<span class="material-symbols-outlined">add_box</span>
+<span>Create Product</span>
+</button>
+<button class="action-btn flex items-center justify-center gap-sm bg-surface-container-lowest text-primary border border-primary py-md px-lg rounded-xl font-body-md font-bold hover:bg-surface-container-high transition-all press-effect" onclick="app.loadModule('purchasing')">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Purchase Order</span>
+</button>
+</div>
+{{pendingAlert}}
+</section>
+<!-- KPI Row -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<div class="surface-card p-lg rounded-xl flex flex-col gap-xs hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<span class="text-label-md font-label-md text-on-surface-variant">Today's Sales</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-xs rounded-lg">trending_up</span>
+</div>
+<span class="font-headline-lg text-headline-lg text-on-surface font-data-mono">${{todaySales}}</span>
+</div>
+<div class="surface-card p-lg rounded-xl flex flex-col gap-xs hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<span class="text-label-md font-label-md text-on-surface-variant">Total Orders</span>
+<span class="material-symbols-outlined text-secondary bg-secondary-fixed p-xs rounded-lg">shopping_cart</span>
+</div>
+<span class="font-headline-lg text-headline-lg text-on-surface font-data-mono">{{totalOrders}}</span>
+</div>
+<div class="surface-card p-lg rounded-xl flex flex-col gap-xs border-l-4 border-l-error hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<span class="text-label-md font-label-md text-on-surface-variant">Low Stock Items</span>
+<span class="material-symbols-outlined text-error bg-error-container p-xs rounded-lg">inventory</span>
+</div>
+<span class="font-headline-lg text-headline-lg text-on-surface font-data-mono">{{lowStock}}</span>
+<div class="flex items-center gap-xs mt-sm text-error text-label-md font-label-md">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+<span>Requires replenishment</span>
+</div>
+</div>
+</section>
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Recent Sales Table -->
+<section class="lg:col-span-2 surface-card rounded-xl flex flex-col overflow-hidden">
+<div class="p-lg flex justify-between items-center border-b border-outline-variant">
+<h3 class="font-title-md text-title-md text-on-surface">Recent Sales</h3>
+<button class="text-primary text-label-md font-bold hover:underline" onclick="app.loadModule('sales')">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left erp-table">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant">
+<tr>
+<th class="px-lg py-md">ORDER ID</th>
+<th class="px-lg py-md">CUSTOMER</th>
+<th class="px-lg py-md text-right">TOTAL</th>
+<th class="px-lg py-md">STATUS</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+{{recentSalesRows}}
+</tbody>
+</table>
+</div>
+</section>
+<!-- Inventory Status Side Card -->
+<section class="surface-card rounded-xl p-lg flex flex-col gap-lg overflow-hidden">
+<div>
+<h3 class="font-title-md text-title-md text-on-surface mb-md">Stock Overview</h3>
+<div class="space-y-md">
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between text-body-md">
+<span>Main Warehouse</span>
+<span class="font-bold font-data-mono">{{mainWarehouseUtil}}%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full transition-all duration-1000" style="width: {{mainWarehouseUtil}}%"></div>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between text-body-md">
+<span>Distribution Center</span>
+<span class="font-bold font-data-mono">{{distCenterUtil}}%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full transition-all duration-1000" style="width: {{distCenterUtil}}%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-xl p-md flex flex-col items-center justify-center text-center relative overflow-hidden group">
+<div class="z-10">
+<span class="material-symbols-outlined text-[48px] text-primary mb-sm">analytics</span>
+<h4 class="font-body-lg font-bold text-on-surface mb-xs">Inventory Forecast</h4>
+<p class="text-body-md text-on-surface-variant mb-md px-md">Predictive analysis suggests restocking for Q4 peak.</p>
+<button class="bg-white text-primary border border-primary px-lg py-sm rounded-xl font-bold hover:bg-primary-container hover:text-white transition-all press-effect" onclick="app.loadModule('planning')">Analyze Data</button>
+</div>
+<div class="absolute inset-0 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
+<div class="w-full h-full" style="background-image: radial-gradient(#451ebb 1px, transparent 1px); background-size: 20px 20px;"></div>
+</div>
+</div>
+</section>
+</div>

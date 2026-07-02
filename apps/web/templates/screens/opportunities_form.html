@@ -1,0 +1,51 @@
+<div class="max-w-2xl mx-auto mt-lg">
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+    <div class="flex items-center gap-md mb-lg">
+      <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors p-xs" onclick="controllers.opportunities.render()">arrow_back</button>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface">{{title}}</h2>
+    </div>
+    <form onsubmit="return controllers.opportunities.saveForm()" class="space-y-md">
+      <input id="opportunityFormId" type="hidden" value="{{id}}"/>
+      <div>
+        <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Opportunity Name *</label>
+        <input id="opportunityFormName" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{opportunityName}}" required/>
+      </div>
+      <div class="grid grid-cols-2 gap-md">
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Stage</label>
+          <select id="opportunityFormStage" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md">
+            <option value="Prospecting">Prospecting</option>
+            <option value="Qualification">Qualification</option>
+            <option value="Needs Analysis">Needs Analysis</option>
+            <option value="Proposal">Proposal</option>
+            <option value="Negotiation">Negotiation</option>
+            <option value="Closed Won">Closed Won</option>
+            <option value="Closed Lost">Closed Lost</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Expected Close Date</label>
+          <input id="opportunityFormCloseDate" type="date" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{expectedCloseDate}}"/>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-md">
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Amount ($)</label>
+          <input id="opportunityFormAmount" type="number" step="0.01" min="0" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{amount}}"/>
+        </div>
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Probability (%)</label>
+          <input id="opportunityFormProbability" type="number" min="0" max="100" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{probability}}"/>
+        </div>
+      </div>
+      <div>
+        <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Notes</label>
+        <textarea id="opportunityFormNotes" rows="3" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md">{{notes}}</textarea>
+      </div>
+      <div class="flex justify-end gap-md pt-md">
+        <button type="button" class="px-lg py-sm border border-outline-variant rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="controllers.opportunities.render()">Cancel</button>
+        <button type="submit" class="bg-primary text-on-primary px-lg py-sm rounded-xl font-label-md active:translate-y-[1px] transition-all press-effect">Save</button>
+      </div>
+    </form>
+  </div>
+</div>

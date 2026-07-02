@@ -1,0 +1,1 @@
+﻿window.ShiftModel = class Shift {constructor(data){Object.assign(this,data);}}

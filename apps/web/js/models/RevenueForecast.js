@@ -1,0 +1,1 @@
+﻿window.RevenueForecastModel = class RevenueForecast {constructor(d){Object.assign(this,d)}}

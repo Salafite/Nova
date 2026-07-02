@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings - Nova ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#141b2b",
+                        "on-secondary-container": "#006e6e",
+                        "on-primary": "#ffffff",
+                        "secondary": "#006a6a",
+                        "tertiary-container": "#555c69",
+                        "primary": "#451ebb",
+                        "on-secondary-fixed": "#002020",
+                        "outline": "#797586",
+                        "surface-container-highest": "#dce2f7",
+                        "on-primary-fixed": "#1c0062",
+                        "surface-container": "#e9edff",
+                        "on-primary-fixed-variant": "#4723be",
+                        "surface-dim": "#d3daef",
+                        "surface": "#f9f9ff",
+                        "surface-container-high": "#e1e8fd",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "primary-fixed-dim": "#cabeff",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "surface-tint": "#6042d6",
+                        "primary-fixed": "#e6deff",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#dce2f7",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-surface-variant": "#484554",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#3d4551",
+                        "surface-bright": "#f9f9ff",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c9c4d7",
+                        "inverse-on-surface": "#edf0ff",
+                        "secondary-container": "#90efef",
+                        "on-tertiary-fixed": "#151c27",
+                        "inverse-surface": "#293040",
+                        "background": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#ced4e4",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f1f3ff",
+                        "on-primary-container": "#d8ceff",
+                        "inverse-primary": "#cabeff",
+                        "on-background": "#141b2b",
+                        "secondary-fixed": "#93f2f2",
+                        "tertiary-fixed": "#dce2f3",
+                        "primary-container": "#5d3fd3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "margin-desktop": "32px",
+                        "lg": "24px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "gutter": "16px",
+                        "max-width": "1440px",
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "title-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-ripple { position: relative; overflow: hidden; }
+        .active-ripple:active::after {
+            content: "";
+            position: absolute;
+            width: 100%; height: 100%;
+            top: 0; left: 0;
+            background: rgba(69, 30, 187, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md text-body-md antialiased min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="sticky top-0 w-full z-40 flex justify-between items-center px-margin-mobile h-14 bg-surface-container-lowest dark:bg-inverse-surface border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim cursor-pointer">menu</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-primary-fixed-dim">System Admin</h1>
+</div>
+<button class="text-primary dark:text-primary-fixed-dim font-bold hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors px-2 py-1 rounded">EN/AR</button>
+</header>
+<main class="max-w-md mx-auto mt-6 px-margin-mobile space-y-6">
+<!-- Header Section -->
+<section class="flex items-center gap-md">
+<div class="w-16 h-16 rounded-full overflow-hidden bg-surface-container-high border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="A professional high-resolution headshot of a senior system administrator in a clean modern office environment. The person has a friendly but authoritative expression. The lighting is bright and even, consistent with a clean enterprise software aesthetic, featuring a soft blue and white background palette. Professional corporate photography style with a shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEzRlRbILv_8iyakY0pl6WHVlu0_uS5BPbybYqcLvV7QcYUZDKxB5-nEov-vdRMdQpCotrAviVx3ZerNCB936hTUlSeRIJKIyEdV9-DLQMy7hxC6NAITxjrYK6sHesGM5h5D_UZpMtnNISPVRYC11AnJogpljS4THkeFBhPBnKO4ifX6mOid8O0HBUJAPOWuvIZpVsFpe0vdDVPgLkVbOK_wPO21JVwVXA568XyBiuckr0VhBLNGXR-a7ANCLUCfUMVzAxLEiOsQE"/>
+</div>
+<div>
+<h2 class="font-title-md text-title-md text-on-surface">Admin Console</h2>
+<p class="text-on-surface-variant font-body-md text-body-md">System Supervisor</p>
+</div>
+</section>
+<!-- Company Settings -->
+<section class="space-y-sm">
+<h3 class="font-label-md text-label-md text-primary uppercase tracking-wider ml-1">Company</h3>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden divide-y divide-outline-variant">
+<div class="flex items-center justify-between p-md hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">business</span>
+</div>
+<span class="font-body-lg text-body-lg">Company Profile</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-md hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">language</span>
+</div>
+<span class="font-body-lg text-body-lg">System Language</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="text-on-surface-variant text-label-md">English (US)</span>
+<span class="material-symbols-outlined text-on-surface-variant">arrow_drop_down</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Finance & Manufacturing (Grouped) -->
+<section class="space-y-sm">
+<h3 class="font-label-md text-label-md text-primary uppercase tracking-wider ml-1">Operational</h3>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden divide-y divide-outline-variant">
+<div class="flex items-center justify-between p-md hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">account_balance</span>
+</div>
+<span class="font-body-lg text-body-lg">Finance Controls</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-md hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+</div>
+<span class="font-body-lg text-body-lg">Manufacturing Rules</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Security & Identity -->
+<section class="space-y-sm">
+<h3 class="font-label-md text-label-md text-primary uppercase tracking-wider ml-1">Security &amp; Access</h3>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden divide-y divide-outline-variant">
+<!-- Two-Factor Auth -->
+<div class="flex items-center justify-between p-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">enhanced_encryption</span>
+</div>
+<span class="font-body-lg text-body-lg">Two-Factor Authentication</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Role Matrix -->
+<div class="flex items-center justify-between p-md hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">format_list_bulleted</span>
+</div>
+<span class="font-body-lg text-body-lg">Role Matrix</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Preferences -->
+<section class="space-y-sm">
+<h3 class="font-label-md text-label-md text-primary uppercase tracking-wider ml-1">App Preferences</h3>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden divide-y divide-outline-variant">
+<!-- Dark Mode -->
+<div class="flex items-center justify-between p-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-outline-variant/20 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">dark_mode</span>
+</div>
+<span class="font-body-lg text-body-lg">Dark Mode</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer" onclick="document.documentElement.classList.toggle('dark')">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Push Notifications -->
+<div class="flex items-center justify-between p-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-outline-variant/20 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+<span class="font-body-lg text-body-lg">Push Notifications</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Footer Info -->
+<footer class="pt-8 pb-12 flex flex-col items-center gap-xs">
+<span class="font-data-mono text-data-mono text-on-surface-variant opacity-70">v2.4.0 - Global ERP</span>
+<div class="flex gap-md mt-sm">
+<a class="text-primary text-label-md underline" href="#">Privacy Policy</a>
+<a class="text-primary text-label-md underline" href="#">Terms of Service</a>
+</div>
+</footer>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-sm py-xs bg-surface dark:bg-surface-dim border-t border-outline-variant dark:border-outline">
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span>
+<span class="font-label-md text-label-md">Permissions</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+<span class="font-label-md text-label-md">Logs</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-primary-container dark:bg-on-primary-fixed-variant text-on-primary-container dark:text-primary-fixed rounded-full px-4 py-1 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</div>
+</nav>
+<script>
+        // Micro-interaction for toggles
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const parent = this.closest('label').parentElement.parentElement;
+                parent.style.backgroundColor = this.checked ? 'rgba(69, 30, 187, 0.02)' : 'transparent';
+                setTimeout(() => {
+                    parent.style.transition = 'background-color 0.3s ease';
+                }, 50);
+            });
+        });
+
+        // Simple vibration simulation for mobile feel
+        document.querySelectorAll('.active-ripple').forEach(el => {
+            el.addEventListener('click', () => {
+                if (window.navigator.vibrate) window.navigator.vibrate(5);
+            });
+        });
+    </script>
+</body></html>

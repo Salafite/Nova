@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+
+<html class="light" dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP | Operations Dashboard</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#dce2f3",
+                        "primary": "#451ebb",
+                        "inverse-primary": "#cabeff",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#5d3fd3",
+                        "on-secondary-container": "#006e6e",
+                        "surface": "#f9f9ff",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "surface-tint": "#6042d6",
+                        "secondary-container": "#90efef",
+                        "on-secondary-fixed": "#002020",
+                        "on-tertiary-container": "#ced4e4",
+                        "surface-dim": "#d3daef",
+                        "on-primary-container": "#d8ceff",
+                        "surface-container-low": "#f1f3ff",
+                        "outline-variant": "#c9c4d7",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#3d4551",
+                        "on-surface-variant": "#484554",
+                        "surface-bright": "#f9f9ff",
+                        "primary-fixed": "#e6deff",
+                        "on-surface": "#141b2b",
+                        "on-background": "#141b2b",
+                        "inverse-surface": "#293040",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-primary-fixed": "#1c0062",
+                        "background": "#f9f9ff",
+                        "outline": "#797586",
+                        "surface-container-high": "#e1e8fd",
+                        "surface-container": "#e9edff",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#4723be",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "on-tertiary-fixed": "#151c27",
+                        "on-error-container": "#93000a",
+                        "secondary": "#006a6a",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#93f2f2",
+                        "inverse-on-surface": "#edf0ff",
+                        "tertiary-container": "#555c69",
+                        "surface-variant": "#dce2f7",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "max-width": "1440px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #F9FAFB; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .data-table-row { border-bottom: 1px solid #E5E7EB; transition: background-color 0.2s; }
+        .data-table-row:hover { background-color: rgba(69, 30, 187, 0.02); }
+        .chart-container { position: relative; width: 100%; height: 300px; }
+        .btn-press:active { transform: translateY(1px); }
+        
+        /* RTL Adjustments */
+        [dir="rtl"] .ml-\[240px\] { margin-left: 0; margin-right: 240px; }
+        [dir="rtl"] aside { left: auto; right: 0; border-left-width: 1px; border-right-width: 0; }
+        [dir="rtl"] .material-symbols-outlined[data-icon="trending_up"] { transform: scaleX(-1); }
+        [dir="rtl"] .text-right { text-align: left; }
+        [dir="rtl"] .flex-row-reverse { flex-direction: row; }
+        
+        @media (max-width: 1024px) {
+            aside { transform: translateX(-100%); transition: transform 0.3s ease; }
+            aside.open { transform: translateX(0); }
+            [dir="rtl"] aside { transform: translateX(100%); }
+            [dir="rtl"] aside.open { transform: translateX(0); }
+            main { margin-left: 0 !important; margin-right: 0 !important; }
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- Navigation Drawer -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface border-r border-outline-variant flex flex-col py-lg z-50 overflow-y-auto" id="sidebar">
+<div class="px-md mb-xl flex justify-between items-center">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">Nova ERP</h1>
+<button class="lg:hidden p-sm text-on-surface-variant" id="closeSidebar">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<nav class="flex flex-col gap-xs flex-grow">
+<a class="nav-item flex items-center gap-md bg-primary-container text-on-primary-container rounded-xl px-md py-sm mx-sm transition-all hover:bg-primary-container/90 active:translate-y-[1px]" data-active="true" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md">Dashboard</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl hover:bg-surface-container-high transition-all active:translate-y-[1px]" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-body-md">Inventory</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl hover:bg-surface-container-high transition-all active:translate-y-[1px]" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md">Sales</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl hover:bg-surface-container-high transition-all active:translate-y-[1px]" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-body-md">Accounting</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl hover:bg-surface-container-high transition-all active:translate-y-[1px]" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-md">HR</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant pt-md">
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl hover:bg-surface-container-high transition-all active:translate-y-[1px]" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[240px] min-h-screen transition-all duration-300">
+<!-- Modular Top App Bar -->
+<header class="sticky top-0 z-40 bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center w-full px-margin-desktop h-[64px]">
+<div class="flex items-center gap-md">
+<button class="p-xs hover:bg-surface-container-high rounded-full transition-colors flex items-center" id="toggleSidebar">
+<span class="material-symbols-outlined text-primary cursor-pointer" data-icon="menu">menu</span>
+</button>
+<h2 class="font-title-md text-title-md text-primary hidden sm:block" id="pageTitle">Operations</h2>
+</div>
+<div class="flex items-center gap-lg">
+<div class="relative hidden md:block">
+<input class="bg-surface-container-low border border-outline-variant rounded-full px-md py-xs text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 w-64 transition-all" id="topSearch" placeholder="Search data..." type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1.5 text-on-surface-variant text-sm rtl:right-auto rtl:left-3" data-icon="search">search</span>
+</div>
+<button class="font-title-md text-on-surface-variant hover:text-primary transition-colors btn-press px-sm py-xs" id="langToggle">
+<span id="langText">EN</span>/AR
+                </button>
+<div class="relative">
+<button class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold border border-outline-variant hover:ring-2 hover:ring-primary/20 transition-all focus:outline-none" id="profileDropdownBtn">
+                        JD
+                    </button>
+<!-- Profile Dropdown -->
+<div class="hidden absolute right-0 mt-2 w-48 bg-white border border-outline-variant rounded-xl shadow-lg py-sm z-50 rtl:right-auto rtl:left-0" id="profileDropdown">
+<a class="block px-md py-sm text-sm hover:bg-surface-container transition-colors" href="#">My Profile</a>
+<a class="block px-md py-sm text-sm hover:bg-surface-container transition-colors" href="#">Team Settings</a>
+<hr class="my-xs border-outline-variant"/>
+<a class="block px-md py-sm text-sm text-error hover:bg-error-container transition-colors" href="#">Sign Out</a>
+</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-margin-desktop space-y-lg max-w-[1440px] mx-auto">
+<!-- Summary Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<div class="bg-white border border-outline-variant rounded-xl p-lg space-y-xs hover:shadow-md transition-shadow cursor-default group">
+<p class="text-on-surface-variant font-label-md">TOTAL REVENUE</p>
+<h3 class="text-headline-lg font-headline-lg font-bold text-primary group-hover:scale-[1.02] transition-transform origin-left rtl:origin-right">$1,284,430</h3>
+<p class="text-green-600 text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span> +12.5% vs last month
+                    </p>
+</div>
+<div class="bg-white border border-outline-variant rounded-xl p-lg space-y-xs hover:shadow-md transition-shadow">
+<p class="text-on-surface-variant font-label-md">ACTIVE ORDERS</p>
+<h3 class="text-headline-lg font-headline-lg font-bold text-on-surface">432</h3>
+<p class="text-on-surface-variant text-xs">Currently in processing</p>
+</div>
+<div class="bg-white border border-outline-variant rounded-xl p-lg space-y-xs hover:shadow-md transition-shadow">
+<p class="text-on-surface-variant font-label-md">INVENTORY HEALTH</p>
+<h3 class="text-headline-lg font-headline-lg font-bold text-on-surface">94.2%</h3>
+<p class="text-on-surface-variant text-xs">Stable availability</p>
+</div>
+<div class="bg-white border border-outline-variant rounded-xl p-lg space-y-xs hover:shadow-md transition-shadow">
+<p class="text-on-surface-variant font-label-md">PENDING SHIPMENTS</p>
+<h3 class="text-headline-lg font-headline-lg font-bold text-error">18</h3>
+<p class="text-error text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="priority_high">priority_high</span> Action required
+                    </p>
+</div>
+</div>
+<!-- Main Analytics Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Sales Performance Line Chart -->
+<div class="lg:col-span-2 bg-white border border-outline-variant rounded-xl p-lg flex flex-col h-full">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-xl gap-md">
+<div>
+<h4 class="font-title-md text-title-md text-on-surface">Sales Performance over Time</h4>
+<p class="text-on-surface-variant font-body-md">Daily revenue tracking for the current fiscal period.</p>
+</div>
+<div class="flex gap-sm w-full sm:w-auto">
+<button class="chart-filter px-md py-xs border border-outline-variant rounded-lg text-sm hover:bg-surface-container transition-all btn-press flex-grow sm:flex-grow-0" data-range="7">7 Days</button>
+<button class="chart-filter px-md py-xs bg-primary text-white rounded-lg text-sm transition-all btn-press shadow-sm flex-grow sm:flex-grow-0" data-range="30">30 Days</button>
+</div>
+</div>
+<div class="chart-container flex-grow group">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 800 300">
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#451ebb" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#451ebb" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<line stroke="#E5E7EB" stroke-width="1" x1="0" x2="800" y1="50" y2="50"></line>
+<line stroke="#E5E7EB" stroke-width="1" x1="0" x2="800" y1="150" y2="150"></line>
+<line stroke="#F3F4F6" stroke-width="1" x1="0" x2="800" y1="250" y2="250"></line>
+<path d="M0,250 Q100,200 200,220 T400,100 T600,180 T800,80 L800,300 L0,300 Z" fill="url(#chartGradient)"></path>
+<path d="M0,250 Q100,200 200,220 T400,100 T600,180 T800,80" fill="none" stroke="#451ebb" stroke-linecap="round" stroke-width="3"></path>
+<circle class="hover:r-8 transition-all cursor-pointer" cx="400" cy="100" fill="#451ebb" r="5"></circle>
+</svg>
+<div class="absolute top-10 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-md py-sm rounded-lg shadow-xl text-xs flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+<span class="font-bold">Oct 14, 2023</span>
+<span>Sales: $42,120</span>
+</div>
+</div>
+<div class="mt-md flex justify-between text-xs text-on-surface-variant font-data-mono">
+<span>OCT 01</span>
+<span>OCT 07</span>
+<span>OCT 14</span>
+<span>OCT 21</span>
+<span>OCT 28</span>
+<span>NOV 01</span>
+</div>
+</div>
+<!-- Revenue by Category -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg flex flex-col">
+<h4 class="font-title-md text-title-md text-on-surface mb-xs">Revenue by Category</h4>
+<p class="text-on-surface-variant font-body-md mb-xl">Allocation of total sales across core business units.</p>
+<div class="flex-grow flex items-center justify-center relative">
+<svg class="w-48 h-48 -rotate-90" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#F3F4F6" stroke-width="12"></circle>
+<circle class="hover:stroke-[14] transition-all cursor-pointer" cx="50" cy="50" fill="transparent" r="40" stroke="#451ebb" stroke-dasharray="251.2" stroke-dashoffset="62.8" stroke-width="12"></circle>
+<circle class="hover:stroke-[14] transition-all cursor-pointer" cx="50" cy="50" fill="transparent" r="40" stroke="#90efef" stroke-dasharray="251.2" stroke-dashoffset="188.4" stroke-width="12"></circle>
+<circle class="hover:stroke-[14] transition-all cursor-pointer" cx="50" cy="50" fill="transparent" r="40" stroke="#555c69" stroke-dasharray="251.2" stroke-dashoffset="226.1" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+<span class="text-label-md text-on-surface-variant">TOTAL</span>
+<span class="text-title-md font-bold text-on-surface">$1.2M</span>
+</div>
+</div>
+<div class="mt-xl space-y-md">
+<div class="flex items-center justify-between group cursor-pointer p-xs hover:bg-surface-container rounded-lg transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-sm font-medium">Electronics</span>
+</div>
+<span class="text-sm font-data-mono font-bold">54%</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer p-xs hover:bg-surface-container rounded-lg transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-secondary-fixed-dim"></div>
+<span class="text-sm font-medium">Furniture</span>
+</div>
+<span class="text-sm font-data-mono font-bold">28%</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer p-xs hover:bg-surface-container rounded-lg transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-tertiary-container"></div>
+<span class="text-sm font-medium">Apparel</span>
+</div>
+<span class="text-sm font-data-mono font-bold">18%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Top Performing Products Table -->
+<div class="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md bg-surface-container-low flex justify-between items-center border-b border-outline-variant">
+<h4 class="font-title-md text-title-md text-on-surface">Top Performing Products</h4>
+<button class="flex items-center gap-sm text-primary font-bold text-sm hover:underline transition-all btn-press">
+                        View Report <span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse rtl:text-right">
+<thead class="bg-gray-50 border-b border-outline-variant">
+<tr>
+<th class="px-lg py-md text-on-surface-variant font-label-md uppercase">Product Detail</th>
+<th class="px-lg py-md text-on-surface-variant font-label-md uppercase">Stock Status</th>
+<th class="px-lg py-md text-on-surface-variant font-label-md uppercase">Monthly Revenue</th>
+<th class="px-lg py-md text-on-surface-variant font-label-md uppercase">Growth</th>
+<th class="px-lg py-md text-on-surface-variant font-label-md uppercase text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="data-table-row group">
+<td class="px-lg py-md flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden shrink-0">
+<img alt="Ergo Chair" class="w-full h-full object-cover transition-transform group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAl9v_KYoid5xbEBwO52iQw3bGjZlCRB73eaW2CGlPD4bkS99ZlngipnanOkNvNNv8nxEKsitJj8reCpZbEXe8QGs2POrXAQ2UobQ8m2n9kqGFO6ZYgicKE8TE7MUEeaxMHslrhls6emL6bkPvFd-z0GI6BqVVnS9IIjMoTGEQDs00Q8cPNopZMXZgg-9k51KDM10ARbQLtqkRM05oS3bs7yCzSoO5V-a0ld9xVrk5ZsWzP8MkfW8fZsVT0a9xxh5c32TBLyysOFdw"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">Apex Ergo Chair v2</p>
+<p class="text-xs text-on-surface-variant">Electronics / Office</p>
+</div>
+</td>
+<td class="px-lg py-md">
+<span class="bg-green-100 text-green-700 px-sm py-1 rounded-full text-xs font-bold">IN STOCK</span>
+</td>
+<td class="px-lg py-md font-data-mono">$84,320.00</td>
+<td class="px-lg py-md text-green-600 font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span> 8.4%
+                                </td>
+<td class="px-lg py-md text-right">
+<button class="action-btn p-sm hover:bg-surface-container rounded-lg transition-colors focus:ring-2 focus:ring-primary/20 outline-none">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="data-table-row group">
+<td class="px-lg py-md flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden shrink-0">
+<img alt="Monitor" class="w-full h-full object-cover transition-transform group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzgS42MwYz7ySQSL1AG6KSTLo34MZ61oNpfv58px8pa0BlFnWQgHuSF4l6wY0HLj9jS499Xw-OkbmeJRRERWnRW0EdF_ooQCUrVXCLVuf60j68k7i_ZWmCSQRb1CnwQLmWdohzgPGJNsbUb5TwwROdB4TqfsOXBUlFsI0kHNSdSqX4Zj_3fs6_5av1ACm0KJC8eSQgXVKydiEd1wf70h0TOguSu_ssn8Lo7EQqiMZDUmucXhAv50a3_81YJz0Ryhx5PfPO0FWGN_A"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">NovaVision 34" Display</p>
+<p class="text-xs text-on-surface-variant">Electronics / Peripherals</p>
+</div>
+</td>
+<td class="px-lg py-md">
+<span class="bg-red-100 text-red-700 px-sm py-1 rounded-full text-xs font-bold">LOW STOCK</span>
+</td>
+<td class="px-lg py-md font-data-mono">$62,150.00</td>
+<td class="px-lg py-md text-green-600 font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span> 12.1%
+                                </td>
+<td class="px-lg py-md text-right">
+<button class="action-btn p-sm hover:bg-surface-container rounded-lg transition-colors focus:ring-2 focus:ring-primary/20 outline-none">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="data-table-row group">
+<td class="px-lg py-md flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden shrink-0">
+<img alt="Keyboard" class="w-full h-full object-cover transition-transform group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBa2GsxEj7mzYJNBls6Kn2pZqiD56PjhyOvnpdrv4ce3MHA7L2wy8cg2N3i5s2ntbdk9ex7qXW-2alNHsy_Sg9tPkPzRQIvxkZohoEa878jDdJLMCSU1naKVAhA1F3a2W1yU9RtJXLBNNpMZfgJcaQrF9XtAjqRP8UpJC-dOlujDhKs70EGapKTzc29oAJXjX2KZNPDkQLAIh75jq6lqRwF26mrHKgLG7f2vopcW2TP_FcHbgE1B1NtMG7y1SvUr-Kd4uoGvhj-nao"/>
+</div>
+<div>
+<p class="font-bold text-on-surface">Tactile Pro Keyboard</p>
+<p class="text-xs text-on-surface-variant">Electronics / Peripherals</p>
+</div>
+</td>
+<td class="px-lg py-md">
+<span class="bg-green-100 text-green-700 px-sm py-1 rounded-full text-xs font-bold">IN STOCK</span>
+</td>
+<td class="px-lg py-md font-data-mono">$41,800.00</td>
+<td class="px-lg py-md text-on-surface-variant font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span> 0.2%
+                                </td>
+<td class="px-lg py-md text-right">
+<button class="action-btn p-sm hover:bg-surface-container rounded-lg transition-colors focus:ring-2 focus:ring-primary/20 outline-none">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed bottom-lg right-lg w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:shadow-2xl hover:scale-110 flex items-center justify-center transition-all btn-press z-50 focus:outline-none ring-offset-2 focus:ring-2 focus:ring-primary" id="mainFAB">
+<span class="material-symbols-outlined text-2xl" data-icon="add">add</span>
+</button>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- UI Elements ---
+            const sidebar = document.getElementById('sidebar');
+            const toggleSidebarBtn = document.getElementById('toggleSidebar');
+            const closeSidebarBtn = document.getElementById('closeSidebar');
+            const langToggle = document.getElementById('langToggle');
+            const langText = document.getElementById('langText');
+            const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+            const profileDropdown = document.getElementById('profileDropdown');
+            const navItems = document.querySelectorAll('.nav-item');
+            const chartFilters = document.querySelectorAll('.chart-filter');
+            const searchInput = document.getElementById('topSearch');
+            const fab = document.getElementById('mainFAB');
+
+            // --- Sidebar Logic ---
+            const toggleSidebar = () => {
+                sidebar.classList.toggle('open');
+            };
+
+            toggleSidebarBtn?.addEventListener('click', toggleSidebar);
+            closeSidebarBtn?.addEventListener('click', () => sidebar.classList.remove('open'));
+
+            // Click outside sidebar to close on mobile
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth < 1024) {
+                    if (!sidebar.contains(e.target) && !toggleSidebarBtn.contains(e.target)) {
+                        sidebar.classList.remove('open');
+                    }
+                }
+            });
+
+            // --- Navigation Item Logic ---
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navItems.forEach(i => {
+                        i.classList.remove('bg-primary-container', 'text-on-primary-container');
+                        i.classList.add('text-on-surface-variant');
+                    });
+                    item.classList.add('bg-primary-container', 'text-on-primary-container');
+                    item.classList.remove('text-on-surface-variant');
+                    
+                    const label = item.querySelector('span:last-child').textContent;
+                    document.getElementById('pageTitle').textContent = label;
+                    
+                    if (window.innerWidth < 1024) sidebar.classList.remove('open');
+                });
+            });
+
+            // --- Language / RTL Logic ---
+            let currentLang = 'EN';
+            langToggle?.addEventListener('click', () => {
+                const html = document.documentElement;
+                if (currentLang === 'EN') {
+                    html.dir = 'rtl';
+                    html.lang = 'ar';
+                    currentLang = 'AR';
+                    langText.textContent = 'AR';
+                    // Update search icon placement for RTL if needed via CSS classes
+                } else {
+                    html.dir = 'ltr';
+                    html.lang = 'en';
+                    currentLang = 'EN';
+                    langText.textContent = 'EN';
+                }
+            });
+
+            // --- Profile Dropdown Logic ---
+            profileDropdownBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdown.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', () => {
+                profileDropdown.classList.add('hidden');
+            });
+
+            // --- Chart Filter Logic ---
+            chartFilters.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    chartFilters.forEach(b => {
+                        b.classList.remove('bg-primary', 'text-white', 'shadow-sm');
+                        b.classList.add('border', 'border-outline-variant');
+                    });
+                    btn.classList.add('bg-primary', 'text-white', 'shadow-sm');
+                    btn.classList.remove('border', 'border-outline-variant');
+                    
+                    console.log(`Filtering chart for: ${btn.dataset.range} days`);
+                });
+            });
+
+            // --- Interactive Elements Feedback ---
+            searchInput?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    alert(`Searching Nova ERP for: ${searchInput.value}`);
+                }
+            });
+
+            fab?.addEventListener('click', () => {
+                alert('Add New Entry dialogue would open here.');
+            });
+
+            // Add click handlers for table action buttons
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    console.log('Action menu triggered for product row');
+                });
+            });
+
+            // Hover state for table rows
+            document.querySelectorAll('.data-table-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    console.log('Row clicked - navigating to details');
+                });
+            });
+        });
+    </script>
+</body></html>

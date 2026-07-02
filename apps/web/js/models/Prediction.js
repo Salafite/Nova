@@ -1,0 +1,1 @@
+﻿window.PredictionModel = class Prediction {constructor(d){Object.assign(this,d)}}

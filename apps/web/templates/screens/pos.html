@@ -1,0 +1,93 @@
+<div class="flex flex-col lg:flex-row h-full overflow-hidden bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container">
+  
+  <!-- Left: Product Grid Section -->
+  <section class="flex-1 overflow-y-auto p-md bg-surface-bright lg:border-r border-outline-variant flex flex-col">
+    <!-- Category Filters -->
+    <div class="flex items-center gap-sm mb-lg overflow-x-auto pb-2 scrollbar-hide">
+      <!-- Added the search input here before the category tabs -->
+      <div class="min-w-[250px] mr-md relative">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+        <input type="text" id="posSearch" placeholder="Search products, SKUs..." class="w-full bg-surface-container-low border border-outline-variant rounded px-10 py-2 font-body-md focus:outline-none focus:border-primary transition-all" oninput="controllers.pos.search(this.value)">
+      </div>
+      <button class="px-md py-sm bg-primary text-on-primary font-label-md rounded flex items-center gap-xs whitespace-nowrap">
+        <span class="material-symbols-outlined text-[18px]">grid_view</span> All Items
+      </button>
+      <button class="px-md py-sm bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md rounded flex items-center gap-xs whitespace-nowrap">
+        <span class="material-symbols-outlined text-[18px]">devices</span> Electronics
+      </button>
+      <button class="px-md py-sm bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md rounded flex items-center gap-xs whitespace-nowrap">
+        <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span> Industrial
+      </button>
+      <div class="ml-auto hidden lg:flex items-center gap-sm">
+        <span class="text-label-md text-on-surface-variant">View:</span>
+        <button class="material-symbols-outlined text-primary">grid_on</button>
+        <button class="material-symbols-outlined text-on-surface-variant">view_list</button>
+      </div>
+    </div>
+
+    <!-- Product Grid -->
+    <div id="posProductList" class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-md content-start">
+      {{productList}}
+    </div>
+  </section>
+
+  <!-- Right: Order Sidebar -->
+  <aside class="w-full lg:w-[400px] bg-surface flex flex-col shadow-[-4px_0_12px_rgba(0,0,0,0.02)] h-full z-10">
+    <div class="p-md border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+      <div class="flex items-center gap-sm">
+        <span class="material-symbols-outlined text-primary">shopping_basket</span>
+        <h2 class="font-title-md text-title-md text-on-surface">Current Cart (<span id="cartCount">{{cartCount}}</span>)</h2>
+      </div>
+      <button class="text-error font-label-md hover:underline decoration-error/30 transition-all flex items-center gap-xs" onclick="controllers.pos.clearCart()">
+        <span class="material-symbols-outlined text-[16px]">delete_sweep</span> Clear
+      </button>
+    </div>
+
+    <!-- Customer info -->
+    <div class="p-sm m-md mb-0 bg-surface-container-low rounded border border-outline-variant flex items-center justify-between">
+      <div class="flex items-center gap-md flex-1">
+        <div class="w-10 h-10 bg-tertiary-container rounded-full flex items-center justify-center text-on-tertiary-container">
+          <span class="material-symbols-outlined">person</span>
+        </div>
+        <div class="flex-1">
+          <input type="text" id="customerInput" placeholder="Walk-in Client..." class="w-full bg-transparent border-none focus:ring-0 outline-none font-body-md font-semibold text-on-surface p-0">
+          <p class="font-label-md text-on-surface-variant">Selected Customer</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cart Items -->
+    <div id="cartItems" class="flex-1 overflow-y-auto p-md space-y-md">
+      {{cartItems}}
+    </div>
+
+    <!-- Totals & Checkout -->
+    <div class="p-md bg-surface-container border-t border-outline-variant">
+      <div class="space-y-sm mb-lg">
+        <div class="flex justify-between items-center text-on-surface-variant">
+          <span class="font-body-md">Subtotal</span>
+          <span class="font-data-mono" id="cartSubtotal">${{cartTotal}}</span>
+        </div>
+        <div class="flex justify-between items-center text-on-surface-variant">
+          <span class="font-body-md">Tax (VAT 5%)</span>
+          <span class="font-data-mono" id="cartTax">$0.00</span>
+        </div>
+        <div class="flex justify-between items-center text-on-surface pt-sm">
+          <span class="font-title-md font-bold">Total Amount</span>
+          <span class="font-display-lg text-title-md text-primary font-bold" id="cartTotalDisplay">${{cartTotal}}</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-sm mb-sm">
+        <button class="py-sm border border-primary text-primary font-label-md rounded flex items-center justify-center gap-xs hover:bg-primary-container/10 transition-all">
+          <span class="material-symbols-outlined text-[18px]">receipt_long</span> Hold Order
+        </button>
+        <button class="py-sm border border-primary text-primary font-label-md rounded flex items-center justify-center gap-xs hover:bg-primary-container/10 transition-all">
+          <span class="material-symbols-outlined text-[18px]">percent</span> Discount
+        </button>
+      </div>
+      <button class="checkout-btn w-full bg-primary text-white py-lg rounded font-headline-lg text-title-md shadow-lg shadow-primary/20 flex items-center justify-center gap-sm transition-all hover:brightness-110 active:scale-[0.99]" onclick="controllers.pos.checkout()">
+        <span class="material-symbols-outlined">payments</span> PROCEED TO CHECKOUT
+      </button>
+    </div>
+  </aside>
+</div>

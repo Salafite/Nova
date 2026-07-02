@@ -1,0 +1,1 @@
+﻿window.RecommendationModel = class Recommendation {constructor(d){Object.assign(this,d)}}

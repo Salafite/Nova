@@ -1,0 +1,1 @@
+﻿window.MobileOrderModel = class MobileOrder {constructor(d){Object.assign(this,d)}}

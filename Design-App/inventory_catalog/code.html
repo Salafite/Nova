@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP - Inventory Catalog</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "background": "#f9f9ff",
+                        "surface-container": "#e9edff",
+                        "surface-container-low": "#f1f3ff",
+                        "tertiary": "#3d4551",
+                        "on-secondary-container": "#006e6e",
+                        "primary-fixed-dim": "#cabeff",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed": "#002020",
+                        "primary-container": "#5d3fd3",
+                        "surface-container-highest": "#dce2f7",
+                        "inverse-surface": "#293040",
+                        "on-background": "#141b2b",
+                        "error": "#ba1a1a",
+                        "outline": "#797586",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#90efef",
+                        "outline-variant": "#c9c4d7",
+                        "inverse-primary": "#cabeff",
+                        "primary": "#451ebb",
+                        "on-tertiary-container": "#ced4e4",
+                        "tertiary-container": "#555c69",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "on-primary-container": "#d8ceff",
+                        "surface-tint": "#6042d6",
+                        "inverse-on-surface": "#edf0ff",
+                        "secondary": "#006a6a",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#93f2f2",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#4723be",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-surface-variant": "#484554",
+                        "surface-variant": "#dce2f7",
+                        "surface-dim": "#d3daef",
+                        "on-surface": "#141b2b",
+                        "surface-bright": "#f9f9ff",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed": "#1c0062",
+                        "surface": "#f9f9ff",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "primary-fixed": "#e6deff",
+                        "on-tertiary-fixed": "#151c27",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "surface-container-high": "#e1e8fd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "xs": "4px",
+                        "max-width": "1440px",
+                        "lg": "24px",
+                        "gutter": "16px",
+                        "xl": "32px",
+                        "margin-desktop": "32px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 bg-surface-container-lowest dark:bg-surface-container-low border-b border-outline-variant dark:border-outline flex justify-between items-center px-margin-mobile h-14">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed-dim hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors p-2 rounded-full active:translate-y-[1px] transition-transform duration-100">menu</button>
+<h1 class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed-dim">ERP Systems</h1>
+</div>
+<div class="flex items-center">
+<button class="text-primary dark:text-primary-fixed-dim font-semibold hover:bg-surface-container-highest dark:hover:bg-surface-container-high px-3 py-2 rounded-lg transition-colors active:translate-y-[1px] transition-transform duration-100">EN/AR</button>
+</div>
+</header>
+<main class="mt-14 px-margin-mobile pt-lg">
+<!-- Metrics Section -->
+<section class="grid grid-cols-2 gap-base mb-lg">
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex flex-col justify-between shadow-sm">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-error text-[20px]">warning</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Critical Stock</span>
+</div>
+<div>
+<p class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">12</p>
+<p class="font-label-md text-label-md text-error">-4 Items vs Yesterday</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex flex-col justify-between shadow-sm">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-[20px]">refresh</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Reorder Point</span>
+</div>
+<div>
+<p class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">08</p>
+<p class="font-label-md text-label-md text-primary">Awaiting Order</p>
+</div>
+</div>
+</section>
+<!-- Search and Filters -->
+<section class="sticky top-14 bg-background pt-2 pb-md z-40">
+<div class="relative mb-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full h-12 bg-surface-container-lowest border border-outline-variant rounded-xl pl-10 pr-4 text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Search catalog by name or SKU..." type="text"/>
+</div>
+<div class="flex gap-sm overflow-x-auto no-scrollbar pb-1">
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md shadow-sm">All</button>
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-highest transition-colors">Electronics</button>
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-highest transition-colors">Warehouse A</button>
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-highest transition-colors">Furniture</button>
+<button class="material-symbols-outlined bg-surface-container-high p-2 rounded-full text-on-surface-variant">filter_list</button>
+</div>
+</section>
+<!-- Product List -->
+<section class="flex flex-col gap-md">
+<!-- Product Item 1: Critical -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex gap-md items-center active:scale-[0.98] transition-transform">
+<div class="w-20 h-20 bg-surface-container rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A professional high-angle studio shot of a high-end enterprise server rack component, with matte black metallic finish and subtle blue LED indicators. The lighting is crisp and cool-toned, emphasizing the industrial modern design suitable for a clean light-mode ERP interface. Sharp focus on texture and form against a neutral gray background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgSzHXh_nqtstVde2e7D1QJQbxUaNfSrKSKlQ9alicdmgFbVMxa_lI5s1AHzvU_D3NR3y1quY1_DKy2-gXY96VqxE0feTkWfaOivq0AxEXoEGT67oEvGmPQSKBAqk58EGIIo6QCsgpC724_hPzFwW56i2M30K43ji7xCa-hO5UXx4IcL5cTuAg_8ajyUd6weTlEK8N2z_VuhOeG9c6tY0nmsrGQi1i5GfU7NgO0CLOiDLgnwseOJToTyRHiIyJ8y0qIUvvYXiiVqY"/>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-body-lg text-body-lg font-semibold text-on-surface truncate">Intel Xeon Platinum 8380</h3>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-error-container text-on-error-container">Critical</span>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-data-mono text-data-mono text-on-surface-variant">SKU: PRO-SRV-8380-X</span>
+<span class="font-label-md text-label-md text-outline">Category: Processing Units</span>
+</div>
+<div class="mt-2 flex justify-between items-end">
+<span class="font-title-md text-title-md text-on-surface">5 Units</span>
+<button class="material-symbols-outlined text-primary hover:bg-primary-container/10 p-1 rounded-full">more_vert</button>
+</div>
+</div>
+</div>
+<!-- Product Item 2: Healthy -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex gap-md items-center active:scale-[0.98] transition-transform">
+<div class="w-20 h-20 bg-surface-container rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A minimalist product shot of a sleek, white ergonomic office chair with chrome accents and high-quality mesh fabric. The lighting is bright and airy, reflecting a modern corporate modernist aesthetic with soft, diffused shadows. The composition is clean, centered, and professional for an inventory management dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZyrvsCU2RxonxGQG1wD6HFzEwd7wz4QA06sQm-Gqo1sc9Mrtf3kxeFddxJEz-cM0Azb2fQefhL1Y6fTz5aYHImTULZqoqTjLTZH__wLFJCuzwvZdYSpRN8qrTiRSrLXCbg4ujKf_c6IpL86gOlJp_7QrM6B17Psr_A1kHsaZrD3Oh6mHEaxr7qI9GLRnF6C0lsN9itSv1-X_2z6aa8qKZGpRF4OmzwsP3e-FCPPvOzSag49UhpPqoKaEqIcHjJbdU-qlZFPA8fCo"/>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-body-lg text-body-lg font-semibold text-on-surface truncate">ErgoNexus Elite Chair</h3>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-secondary-container text-on-secondary-container">Healthy</span>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-data-mono text-data-mono text-on-surface-variant">SKU: FUR-CH-9921-W</span>
+<span class="font-label-md text-label-md text-outline">Category: Office Furniture</span>
+</div>
+<div class="mt-2 flex justify-between items-end">
+<span class="font-title-md text-title-md text-on-surface">142 Units</span>
+<button class="material-symbols-outlined text-primary hover:bg-primary-container/10 p-1 rounded-full">more_vert</button>
+</div>
+</div>
+</div>
+<!-- Product Item 3: Review -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex gap-md items-center active:scale-[0.98] transition-transform">
+<div class="w-20 h-20 bg-surface-container rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A detailed commercial photograph of a bundle of high-quality fiber optic cables with glowing blue tips, coiled neatly on a light reflective surface. The image is crisp with high contrast, showing tech hardware in a clean, analytical laboratory environment. The color palette uses deep indigos and bright cyan highlights to signify high-speed technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMZbd9rPv-rvMk6XxhACEQkBcEVY1nFr86cX6OXvMBc4EJ3TUxwxtcZKzAWHPLEQLF4akx27idOpX6z5TT0tkLqmL6NETFKMxZNGe9fnuv_9KgWe-uhB_YVj5y-erkVtm98wEJLHeRtBdqJi83rsGzmz70TeSMCuBAqqqPAN517VJdd8hqYWYr3WW-wK18kg5mAFlQVzuTJqZjBH5L0KWzMH7EGCB8M45JEw8uXYmD3ZdRHVDaIfZIJ4EYd8J2oJH1_Upw_gLMFNk"/>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-body-lg text-body-lg font-semibold text-on-surface truncate">OptiCore Fiber 10G - 5m</h3>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-surface-container-highest text-on-surface-variant">Review</span>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-data-mono text-data-mono text-on-surface-variant">SKU: NET-CBL-F10G-05</span>
+<span class="font-label-md text-label-md text-outline">Category: Networking</span>
+</div>
+<div class="mt-2 flex justify-between items-end">
+<span class="font-title-md text-title-md text-on-surface">28 Units</span>
+<button class="material-symbols-outlined text-primary hover:bg-primary-container/10 p-1 rounded-full">more_vert</button>
+</div>
+</div>
+</div>
+<!-- Product Item 4: Critical -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex gap-md items-center active:scale-[0.98] transition-transform">
+<div class="w-20 h-20 bg-surface-container rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A clean, minimalist product image of a slim aluminum external solid state drive with a brushed metallic texture. The design is modern and authoritative, with a single status light. It is presented on a pristine white surface with high-key lighting that eliminates heavy shadows, emphasizing structural integrity and data legibility." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALUySiZ56U76Yhb3fWw-LopKmQHCI-8eiVcN0aZ7_ym4J58luulfK-XOY2Kd7RBMQc-bK6v1zFpLuEP0AH7iCjdlGlZ55zTwhLftn-DjLU_JPZT6OWsPWUqfqXCX4NKRqaS9y5n74sD18gOmxNUSy6zxYqeLqyCnUmNStsuxclmwdWkaZ45ynHL2IupqbLWHNQ78gSbbv0VA8-vpTsG9p-KImoVgcfx9Oqv3q-TMHtFcv2hKnDOOpQY0XZfMAkIn1A36R2XrPyWFM"/>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-body-lg text-body-lg font-semibold text-on-surface truncate">NovaDrive 2TB SSD</h3>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-error-container text-on-error-container">Critical</span>
+</div>
+<div class="mt-1 flex flex-col">
+<span class="font-data-mono text-data-mono text-on-surface-variant">SKU: STO-SSD-NV2T-AL</span>
+<span class="font-label-md text-label-md text-outline">Category: Storage</span>
+</div>
+<div class="mt-2 flex justify-between items-end">
+<span class="font-title-md text-title-md text-on-surface">2 Units</span>
+<button class="material-symbols-outlined text-primary hover:bg-primary-container/10 p-1 rounded-full">more_vert</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-surface-container-lowest dark:bg-surface-container-low border-t border-outline-variant dark:border-outline flex justify-around items-center px-4 py-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors active:scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors active:scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Sales</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full px-4 py-1 active:scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors active:scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<span class="font-label-md text-label-md">More</span>
+</a>
+</nav>
+<!-- Floating Action Button (Inventory Focused) -->
+<button class="fixed right-margin-mobile bottom-24 w-14 h-14 bg-primary text-on-primary rounded-xl shadow-lg flex items-center justify-center active:scale-95 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+<script>
+        // Simple Interaction logic for filter buttons
+        document.querySelectorAll('button[class*="rounded-full"]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if(this.classList.contains('material-symbols-outlined')) return;
+                
+                // Reset siblings
+                document.querySelectorAll('button[class*="rounded-full"]').forEach(b => {
+                    if(!b.classList.contains('material-symbols-outlined')) {
+                        b.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm');
+                        b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+                    }
+                });
+                
+                // Set active
+                this.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+                this.classList.add('bg-primary', 'text-on-primary', 'shadow-sm');
+            });
+        });
+    </script>
+</body></html>

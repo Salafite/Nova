@@ -1,0 +1,1 @@
+﻿window.AllocationModel = class Allocation {constructor(d){Object.assign(this,d)}}

@@ -1,0 +1,1 @@
+﻿window.SyncService = class SyncService {}

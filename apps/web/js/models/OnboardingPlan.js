@@ -1,0 +1,1 @@
+﻿window.OnboardingPlanModel = class OnboardingPlan {constructor(data){Object.assign(this,data);}}

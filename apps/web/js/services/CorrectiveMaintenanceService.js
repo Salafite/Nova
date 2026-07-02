@@ -1,0 +1,1 @@
+﻿window.CorrectiveMaintenanceService = class CorrectiveMaintenanceService{repair(r){return {status:'completed',request:r}}}

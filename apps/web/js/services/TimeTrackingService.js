@@ -1,0 +1,1 @@
+﻿window.TimeTrackingService = class TimeTrackingService {}

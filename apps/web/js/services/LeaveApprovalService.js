@@ -1,0 +1,1 @@
+﻿window.LeaveApprovalService = class LeaveApprovalService {}

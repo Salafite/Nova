@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Odoo-style tonal layering */
+        .glass-card {
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            transition: transform 0.1s ease;
+        }
+        .glass-card:active {
+            transform: translateY(1px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#93f2f2",
+                        "outline": "#797586",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#cabeff",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#edf0ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#006e6e",
+                        "inverse-surface": "#293040",
+                        "tertiary-container": "#555c69",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "secondary": "#006a6a",
+                        "surface-container-low": "#f1f3ff",
+                        "on-secondary": "#ffffff",
+                        "surface": "#f9f9ff",
+                        "primary-fixed": "#e6deff",
+                        "on-background": "#141b2b",
+                        "on-surface-variant": "#484554",
+                        "on-surface": "#141b2b",
+                        "surface-dim": "#d3daef",
+                        "on-primary-fixed": "#1c0062",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "surface-container": "#e9edff",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "on-tertiary-fixed": "#151c27",
+                        "surface-tint": "#6042d6",
+                        "background": "#f9f9ff",
+                        "primary-container": "#5d3fd3",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e1e8fd",
+                        "on-primary-container": "#d8ceff",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "surface-variant": "#dce2f7",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c9c4d7",
+                        "tertiary": "#3d4551",
+                        "on-primary-fixed-variant": "#4723be",
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff",
+                        "primary": "#451ebb",
+                        "surface-bright": "#f9f9ff",
+                        "secondary-container": "#90efef",
+                        "on-tertiary-container": "#ced4e4",
+                        "on-secondary-fixed": "#002020",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "max-width": "1440px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "gutter": "16px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "base": "4px",
+                        "md": "16px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen pb-20">
+<!-- Top App Bar -->
+<header class="bg-surface w-full top-0 sticky flex justify-between items-center px-margin-mobile h-14 w-full border-b border-outline-variant z-50">
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-primary active:translate-y-px transition-transform p-2 hover:bg-surface-container-highest rounded-full">menu</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Nova ERP</h1>
+</div>
+<div class="flex items-center gap-sm">
+<!-- Language Toggle -->
+<button class="flex items-center gap-1 px-3 py-1 bg-surface-container-low border border-outline-variant rounded-full text-label-md font-label-md hover:bg-surface-container-high transition-colors" onclick="toggleLanguage()">
+<span class="material-symbols-outlined text-[18px]">language</span>
+<span id="lang-text">EN</span>
+</button>
+<button class="material-symbols-outlined text-primary active:translate-y-px transition-transform p-2 hover:bg-surface-container-highest rounded-full">notifications</button>
+</div>
+</header>
+<main class="p-margin-mobile space-y-md">
+<!-- Hero Stat: Total Revenue -->
+<section class="glass-card rounded-xl p-lg shadow-sm">
+<div class="flex justify-between items-start">
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider" data-i18n="total_revenue">Total Revenue</span>
+<div class="mt-xs flex items-baseline gap-xs">
+<span class="font-headline-lg-mobile text-headline-lg-mobile">$1,248,500.00</span>
+</div>
+<div class="flex items-center gap-xs mt-xs text-secondary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+<span>+12.5% <span class="text-on-surface-variant ml-1" data-i18n="vs_last_month">vs last month</span></span>
+</div>
+</div>
+<div class="w-12 h-12 bg-primary-container rounded-lg flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">payments</span>
+</div>
+</div>
+<!-- Mini Sparkline Placeholder -->
+<div class="mt-lg h-16 w-full flex items-end gap-1">
+<div class="bg-primary/20 flex-1 rounded-t-sm" style="height: 40%"></div>
+<div class="bg-primary/20 flex-1 rounded-t-sm" style="height: 60%"></div>
+<div class="bg-primary/20 flex-1 rounded-t-sm" style="height: 45%"></div>
+<div class="bg-primary/20 flex-1 rounded-t-sm" style="height: 80%"></div>
+<div class="bg-primary/20 flex-1 rounded-t-sm" style="height: 70%"></div>
+<div class="bg-primary/20 flex-1 rounded-t-sm" style="height: 90%"></div>
+<div class="bg-primary flex-1 rounded-t-sm" style="height: 100%"></div>
+</div>
+</section>
+<!-- Expenses & Profit Cards -->
+<div class="grid grid-cols-2 gap-md">
+<div class="glass-card rounded-xl p-md">
+<span class="font-label-md text-label-md text-on-surface-variant block" data-i18n="expenses">Expenses</span>
+<span class="font-title-md text-title-md block mt-xs">$420,300</span>
+<div class="flex items-center gap-1 text-error mt-sm font-label-md text-label-md">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+<span>4%</span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-md">
+<span class="font-label-md text-label-md text-on-surface-variant block" data-i18n="net_profit">Net Profit</span>
+<span class="font-title-md text-title-md block mt-xs">$828,200</span>
+<div class="flex items-center gap-1 text-secondary mt-sm font-label-md text-label-md">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+<span>2%</span>
+</div>
+</div>
+</div>
+<!-- Revenue by Category (Donut Chart) -->
+<section class="glass-card rounded-xl p-lg">
+<div class="flex justify-between items-center mb-lg">
+<h3 class="font-title-md text-title-md text-on-surface" data-i18n="revenue_split">Revenue Split</h3>
+<button class="material-symbols-outlined text-on-surface-variant">more_vert</button>
+</div>
+<div class="flex items-center gap-lg">
+<!-- Simple CSS Donut -->
+<div class="relative w-32 h-32 flex-shrink-0">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<circle class="stroke-surface-container-highest" cx="18" cy="18" fill="none" r="16" stroke-width="4"></circle>
+<circle class="stroke-primary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="60, 100" stroke-width="4"></circle>
+<circle class="stroke-secondary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="25, 100" stroke-dashoffset="-60" stroke-width="4"></circle>
+<circle class="stroke-tertiary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="15, 100" stroke-dashoffset="-85" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-title-md text-title-md">100%</span>
+</div>
+</div>
+<!-- Legend -->
+<div class="space-y-sm flex-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="font-body-md text-body-md" data-i18n="services">Services</span>
+</div>
+<span class="font-data-mono text-data-mono">60%</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<span class="font-body-md text-body-md" data-i18n="products">Products</span>
+</div>
+<span class="font-data-mono text-data-mono">25%</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<span class="font-body-md text-body-md" data-i18n="licensing">Licensing</span>
+</div>
+<span class="font-data-mono text-data-mono">15%</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Transactions -->
+<section class="glass-card rounded-xl overflow-hidden">
+<div class="p-lg flex justify-between items-center border-b border-outline-variant">
+<h3 class="font-title-md text-title-md text-on-surface" data-i18n="recent_transactions">Recent Transactions</h3>
+<a class="text-primary font-label-md text-label-md hover:underline" data-i18n="view_all" href="#">View All</a>
+</div>
+<div class="divide-y divide-outline-variant">
+<!-- Transaction 1 -->
+<div class="p-md flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined text-[20px]">shopping_cart</span>
+</div>
+<div>
+<span class="font-body-md text-body-md font-semibold block">Amazon Web Services</span>
+<span class="font-label-md text-label-md text-on-surface-variant block">Infrastructure • 2h ago</span>
+</div>
+</div>
+<span class="font-data-mono text-data-mono text-error">-$1,240.00</span>
+</div>
+<!-- Transaction 2 -->
+<div class="p-md flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-[20px]">person_check</span>
+</div>
+<div>
+<span class="font-body-md text-body-md font-semibold block">Apple Inc. Settlement</span>
+<span class="font-label-md text-label-md text-on-surface-variant block">Consulting • 5h ago</span>
+</div>
+</div>
+<span class="font-data-mono text-data-mono text-secondary">+$45,000.00</span>
+</div>
+<!-- Transaction 3 -->
+<div class="p-md flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">lunch_dining</span>
+</div>
+<div>
+<span class="font-body-md text-body-md font-semibold block">Client Dinner - Nobu</span>
+<span class="font-label-md text-label-md text-on-surface-variant block">Business Meals • 1d ago</span>
+</div>
+</div>
+<span class="font-data-mono text-data-mono text-error">-$850.50</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 px-2 pb-safe bg-surface border-t border-outline-variant">
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-label-md text-label-md">Sales</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined">more_horiz</span>
+<span class="font-label-md text-label-md">More</span>
+</button>
+</nav>
+<script>
+        const translations = {
+            en: {
+                total_revenue: "Total Revenue",
+                vs_last_month: "vs last month",
+                expenses: "Expenses",
+                net_profit: "Net Profit",
+                revenue_split: "Revenue Split",
+                services: "Services",
+                products: "Products",
+                licensing: "Licensing",
+                recent_transactions: "Recent Transactions",
+                view_all: "View All"
+            },
+            ar: {
+                total_revenue: "إجمالي الإيرادات",
+                vs_last_month: "مقارنة بالشهر الماضي",
+                expenses: "المصروفات",
+                net_profit: "صافي الربح",
+                revenue_split: "توزيع الإيرادات",
+                services: "الخدمات",
+                products: "المنتجات",
+                licensing: "التراخيص",
+                recent_transactions: "أحدث المعاملات",
+                view_all: "عرض الكل"
+            }
+        };
+
+        let currentLang = 'en';
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'ar' : 'en';
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.getElementById('lang-text').innerText = currentLang.toUpperCase();
+            
+            // Translate elements
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang][key]) {
+                    el.innerText = translations[currentLang][key];
+                }
+            });
+        }
+    </script>
+</body></html>

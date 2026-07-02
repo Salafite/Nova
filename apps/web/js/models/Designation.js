@@ -1,0 +1,1 @@
+﻿window.DesignationModel = class Designation {constructor(data){Object.assign(this,data);}}

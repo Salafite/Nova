@@ -1,0 +1,1 @@
+﻿window.RiskAssessmentModel = class RiskAssessment {constructor(d){Object.assign(this,d)}}

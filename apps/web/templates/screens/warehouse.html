@@ -1,0 +1,47 @@
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end mb-xl">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-background">Warehouse Management</h3>
+<p class="text-on-surface-variant mt-1">Live overview of Zone W-44 Capacity & Throughput</p>
+</div>
+<div class="flex gap-md">
+<button class="bg-surface-container-high px-lg py-2 rounded font-label-md text-label-md flex items-center gap-xs hover:bg-surface-variant transition-colors border border-outline-variant">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                    Filter
+                </button>
+</div>
+</div>
+<!-- Bento Grid: Zone Utilization -->
+<div class="grid grid-cols-12 gap-gutter mb-xl">
+{{zoneRows}}
+</div>
+<!-- Inventory Table Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-lg border-b border-outline-variant flex justify-between items-center">
+<div class="flex items-center gap-md">
+<h4 class="font-title-md text-title-md">Live Inventory</h4>
+<span class="px-2 py-1 bg-surface-container-high rounded text-[10px] font-bold text-on-surface-variant uppercase">342 active items</span>
+</div>
+<div class="flex gap-sm">
+<button class="p-2 hover:bg-surface-variant transition-all rounded-lg material-symbols-outlined text-outline">download</button>
+<button class="p-2 hover:bg-surface-variant transition-all rounded-lg material-symbols-outlined text-outline">more_vert</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left rtl:text-right border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">SKU</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Description</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Location</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Status</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant text-right">Quantity</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-outline-variant">Last Update</th>
+</tr>
+</thead>
+<tbody>
+{{stockRows}}
+</tbody>
+</table>
+</div>
+</div>

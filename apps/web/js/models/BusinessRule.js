@@ -1,0 +1,1 @@
+﻿window.BusinessRuleModel = class BusinessRule {constructor(d){Object.assign(this,d)}}

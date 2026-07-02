@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova Analytics - Financial Performance Report</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#6042d6",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "background": "#f9f9ff",
+                        "surface-container-low": "#f1f3ff",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#484554",
+                        "primary-fixed-dim": "#cabeff",
+                        "tertiary": "#3d4551",
+                        "on-primary-fixed-variant": "#4723be",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-surface": "#141b2b",
+                        "inverse-primary": "#cabeff",
+                        "error-container": "#ffdad6",
+                        "surface": "#f9f9ff",
+                        "on-tertiary-container": "#ced4e4",
+                        "surface-variant": "#dce2f7",
+                        "outline-variant": "#c9c4d7",
+                        "on-tertiary-fixed": "#151c27",
+                        "inverse-surface": "#293040",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "surface-container-high": "#e1e8fd",
+                        "surface-bright": "#f9f9ff",
+                        "primary-container": "#5d3fd3",
+                        "on-secondary-fixed": "#002020",
+                        "on-error": "#ffffff",
+                        "surface-dim": "#d3daef",
+                        "tertiary-container": "#555c69",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#dce2f7",
+                        "on-primary-container": "#d8ceff",
+                        "on-error-container": "#93000a",
+                        "outline": "#797586",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#e6deff",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "surface-container": "#e9edff",
+                        "on-secondary-container": "#006e6e",
+                        "secondary": "#006a6a",
+                        "inverse-on-surface": "#edf0ff",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#93f2f2",
+                        "primary": "#451ebb",
+                        "on-background": "#141b2b",
+                        "secondary-container": "#90efef",
+                        "on-primary-fixed": "#1c0062"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "max-width": "1440px",
+                        "lg": "24px",
+                        "margin-desktop": "32px",
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f9f9ff; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .transaction-row:hover {
+            background-color: rgba(96, 66, 214, 0.02);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        @media (max-width: 768px) {
+            .desktop-nav { display: none; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex items-center justify-between px-margin-mobile md:px-margin-desktop w-full h-14">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-low transition-colors p-1 rounded-full">menu</button>
+<span class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed-dim">Nova Analytics</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden md:flex gap-lg mr-lg">
+<a class="font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors px-2 py-1 rounded" href="#">Executive Overview</a>
+<a class="font-label-md text-label-md text-primary dark:text-primary-fixed-dim font-semibold border-b-2 border-primary" href="#">Trends</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors px-2 py-1 rounded" href="#">Financial Health</a>
+</div>
+<button class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-md text-label-md font-bold active:translate-y-px duration-100 transition-all">AR</button>
+</div>
+</header>
+<div class="flex">
+<!-- NavigationDrawer (Sidebar for Desktop) -->
+<aside class="hidden md:flex flex-col h-[calc(100vh-3.5rem)] w-64 fixed left-0 top-14 bg-surface-container-lowest border-r border-outline-variant py-lg z-40">
+<div class="px-md mb-xl flex flex-col items-start">
+<div class="flex items-center gap-sm mb-xs">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional headshot of a corporate executive director, clean lighting, soft background of a modern office, neutral business attire, high resolution studio photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0R_0k-CefOfa7LDfJP6-wwc2mRQ31Pf-a9O9RWlTTnyDm7qMZiqsT88kt8Tnyf77Kq4lH1KQj0jR4d1MmY2GjGSZRe1x7DQ2DCqDWzRhiM0mKCDZ8L1YKscm6XJuusc3q4NFWQLMMgJapZBLY_Uc5b4sPVbsgmcXfEHrg1Q4Z8ah7C_AKMNbh9zLwQhhdbJkTPYxhfIQgWM4MD0PlJKW5HyRUofJkHp-Ox8vh-I01IpJxZMan3e_ZQsI0g9eG6HG2Oe9uIub85ho"/>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-bold text-on-surface">Director Analytics</span>
+<span class="font-label-md text-label-md text-on-surface-variant text-[10px]">Global Markets</span>
+</div>
+</div>
+</div>
+<nav class="flex flex-col gap-xs px-sm">
+<button class="flex items-center gap-md px-md py-sm rounded-full text-on-surface-variant hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Executive Overview</span>
+</button>
+<button class="flex items-center gap-md px-md py-sm rounded-full bg-primary-container text-on-primary-container transition-all">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-label-md text-label-md">Sales Performance</span>
+</button>
+<button class="flex items-center gap-md px-md py-sm rounded-full text-on-surface-variant hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-label-md text-label-md">Operational Risk</span>
+</button>
+<button class="flex items-center gap-md px-md py-sm rounded-full text-on-surface-variant hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-md text-label-md">Financial Health</span>
+</button>
+<hr class="my-sm border-outline-variant opacity-50"/>
+<button class="flex items-center gap-md px-md py-sm rounded-full text-on-surface-variant hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">User Settings</span>
+</button>
+</nav>
+<div class="mt-auto px-md">
+<span class="font-label-md text-label-md text-outline opacity-50">v2.4.0</span>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 p-margin-mobile md:p-margin-desktop min-h-screen pb-24">
+<!-- Headline -->
+<div class="mb-lg flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Financial Performance</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Q3 Report — Data last updated 14 minutes ago.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-surface border border-outline px-md py-sm rounded-lg flex items-center gap-xs font-label-md text-label-md text-on-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                        Last 6 Months
+                    </button>
+<button class="bg-primary text-on-primary px-md py-sm rounded-lg flex items-center gap-xs font-label-md text-label-md active:translate-y-px transition-all">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export Report
+                    </button>
+</div>
+</div>
+<!-- Bento Grid: Top Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-lg">
+<!-- Net Profit Card -->
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col gap-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant">Net Profit</span>
+<span class="text-secondary font-bold font-label-md text-label-md">+12.4%</span>
+</div>
+<div class="flex flex-col">
+<span class="font-display-lg text-display-lg text-on-surface">$2.48M</span>
+<div class="w-full bg-surface-container-high h-1 rounded-full mt-sm">
+<div class="bg-secondary h-1 rounded-full" style="width: 78%"></div>
+</div>
+</div>
+<span class="font-body-md text-body-md text-on-surface-variant mt-xs">Target: $3.1M</span>
+</div>
+<!-- Outstanding AR Card -->
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col gap-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant">Accounts Receivable</span>
+<span class="text-error font-bold font-label-md text-label-md">+3.2%</span>
+</div>
+<div class="flex flex-col">
+<span class="font-display-lg text-display-lg text-on-surface">$842.5K</span>
+<div class="flex items-center gap-xs mt-sm text-error">
+<span class="material-symbols-outlined text-[16px]">priority_high</span>
+<span class="font-label-md text-label-md">14 Overdue Invoices</span>
+</div>
+</div>
+</div>
+<!-- Expense Ratio Card -->
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col gap-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant">Expense Ratio</span>
+<span class="text-secondary font-bold font-label-md text-label-md">-1.5%</span>
+</div>
+<div class="flex flex-col">
+<span class="font-display-lg text-display-lg text-on-surface">34.2%</span>
+<p class="font-body-md text-body-md text-on-surface-variant mt-sm">Operating efficiency optimized.</p>
+</div>
+</div>
+</div>
+<!-- Revenue vs Expenses Chart -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-gutter mb-lg">
+<div class="lg:col-span-3 bg-surface-container-lowest border border-outline-variant p-lg rounded-xl">
+<div class="flex items-center justify-between mb-lg">
+<h3 class="font-title-md text-title-md text-on-surface">Revenue vs. Expenses</h3>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">Revenue</span>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-3 h-3 rounded-full bg-secondary"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">Expenses</span>
+</div>
+</div>
+</div>
+<div class="chart-container flex items-end justify-between px-xs">
+<!-- Bar Chart Simulation using Styled Divs -->
+<div class="flex-1 flex flex-col items-center gap-xs h-full justify-end group">
+<div class="flex gap-xs items-end h-[240px]">
+<div class="w-4 bg-primary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 60%"></div>
+<div class="w-4 bg-secondary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 35%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">MAR</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-xs h-full justify-end group">
+<div class="flex gap-xs items-end h-[240px]">
+<div class="w-4 bg-primary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 75%"></div>
+<div class="w-4 bg-secondary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 40%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">APR</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-xs h-full justify-end group">
+<div class="flex gap-xs items-end h-[240px]">
+<div class="w-4 bg-primary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 65%"></div>
+<div class="w-4 bg-secondary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 38%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">MAY</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-xs h-full justify-end group">
+<div class="flex gap-xs items-end h-[240px]">
+<div class="w-4 bg-primary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 85%"></div>
+<div class="w-4 bg-secondary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 45%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">JUN</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-xs h-full justify-end group">
+<div class="flex gap-xs items-end h-[240px]">
+<div class="w-4 bg-primary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 95%"></div>
+<div class="w-4 bg-secondary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 50%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">JUL</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-xs h-full justify-end group">
+<div class="flex gap-xs items-end h-[240px]">
+<div class="w-4 bg-primary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 80%"></div>
+<div class="w-4 bg-secondary rounded-t-sm transition-all duration-500 hover:brightness-110" style="height: 42%"></div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">AUG</span>
+</div>
+</div>
+</div>
+<div class="bg-primary-container text-on-primary-container p-lg rounded-xl flex flex-col justify-between overflow-hidden relative">
+<div class="z-10">
+<h3 class="font-title-md text-title-md mb-xs">Growth Forecast</h3>
+<p class="font-body-md text-body-md opacity-80">Predicted expansion based on current transaction velocity.</p>
+</div>
+<div class="z-10">
+<span class="font-display-lg text-display-lg block">+18.5%</span>
+<span class="font-label-md text-label-md opacity-70">Estimated Q4 Upside</span>
+</div>
+<!-- Abstract Decorative Element -->
+<div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+</div>
+</div>
+<!-- Transaction Table Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="px-lg py-md border-b border-outline-variant flex items-center justify-between">
+<h3 class="font-title-md text-title-md text-on-surface">High-Value Transactions</h3>
+<div class="flex gap-sm">
+<button class="material-symbols-outlined text-on-surface-variant p-1 hover:bg-surface-container-low rounded">search</button>
+<button class="material-symbols-outlined text-on-surface-variant p-1 hover:bg-surface-container-low rounded">filter_list</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-high border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Entity</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Amount</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Reference</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<!-- Row 1 -->
+<tr class="transaction-row transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">corporate_fare</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg font-semibold text-on-surface">TechGlobal Inc.</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Cloud Services Contract</span>
+</div>
+</div>
+</td>
+<td class="px-lg py-md">
+<span class="px-md py-xs rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md">Settled</span>
+</td>
+<td class="px-lg py-md text-right">
+<span class="font-data-mono text-data-mono font-bold text-on-surface">$142,500.00</span>
+</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-on-surface-variant">TXN-49202-A</td>
+</tr>
+<!-- Row 2 -->
+<tr class="transaction-row transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">shopping_cart</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg font-semibold text-on-surface">OmniRetail Group</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Supply Chain Inventory</span>
+</div>
+</div>
+</td>
+<td class="px-lg py-md">
+<span class="px-md py-xs rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md">Pending</span>
+</td>
+<td class="px-lg py-md text-right">
+<span class="font-data-mono text-data-mono font-bold text-on-surface">$89,240.50</span>
+</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-on-surface-variant">TXN-50119-B</td>
+</tr>
+<!-- Row 3 -->
+<tr class="transaction-row transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">architecture</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg font-semibold text-on-surface">Stellar Designs Ltd</span>
+<span class="font-label-md text-label-md text-on-surface-variant">License Renewal</span>
+</div>
+</div>
+</td>
+<td class="px-lg py-md">
+<span class="px-md py-xs rounded-full bg-error-container text-on-error-container font-label-md text-label-md">Flagged</span>
+</td>
+<td class="px-lg py-md text-right">
+<span class="font-data-mono text-data-mono font-bold text-on-surface">$24,900.00</span>
+</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-on-surface-variant">TXN-51203-C</td>
+</tr>
+<!-- Row 4 -->
+<tr class="transaction-row transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">public</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg font-semibold text-on-surface">Global Logistics</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Freight Services</span>
+</div>
+</div>
+</td>
+<td class="px-lg py-md">
+<span class="px-md py-xs rounded-full bg-secondary-container text-on-secondary-container font-label-md text-label-md">Settled</span>
+</td>
+<td class="px-lg py-md text-right">
+<span class="font-data-mono text-data-mono font-bold text-on-surface">$210,000.00</span>
+</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-on-surface-variant">TXN-49882-K</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-md flex items-center justify-center border-t border-outline-variant">
+<button class="font-label-md text-label-md text-primary font-bold hover:underline">View All Transactions (2,451)</button>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar (Active on 'Trends') - Mobile Only View -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface dark:bg-surface-dim border-t border-outline-variant dark:border-outline h-16 flex justify-around items-center px-4 z-50">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-95 px-4 py-1">
+<span class="material-symbols-outlined">assessment</span>
+<span class="font-label-md text-[10px]">KPIs</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 transition-all active:scale-95">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-label-md text-[10px]">Trends</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-95 px-4 py-1">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-md text-[10px]">Reports</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-95 px-4 py-1">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-label-md text-[10px]">Alerts</span>
+</button>
+</nav>
+<script>
+        // Simple micro-interaction for the report export button
+        document.querySelector('.bg-primary')?.addEventListener('click', function() {
+            this.textContent = 'Generating...';
+            setTimeout(() => {
+                this.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span> Downloaded';
+                setTimeout(() => {
+                    this.innerHTML = '<span class="material-symbols-outlined text-[18px]">download</span> Export Report';
+                }, 2000);
+            }, 1000);
+        });
+    </script>
+</body></html>

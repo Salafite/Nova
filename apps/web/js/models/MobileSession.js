@@ -1,0 +1,1 @@
+﻿window.MobileSessionModel = class MobileSession {constructor(d){Object.assign(this,d)}}

@@ -1,0 +1,22 @@
+import os
+import psycopg2
+from psycopg2.pool import SimpleConnectionPool
+
+_pool = SimpleConnectionPool(
+    minconn=int(os.getenv('DB_POOL_MIN', 5)),
+    maxconn=int(os.getenv('DB_POOL_MAX', 20)),
+    host=os.getenv('DB_HOST', 'localhost'),
+    port=int(os.getenv('DB_PORT', 5432)),
+    dbname=os.getenv('DB_NAME', 'Stage'),
+    user=os.getenv('DB_USER', 'postgres'),
+    password=os.getenv('DB_PASSWORD', ''),
+    options=f'-c search_path="{os.getenv("DB_SCHEMA", "Nova")}"'
+)
+
+
+def get_connection():
+    return _pool.getconn()
+
+
+def release_connection(conn):
+    _pool.putconn(conn)

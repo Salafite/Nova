@@ -1,0 +1,90 @@
+<div class="max-w-max-width mx-auto">
+<!-- Welcome & Time Filter -->
+<div class="flex flex-col md:flex-row justify-between md:items-end mb-xl gap-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Finance Overview</h2>
+<p class="text-on-surface-variant font-body-md mt-1">Track performance and manage your enterprise liquidity in real-time.</p>
+</div>
+<div class="flex bg-surface-container rounded-lg p-1">
+<button class="px-4 py-1.5 rounded-md font-label-md text-label-md bg-white text-primary shadow-sm">Last 30 Days</button>
+<button class="px-4 py-1.5 rounded-md font-label-md text-label-md text-on-surface-variant hover:text-on-surface">Quarterly</button>
+<button class="px-4 py-1.5 rounded-md font-label-md text-label-md text-on-surface-variant hover:text-on-surface">Annual</button>
+</div>
+</div>
+<!-- KPI Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-primary-container text-primary rounded-lg">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<span class="text-secondary font-label-md text-label-md flex items-center"><span class="material-symbols-outlined text-sm mr-1">trending_up</span> +12%</span>
+</div>
+<div class="mt-4">
+<p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Total Revenue</p>
+<p class="font-display-lg text-[28px] leading-tight text-on-surface font-bold font-data-mono">${{totalRevenue}}</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-surface-container-high text-on-surface-variant rounded-lg">
+<span class="material-symbols-outlined">receipt_long</span>
+</div>
+<span class="text-error font-label-md text-label-md flex items-center"><span class="material-symbols-outlined text-sm mr-1">trending_up</span> +4.5%</span>
+</div>
+<div class="mt-4">
+<p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Expenses</p>
+<p class="font-display-lg text-[28px] leading-tight text-error font-bold font-data-mono">${{totalExpenses}}</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-secondary-container text-on-secondary-container rounded-lg">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<span class="text-secondary font-label-md text-label-md flex items-center"><span class="material-symbols-outlined text-sm mr-1">trending_up</span> +8.2%</span>
+</div>
+<div class="mt-4">
+<p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Net Profit</p>
+<p class="font-display-lg text-[28px] leading-tight text-on-surface font-bold font-data-mono">${{netProfit}}</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl flex flex-col justify-between shadow-sm border-l-4 border-l-primary">
+<div class="flex justify-between items-start">
+<div class="p-2 bg-primary-container/10 text-primary rounded-lg">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<button class="text-primary font-label-md text-label-md hover:underline">View AR</button>
+</div>
+<div class="mt-4">
+<p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Pending Invoices</p>
+<p class="font-display-lg text-[28px] leading-tight text-on-surface font-bold font-data-mono">{{pendingInvoices}}</p>
+</div>
+</div>
+</div>
+<!-- Recent Transactions Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md bg-surface-container-low border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-title-md text-title-md text-on-surface font-bold">Recent Transactions</h3>
+<div class="flex gap-2">
+<button class="bg-white border border-outline-variant px-3 py-1.5 rounded text-label-md font-label-md text-on-surface-variant hover:bg-surface-bright transition-colors">Export CSV</button>
+<button class="bg-primary text-on-primary px-3 py-1.5 rounded text-label-md font-label-md active:scale-95 transition-transform press-effect">New Transaction</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-lg py-3 text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">Date</th>
+<th class="px-lg py-3 text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">Description</th>
+<th class="px-lg py-3 text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider">Type</th>
+<th class="px-lg py-3 text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider text-right">Amount</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{transactionRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

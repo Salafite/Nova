@@ -1,0 +1,1 @@
+﻿window.ApiClientModel = class ApiClient {constructor(d){Object.assign(this,d)}}

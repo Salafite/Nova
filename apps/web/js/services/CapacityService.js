@@ -1,0 +1,1 @@
+﻿window.CapacityService = class CapacityService {}

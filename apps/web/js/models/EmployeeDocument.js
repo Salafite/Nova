@@ -1,0 +1,1 @@
+﻿window.EmployeeDocumentModel = class EmployeeDocument {constructor(data){Object.assign(this,data);}}

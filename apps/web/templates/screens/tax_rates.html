@@ -1,0 +1,67 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+  <div class="flex justify-between items-end mb-lg mt-lg">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Tax Rates</h2>
+      <p class="text-body-md text-on-surface-variant mt-1">Manage tax rate definitions for sales, purchases, or both.</p>
+    </div>
+    <div class="flex items-center gap-sm">
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+        <input type="text" id="txrSearch" placeholder="Search by name or code..." class="bg-surface border border-outline-variant rounded-lg pl-9 pr-3 py-2 text-body-md w-56 focus:ring-2 focus:ring-primary/20" oninput="controllers.tax_rates.search(this.value)">
+      </div>
+      <button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.tax_rates.showCreateForm()">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        <span>New Tax Rate</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-3 gap-gutter">
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center gap-sm">
+        <span class="material-symbols-outlined text-primary text-[24px]">percent</span>
+        <span class="font-title-md text-title-md text-on-surface">Total</span>
+      </div>
+      <p class="font-headline-lg text-headline-lg text-primary font-bold mt-sm">{{count}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center gap-sm">
+        <span class="material-symbols-outlined text-success text-[24px]">check_circle</span>
+        <span class="font-title-md text-title-md text-on-surface">Active</span>
+      </div>
+      <p class="font-headline-lg text-headline-lg text-success font-bold mt-sm">{{activeCount}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center gap-sm">
+        <span class="material-symbols-outlined text-warning text-[24px]">star</span>
+        <span class="font-title-md text-title-md text-on-surface">Default</span>
+      </div>
+      <p class="font-headline-lg text-headline-lg text-warning font-bold mt-sm">{{defaultCount}}</p>
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+      <h3 class="font-title-md text-title-md font-bold">Tax Rates</h3>
+      <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs rounded-full hover:bg-surface-container-high" onclick="controllers.tax_rates.refresh()">refresh</button>
+    </div>
+    <div class="overflow-x-auto flex-1">
+      <table class="w-full text-left border-collapse erp-table">
+        <thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+          <tr>
+            <th class="px-lg py-sm font-semibold">Name</th>
+            <th class="px-lg py-sm font-semibold">Code</th>
+            <th class="px-lg py-sm font-semibold">Rate</th>
+            <th class="px-lg py-sm font-semibold">Type</th>
+            <th class="px-lg py-sm font-semibold">Status</th>
+            <th class="px-lg py-sm font-semibold text-center"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant">
+          {{rows}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,26 @@
+<h2>{{title}}</h2>
+<div class="card">
+  <form id="customerForm" onsubmit="return controllers.customers.saveForm()">
+    <input type="hidden" id="customerFormId" value="{{id}}">
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" id="customerFormName" value="{{name}}" required>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="customerFormEmail" value="{{email}}">
+    </div>
+    <div class="form-group">
+      <label>Phone</label>
+      <input type="text" id="customerFormPhone" value="{{phone}}">
+    </div>
+    <div class="form-group">
+      <label>Credit Limit</label>
+      <input type="number" id="customerFormCreditLimit" value="{{creditLimit}}" step="0.01">
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="button" class="btn btn-outline" onclick="app.loadModule('customers')">Cancel</button>
+    </div>
+  </form>
+</div>

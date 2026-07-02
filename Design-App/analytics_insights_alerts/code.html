@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova Analytics | Operational Alerts</title>
+<!-- Fonts and Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#6042d6",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "background": "#f9f9ff",
+                    "surface-container-low": "#f1f3ff",
+                    "on-primary": "#ffffff",
+                    "on-surface-variant": "#484554",
+                    "primary-fixed-dim": "#cabeff",
+                    "tertiary": "#3d4551",
+                    "on-primary-fixed-variant": "#4723be",
+                    "tertiary-fixed": "#dce2f3",
+                    "on-surface": "#141b2b",
+                    "inverse-primary": "#cabeff",
+                    "error-container": "#ffdad6",
+                    "surface": "#f9f9ff",
+                    "on-tertiary-container": "#ced4e4",
+                    "surface-variant": "#dce2f7",
+                    "outline-variant": "#c9c4d7",
+                    "on-tertiary-fixed": "#151c27",
+                    "inverse-surface": "#293040",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "surface-container-high": "#e1e8fd",
+                    "surface-bright": "#f9f9ff",
+                    "primary-container": "#5d3fd3",
+                    "on-secondary-fixed": "#002020",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#d3daef",
+                    "tertiary-container": "#555c69",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#dce2f7",
+                    "on-primary-container": "#d8ceff",
+                    "on-error-container": "#93000a",
+                    "outline": "#797586",
+                    "on-secondary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#e6deff",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "surface-container": "#e9edff",
+                    "on-secondary-container": "#006e6e",
+                    "secondary": "#006a6a",
+                    "inverse-on-surface": "#edf0ff",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#93f2f2",
+                    "primary": "#451ebb",
+                    "on-background": "#141b2b",
+                    "secondary-container": "#90efef",
+                    "on-primary-fixed": "#1c0062"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "max-width": "1440px",
+                    "lg": "24px",
+                    "margin-desktop": "32px",
+                    "md": "16px",
+                    "margin-mobile": "16px",
+                    "gutter": "16px",
+                    "base": "4px",
+                    "xl": "32px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "title-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c9c4d7; border-radius: 10px; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md overflow-x-hidden">
+<!-- Desktop Navigation Drawer -->
+<aside class="hidden md:flex flex-col h-full py-lg h-full w-60 fixed left-0 top-0 bg-surface-container-lowest border-r border-outline-variant shadow-sm z-50">
+<div class="px-md mb-xl">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Nova</h1>
+</div>
+<nav class="flex-1 space-y-1 px-sm">
+<a class="flex items-center gap-md px-md py-sm transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Executive Overview</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-label-md text-label-md">Sales Performance</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="font-label-md text-label-md">Operational Risk</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-label-md text-label-md">Financial Health</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm transition-all duration-200 ease-in-out text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">User Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-md py-lg border-t border-outline-variant">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-primary-fixed flex items-center justify-center">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a senior director in a modern corporate setting. The person is wearing a navy blue blazer and has a confident, approachable expression. The background is a blurred, high-tech office with cool blue and purple lighting accents, matching a premium enterprise analytics theme." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmNk0zW4hL5xWDSIWRgr4xCpy6_Mic1Mw4in106GNu6BpwdBJbT5b4hRFm3yyKT1RAiosPZGCWf0pkZv30tT4hS4K5xwRbyfLM6KRgQf0yms14PXNeF5Ey4HwQiS42RcYA1ybWtEkI7ZLK79gGDssg0SRE50qUMbshhG5LsaiqxhKuEr83qT7sh-L_4_Vm8X0FF0-yPaPA_3ZfvCPSV_u8WGpguvTc4q5U5nm47GQKh6SVUPsR7IIOBvKmCZL9azre4tCoSpDTOIM"/>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">Director Analytics</p>
+<p class="text-[10px] text-on-surface-variant">Global Markets</p>
+</div>
+</div>
+<p class="mt-md text-[10px] text-outline text-right uppercase tracking-widest">v2.4.0</p>
+</div>
+</aside>
+<!-- Top App Bar -->
+<header class="w-full top-0 sticky bg-surface border-b border-outline-variant z-40">
+<div class="flex items-center justify-between px-margin-mobile md:px-margin-desktop w-full h-14 md:ml-60 md:w-[calc(100%-15rem)]">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined md:hidden text-primary" data-icon="menu">menu</span>
+<span class="font-title-md text-title-md font-bold text-primary">Nova Analytics</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="search">search</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-sm">
+                    AR
+                </div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="md:ml-60 min-h-screen pb-32 pt-lg px-margin-mobile md:px-margin-desktop bg-background">
+<!-- Dashboard Header -->
+<div class="mb-xl flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Operational Alerts</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Real-time data insights and critical system notifications.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-md py-sm bg-surface-container-lowest border border-outline-variant rounded hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span>
+<span class="font-label-md text-label-md">Filter</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm bg-primary text-on-primary rounded hover:opacity-90 active:translate-y-px transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+<span class="font-label-md text-label-md">Export Report</span>
+</button>
+</div>
+</div>
+<!-- Alert Feed Layout (Bento Grid Style) -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-lg">
+<!-- Summary Card -->
+<section class="md:col-span-4 h-full">
+<div class="glass-card p-lg rounded-xl h-full flex flex-col justify-between">
+<div class="flex justify-between items-start mb-md">
+<h3 class="font-title-md text-title-md">Snapshot</h3>
+<span class="material-symbols-outlined text-primary" data-icon="info">info</span>
+</div>
+<div class="space-y-md">
+<div class="flex items-center justify-between p-md bg-error-container/20 rounded-lg">
+<span class="font-label-md text-label-md text-on-error-container">Critical</span>
+<span class="font-data-mono text-data-mono font-bold text-error">03</span>
+</div>
+<div class="flex items-center justify-between p-md bg-secondary-container/20 rounded-lg">
+<span class="font-label-md text-label-md text-on-secondary-container">Warnings</span>
+<span class="font-data-mono text-data-mono font-bold text-secondary">08</span>
+</div>
+<div class="flex items-center justify-between p-md bg-primary-container/10 rounded-lg">
+<span class="font-label-md text-label-md text-on-primary-container">Insights</span>
+<span class="font-data-mono text-data-mono font-bold text-primary">14</span>
+</div>
+</div>
+<div class="mt-xl h-40 relative rounded-lg overflow-hidden border border-outline-variant">
+
+<div class="absolute inset-0 flex flex-col items-center justify-center p-md text-center">
+<p class="font-display-lg text-display-lg text-primary">98.2%</p>
+<p class="font-label-md text-label-md text-on-surface-variant">System Integrity</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Alert Feed -->
+<section class="md:col-span-8 flex flex-col gap-md">
+<!-- Critical Alert -->
+<div class="p-lg bg-white border-l-4 border-error rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex gap-md">
+<div class="w-10 h-10 rounded-full bg-error-container flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="inventory_2" data-weight="fill">inventory_2</span>
+</div>
+<div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="bg-error/10 text-error text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase">Critical</span>
+<span class="text-outline text-[11px] font-data-mono">2 min ago</span>
+</div>
+<h4 class="font-title-md text-body-lg font-bold text-on-surface">Warning: Stock for SKU-2091 is low</h4>
+<p class="text-on-surface-variant mt-xs">Current inventory level is 12 units. Reorder point (25) was breached 4 hours ago. Expected lead time is 5 days.</p>
+<div class="flex gap-sm mt-md">
+<button class="px-md py-sm bg-error text-on-error rounded font-label-md text-label-md hover:bg-error/90 active:translate-y-px transition-all">Reorder Now</button>
+<button class="px-md py-sm border border-outline-variant rounded font-label-md text-label-md hover:bg-surface-container transition-colors">Dismiss</button>
+</div>
+</div>
+</div>
+<button class="text-outline hover:text-on-surface"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</div>
+<!-- Positive Insight -->
+<div class="p-lg bg-white border-l-4 border-secondary rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="trending_up" data-weight="fill">trending_up</span>
+</div>
+<div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="bg-secondary/10 text-secondary text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase">Growth Insight</span>
+<span class="text-outline text-[11px] font-data-mono">1 hour ago</span>
+</div>
+<h4 class="font-title-md text-body-lg font-bold text-on-surface">Revenue is up 12% in B2B services</h4>
+<p class="text-on-surface-variant mt-xs">Performance in North American market exceeds quarterly projections. High retention in 'Enterprise Cloud' segment driving organic growth.</p>
+<div class="flex gap-sm mt-md">
+<button class="px-md py-sm text-secondary border border-secondary rounded font-label-md text-label-md hover:bg-secondary/5 transition-colors">View Deep Dive</button>
+</div>
+</div>
+</div>
+<button class="text-outline hover:text-on-surface"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</div>
+<!-- Info Alert -->
+<div class="p-lg bg-white border-l-4 border-primary rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="update" data-weight="fill">update</span>
+</div>
+<div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase">Info</span>
+<span class="text-outline text-[11px] font-data-mono">4 hours ago</span>
+</div>
+<h4 class="font-title-md text-body-lg font-bold text-on-surface">Routine system maintenance scheduled</h4>
+<p class="text-on-surface-variant mt-xs">Planned database optimization will occur Sunday at 02:00 UTC. Expect 15 minutes of read-only access for analytics modules.</p>
+</div>
+</div>
+<button class="text-outline hover:text-on-surface"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</div>
+<!-- Warning Alert -->
+<div class="p-lg bg-white border-l-4 border-surface-tint rounded-r-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between">
+<div class="flex gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="monitoring" data-weight="fill">monitoring</span>
+</div>
+<div>
+<div class="flex items-center gap-sm mb-xs">
+<span class="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase">Operational</span>
+<span class="text-outline text-[11px] font-data-mono">6 hours ago</span>
+</div>
+<h4 class="font-title-md text-body-lg font-bold text-on-surface">Unusual activity in logistics API</h4>
+<p class="text-on-surface-variant mt-xs">Spike in latency detected (avg +450ms). Investigation suggested bottleneck in carrier webhook processing.</p>
+<div class="flex gap-sm mt-md">
+<button class="px-md py-sm bg-primary text-on-primary rounded font-label-md text-label-md hover:opacity-90 active:translate-y-px transition-all">Inspect Latency</button>
+</div>
+</div>
+</div>
+<button class="text-outline hover:text-on-surface"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</div>
+</section>
+</div>
+<!-- Sidebar Trend Detail (Secondary Column Desktop) -->
+<div class="hidden xl:block fixed right-margin-desktop top-[140px] w-72 space-y-lg">
+<div class="bg-surface-container-low border border-outline-variant p-lg rounded-xl">
+<h5 class="font-label-md text-label-md font-bold mb-md">ANALYTICS HEALTH</h5>
+<div class="space-y-sm">
+<div class="flex items-center justify-between">
+<span class="text-[11px] text-on-surface-variant">Data Freshness</span>
+<span class="text-[11px] font-data-mono text-secondary">0.4s ago</span>
+</div>
+<div class="w-full bg-outline-variant h-1 rounded-full overflow-hidden">
+<div class="bg-secondary h-full" style="width: 92%"></div>
+</div>
+<div class="flex items-center justify-between mt-md">
+<span class="text-[11px] text-on-surface-variant">API Uptime</span>
+<span class="text-[11px] font-data-mono text-secondary">99.98%</span>
+</div>
+<div class="w-full bg-outline-variant h-1 rounded-full overflow-hidden">
+<div class="bg-secondary h-full" style="width: 99.9%"></div>
+</div>
+</div>
+</div>
+<div class="bg-primary-container p-lg rounded-xl text-on-primary-container relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+<span class="material-symbols-outlined text-[120px]" data-icon="lightbulb">lightbulb</span>
+</div>
+<h5 class="font-label-md text-label-md font-bold mb-xs">Nova Tip</h5>
+<p class="text-[13px] relative z-10">Configure custom alert thresholds in the settings menu to reduce notification fatigue.</p>
+<a class="inline-block mt-md text-[12px] font-bold underline relative z-10" href="#">Take Me There</a>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 bg-surface border-t border-outline-variant z-50 h-16">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="font-label-md text-label-md">KPIs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-label-md text-label-md">Trends</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-md text-label-md">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="notifications" data-weight="fill">notifications</span>
+<span class="font-label-md text-label-md">Alerts</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for dismissal or actions
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if(this.textContent.includes('Dismiss')) {
+                    const card = this.closest('.bg-white');
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(20px)';
+                    setTimeout(() => card.remove(), 300);
+                }
+            });
+        });
+    </script>
+</body></html>

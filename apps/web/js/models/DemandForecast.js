@@ -1,0 +1,1 @@
+﻿window.DemandForecastModel = class DemandForecast {constructor(d){Object.assign(this,d)}}

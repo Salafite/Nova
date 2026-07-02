@@ -1,0 +1,43 @@
+<div class="max-w-2xl mx-auto py-xl">
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+    <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low">
+      <h3 class="font-title-md text-title-md font-bold">{{title}}</h3>
+    </div>
+    <form onsubmit="return controllers.chart_of_accounts.saveForm()" class="p-lg space-y-lg">
+      <input type="hidden" id="coaFormId" value="{{id}}">
+      <div class="grid grid-cols-2 gap-lg">
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Account Code</label>
+          <input type="text" id="coaFormCode" value="{{accountCode}}" required class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Account Name</label>
+          <input type="text" id="coaFormName" value="{{accountName}}" required class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Type</label>
+          <select id="coaFormType" required class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+            <option value="">Select type...</option>
+            <option value="Asset" {{accountTypeSelected_Asset}}>Asset</option>
+            <option value="Liability" {{accountTypeSelected_Liability}}>Liability</option>
+            <option value="Equity" {{accountTypeSelected_Equity}}>Equity</option>
+            <option value="Revenue" {{accountTypeSelected_Revenue}}>Revenue</option>
+            <option value="Expense" {{accountTypeSelected_Expense}}>Expense</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Currency</label>
+          <input type="text" id="coaFormCurrency" value="{{currency}}" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+      </div>
+      <div class="flex items-center gap-sm">
+        <input type="checkbox" id="coaFormIsActive" {{isActive}} class="rounded border-outline text-primary focus:ring-primary/20 w-5 h-5">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Is Active</label>
+      </div>
+      <div class="flex justify-end gap-sm pt-md border-t border-outline-variant">
+        <button type="button" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" onclick="controllers.chart_of_accounts.render()">Cancel</button>
+        <button type="submit" class="px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all press-effect">Save</button>
+      </div>
+    </form>
+  </div>
+</div>

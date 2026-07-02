@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP - Expense Tracking</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#93f2f2",
+                        "outline": "#797586",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#cabeff",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#edf0ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#006e6e",
+                        "inverse-surface": "#293040",
+                        "tertiary-container": "#555c69",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "secondary": "#006a6a",
+                        "surface-container-low": "#f1f3ff",
+                        "on-secondary": "#ffffff",
+                        "surface": "#f9f9ff",
+                        "primary-fixed": "#e6deff",
+                        "on-background": "#141b2b",
+                        "on-surface-variant": "#484554",
+                        "on-surface": "#141b2b",
+                        "surface-dim": "#d3daef",
+                        "on-primary-fixed": "#1c0062",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "surface-container": "#e9edff",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "on-tertiary-fixed": "#151c27",
+                        "surface-tint": "#6042d6",
+                        "background": "#f9f9ff",
+                        "primary-container": "#5d3fd3",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e1e8fd",
+                        "on-primary-container": "#d8ceff",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "surface-variant": "#dce2f7",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c9c4d7",
+                        "tertiary": "#3d4551",
+                        "on-primary-fixed-variant": "#4723be",
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff",
+                        "primary": "#451ebb",
+                        "surface-bright": "#f9f9ff",
+                        "secondary-container": "#90efef",
+                        "on-tertiary-container": "#ced4e4",
+                        "on-secondary-fixed": "#002020",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "max-width": "1440px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "gutter": "16px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "base": "4px",
+                        "md": "16px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f9f9ff;
+            color: #141b2b;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+        }
+        .expense-row:hover {
+            background-color: rgba(69, 30, 187, 0.02);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md overflow-x-hidden pb-24 md:pb-0 md:pl-60">
+<!-- Top AppBar -->
+<header class="bg-surface w-full top-0 sticky border-b border-outline-variant z-40 flex justify-between items-center px-margin-mobile h-14 w-full">
+<div class="flex items-center gap-4">
+<button class="md:hidden active:translate-y-px transition-transform text-on-surface-variant">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Nova ERP</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-3 py-1 text-label-md font-label-md border border-outline-variant rounded-full hover:bg-surface-container-highest transition-colors" id="langToggle">
+                EN/AR
+            </button>
+<button class="active:translate-y-px transition-transform text-primary">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold text-xs">
+                AU
+            </div>
+</div>
+</header>
+<!-- Navigation Drawer (Desktop) -->
+<nav class="hidden md:flex flex-col h-full w-60 fixed left-0 top-0 z-[60] bg-surface border-r border-outline-variant py-md">
+<div class="px-4 mb-8">
+<h2 class="font-title-md text-title-md font-black text-primary">Nova ERP</h2>
+<p class="text-xs text-on-surface-variant mt-1">Finance Module</p>
+</div>
+<div class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 mx-2 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 mx-2 bg-primary-container text-on-primary-container font-semibold rounded-r-full transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md text-body-md">Expenses</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 mx-2 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-body-md text-body-md">Accounting</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 mx-2 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-md text-body-md">Invoices</span>
+</a>
+</div>
+<div class="mt-auto px-4 pt-4 border-t border-outline-variant">
+<div class="flex items-center gap-3 py-2">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="font-semibold text-sm">Admin User</p>
+<p class="text-xs text-on-surface-variant">admin@nova-erp.com</p>
+</div>
+</div>
+<a class="flex items-center gap-3 py-3 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="p-4 md:p-8 max-w-7xl mx-auto">
+<!-- Header Actions -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Expense Tracking</h2>
+<p class="text-on-surface-variant">Manage business spendings and receipt validations</p>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 bg-surface border border-primary text-primary px-4 py-2 rounded-lg font-semibold active:translate-y-px transition-all">
+<span class="material-symbols-outlined text-sm">qr_code_scanner</span>
+                    Scan Invoice
+                </button>
+<button class="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-lg font-semibold active:translate-y-px transition-all shadow-sm">
+<span class="material-symbols-outlined text-sm">add</span>
+                    New Expense
+                </button>
+</div>
+</div>
+<!-- Stats Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+<div class="bg-surface border border-outline-variant p-4 rounded-xl">
+<p class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Total This Month</p>
+<h3 class="text-2xl font-bold text-primary mt-2">$12,450.00</h3>
+<div class="flex items-center gap-1 text-error text-xs mt-2">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>12% from last month</span>
+</div>
+</div>
+<div class="bg-surface border border-outline-variant p-4 rounded-xl">
+<p class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Pending Approval</p>
+<h3 class="text-2xl font-bold text-on-surface mt-2">14 Items</h3>
+<p class="text-xs text-on-surface-variant mt-2">Awaiting manager review</p>
+</div>
+<div class="bg-surface border border-outline-variant p-4 rounded-xl">
+<p class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Top Category</p>
+<h3 class="text-2xl font-bold text-on-surface mt-2">Travel</h3>
+<p class="text-xs text-on-surface-variant mt-2">35% of total budget</p>
+</div>
+<div class="bg-surface border border-outline-variant p-4 rounded-xl">
+<p class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Receipt Compliance</p>
+<h3 class="text-2xl font-bold text-secondary mt-2">98%</h3>
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full mt-3">
+<div class="bg-secondary w-[98%] h-full rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Expense Management Section -->
+<div class="bg-surface border border-outline-variant rounded-xl overflow-hidden">
+<!-- Filter Bar -->
+<div class="p-4 border-b border-outline-variant bg-surface-container-low flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-2 flex-1 min-w-[200px]">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all" placeholder="Search expenses, vendors..." type="text"/>
+</div>
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-surface-container-high text-on-surface-variant">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-2 text-label-md font-label-md text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors">Export CSV</button>
+<button class="px-3 py-2 text-label-md font-label-md text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors">Archive</button>
+</div>
+</div>
+<!-- Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant border-b border-outline-variant">
+<th class="px-6 py-4 font-semibold text-label-md uppercase tracking-wider">Expense Item</th>
+<th class="px-6 py-4 font-semibold text-label-md uppercase tracking-wider">Category</th>
+<th class="px-6 py-4 font-semibold text-label-md uppercase tracking-wider">Date</th>
+<th class="px-6 py-4 font-semibold text-label-md uppercase tracking-wider">Receipt</th>
+<th class="px-6 py-4 font-semibold text-label-md uppercase tracking-wider text-right">Amount</th>
+<th class="px-6 py-4 font-semibold text-label-md uppercase tracking-wider">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="expense-row transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container/20 rounded flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">flight</span>
+</div>
+<div>
+<p class="font-semibold text-on-surface">Client Site Visit - London</p>
+<p class="text-xs text-on-surface-variant">Vendor: British Airways</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs rounded-full">Travel</span>
+</td>
+<td class="px-6 py-4 font-data-mono text-data-mono">24 Oct 2023</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline flex items-center gap-1 text-sm">
+<span class="material-symbols-outlined text-base">attachment</span>
+                                    BA-9482.pdf
+                                </button>
+</td>
+<td class="px-6 py-4 text-right font-bold text-on-surface font-data-mono">$842.00</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase rounded">Approved</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="expense-row transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-tertiary-container/20 rounded flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+<div>
+<p class="font-semibold text-on-surface">Cloud Server Subscription</p>
+<p class="text-xs text-on-surface-variant">Vendor: Amazon Web Services</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs rounded-full">Utilities</span>
+</td>
+<td class="px-6 py-4 font-data-mono text-data-mono">22 Oct 2023</td>
+<td class="px-6 py-4">
+<button class="text-error hover:underline flex items-center gap-1 text-sm">
+<span class="material-symbols-outlined text-base">error_outline</span>
+                                    Missing
+                                </button>
+</td>
+<td class="px-6 py-4 text-right font-bold text-on-surface font-data-mono">$1,250.00</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 bg-error-container text-on-error-container text-[10px] font-bold uppercase rounded">Pending</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="expense-row transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-secondary-container/20 rounded flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">local_cafe</span>
+</div>
+<div>
+<p class="font-semibold text-on-surface">Team Strategy Lunch</p>
+<p class="text-xs text-on-surface-variant">Vendor: Starbucks Corp.</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-xs rounded-full">Supplies</span>
+</td>
+<td class="px-6 py-4 font-data-mono text-data-mono">20 Oct 2023</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline flex items-center gap-1 text-sm">
+<span class="material-symbols-outlined text-base">attachment</span>
+                                    IMG_5521.jpg
+                                </button>
+</td>
+<td class="px-6 py-4 text-right font-bold text-on-surface font-data-mono">$45.50</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase rounded">Approved</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="p-4 bg-surface border-t border-outline-variant flex items-center justify-between">
+<span class="text-xs text-on-surface-variant">Showing 1-10 of 124 expenses</span>
+<div class="flex gap-2">
+<button class="p-1 border border-outline-variant rounded hover:bg-surface-container-high disabled:opacity-50">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-1 border border-outline-variant rounded hover:bg-surface-container-high">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Recent Receipt Uploads Area (Bento Component) -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 bg-surface border border-outline-variant p-6 rounded-xl">
+<div class="flex justify-between items-start mb-6">
+<h3 class="font-title-md text-title-md text-on-surface">Quick Upload</h3>
+<span class="text-xs text-primary font-bold">DRAG &amp; DROP READY</span>
+</div>
+<div class="border-2 border-dashed border-outline-variant rounded-xl p-10 flex flex-col items-center justify-center bg-surface-container-lowest hover:bg-primary/5 transition-colors cursor-pointer group">
+<div class="w-16 h-16 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">cloud_upload</span>
+</div>
+<p class="font-bold text-on-surface">Click to upload or drag and drop</p>
+<p class="text-sm text-on-surface-variant mt-1">PDF, JPG, PNG or ZIP (max 10MB)</p>
+</div>
+</div>
+<div class="bg-surface border border-outline-variant p-6 rounded-xl relative overflow-hidden flex flex-col justify-between">
+<div class="z-10">
+<h3 class="font-title-md text-title-md text-on-surface mb-2">Smart Scan</h3>
+<p class="text-sm text-on-surface-variant">Our AI automatically extracts dates, vendors, and totals from your receipts.</p>
+</div>
+<div class="mt-6 space-y-3 z-10">
+<div class="flex items-center gap-2 text-sm text-secondary font-bold">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+                        99% Accuracy
+                    </div>
+<div class="flex items-center gap-2 text-sm text-secondary font-bold">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+                        Instant Categorization
+                    </div>
+<button class="w-full mt-4 bg-secondary text-on-secondary py-3 rounded-lg font-bold active:scale-95 transition-all">
+                        Launch Camera
+                    </button>
+</div>
+<!-- Abstract Decorative Pattern -->
+<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl"></div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 px-2 pb-safe bg-surface border-t border-outline-variant rounded-t-lg">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-95 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 active:scale-95 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Expenses</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-95 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-95 transition-all duration-150" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<span class="font-label-md text-label-md">More</span>
+</a>
+</nav>
+<!-- Language & Interaction Logic -->
+<script>
+        const langToggle = document.getElementById('langToggle');
+        let currentLang = 'EN';
+        
+        const translations = {
+            'EN': {
+                'title': 'Nova ERP',
+                'header': 'Expense Tracking',
+                'sub': 'Manage business spendings and receipt validations',
+                'new': 'New Expense',
+                'scan': 'Scan Invoice',
+                'dir': 'ltr'
+            },
+            'AR': {
+                'title': 'نوفا ERP',
+                'header': 'تتبع المصاريف',
+                'sub': 'إدارة نفقات العمل والتحقق من الإيصالات',
+                'new': 'مصروف جديد',
+                'scan': 'مسح الفاتورة',
+                'dir': 'rtl'
+            }
+        };
+
+        langToggle.addEventListener('click', () => {
+            currentLang = currentLang === 'EN' ? 'AR' : 'EN';
+            langToggle.innerText = currentLang === 'EN' ? 'EN/AR' : 'AR/EN';
+            
+            document.documentElement.dir = translations[currentLang].dir;
+            document.querySelector('h1').innerText = translations[currentLang].title;
+            document.querySelector('h2').innerText = translations[currentLang].header;
+            document.querySelector('h2 + p').innerText = translations[currentLang].sub;
+            
+            // Adjust sidebar for RTL if desktop
+            const nav = document.querySelector('nav');
+            if (currentLang === 'AR') {
+                nav.classList.remove('left-0', 'border-r');
+                nav.classList.add('right-0', 'border-l');
+                document.body.classList.remove('md:pl-60');
+                document.body.classList.add('md:pr-60');
+            } else {
+                nav.classList.add('left-0', 'border-r');
+                nav.classList.remove('right-0', 'border-l');
+                document.body.classList.add('md:pl-60');
+                document.body.classList.remove('md:pr-60');
+            }
+        });
+
+        // Simple press animation for buttons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mousedown', () => btn.style.transform = 'translateY(1px)');
+            btn.addEventListener('mouseup', () => btn.style.transform = 'translateY(0)');
+        });
+    </script>
+</body></html>

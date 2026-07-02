@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP | Manufacturing Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-surface": "#141b2b",
+                      "surface-bright": "#f9f9ff",
+                      "on-tertiary-fixed": "#151c27",
+                      "tertiary-container": "#555c69",
+                      "on-tertiary-fixed-variant": "#404754",
+                      "primary-fixed": "#e6deff",
+                      "surface-container-high": "#e1e8fd",
+                      "on-secondary-fixed-variant": "#004f4f",
+                      "on-primary-fixed-variant": "#4723be",
+                      "tertiary-fixed": "#dce2f3",
+                      "on-error": "#ffffff",
+                      "inverse-surface": "#293040",
+                      "on-tertiary-container": "#ced4e4",
+                      "surface-container": "#e9edff",
+                      "tertiary-fixed-dim": "#c0c7d6",
+                      "secondary-fixed": "#93f2f2",
+                      "on-surface-variant": "#484554",
+                      "outline": "#797586",
+                      "secondary-fixed-dim": "#76d6d5",
+                      "secondary": "#006a6a",
+                      "on-primary-fixed": "#1c0062",
+                      "inverse-on-surface": "#edf0ff",
+                      "error": "#ba1a1a",
+                      "primary-container": "#5d3fd3",
+                      "primary": "#451ebb",
+                      "outline-variant": "#c9c4d7",
+                      "inverse-primary": "#cabeff",
+                      "primary-fixed-dim": "#cabeff",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-container": "#006e6e",
+                      "surface-dim": "#d3daef",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "secondary-container": "#90efef",
+                      "on-background": "#141b2b",
+                      "surface-variant": "#dce2f7",
+                      "surface-container-low": "#f1f3ff",
+                      "background": "#f9f9ff",
+                      "on-primary": "#ffffff",
+                      "on-primary-container": "#d8ceff",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#3d4551",
+                      "surface-container-highest": "#dce2f7",
+                      "surface": "#f9f9ff",
+                      "on-tertiary": "#ffffff",
+                      "surface-tint": "#6042d6",
+                      "on-secondary-fixed": "#002020"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "gutter": "16px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "max-width": "1440px",
+                      "lg": "24px",
+                      "margin-mobile": "16px",
+                      "md": "16px",
+                      "margin-desktop": "32px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "label-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "title-md": ["Inter"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #F9FAFB;
+            color: #141b2b;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .tonal-layer-1 {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+        }
+        .active-nav-border {
+            border-right-width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 10px;
+        }
+        .chart-bar {
+            transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-background">
+<!-- SideNavBar (Predicted Anchor) -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] bg-surface-container-low border-r border-outline-variant flex flex-col py-md z-50">
+<div class="px-md mb-xl">
+<h1 class="font-title-md text-title-md font-bold text-on-surface">ERP Central</h1>
+<p class="font-label-md text-label-md text-on-surface-variant opacity-70">Enterprise Resource Planning</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Manufacturing (Active) -->
+<a class="flex items-center px-md py-3 text-primary font-bold border-r-4 border-primary bg-primary-container/10 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="factory">factory</span>
+<span class="font-label-md text-label-md">Manufacturing</span>
+</a>
+<a class="flex items-center px-md py-3 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="payments">payments</span>
+<span class="font-label-md text-label-md">Finance</span>
+</a>
+<a class="flex items-center px-md py-3 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<a class="flex items-center px-md py-3 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="handshake">handshake</span>
+<span class="font-label-md text-label-md">CRM</span>
+</a>
+</nav>
+<div class="px-md mt-auto pt-md border-t border-outline-variant space-y-1">
+<button class="w-full bg-primary text-on-primary py-2 px-4 rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all mb-md">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Module
+            </button>
+<a class="flex items-center px-md py-2 text-on-surface-variant hover:bg-surface-variant transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center px-md py-2 text-on-surface-variant hover:bg-surface-variant transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[240px] flex flex-col min-h-screen">
+<!-- TopAppBar (Predicted Anchor) -->
+<header class="sticky top-0 w-full z-40 bg-surface border-b border-outline-variant h-16 flex justify-between items-center px-margin-desktop">
+<div class="flex items-center gap-xl flex-1">
+<span class="font-headline-lg text-headline-lg font-black text-primary">Global ERP</span>
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full pl-10 pr-4 py-2 font-body-md text-body-md focus:ring-2 focus:ring-primary-container/30 outline-none" placeholder="Search operations..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<div class="flex items-center gap-md border-r border-outline-variant pr-md">
+<a class="font-body-md text-body-md text-primary font-bold border-b-2 border-primary pb-1" href="#">EN</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">AR</a>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="apps">apps</span>
+</button>
+</div>
+<div class="flex items-center gap-sm cursor-pointer hover:bg-surface-variant p-1 rounded-lg transition-colors">
+<img class="w-8 h-8 rounded-full border border-outline-variant" data-alt="A professional headshot of a corporate administrator, high-density ERP user interface context. The lighting is bright and modern, featuring clean white and iris purple brand colors. Professional business attire, looking confident and approachable, minimalist background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDU-EIz32VZWUc6E7s-SLUNtv9JnmUVDCin3L7f0RYpbMyj1GeQNQ5zWPZ5Txi_TtrjJ5-Ympf2gvWJJTrBlGVpqs0ChVaiwpfkB0ytsLKs4PkVR5BhI4jH_IvgOYBfoGW6gUyu5-nIuaplK6Qec166cNb2LcHY4PH_W0jtbIqv1PcFIR8Huu3w8kA78BNOyYEaZoyvm9fRtRVbSPNRLNe0qRu96N_qoeSWjixENE2YKIC7S4dmmJb082X2zbbGhvdlOY1WNVGhnqI"/>
+<span class="font-label-md text-label-md hidden lg:block">Admin</span>
+</div>
+</div>
+</header>
+<!-- Dashboard Canvas -->
+<div class="p-xl space-y-xl max-w-[1440px]">
+<!-- Welcome Header -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Manufacturing Overview</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Real-time facility metrics and work order tracking.</p>
+</div>
+<div class="flex gap-sm">
+<button class="px-4 py-2 border border-outline-variant bg-surface text-on-surface font-label-md text-label-md rounded hover:bg-surface-variant transition-all">Export Report</button>
+<button class="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded hover:opacity-90 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Create Order
+                    </button>
+</div>
+</div>
+<!-- KPI Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- KPI 1: Active Jobs -->
+<div class="tonal-layer-1 p-lg rounded-lg space-y-sm">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Active Jobs</span>
+<span class="material-symbols-outlined text-primary" data-icon="precision_manufacturing">precision_manufacturing</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-headline-lg font-bold">42</span>
+<span class="text-secondary font-label-md text-label-md">+4.2%</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[65%]"></div>
+</div>
+</div>
+<!-- KPI 2: OEE Efficiency -->
+<div class="tonal-layer-1 p-lg rounded-lg space-y-sm">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">OEE Score</span>
+<span class="material-symbols-outlined text-primary" data-icon="speed">speed</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-headline-lg font-bold">88.4<span class="text-xl font-normal">%</span></span>
+<span class="text-secondary font-label-md text-label-md">+1.2%</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-[88%]"></div>
+</div>
+</div>
+<!-- KPI 3: Pending Alerts -->
+<div class="tonal-layer-1 p-lg rounded-lg space-y-sm">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Pending Alerts</span>
+<span class="material-symbols-outlined text-error" data-icon="warning">warning</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-headline-lg font-bold">07</span>
+<span class="text-error font-label-md text-label-md">-3 resolved</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full overflow-hidden">
+<div class="bg-error h-full w-[25%]"></div>
+</div>
+</div>
+<!-- KPI 4: Cycle Time -->
+<div class="tonal-layer-1 p-lg rounded-lg space-y-sm">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Avg Cycle Time</span>
+<span class="material-symbols-outlined text-primary" data-icon="timer">timer</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-headline-lg font-bold">14.2<span class="text-xl font-normal">m</span></span>
+<span class="text-on-surface-variant font-label-md text-label-md">Optimal</span>
+</div>
+<div class="w-full bg-surface-variant h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[45%]"></div>
+</div>
+</div>
+</div>
+<!-- Dashboard Body: Visual Metrics & Tables -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-stretch">
+<!-- Efficiency Chart (Bar Graph) -->
+<div class="lg:col-span-4 tonal-layer-1 rounded-lg flex flex-col">
+<div class="p-md border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-title-md text-title-md">Efficiency Metrics</h3>
+<button class="p-1 hover:bg-surface-variant rounded transition-colors">
+<span class="material-symbols-outlined text-outline">more_vert</span>
+</button>
+</div>
+<div class="flex-1 p-lg flex flex-col justify-end">
+<div class="flex items-end justify-between h-48 gap-3 px-2">
+<!-- Bars -->
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="chart-bar w-full bg-primary-container/20 rounded-t-sm relative group" style="height: 60%">
+<div class="absolute inset-x-0 bottom-0 bg-primary h-[80%] rounded-t-sm"></div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">82%</div>
+</div>
+<span class="font-label-md text-[10px] text-on-surface-variant">MON</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="chart-bar w-full bg-primary-container/20 rounded-t-sm relative group" style="height: 75%">
+<div class="absolute inset-x-0 bottom-0 bg-primary h-[90%] rounded-t-sm"></div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">91%</div>
+</div>
+<span class="font-label-md text-[10px] text-on-surface-variant">TUE</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="chart-bar w-full bg-primary-container/20 rounded-t-sm relative group" style="height: 45%">
+<div class="absolute inset-x-0 bottom-0 bg-error h-[100%] rounded-t-sm"></div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">45%</div>
+</div>
+<span class="font-label-md text-[10px] text-on-surface-variant text-error font-bold">WED</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="chart-bar w-full bg-primary-container/20 rounded-t-sm relative group" style="height: 85%">
+<div class="absolute inset-x-0 bottom-0 bg-primary h-[85%] rounded-t-sm"></div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">85%</div>
+</div>
+<span class="font-label-md text-[10px] text-on-surface-variant">THU</span>
+</div>
+<div class="flex flex-col items-center flex-1 gap-2">
+<div class="chart-bar w-full bg-primary-container/20 rounded-t-sm relative group" style="height: 95%">
+<div class="absolute inset-x-0 bottom-0 bg-secondary h-[100%] rounded-t-sm"></div>
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-[10px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">98%</div>
+</div>
+<span class="font-label-md text-[10px] text-on-surface-variant">FRI</span>
+</div>
+</div>
+<div class="mt-lg pt-lg border-t border-outline-variant">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md text-on-surface-variant">Week average</span>
+<span class="font-title-md text-title-md font-bold text-primary">80.2%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Work Orders Table -->
+<div class="lg:col-span-8 tonal-layer-1 rounded-lg overflow-hidden flex flex-col">
+<div class="p-md border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-title-md text-title-md">Recent Work Orders</h3>
+<div class="flex gap-2">
+<button class="text-primary font-label-md text-label-md hover:underline">View All</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-[#F3F4F6]">
+<tr>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant">ORDER ID</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant">PRODUCT</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant">PRIORITY</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant">STATUS</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant text-right">PROGRESS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-primary/5 transition-colors h-12 cursor-pointer">
+<td class="px-md font-data-mono text-data-mono">#WO-8921</td>
+<td class="px-md font-body-md text-body-md">Precision Gasket V4</td>
+<td class="px-md">
+<span class="inline-flex items-center gap-1 text-error text-[11px] font-bold">
+<span class="w-2 h-2 rounded-full bg-error"></span> HIGH
+                                        </span>
+</td>
+<td class="px-md">
+<span class="bg-primary-container/10 text-primary px-2 py-1 rounded text-[11px] font-bold uppercase tracking-tight">In Progress</span>
+</td>
+<td class="px-md text-right">
+<div class="flex items-center justify-end gap-2">
+<span class="font-data-mono text-data-mono">65%</span>
+<div class="w-16 bg-surface-variant h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[65%]"></div>
+</div>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-primary/5 transition-colors h-12 cursor-pointer">
+<td class="px-md font-data-mono text-data-mono">#WO-8918</td>
+<td class="px-md font-body-md text-body-md">Steel Bracket (L-Type)</td>
+<td class="px-md">
+<span class="inline-flex items-center gap-1 text-on-surface-variant text-[11px] font-bold">
+<span class="w-2 h-2 rounded-full bg-outline"></span> MEDIUM
+                                        </span>
+</td>
+<td class="px-md">
+<span class="bg-secondary-container/20 text-on-secondary-container px-2 py-1 rounded text-[11px] font-bold uppercase tracking-tight">Completed</span>
+</td>
+<td class="px-md text-right">
+<div class="flex items-center justify-end gap-2">
+<span class="font-data-mono text-data-mono">100%</span>
+<div class="w-16 bg-secondary h-1.5 rounded-full"></div>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-primary/5 transition-colors h-12 cursor-pointer">
+<td class="px-md font-data-mono text-data-mono">#WO-8930</td>
+<td class="px-md font-body-md text-body-md">Hydraulic Seal Kit</td>
+<td class="px-md">
+<span class="inline-flex items-center gap-1 text-on-surface-variant text-[11px] font-bold">
+<span class="w-2 h-2 rounded-full bg-outline"></span> LOW
+                                        </span>
+</td>
+<td class="px-md">
+<span class="bg-surface-variant text-on-surface-variant px-2 py-1 rounded text-[11px] font-bold uppercase tracking-tight">Draft</span>
+</td>
+<td class="px-md text-right">
+<div class="flex items-center justify-end gap-2 text-outline">
+<span class="font-data-mono text-data-mono">0%</span>
+<div class="w-16 bg-surface-variant h-1.5 rounded-full"></div>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-primary/5 transition-colors h-12 cursor-pointer">
+<td class="px-md font-data-mono text-data-mono">#WO-8925</td>
+<td class="px-md font-body-md text-body-md">Aluminum Housing x50</td>
+<td class="px-md">
+<span class="inline-flex items-center gap-1 text-error text-[11px] font-bold">
+<span class="w-2 h-2 rounded-full bg-error"></span> HIGH
+                                        </span>
+</td>
+<td class="px-md">
+<span class="bg-primary-container/10 text-primary px-2 py-1 rounded text-[11px] font-bold uppercase tracking-tight">In Progress</span>
+</td>
+<td class="px-md text-right">
+<div class="flex items-center justify-end gap-2">
+<span class="font-data-mono text-data-mono">22%</span>
+<div class="w-16 bg-surface-variant h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[22%]"></div>
+</div>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-primary/5 transition-colors h-12 cursor-pointer">
+<td class="px-md font-data-mono text-data-mono">#WO-8910</td>
+<td class="px-md font-body-md text-body-md">Filter Assembly S9</td>
+<td class="px-md">
+<span class="inline-flex items-center gap-1 text-on-surface-variant text-[11px] font-bold">
+<span class="w-2 h-2 rounded-full bg-outline"></span> MEDIUM
+                                        </span>
+</td>
+<td class="px-md">
+<span class="bg-secondary-container/20 text-on-secondary-container px-2 py-1 rounded text-[11px] font-bold uppercase tracking-tight">Completed</span>
+</td>
+<td class="px-md text-right">
+<div class="flex items-center justify-end gap-2">
+<span class="font-data-mono text-data-mono">100%</span>
+<div class="w-16 bg-secondary h-1.5 rounded-full"></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Visual Component: High-end Bento Grid Extra -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter h-auto lg:h-[300px]">
+<!-- Facility Status (Asymmetric Card) -->
+<div class="tonal-layer-1 rounded-lg p-lg relative overflow-hidden flex flex-col md:col-span-2">
+<div class="z-10">
+<h3 class="font-title-md text-title-md mb-2">Facility Real-time Stream</h3>
+<div class="flex gap-4 mb-xl">
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Line 01: Active</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Line 02: Active</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 bg-error rounded-full"></span>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Line 03: Down</span>
+</div>
+</div>
+</div>
+<div class="mt-auto grid grid-cols-2 lg:grid-cols-4 gap-md z-10">
+<div class="bg-surface-variant/30 p-md rounded border border-white/50">
+<div class="text-[10px] text-on-surface-variant font-bold uppercase mb-1">Power Load</div>
+<div class="text-title-md font-bold text-primary">240 kW</div>
+</div>
+<div class="bg-surface-variant/30 p-md rounded border border-white/50">
+<div class="text-[10px] text-on-surface-variant font-bold uppercase mb-1">Humidity</div>
+<div class="text-title-md font-bold text-primary">42%</div>
+</div>
+<div class="bg-surface-variant/30 p-md rounded border border-white/50">
+<div class="text-[10px] text-on-surface-variant font-bold uppercase mb-1">Temp</div>
+<div class="text-title-md font-bold text-primary">24°C</div>
+</div>
+<div class="bg-surface-variant/30 p-md rounded border border-white/50">
+<div class="text-[10px] text-on-surface-variant font-bold uppercase mb-1">Units/Hr</div>
+<div class="text-title-md font-bold text-primary">1,240</div>
+</div>
+</div>
+<!-- Decorative background element -->
+<div class="absolute -right-10 -bottom-10 opacity-5 pointer-events-none">
+<span class="material-symbols-outlined text-[200px]" data-icon="factory">factory</span>
+</div>
+</div>
+<!-- Operator Shift Info -->
+<div class="bg-primary text-on-primary rounded-lg p-lg flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md opacity-80 uppercase tracking-widest">Active Shift</span>
+<span class="material-symbols-outlined" data-icon="group">group</span>
+</div>
+<h4 class="font-title-md text-title-md mt-sm">Morning Shift B</h4>
+<p class="font-body-md text-body-md opacity-70">Supervisor: Sarah J.</p>
+</div>
+<div class="space-y-md">
+<div class="flex -space-x-2">
+<img class="w-8 h-8 rounded-full border-2 border-primary" data-alt="Close up face of a male factory worker wearing a safety vest and hard hat, looking professional and serious, industrial background, corporate ERP style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlcL5-ohHa5aGimu6CRGyP1B5IU5YnAThINYlA9JzTU3Hf6LJqkaMid-RdTzbwSwal0bhINwEJhrsBci2q5fguFkAFz4mjQFS8r_GqmOVjbLCy9-qq81VsAIzz6TOZol-NFmEjCc2tA82bsSX-MNhK8MFWxDFWszX5xkt_NUs34KCH4V1NCajhbiO986SeDA3nVcEuZan_nyu9rEKQodsgMEMIQ_C7CAXChIuza_kXw5jQQd-SP1ARxY3rq1H6KfwVQ_-WTew5AaQ"/>
+<img class="w-8 h-8 rounded-full border-2 border-primary" data-alt="Close up face of a female engineer with safety glasses, sharp and professional, high-density ERP manufacturing context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAG6iH5CghbtT5t-OBEejo2iulpWA0ygWdI17aZ7_VfYXC-6cg1T5JXPILbC3Z8IpYAhbWn23Xw5sQ-8rIKo-C2XmR8AdILsLOx-zwxY2uy6T5J6m-coN2VNE6v9TCmPrApcXmPnbUtWafOhx_HIe7Wps8FKVKjYLIUBDKhnQZzgnGMzUmOdX4WH_QhtU5bS6o2IIJqBZqkNUuKuFA0nYjMDANDQyn9c6KJMtQbXKRR-RAjhnia1xs2lrb_Pzx_n8bpWv2-HAjRVg"/>
+<img class="w-8 h-8 rounded-full border-2 border-primary" data-alt="Close up face of a technician working in a cleanroom environment, specialized gear, professional lighting, corporate modernism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeJH7rZjwzeUZwD3gowOXZPpfpuDUT2RRo0-hai3VvHuy_r-mXrrm8nmfnY8sxJ5qx24qh1yM_eZvzvA9TjfpLgqhqdSVv9qsC2xmSwOXrPaXnlyppn97AvJ2_d4EBj3pIkwuuKJjVhJoAhPLHLKb5tglC2Gcbbr-etyZ9UPa92tKOkr3FcJM2siYE3HZDLiBw-rFqiRqPbLcRjFJwo991eQpmZWcfhOEWzcrkoaNodGLxhHZ0uK0TwIRAYgPjWELRNzeMMMbppiQ"/>
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-label-md text-label-md border-2 border-primary">+12</div>
+</div>
+<button class="w-full py-2 bg-on-primary text-primary font-bold text-label-md rounded hover:bg-opacity-90 transition-all">Manage Personnel</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB for Quick Actions -->
+<button class="fixed bottom-xl right-xl w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group">
+<span class="material-symbols-outlined" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="absolute right-16 bg-on-surface text-surface text-label-md font-bold py-2 px-4 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">Scan Work Order</span>
+</button>
+<script>
+        // Micro-interaction for bar chart animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const bars = document.querySelectorAll('.chart-bar > div');
+            bars.forEach(bar => {
+                const targetHeight = bar.parentElement.style.height;
+                bar.parentElement.style.height = '0%';
+                setTimeout(() => {
+                    bar.parentElement.style.height = targetHeight;
+                }, 100);
+            });
+        });
+
+        // Simple Arabic Support Toggle Simulation
+        const langToggle = document.querySelectorAll('header a');
+        langToggle.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                langToggle.forEach(b => b.classList.remove('font-bold', 'border-b-2', 'border-primary', 'text-primary'));
+                btn.classList.add('font-bold', 'border-b-2', 'border-primary', 'text-primary');
+                
+                if(btn.textContent === 'AR') {
+                    document.documentElement.dir = 'rtl';
+                } else {
+                    document.documentElement.dir = 'ltr';
+                }
+            });
+        });
+    </script>
+</body></html>

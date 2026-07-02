@@ -1,0 +1,43 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Audit Log</h2>
+<p class="text-body-md text-on-surface-variant">Read-only record of all data changes.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm"><p class="font-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Total Entries</p><p class="font-headline-lg text-headline-lg text-primary">{{total}}</p></div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm"><p class="font-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Inserts</p><p class="font-headline-lg text-headline-lg text-secondary">{{inserts}}</p></div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm"><p class="font-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Updates</p><p class="font-headline-lg text-headline-lg text-primary">{{updates}}</p></div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm"><p class="font-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Deletes</p><p class="font-headline-lg text-headline-lg text-error">{{deletes}}</p></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+<div><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Search Table</label><input class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md" id="auditSearchTable" placeholder="Table name..." oninput="controllers.audit_log.search('table', this.value)"/></div>
+<div><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Search Record ID</label><input class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md" id="auditSearchRecord" placeholder="Record ID..." oninput="controllers.audit_log.search('record', this.value)"/></div>
+<div><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Filter Action</label>
+<select class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md" id="auditSearchAction" onchange="controllers.audit_log.search('action', this.value)">
+<option value="">All</option>
+<option value="INSERT">INSERT</option>
+<option value="UPDATE">UPDATE</option>
+<option value="DELETE">DELETE</option>
+</select></div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Table</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Record ID</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Action</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Changed By</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Timestamp</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{rows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

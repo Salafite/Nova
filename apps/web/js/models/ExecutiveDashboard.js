@@ -1,0 +1,1 @@
+﻿window.ExecutiveDashboardModel = class ExecutiveDashboard {constructor(d){Object.assign(this,d)}}

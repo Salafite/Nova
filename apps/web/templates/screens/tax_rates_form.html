@@ -1,0 +1,55 @@
+<div class="max-w-2xl mx-auto mt-xl">
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+    <div class="flex items-center gap-sm mb-lg">
+      <span class="material-symbols-outlined text-primary text-[24px]">percent</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">{{title}}</h2>
+    </div>
+    <form onsubmit="return controllers.tax_rates.saveForm()">
+      <input type="hidden" id="txrFormId" value="{{id}}">
+
+      <div class="grid grid-cols-2 gap-gutter">
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Name</label>
+          <input type="text" id="txrFormName" value="{{name}}" placeholder="e.g. Standard VAT" required class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Code</label>
+          <input type="text" id="txrFormCode" value="{{code}}" placeholder="e.g. VAT-STD" required class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-gutter mt-md">
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Rate (%)</label>
+          <input type="number" id="txrFormRate" value="{{rate}}" step="0.01" min="0" max="100" placeholder="e.g. 15.00" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Type</label>
+          <select id="txrFormType" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+            <option value="Sales" {{type == 'Sales' ? 'selected' : ''}}>Sales</option>
+            <option value="Purchase" {{type == 'Purchase' ? 'selected' : ''}}>Purchase</option>
+            <option value="Both" {{type == 'Both' ? 'selected' : ''}}>Both</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-sm mt-md">
+        <input type="checkbox" id="txrFormDefault" {{isDefault}} class="rounded border-outline-variant text-primary focus:ring-primary/20">
+        <label for="txrFormDefault" class="font-body-md text-on-surface">Is Default</label>
+      </div>
+
+      <div class="flex flex-col gap-xs mt-md">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Description</label>
+        <textarea id="txrFormDesc" rows="3" placeholder="Optional description..." class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">{{description}}</textarea>
+      </div>
+
+      <div class="flex justify-end gap-sm mt-xl">
+        <button type="button" class="bg-surface-container-high text-on-surface px-lg py-sm rounded-lg font-label-md" onclick="controllers.tax_rates.render(); controllers.tax_rates.mount()">Cancel</button>
+        <button type="submit" class="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-md flex items-center gap-xs">
+          <span class="material-symbols-outlined text-[18px]">save</span>
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

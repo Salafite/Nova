@@ -1,0 +1,72 @@
+<div class="max-w-2xl mx-auto mt-lg">
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+    <div class="flex items-center gap-md mb-lg">
+      <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors p-xs" onclick="controllers.leads.render()">arrow_back</button>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface">{{title}}</h2>
+    </div>
+    <form onsubmit="return controllers.leads.saveForm()" class="space-y-md">
+      <input id="leadFormId" type="hidden" value="{{id}}"/>
+      <div class="grid grid-cols-2 gap-md">
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">First Name *</label>
+          <input id="leadFormFirstName" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{firstName}}" required/>
+        </div>
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Last Name *</label>
+          <input id="leadFormLastName" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{lastName}}" required/>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-md">
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Email</label>
+          <input id="leadFormEmail" type="email" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{email}}"/>
+        </div>
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Phone</label>
+          <input id="leadFormPhone" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{phone}}"/>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-md">
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Company</label>
+          <input id="leadFormCompany" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{company}}"/>
+        </div>
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Job Title</label>
+          <input id="leadFormTitle" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md" value="{{title}}"/>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-md">
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Source</label>
+          <select id="leadFormSource" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md">
+            <option value="Website">Website</option>
+            <option value="Referral">Referral</option>
+            <option value="Cold Call">Cold Call</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Trade Show">Trade Show</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Status</label>
+          <select id="leadFormStatus" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md">
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Qualified">Qualified</option>
+            <option value="Disqualified">Disqualified</option>
+            <option value="Converted">Converted</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-label-md font-label-md text-on-surface-variant block mb-xs">Notes</label>
+        <textarea id="leadFormNotes" rows="3" class="w-full px-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body-md">{{notes}}</textarea>
+      </div>
+      <div class="flex justify-end gap-md pt-md">
+        <button type="button" class="px-lg py-sm border border-outline-variant rounded-xl text-on-surface-variant hover:bg-surface-container-low transition-colors" onclick="controllers.leads.render()">Cancel</button>
+        <button type="submit" class="bg-primary text-on-primary px-lg py-sm rounded-xl font-label-md active:translate-y-[1px] transition-all press-effect">Save</button>
+      </div>
+    </form>
+  </div>
+</div>

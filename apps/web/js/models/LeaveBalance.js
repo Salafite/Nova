@@ -1,0 +1,1 @@
+﻿window.LeaveBalanceModel = class LeaveBalance {constructor(data){Object.assign(this,data);}}

@@ -1,0 +1,1 @@
+﻿window.ServiceRequestModel = class ServiceRequest {constructor(d){Object.assign(this,d)}}

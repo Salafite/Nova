@@ -1,0 +1,90 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<nav class="flex items-center gap-2 text-on-surface-variant mb-1">
+<span class="font-label-md text-label-md">Manufacturing</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="font-label-md text-label-md font-bold text-primary">Shop Floor</span>
+</nav>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Work Order Management</h2>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-2 bg-primary text-on-primary px-md py-2 font-label-md text-label-md rounded-lg hover:brightness-110 transition-all press-effect" onclick="controllers.shopfloor.showCreateForm()">
+<span class="material-symbols-outlined">add</span>
+Create Work Order
+</button>
+</div>
+</div>
+<!-- Dashboard Stats Summary (High-Density) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-lg">
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg shadow-sm">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Active Workstations</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">{{activeWS}}</span>
+<span class="text-secondary font-label-md text-label-md flex items-center">Available: {{availableWS}}</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg shadow-sm border-l-4 border-l-secondary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">In Progress Jobs</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">{{inProgressJobs}}</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg shadow-sm border-l-4 border-l-primary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Pending</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">{{pendingJobs}}</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg shadow-sm border-l-4 border-l-outline">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Completed (24h)</p>
+<div class="flex items-baseline gap-2">
+<span class="font-display-lg text-headline-lg font-bold text-on-surface">{{completedJobs}}</span>
+</div>
+</div>
+</div>
+<!-- Active Jobs Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col mb-xl">
+<div class="px-md py-3 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+<h3 class="font-title-md text-title-md font-bold">Active Jobs</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Job #</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Product</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Qty</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Workstation</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider text-center">Status</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{jobRows}}
+</tbody>
+</table>
+</div>
+</div>
+<!-- Workstations Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+<div class="px-md py-3 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+<h3 class="font-title-md text-title-md font-bold">Workstations Status</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Workstation</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Status</th>
+<th class="px-md py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Current Job</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{workstationRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

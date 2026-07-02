@@ -1,0 +1,1 @@
+﻿window.AssetModel = class Asset {constructor(d){Object.assign(this,d)}}

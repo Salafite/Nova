@@ -1,0 +1,1 @@
+﻿window.TimeEntryModel = class TimeEntry {constructor(d){Object.assign(this,d)}}

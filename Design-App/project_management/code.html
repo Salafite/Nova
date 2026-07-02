@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#f1f3ff",
+                    "on-surface-variant": "#484554",
+                    "error": "#ba1a1a",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed-dim": "#cabeff",
+                    "on-secondary-container": "#006e6e",
+                    "on-surface": "#141b2b",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "surface-container": "#e9edff",
+                    "tertiary-container": "#555c69",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "on-primary-container": "#d8ceff",
+                    "on-primary": "#ffffff",
+                    "surface-bright": "#f9f9ff",
+                    "secondary-fixed": "#93f2f2",
+                    "primary-container": "#5d3fd3",
+                    "primary": "#451ebb",
+                    "on-primary-fixed-variant": "#4723be",
+                    "on-background": "#141b2b",
+                    "error-container": "#ffdad6",
+                    "tertiary": "#3d4551",
+                    "on-tertiary-fixed": "#151c27",
+                    "inverse-surface": "#293040",
+                    "background": "#f9f9ff",
+                    "on-secondary-fixed": "#002020",
+                    "secondary": "#006a6a",
+                    "surface": "#f9f9ff",
+                    "primary-fixed": "#e6deff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary": "#ffffff",
+                    "outline-variant": "#c9c4d7",
+                    "on-tertiary-container": "#ced4e4",
+                    "tertiary-fixed": "#dce2f3",
+                    "inverse-on-surface": "#edf0ff",
+                    "on-primary-fixed": "#1c0062",
+                    "surface-dim": "#d3daef",
+                    "inverse-primary": "#cabeff",
+                    "surface-container-high": "#e1e8fd",
+                    "surface-variant": "#dce2f7",
+                    "surface-container-highest": "#dce2f7",
+                    "surface-tint": "#6042d6",
+                    "outline": "#797586",
+                    "secondary-container": "#90efef",
+                    "on-tertiary-fixed-variant": "#404754"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "margin-mobile": "16px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "base": "4px",
+                    "sm": "8px",
+                    "margin-desktop": "32px",
+                    "md": "16px",
+                    "max-width": "1440px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "label-md": ["Inter"],
+                    "title-md": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9f9ff;
+            color: #141b2b;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E5E7EB;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-20">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface-container-lowest dark:bg-surface-container-low border-b border-outline-variant dark:border-outline flex justify-between items-center px-margin-mobile py-sm">
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed-dim hover:bg-surface-container-high transition-colors p-2 rounded-full press-effect">
+                menu
+            </button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-primary-fixed-dim">ERPSuite</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant dark:text-outline-variant font-semibold hover:bg-surface-container-high transition-colors px-md py-xs rounded-lg press-effect">
+                EN/AR
+            </button>
+</div>
+</header>
+<main class="px-margin-mobile pt-lg space-y-lg max-w-md mx-auto">
+<!-- KPI Section: Bento Style -->
+<section class="grid grid-cols-2 gap-sm">
+<div class="col-span-2 glass-card rounded-xl p-md flex items-center justify-between">
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Active Projects</p>
+<p class="font-headline-lg-mobile text-headline-lg-mobile text-primary">12</p>
+</div>
+<div class="bg-primary-container/10 p-sm rounded-lg">
+<span class="material-symbols-outlined text-primary text-3xl">account_tree</span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-md">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-xs">Deadlines</p>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-error text-sm">schedule</span>
+<p class="font-title-md text-title-md text-on-surface">4</p>
+</div>
+</div>
+<div class="glass-card rounded-xl p-md">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-xs">Billable</p>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary text-sm">payments</span>
+<p class="font-title-md text-title-md text-on-surface">128h</p>
+</div>
+</div>
+</section>
+<!-- Status Filter Chips -->
+<section class="flex gap-sm overflow-x-auto hide-scrollbar py-xs">
+<button class="flex-none px-md py-sm bg-primary-container text-on-primary-container rounded-full font-label-md text-label-md press-effect">
+                All
+            </button>
+<button class="flex-none px-md py-sm bg-surface-container-high text-on-surface-variant rounded-full font-label-md text-label-md hover:bg-surface-container-highest transition-colors press-effect">
+                Ongoing
+            </button>
+<button class="flex-none px-md py-sm bg-surface-container-high text-on-surface-variant rounded-full font-label-md text-label-md hover:bg-surface-container-highest transition-colors press-effect">
+                Completed
+            </button>
+</section>
+<!-- Project Cards -->
+<section class="space-y-md pb-xl">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="p-md space-y-md">
+<div class="flex justify-between items-start">
+<div class="space-y-xs">
+<h3 class="font-title-md text-title-md text-on-surface">Cloud Migration Phase II</h3>
+<span class="inline-flex items-center px-sm py-xs rounded bg-error-container text-on-error-container font-label-md text-label-md">
+                                High Priority
+                            </span>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant">more_vert</button>
+</div>
+<div class="space-y-xs">
+<div class="flex justify-between font-label-md text-label-md text-on-surface-variant">
+<span>Progress</span>
+<span class="font-data-mono">65%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 65%"></div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up professional headshot of a female software engineer with glasses, wearing a neutral blazer, clean office background with soft bokeh lighting, high-end professional corporate photography style, Iris Purple and white color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHNTJHmHhgT5-ulO1d52ItTU0WxUMDcAqb-uGj-iBH9Ig0c6nMG1IGLAuAdV2FkF7RBbqqqiKwXSGWqihPyn9iJ3pparzNUdii6YJ3opk5vBCbh7fct7Tv4UdQQWsa6UZ3xQ0KJ9gNRDhw1gHSbB-Q1S_hCqEHABlXocMFZMb_otHjYAwt_5a-1ApVdxSd9B9R0qcHBIBkm8wENIQobNaMHs8ky3KW_jfVortBw-_vjnsBfduOlzeL7n94KM10sWPSDap27zUvqHc"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up professional headshot of a male project manager with a friendly smile, short hair, business casual attire, minimalist architectural background, soft natural daylight, consistent with modern ERP branding aesthetics." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdrfEyZtVWZNMNmpq8Det71UfgYvSS7E_tUsUaa_vdYh1lCDy7NEZHIBpcC7Qb09e9ZVWfy_x1HmmM7CBUf9HDD6XMGJM2tlPMf4oQxyBconZkpzTG3nQfSg5SXpMUuTmnAO2eyRRGpY8QCte6MQeNI6Tf03bkMS9-BEyZi3exbUIZReBVez66YX7qsPHux39_iPF_9zrLS4vdhJhOAOx6Tv5db04OUiMAR087xhdmN7P45OowWekYXHaPNRp-XjtTXZgy4OVzIdQ"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up professional headshot of a creative director with a clean beard, urban office environment in the background, cool tonal lighting with subtle purple accents, high resolution commercial photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9GOj9egZFimhlZYbk_uMEdBvYZqoxhvEFcb5LJ4caa2f17tV3aFAt-gfB9wV2R8BoE2oM6JD2LuRw3PAQxnYhbQ7cScT3ar7HUEsGuSLuZNw4qBmRMfJBdRLXRJoz8YmxWjpjUN5ln2FttGppjmprhjigjROspmZrorcJg81eCdg2Z6Amdx-oH_vN_0ut9eYRnGEFJmckVGk-2YBcJCEG2tSQp37id6NFrkJY9I2O__vqrw8aa4YZSq0SZ3I4UdIekVBacf12I8A"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-container flex items-center justify-center">
+<span class="text-[10px] font-bold text-on-surface-variant">+2</span>
+</div>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant">Due in 3 days</p>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="p-md space-y-md">
+<div class="flex justify-between items-start">
+<div class="space-y-xs">
+<h3 class="font-title-md text-title-md text-on-surface">Global Supply Chain Audit</h3>
+<span class="inline-flex items-center px-sm py-xs rounded bg-secondary-container text-on-secondary-container font-label-md text-label-md">
+                                Medium Priority
+                            </span>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant">more_vert</button>
+</div>
+<div class="space-y-xs">
+<div class="flex justify-between font-label-md text-label-md text-on-surface-variant">
+<span>Progress</span>
+<span class="font-data-mono">32%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 32%"></div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Professional headshot of a logistics expert, focused expression, high-tech background with blurred digital displays, sleek modern corporate style, palette dominated by clean whites and professional blues with Iris Purple accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGEG4G3h5a-H1CCBFSFOM19pLDKkfg2eH0wawOK4yVagL0RGx1DLCmUjxftxLvVwRlQDQADLoaX6Y7YytevD_lQMnV9JopxtWQHiYfVoro9dEY96DGasrkbJfrGebgdN7PAdqUD0vlA6cl4b1CLc-RlRG9N9wQ7ukBa-4Yyrnrt6sRqeybjuBUoQpvzpmrtk41iAB8zZlqVITGUqJ8q78TW02I1wz-FZvMppi9YWvXx8XdHPg2KLOJamojQOxTepwCeZKVKiSQwyM"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Portrait of a female business analyst in a contemporary workspace, bright airy lighting, minimalist aesthetic, professional photography for enterprise software user interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjb2TcGyhxIEaR92uyCrJ2P11xMj5tyPWRjtEQwCMLJG8x5mk_46sz_RtWmCbAQsWEXqxtioCBJpNQnGCiK8d1E0pjt365OQCedxQoMIVrtplzPxbK4b0mr1Citr05OuLmSrIyJoBFFzBQa22zCXKwskNphxoerspoB_D53Bx2QONBQ6A_MsbDEc5vJn7sO2cSh0LHV5Ox42drR-AsgOZhiO1tyOSGKre37Y9IoTD3PRgga_fW-YJnqLRxCfPYomPPyjcWoz4O3hY"/>
+</div>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant">Due in 12 days</p>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow opacity-90">
+<div class="p-md space-y-md">
+<div class="flex justify-between items-start">
+<div class="space-y-xs">
+<h3 class="font-title-md text-title-md text-on-surface">HR Portal Redesign</h3>
+<span class="inline-flex items-center px-sm py-xs rounded bg-surface-container-highest text-on-surface-variant font-label-md text-label-md">
+                                Low Priority
+                            </span>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant">more_vert</button>
+</div>
+<div class="space-y-xs">
+<div class="flex justify-between font-label-md text-label-md text-on-surface-variant">
+<span>Progress</span>
+<span class="font-data-mono">100%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+<div class="bg-on-secondary-container h-full rounded-full" style="width: 100%"></div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Professional headshot of a UI designer, creative and clean look, soft directional lighting, modern studio background, high-end professional photography matching an Odoo-inspired interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1YT7lcdQOpKrbGVK2kS5LjbTLhtqxyKB7TNjFUbxpvlSyE87hiWTJlACUw66cN4mAmKXupqpguRTrHOrzYQZuIORgAwXh19tHxL4BE8QqU7dPBbqlvTl3Us22hndlltBcNq1f8RIFl7SCE8NpwbBbptltXsmcjbl_-zX93A-A8rbEwDyv0vpYPDr7VAsn-GMsdpZ0-wFoZrjX1hn4TB3ZuWWIH7ZatIs279Mi4_a8MmehaiYOfGufYr__PvuTMgmtnRyWN1Tp710"/>
+</div>
+</div>
+<p class="font-label-md text-label-md text-secondary font-semibold">Completed</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full flex justify-around items-center h-16 bg-surface-container-lowest dark:bg-surface-container-low pb-safe z-50 border-t border-outline-variant dark:border-outline">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:bg-surface-container dark:hover:bg-surface-container-high transition-transform duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">verified</span>
+<span class="font-label-md text-label-md">Quality</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:bg-surface-container dark:hover:bg-surface-container-high transition-transform duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">groups</span>
+<span class="font-label-md text-label-md">HR</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 transition-transform duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+<span class="font-label-md text-label-md">Projects</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:bg-surface-container dark:hover:bg-surface-container-high transition-transform duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">more_horiz</span>
+<span class="font-label-md text-label-md">More</span>
+</button>
+</nav>
+<!-- FAB for adding project (Contextual) -->
+<button class="fixed bottom-24 right-margin-mobile w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center press-effect z-40 transition-transform active:scale-90">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+<script>
+        // Micro-interaction: Filter chips toggle state
+        const filterButtons = document.querySelectorAll('section:nth-of-type(2) button');
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterButtons.forEach(b => {
+                    b.classList.remove('bg-primary-container', 'text-on-primary-container');
+                    b.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+                });
+                btn.classList.add('bg-primary-container', 'text-on-primary-container');
+                btn.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>

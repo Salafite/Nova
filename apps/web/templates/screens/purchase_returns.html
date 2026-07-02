@@ -1,0 +1,67 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+  <div class="flex justify-between items-end mb-lg mt-lg">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Purchase Returns</h2>
+      <p class="text-body-md text-on-surface-variant mt-1">Return defective or unwanted goods to suppliers.</p>
+    </div>
+    <div class="flex items-center gap-sm">
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+        <input type="text" id="returnSearch" placeholder="Search returns..." class="bg-surface border border-outline-variant rounded-lg pl-9 pr-3 py-2 text-body-md w-56 focus:ring-2 focus:ring-primary/20" oninput="controllers.purchase_returns.search(this.value)">
+      </div>
+      <button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.purchase_returns.showCreateForm()">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        <span>New Return</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-3 gap-gutter">
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center gap-sm">
+        <span class="material-symbols-outlined text-primary text-[24px]">assignment_returned</span>
+        <span class="font-title-md text-title-md text-on-surface">Total</span>
+      </div>
+      <p class="font-headline-lg text-headline-lg text-primary font-bold mt-sm">{{total}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center gap-sm">
+        <span class="material-symbols-outlined text-warning text-[24px]">draft</span>
+        <span class="font-title-md text-title-md text-on-surface">Draft</span>
+      </div>
+      <p class="font-headline-lg text-headline-lg text-warning font-bold mt-sm">{{draft}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+      <div class="flex items-center gap-sm">
+        <span class="material-symbols-outlined text-secondary text-[24px]">check_circle</span>
+        <span class="font-title-md text-title-md text-on-surface">Returned</span>
+      </div>
+      <p class="font-headline-lg text-headline-lg text-secondary font-bold mt-sm">{{returned}}</p>
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+      <h3 class="font-title-md text-title-md font-bold">Returns</h3>
+      <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs rounded-full hover:bg-surface-container-high" onclick="controllers.purchase_returns.refresh()">refresh</button>
+    </div>
+    <div class="overflow-x-auto flex-1">
+      <table class="w-full text-left border-collapse erp-table">
+        <thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+          <tr>
+            <th class="px-lg py-sm font-semibold">Return #</th>
+            <th class="px-lg py-sm font-semibold">PO #</th>
+            <th class="px-lg py-sm font-semibold">Date</th>
+            <th class="px-lg py-sm font-semibold text-center">Status</th>
+            <th class="px-lg py-sm font-semibold text-center">Actions</th>
+            <th class="px-lg py-sm font-semibold text-center"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant">
+          {{rows}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

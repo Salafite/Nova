@@ -1,0 +1,70 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Platform Overview</h2>
+<p class="text-body-md text-on-surface-variant mt-1">System health, service status, and version information.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md uppercase tracking-wider">Services</span>
+<span class="material-symbols-outlined text-primary">settings</span>
+</div>
+<div class="flex items-baseline gap-sm mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface">{{totalServices}}</span>
+<span class="text-body-md text-on-surface-variant">total</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md uppercase tracking-wider">Healthy</span>
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+</div>
+<div class="flex items-baseline gap-sm mt-2">
+<span class="font-headline-lg text-headline-lg text-secondary">{{healthyServices}}</span>
+<span class="text-body-md text-on-surface-variant">online</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md uppercase tracking-wider">Platform Version</span>
+<span class="material-symbols-outlined text-primary">info</span>
+</div>
+<div class="flex items-baseline gap-sm mt-2">
+<span class="font-headline-lg text-headline-lg text-primary">{{platformVersion}}</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md uppercase tracking-wider">Uptime</span>
+<span class="material-symbols-outlined text-secondary">trending_up</span>
+</div>
+<div class="flex items-baseline gap-sm mt-2">
+<span class="font-headline-lg text-headline-lg text-secondary">{{avgUptime}}%</span>
+<span class="text-body-md text-on-surface-variant">average</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Services & Status</h3>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse erp-table">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Service</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Version</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Uptime</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Last Checked</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{serviceRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

@@ -1,0 +1,1 @@
+﻿window.DeploymentProfileModel = class DeploymentProfile {constructor(d){Object.assign(this,d)}}

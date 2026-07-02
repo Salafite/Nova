@@ -1,0 +1,1 @@
+﻿window.AutomationService = class AutomationService {}

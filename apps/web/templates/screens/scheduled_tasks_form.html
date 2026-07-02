@@ -1,0 +1,29 @@
+<div class="max-w-2xl mx-auto mt-lg">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<div class="flex justify-between items-center mb-lg">
+<h2 class="font-title-md text-title-md font-bold">{{title}}</h2>
+<button class="text-on-surface-variant hover:text-primary press-effect" onclick="app.loadModule('scheduled_tasks')"><span class="material-symbols-outlined">close</span></button>
+</div>
+<form onsubmit="return controllers.scheduled_tasks.saveForm()">
+<input type="hidden" id="taskFormId" value="{{id}}"/>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md mb-md">
+<div><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Task Name</label><input class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md" id="taskFormName" value="{{taskName}}" required/></div>
+<div><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Task Type</label>
+<select class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md" id="taskFormType">
+<option value="EmailReport">Email Report</option>
+<option value="CleanupLogs">Cleanup Logs</option>
+<option value="SyncData">Sync Data</option>
+<option value="GenerateInvoice">Generate Invoice</option>
+</select></div>
+<div><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Cron Expression</label><input class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md" id="taskFormCron" value="{{cronExpression}}" placeholder="0 0 * * *" required/></div>
+<div><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Active</label><label class="flex items-center gap-sm"><input type="checkbox" id="taskFormActive" {{isActive}} class="rounded border-outline-variant text-primary"/><span class="text-body-md">Enabled</span></label></div>
+</div>
+<div class="mb-md"><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Description</label><textarea class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md" id="taskFormDesc" rows="2">{{description}}</textarea></div>
+<div class="mb-md"><label class="font-label-md text-label-md text-on-surface-variant mb-xs block">Config (JSON)</label><textarea class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md font-data-mono" id="taskFormConfig" rows="4">{{config}}</textarea></div>
+<div class="flex gap-sm justify-end">
+<button type="button" class="px-lg py-sm border border-outline-variant rounded-lg font-label-md text-on-surface-variant hover:bg-surface-container-high press-effect" onclick="app.loadModule('scheduled_tasks')">Cancel</button>
+<button type="submit" class="px-lg py-sm bg-primary text-on-primary rounded-lg font-label-md hover:brightness-110 press-effect">Save</button>
+</div>
+</form>
+</div>
+</div>

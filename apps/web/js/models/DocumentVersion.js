@@ -1,0 +1,1 @@
+﻿window.DocumentVersionModel = class DocumentVersion {constructor(d){Object.assign(this,d)}}

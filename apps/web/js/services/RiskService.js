@@ -1,0 +1,1 @@
+﻿window.RiskService = class RiskService {}

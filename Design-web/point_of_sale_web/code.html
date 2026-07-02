@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+
+<html class="light" dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dce2f7;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #451ebb;
+        }
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+        /* RTL mirroring logic for utility classes if needed */
+        [dir="rtl"] .rtl-flip {
+            transform: scaleX(-1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#dce2f7",
+                        "surface-container-low": "#f1f3ff",
+                        "background": "#f9f9ff",
+                        "on-primary": "#ffffff",
+                        "on-background": "#141b2b",
+                        "secondary-container": "#90efef",
+                        "surface-tint": "#6042d6",
+                        "on-secondary-fixed": "#002020",
+                        "surface": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#d8ceff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#3d4551",
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff",
+                        "inverse-primary": "#cabeff",
+                        "error": "#ba1a1a",
+                        "primary-container": "#5d3fd3",
+                        "primary": "#451ebb",
+                        "outline-variant": "#c9c4d7",
+                        "secondary": "#006a6a",
+                        "on-primary-fixed": "#1c0062",
+                        "inverse-on-surface": "#edf0ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-dim": "#d3daef",
+                        "on-secondary-container": "#006e6e",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-container": "#ced4e4",
+                        "inverse-surface": "#293040",
+                        "surface-container-high": "#e1e8fd",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-primary-fixed-variant": "#4723be",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#555c69",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "primary-fixed": "#e6deff",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "outline": "#797586",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "secondary-fixed": "#93f2f2",
+                        "on-surface-variant": "#484554",
+                        "surface-container": "#e9edff",
+                        "on-surface": "#141b2b",
+                        "surface-bright": "#f9f9ff",
+                        "on-tertiary-fixed": "#151c27"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "max-width": "1440px",
+                        "lg": "24px",
+                        "margin-mobile": "16px",
+                        "md": "16px",
+                        "margin-desktop": "32px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "data-mono": ["JetBrains Mono"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md overflow-hidden h-screen flex">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-[240px] rtl:right-0 rtl:left-auto bg-surface-container-lowest border-r border-outline-variant dark:border-outline flex flex-col py-lg z-50" id="main-sidenav">
+<div class="px-md mb-xl">
+<h1 class="font-title-md text-title-md text-primary font-bold">Global ERP</h1>
+<p class="text-on-surface-variant font-label-md text-label-md">Manufacturing Suite</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="apps">apps</span>
+<span class="font-label-md text-label-md">Foundation</span>
+</a>
+<a class="flex items-center px-lg py-sm text-primary border-l-4 border-primary bg-primary-container/10 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="handshake">handshake</span>
+<span class="font-label-md text-label-md">CRM</span>
+</a>
+<a class="flex items-center px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-label-md text-label-md">Procurement</span>
+</a>
+<a class="flex items-center px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="factory">factory</span>
+<span class="font-label-md text-label-md">Manufacturing</span>
+</a>
+<a class="flex items-center px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<a class="flex items-center px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="account_balance">account_balance</span>
+<span class="font-label-md text-label-md">Accounting</span>
+</a>
+</nav>
+<div class="mt-auto px-md space-y-4">
+<button class="w-full bg-primary text-on-primary py-sm rounded-lg font-label-md text-label-md press-effect">Add Module</button>
+<div class="pt-lg border-t border-outline-variant space-y-1">
+<a class="flex items-center px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center px-lg py-sm text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined mr-md rtl:ml-md" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<main class="flex-1 ml-[240px] rtl:mr-[240px] rtl:ml-0 flex flex-col h-screen relative">
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] rtl:left-0 rtl:right-auto h-16 bg-surface border-b border-outline-variant flex justify-between items-center px-margin-desktop z-40">
+<div class="flex items-center gap-xl">
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary/30 outline-none font-body-md text-body-md transition-all" placeholder="Search products or orders..." type="text"/>
+</div>
+<nav class="hidden md:flex items-center gap-lg">
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-title-md text-title-md" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-title-md text-title-md" href="#">Reports</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-title-md text-title-md" href="#">Timeline</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors" onclick="toggleDir()">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="language">language</span>
+</button>
+<div class="relative">
+<span class="material-symbols-outlined text-on-surface-variant p-2 hover:bg-surface-variant/50 rounded-full cursor-pointer" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</div>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-md text-label-md press-effect">Create New</button>
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-variant border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate manager in high-density office lighting, subtle iris purple color accents in the background, sharp modernist photography style, clean skin tones, authoritative and helpful expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyOE0dNh3jb-ICOWXqMv_azzVDstKWe1_5WNbQ75FgGLMNINYCCjorSslWrCWKNhHKhuTwVOJqxDNTULtm3MTSDDZh36sVOGWbBsWlAtqztISEr-m-PRS-fXvi0RUAOJXcSfhHhKZIJa-pigLaeGcejg0623ZGC1prMC5NuIgbj6AUkTF2-bq1z4_O_sGZs1yirJYpWYkVBLnqzs98Nn7lGFxKhO4Wd9aQ1a_EdfDiXMDEqFsNq3jg0Re_GETauXy1cU_vrMo9HOg"/>
+</div>
+</div>
+</header>
+<!-- POS Canvas -->
+<div class="pt-16 flex flex-1 overflow-hidden">
+<!-- Left: Product Grid Section -->
+<section class="flex-1 overflow-y-auto p-lg bg-background">
+<!-- Category Tabs -->
+<div class="flex items-center gap-sm mb-lg overflow-x-auto pb-2 scrollbar-hide">
+<button class="px-lg py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md whitespace-nowrap">All Items</button>
+<button class="px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container/20 font-label-md text-label-md whitespace-nowrap transition-colors">Electronics</button>
+<button class="px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container/20 font-label-md text-label-md whitespace-nowrap transition-colors">Industrial Parts</button>
+<button class="px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container/20 font-label-md text-label-md whitespace-nowrap transition-colors">Office Supplies</button>
+<button class="px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container/20 font-label-md text-label-md whitespace-nowrap transition-colors">Services</button>
+<button class="px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-primary-container/20 font-label-md text-label-md whitespace-nowrap transition-colors">Custom Fabrication</button>
+</div>
+<!-- Product Grid -->
+<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-md">
+<!-- Product Card Loop (Simulated) -->
+<script>
+                        const products = [
+                            { name: "Precision Servo Motor", price: "249.00", cat: "Industrial", img: "High-tech industrial servo motor with metallic finishes, professional studio lighting against a soft lavender background, crisp details, enterprise catalog aesthetic." },
+                            { name: "Quantum Chipset X1", price: "899.99", cat: "Electronics", img: "Close-up of a high-end semiconductor chipset on a pristine silicon wafer, vibrant iris purple glowing tracers, laboratory setting, ultra-modern tech photography." },
+                            { name: "Ergonomic Desk Station", price: "1,200.00", cat: "Office", img: "A minimalist modern ergonomic desk setup in a bright, corporate office space, high-key lighting, soft shadows, neutral tones with purple accents, airy atmosphere." },
+                            { name: "Fabrication Unit A4", price: "5,450.00", cat: "Industrial", img: "Heavy industrial manufacturing unit with polished steel surfaces, precise engineering detail, clean industrial environment, bright diffuse lighting." },
+                            { name: "Fiber Optic Hub", price: "120.50", cat: "Electronics", img: "Modern network switch hub with glowing LED indicators, sleek chassis design, professional telecommunications setting, cool color temperature." },
+                            { name: "Safety Gear Set", price: "45.00", cat: "Industrial", img: "Premium industrial safety gear including helmet and goggles, high-quality materials, bright industrial lighting, professional equipment photography." },
+                            { name: "Smart Inventory Tag", price: "12.00", cat: "Supply", img: "Small electronic RFID tags arranged neatly on a light gray surface, minimalist composition, crisp focus, soft shadows." },
+                            { name: "Laser Cutter 500w", price: "15,000.00", cat: "Industrial", img: "Large industrial laser cutting machine in operation, glowing light sparks, professional manufacturing workshop, dark moody background with high contrast." },
+                            { name: "Core Processor V2", price: "340.00", cat: "Electronics", img: "A computer core processor with intricate gold pin details, macro photography, technical clean aesthetic, purple ambient lighting." },
+                            { name: "Hydraulic Press Kit", price: "675.00", cat: "Parts", img: "Compact hydraulic press machinery with blue and silver finishes, solid construction, industrial studio lighting, sharp details." }
+                        ];
+
+                        document.write(products.map(p => `
+                            <div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden flex flex-col group cursor-pointer hover:border-primary/50 transition-all active:scale-[0.98]">
+                                <div class="h-32 bg-surface-variant relative overflow-hidden">
+                                    <img src="placeholder" data-alt="${p.img}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                                    <span class="absolute top-2 right-2 bg-primary/90 text-on-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">${p.cat}</span>
+                                </div>
+                                <div class="p-sm flex-1 flex flex-col justify-between">
+                                    <h3 class="font-label-md text-label-md text-on-surface line-clamp-2">${p.name}</h3>
+                                    <div class="mt-sm flex justify-between items-end">
+                                        <span class="font-data-mono text-data-mono text-primary">$${p.price}</span>
+                                        <button class="w-8 h-8 rounded-full bg-surface-container-highest text-primary flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+                                            <span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join(''));
+                    </script>
+</div>
+</section>
+<!-- Right: Order Sidebar -->
+<aside class="w-[380px] bg-surface-container-lowest border-l border-outline-variant flex flex-col h-full z-10">
+<div class="p-lg border-b border-outline-variant">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-title-md text-title-md font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="shopping_basket">shopping_basket</span>
+                            Current Order
+                        </h2>
+<span class="bg-secondary-container text-on-secondary-container text-[11px] font-bold px-2 py-0.5 rounded">TICKET #4291</span>
+</div>
+<div class="bg-surface-container-low p-sm rounded-lg flex items-center justify-between border border-outline-variant">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="person">person</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Standard Customer</p>
+<p class="text-[10px] text-on-surface-variant">Walk-in Client</p>
+</div>
+</div>
+<button class="text-primary p-2 hover:bg-primary-container/10 rounded-full">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+</div>
+</div>
+<!-- Cart Items -->
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<!-- Cart Item -->
+<div class="flex gap-md group">
+<div class="w-12 h-12 bg-surface-variant rounded-lg flex-shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up of a precision industrial motor part, professional catalog photography, soft lighting, white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZpQusDTpYOayd1hb8wsunoDk-1rSDCZhM4YMIcm3iIgXusP0cQXFAk66NrBQJKoAVHp38c64JVH8iVpXj6Eq_kWfvlR3ynMzuGsBR-fdfrBNCBsJUXy97i_HQjFu_YiETXg94_WKMShHd6EokLY04CflbiqXT23Qx36-G0M7o4OCH5jOSVhH4WmMA-uhtwN39Eiq7ybOk2ywNIRUhbt1-NVSOWJ-b_Vm-VdHVefjCq6dG3mM4h4KXvboW6NiXEfDTW2d8oMmg1Eo"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-on-surface">Precision Servo Motor</span>
+<span class="font-data-mono text-data-mono">$498.00</span>
+</div>
+<div class="flex justify-between items-center mt-1">
+<div class="flex items-center gap-2">
+<button class="w-6 h-6 rounded bg-surface-variant text-on-surface-variant flex items-center justify-center hover:bg-outline-variant transition-colors">
+<span class="material-symbols-outlined text-[14px]" data-icon="remove">remove</span>
+</button>
+<span class="font-data-mono text-data-mono w-4 text-center">2</span>
+<button class="w-6 h-6 rounded bg-surface-variant text-on-surface-variant flex items-center justify-center hover:bg-outline-variant transition-colors">
+<span class="material-symbols-outlined text-[14px]" data-icon="add">add</span>
+</button>
+</div>
+<button class="text-error opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex gap-md group">
+<div class="w-12 h-12 bg-surface-variant rounded-lg flex-shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="High-end electronic component, studio lighting on a neutral surface, professional tech style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTXE7q3Z5Tzoa1AHkCT1prhUUp96FAmTiMeeG3-yIgKlK_Q3QJTynBFD9902_o78INJwKPUMED69aCbixrR4FDVJUJ93MAzxLZkC-t42pJS-jUTS_XdmvGxAaNthl7aF91alElkNKIjz5pY8LjIqp0tAWtmtGJ49P7YB_I82hxd6dtd_ODUhoccK04YWwo-oX5nJZYOZMP4tE8OO29QtzNWnoiikl0LUZPtDsjy2SS8tTny6-Vcl8RkzNM2vMwO0i76G7tRR3mvKA"/>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-on-surface">Quantum Chipset X1</span>
+<span class="font-data-mono text-data-mono">$899.99</span>
+</div>
+<div class="flex justify-between items-center mt-1">
+<div class="flex items-center gap-2">
+<button class="w-6 h-6 rounded bg-surface-variant text-on-surface-variant flex items-center justify-center hover:bg-outline-variant transition-colors">
+<span class="material-symbols-outlined text-[14px]" data-icon="remove">remove</span>
+</button>
+<span class="font-data-mono text-data-mono w-4 text-center">1</span>
+<button class="w-6 h-6 rounded bg-surface-variant text-on-surface-variant flex items-center justify-center hover:bg-outline-variant transition-colors">
+<span class="material-symbols-outlined text-[14px]" data-icon="add">add</span>
+</button>
+</div>
+<button class="text-error opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Totals & Checkout -->
+<div class="p-lg bg-surface-container border-t border-outline-variant space-y-md">
+<div class="space-y-sm">
+<div class="flex justify-between text-on-surface-variant">
+<span>Subtotal</span>
+<span class="font-data-mono">$1,397.99</span>
+</div>
+<div class="flex justify-between text-on-surface-variant">
+<span>Tax (8%)</span>
+<span class="font-data-mono">$111.84</span>
+</div>
+<div class="flex justify-between font-bold text-lg text-primary pt-sm border-t border-outline-variant/30">
+<span>Total</span>
+<span class="font-data-mono text-xl">$1,509.83</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<button class="py-lg bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-lg flex flex-col items-center gap-1 hover:bg-white press-effect transition-all">
+<span class="material-symbols-outlined" data-icon="credit_card">credit_card</span>
+<span class="font-label-md text-[10px] uppercase">Card</span>
+</button>
+<button class="py-lg bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-lg flex flex-col items-center gap-1 hover:bg-white press-effect transition-all">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-md text-[10px] uppercase">Cash</span>
+</button>
+</div>
+<button class="w-full bg-primary text-on-primary py-lg rounded-xl font-title-md text-title-md font-bold press-effect flex items-center justify-center gap-3 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+                        Proceed to Checkout
+                        <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</aside>
+</div>
+</main>
+<!-- Contextual FAB Suppression: Only for New Orders (Optional UI Layer) -->
+<button class="fixed bottom-lg right-[412px] rtl:left-[412px] rtl:right-auto w-14 h-14 bg-primary-container text-on-primary-container rounded-full shadow-xl flex items-center justify-center hover:scale-105 transition-transform press-effect z-30" id="fab-new">
+<span class="material-symbols-outlined" data-icon="add_shopping_cart">add_shopping_cart</span>
+</button>
+<script>
+        function toggleDir() {
+            const body = document.body;
+            const currentDir = body.getAttribute('dir') || 'ltr';
+            const newDir = currentDir === 'ltr' ? 'rtl' : 'ltr';
+            body.setAttribute('dir', newDir);
+            
+            // Adjust sidebar positioning class
+            const sidenav = document.getElementById('main-sidenav');
+            if(newDir === 'rtl') {
+                sidenav.style.left = 'auto';
+                sidenav.style.right = '0';
+            } else {
+                sidenav.style.left = '0';
+                sidenav.style.right = 'auto';
+            }
+        }
+
+        // Add micro-interaction for product selection
+        document.querySelectorAll('.group').forEach(item => {
+            item.addEventListener('click', () => {
+                // Pulse effect
+                item.classList.add('ring-2', 'ring-primary/40');
+                setTimeout(() => item.classList.remove('ring-2', 'ring-primary/40'), 300);
+            });
+        });
+    </script>
+</body></html>

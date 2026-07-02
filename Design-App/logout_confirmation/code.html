@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Nova ERP | Logout Confirmation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-container": "#90efef",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "on-secondary-fixed": "#002020",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#dce2f3",
+                    "secondary": "#006a6a",
+                    "surface-container-low": "#f1f3ff",
+                    "on-primary-fixed": "#1c0062",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "surface": "#f9f9ff",
+                    "outline-variant": "#c9c4d7",
+                    "background": "#f9f9ff",
+                    "primary-container": "#5d3fd3",
+                    "surface-bright": "#f9f9ff",
+                    "tertiary": "#3d4551",
+                    "on-surface-variant": "#484554",
+                    "surface-variant": "#dce2f7",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "surface-tint": "#6042d6",
+                    "surface-container": "#e9edff",
+                    "primary": "#451ebb",
+                    "error": "#ba1a1a",
+                    "tertiary-container": "#555c69",
+                    "outline": "#797586",
+                    "on-primary-container": "#d8ceff",
+                    "on-tertiary": "#ffffff",
+                    "primary-fixed": "#e6deff",
+                    "on-tertiary-container": "#ced4e4",
+                    "on-surface": "#141b2b",
+                    "error-container": "#ffdad6",
+                    "on-background": "#141b2b",
+                    "secondary-fixed": "#93f2f2",
+                    "surface-dim": "#d3daef",
+                    "primary-fixed-dim": "#cabeff",
+                    "on-error-container": "#93000a",
+                    "inverse-on-surface": "#edf0ff",
+                    "surface-container-high": "#e1e8fd",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "on-tertiary-fixed": "#151c27",
+                    "on-primary-fixed-variant": "#4723be",
+                    "surface-container-highest": "#dce2f7",
+                    "on-secondary-container": "#006e6e",
+                    "inverse-surface": "#293040",
+                    "inverse-primary": "#cabeff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "md": "16px",
+                    "xs": "4px",
+                    "base": "4px",
+                    "xl": "32px",
+                    "sm": "8px",
+                    "margin-desktop": "32px",
+                    "margin-mobile": "16px",
+                    "lg": "24px",
+                    "gutter": "16px",
+                    "max-width": "1440px"
+            },
+            "fontFamily": {
+                    "data-mono": ["JetBrains Mono"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "title-md": ["Inter"],
+                    "display-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+
+        .modal-blur {
+            backdrop-filter: blur(4px);
+        }
+
+        .bento-glow {
+            background: radial-gradient(circle at center, rgba(69, 30, 187, 0.03) 0%, transparent 70%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md overflow-hidden">
+<!-- TopAppBar (Based on Shared Components) -->
+<header class="bg-surface dark:bg-background flex items-center justify-between px-margin-mobile w-full h-16 fixed top-0 z-50">
+<div class="flex items-center gap-4">
+<button class="text-primary dark:text-primary-fixed hover:bg-surface-container-low p-2 rounded-full transition-colors active:translate-y-px">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary dark:text-primary-fixed font-bold">Nova ERP</span>
+</div>
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">person</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center px-margin-mobile pt-16 pb-20 relative">
+<!-- Atmospheric Background Detail -->
+<div class="absolute inset-0 bento-glow pointer-events-none"></div>
+<!-- Confirmation Dialog Card -->
+<div class="w-full max-w-sm bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col items-center text-center">
+<!-- Branding Icon / Visual Anchor -->
+<div class="w-16 h-16 bg-primary-fixed rounded-full flex items-center justify-center mb-lg">
+<span class="material-symbols-outlined text-primary text-[32px]">logout</span>
+</div>
+<!-- Content -->
+<h1 class="font-title-md text-title-md text-on-surface mb-sm">Sign Out</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mb-xl px-4">
+                Are you sure you want to log out of Nova ERP? Any unsaved changes in your active session may be lost.
+            </p>
+<!-- Action Buttons -->
+<div class="flex flex-col w-full gap-md">
+<!-- Primary / Destructive -->
+<button class="press-effect w-full py-4 bg-primary text-on-primary rounded-lg font-title-md transition-all hover:brightness-95 flex items-center justify-center gap-2" id="logoutBtn">
+                    Sign Out
+                </button>
+<!-- Secondary / Cancel -->
+<button class="press-effect w-full py-4 border border-primary text-primary bg-surface rounded-lg font-title-md transition-all hover:bg-surface-container-low">
+                    Cancel
+                </button>
+</div>
+<!-- Footer Meta -->
+<div class="mt-xl">
+<span class="font-label-md text-label-md text-outline">Nova Enterprise v4.2.0</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Suppressed for Transactional/Focused Journey, but kept template logic as guide) -->
+<!-- Not rendered as per "Relevance Check: Suppress if page is Transactional" Rule -->
+<!-- Success Feedback Overlay (Hidden Initially) -->
+<div class="fixed inset-0 z-[100] bg-surface flex flex-col items-center justify-center px-margin-mobile hidden" id="successOverlay">
+<div class="text-center">
+<div class="w-20 h-20 bg-secondary-container text-on-secondary-container rounded-full flex items-center justify-center mx-auto mb-lg scale-0 transition-transform duration-500 ease-out" id="checkCircle">
+<span class="material-symbols-outlined text-[40px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-sm opacity-0 transition-opacity duration-500 delay-300" id="successTitle">Logged Out</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-xl opacity-0 transition-opacity duration-500 delay-500" id="successMsg">You have been successfully signed out of your session.</p>
+<button class="press-effect w-full max-w-xs py-4 bg-primary text-on-primary rounded-lg font-title-md opacity-0 transition-opacity duration-500 delay-700" id="signInBtn">
+                Back to Sign In
+            </button>
+</div>
+</div>
+<!-- Scripting for UI Interactions -->
+<script>
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            const overlay = document.getElementById('successOverlay');
+            const circle = document.getElementById('checkCircle');
+            const title = document.getElementById('successTitle');
+            const msg = document.getElementById('successMsg');
+            const btn = document.getElementById('signInBtn');
+
+            // Show Overlay
+            overlay.classList.remove('hidden');
+            
+            // Trigger Animations
+            setTimeout(() => {
+                circle.classList.remove('scale-0');
+                circle.classList.add('scale-100');
+            }, 100);
+
+            setTimeout(() => {
+                title.classList.remove('opacity-0');
+                msg.classList.remove('opacity-0');
+                btn.classList.remove('opacity-0');
+            }, 400);
+        });
+
+        // Simple button active state toggle simulation if needed
+        document.querySelectorAll('.press-effect').forEach(btn => {
+            btn.addEventListener('mousedown', () => btn.classList.add('translate-y-px'));
+            btn.addEventListener('mouseup', () => btn.classList.remove('translate-y-px'));
+            btn.addEventListener('mouseleave', () => btn.classList.remove('translate-y-px'));
+        });
+    </script>
+<!-- Background Pattern Decorative Element -->
+<div class="fixed bottom-0 right-0 w-64 h-64 opacity-[0.03] pointer-events-none overflow-hidden">
+<div class="w-full h-full bg-no-repeat bg-contain opacity-20" data-alt="A subtle, high-density pattern of clean geometric corporate symbols and ERP-related abstract lines in a professional light-mode aesthetic. The design is minimalist, using only grayscale and very light purple tints to create a texture that feels sophisticated and technical." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDO4e4E-kxpItRCYpqns-g9eGgqySH8n5UG4la_X6kOF_Ut2kKPTtSmXro_zMqeZe-V9UbkXc8CPdHwbM6eBA3NWJ45knJAGSSgRUsTkPHvLd5w4oDhYPdfAn6LX6p3JSZA5aDAkqEqU2a7uf7t3j3iRmgcBpe1aGmHk0nDZZE42cn-Aegw7qUjutsi--wxWdwxoeS8S4IdmQLD7_0lXysml2w48oJzSTX-O45nEgE0BGN0v3RSnJyRJ0b1RrQbsEwtBDelEC5u5Us')"></div>
+</div>
+</body></html>

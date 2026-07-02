@@ -1,0 +1,22 @@
+<h2>Invoice {{id}}</h2>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">Order Details</div>
+    <table>
+      <tr><td>Customer</td><td>{{customer}}</td></tr>
+      <tr><td>Date</td><td>{{date}}</td></tr>
+      <tr><td>Status</td><td>{{status}}</td></tr>
+      <tr><td>Total</td><td>${{total}}</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-header">Items</div>
+    <table>
+      <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
+      <tbody>{{itemRows}}</tbody>
+    </table>
+  </div>
+</div>
+<div style="margin-top:var(--space-3)">
+  <button class="btn btn-outline" onclick="app.loadModule('sales')">Back to List</button>
+</div>

@@ -1,0 +1,1 @@
+﻿window.ShiftService = class ShiftService {}

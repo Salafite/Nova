@@ -1,0 +1,87 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Administration & Security</h2>
+<p class="text-body-md text-on-surface-variant mt-1">Manage users, roles, modules, and view system audit logs.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.admin.showCreateForm()">
+<span class="material-symbols-outlined text-[18px]">person_add</span>
+Add User
+</button>
+<a class="bg-surface-container-high text-on-surface px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md hover:bg-primary hover:text-on-primary transition-all press-effect cursor-pointer" onclick="app.loadModule('module_manager')">
+<span class="material-symbols-outlined text-[18px]">extension</span>
+Modules
+</a>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter mb-xl items-stretch">
+<!-- User Management Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">User Management</h3>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-semibold">Name</th>
+<th class="px-lg py-sm font-semibold">Email</th>
+<th class="px-lg py-sm font-semibold">Role</th>
+<th class="px-lg py-sm font-semibold text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{userRows}}
+</tbody>
+</table>
+</div>
+</div>
+<!-- Roles & Permissions Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Roles & Permissions</h3>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-semibold">Role</th>
+<th class="px-lg py-sm font-semibold text-center">Users</th>
+<th class="px-lg py-sm font-semibold">Permissions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-primary/5 transition-colors group"><td class="px-lg py-md font-body-md font-semibold text-primary">Administrator</td><td class="px-lg py-md font-data-mono text-center">1</td><td class="px-lg py-md text-body-md text-on-surface-variant">Full Access</td></tr>
+<tr class="hover:bg-primary/5 transition-colors group"><td class="px-lg py-md font-body-md font-semibold text-primary">Manager</td><td class="px-lg py-md font-data-mono text-center">1</td><td class="px-lg py-md text-body-md text-on-surface-variant">Read, Write, Approve</td></tr>
+<tr class="hover:bg-primary/5 transition-colors group"><td class="px-lg py-md font-body-md font-semibold text-primary">Cashier</td><td class="px-lg py-md font-data-mono text-center">1</td><td class="px-lg py-md text-body-md text-on-surface-variant">POS, Read</td></tr>
+<tr class="hover:bg-primary/5 transition-colors group"><td class="px-lg py-md font-body-md font-semibold text-primary">Viewer</td><td class="px-lg py-md font-data-mono text-center">1</td><td class="px-lg py-md text-body-md text-on-surface-variant">Read Only</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Audit Log Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col mb-xl">
+<div class="px-lg py-md border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+<h3 class="font-title-md text-title-md font-bold">Audit Log</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Time</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">User</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-primary/5 transition-colors group"><td class="px-lg py-md font-data-mono text-on-surface-variant text-sm">10:30 AM</td><td class="px-lg py-md font-body-md font-semibold">admin</td><td class="px-lg py-md text-body-md">User login</td></tr>
+<tr class="hover:bg-primary/5 transition-colors group"><td class="px-lg py-md font-data-mono text-on-surface-variant text-sm">10:35 AM</td><td class="px-lg py-md font-body-md font-semibold">john</td><td class="px-lg py-md text-body-md">Created PO-002</td></tr>
+<tr class="hover:bg-primary/5 transition-colors group"><td class="px-lg py-md font-data-mono text-on-surface-variant text-sm">11:00 AM</td><td class="px-lg py-md font-body-md font-semibold">jane</td><td class="px-lg py-md text-body-md">Completed sale #1003</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>

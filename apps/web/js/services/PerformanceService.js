@@ -1,0 +1,1 @@
+﻿window.PerformanceService = class PerformanceService {}

@@ -1,0 +1,1 @@
+﻿window.OvertimeEntryModel = class OvertimeEntry {constructor(data){Object.assign(this,data);}}

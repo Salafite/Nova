@@ -1,0 +1,1 @@
+﻿window.OnlineOrderModel = class OnlineOrder {constructor(d){Object.assign(this,d)}}

@@ -1,0 +1,69 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+  <div class="flex justify-between items-end mb-lg mt-lg">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Executive Dashboards</h2>
+      <p class="text-body-md text-on-surface-variant mt-1">Monitor organizational performance with real-time KPI dashboards.</p>
+    </div>
+    <div class="flex gap-sm">
+      <button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.executive.showCreateForm()">
+        <span class="material-symbols-outlined text-[18px]">dashboard</span>
+        New Dashboard
+      </button>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+      <div class="flex justify-between items-start">
+        <span class="text-on-surface-variant font-label-md uppercase tracking-wider">Active Dashboards</span>
+        <span class="material-symbols-outlined text-primary">dashboard</span>
+      </div>
+      <div class="flex items-baseline gap-sm mt-2">
+        <span class="font-headline-lg text-headline-lg text-on-surface">{{activeDashboards}}</span>
+        <span class="text-body-md text-on-surface-variant">active</span>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+      <div class="flex justify-between items-start">
+        <span class="text-on-surface-variant font-label-md uppercase tracking-wider">Scheduled Reports</span>
+        <span class="material-symbols-outlined text-secondary">schedule</span>
+      </div>
+      <div class="flex items-baseline gap-sm mt-2">
+        <span class="font-headline-lg text-headline-lg text-secondary">{{scheduledReports}}</span>
+        <span class="text-body-md text-on-surface-variant">scheduled</span>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+      <div class="flex justify-between items-start">
+        <span class="text-on-surface-variant font-label-md uppercase tracking-wider">Data Sources</span>
+        <span class="material-symbols-outlined text-primary">storage</span>
+      </div>
+      <div class="flex items-baseline gap-sm mt-2">
+        <span class="font-headline-lg text-headline-lg text-primary">{{dataSources}}</span>
+        <span class="text-body-md text-on-surface-variant">connected</span>
+      </div>
+    </div>
+  </div>
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+      <h3 class="font-title-md text-title-md font-bold">KPI Dashboards</h3>
+      <div class="flex gap-sm">
+        <input type="text" id="dashboardSearch" placeholder="Search dashboards..." class="px-md py-sm bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md outline-none focus:border-primary text-body-md" oninput="controllers.executive.search(this.value)">
+      </div>
+    </div>
+    <div class="overflow-x-auto flex-1">
+      <table class="w-full text-left border-collapse erp-table">
+        <thead class="bg-surface-container-low border-b border-outline-variant">
+          <tr>
+            <th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Name</th>
+            <th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Category</th>
+            <th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Widgets</th>
+            <th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+            <th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Last Updated</th>
+            <th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant">{{dashboardRows}}</tbody>
+      </table>
+    </div>
+  </div>
+</div>

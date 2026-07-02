@@ -1,0 +1,46 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full">
+<!-- Dashboard Header & Actions -->
+<div class="flex justify-between items-end mb-lg py-lg">
+<div>
+<div class="flex items-center text-label-md text-outline mb-base">
+<span>Main Hub</span>
+<span class="material-symbols-outlined text-[14px] mx-1">chevron_right</span>
+<span class="text-on-surface-variant font-semibold">Suppliers</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Vendor Directory</h3>
+</div>
+<div class="flex gap-md">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.suppliers.showAddForm()">
+<span class="material-symbols-outlined text-[18px]">add</span>
+Add Supplier
+</button>
+</div>
+</div>
+<!-- High-Density Content Area -->
+<div class="flex-1 pb-xl overflow-hidden flex flex-col">
+<!-- Data Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
+<div class="p-md border-b border-outline-variant bg-surface-container-low">
+<div class="relative max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input type="text" id="supplierSearch" class="w-full bg-surface-container-lowest border border-outline-variant rounded-full pl-10 pr-4 py-2 font-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary text-on-surface outline-none" placeholder="Search suppliers..." oninput="controllers.suppliers.search(this.value)">
+</div>
+</div>
+<div class="overflow-x-auto custom-scrollbar flex-1">
+<table class="w-full text-left rtl:text-right border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="py-sm px-md font-label-md text-on-surface-variant uppercase tracking-wider">Vendor Name</th>
+<th class="py-sm px-md font-label-md text-on-surface-variant uppercase tracking-wider">Contact</th>
+<th class="py-sm px-md font-label-md text-on-surface-variant uppercase tracking-wider">Payment Terms</th>
+<th class="py-sm px-md font-label-md text-on-surface-variant uppercase tracking-wider text-right rtl:text-left">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant" id="supplierTableBody">
+{{rows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>

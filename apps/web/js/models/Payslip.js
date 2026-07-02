@@ -1,0 +1,1 @@
+﻿window.PayslipModel = class Payslip {constructor(data){Object.assign(this,data);}}

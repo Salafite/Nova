@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        /* Custom scrollbar for high-density tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c9c4d7;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #797586;
+        }
+        /* Press effect for buttons */
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-variant": "#dce2f7",
+                      "surface-container-low": "#f1f3ff",
+                      "background": "#f9f9ff",
+                      "on-primary": "#ffffff",
+                      "on-background": "#141b2b",
+                      "secondary-container": "#90efef",
+                      "surface-tint": "#6042d6",
+                      "on-secondary-fixed": "#002020",
+                      "surface": "#f9f9ff",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-container": "#d8ceff",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#3d4551",
+                      "surface-container-highest": "#dce2f7",
+                      "primary-fixed-dim": "#cabeff",
+                      "inverse-primary": "#cabeff",
+                      "error": "#ba1a1a",
+                      "primary-container": "#5d3fd3",
+                      "primary": "#451ebb",
+                      "outline-variant": "#c9c4d7",
+                      "secondary": "#006a6a",
+                      "on-primary-fixed": "#1c0062",
+                      "inverse-on-surface": "#edf0ff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "surface-dim": "#d3daef",
+                      "on-secondary-container": "#006e6e",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary-container": "#ced4e4",
+                      "inverse-surface": "#293040",
+                      "surface-container-high": "#e1e8fd",
+                      "on-secondary-fixed-variant": "#004f4f",
+                      "on-primary-fixed-variant": "#4723be",
+                      "tertiary-fixed": "#dce2f3",
+                      "on-error": "#ffffff",
+                      "tertiary-container": "#555c69",
+                      "on-tertiary-fixed-variant": "#404754",
+                      "primary-fixed": "#e6deff",
+                      "secondary-fixed-dim": "#76d6d5",
+                      "outline": "#797586",
+                      "tertiary-fixed-dim": "#c0c7d6",
+                      "secondary-fixed": "#93f2f2",
+                      "on-surface-variant": "#484554",
+                      "surface-container": "#e9edff",
+                      "on-surface": "#141b2b",
+                      "surface-bright": "#f9f9ff",
+                      "on-tertiary-fixed": "#151c27"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "max-width": "1440px",
+                      "lg": "24px",
+                      "margin-mobile": "16px",
+                      "md": "16px",
+                      "margin-desktop": "32px",
+                      "base": "4px",
+                      "xl": "32px",
+                      "gutter": "16px",
+                      "sm": "8px",
+                      "xs": "4px"
+              },
+              "fontFamily": {
+                      "data-mono": ["JetBrains Mono"],
+                      "label-md": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "title-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface min-h-screen">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-[240px] rtl:right-0 rtl:left-auto bg-surface-container-lowest dark:bg-inverse-surface border-r border-outline-variant dark:border-outline flex flex-col py-lg z-50">
+<!-- Brand Header -->
+<div class="px-lg mb-xl flex items-center gap-sm">
+<div class="w-10 h-10 bg-primary-container rounded flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+</div>
+<div>
+<h1 class="font-title-md text-title-md text-primary dark:text-inverse-primary leading-none">Global ERP</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Manufacturing Suite</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 px-sm space-y-xs overflow-y-auto custom-scrollbar">
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="apps">apps</span>
+                Foundation
+            </a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="handshake">handshake</span>
+                CRM
+            </a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+                Procurement
+            </a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+                Manufacturing
+            </a>
+<!-- Active Tab: Inventory (Products Catalog context) -->
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-primary dark:text-inverse-primary border-l-4 border-primary dark:border-inverse-primary bg-primary-container/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+                Inventory
+            </a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+                Accounting
+            </a>
+<div class="pt-xl px-md">
+<button class="w-full py-sm px-md bg-primary text-on-primary rounded font-label-md text-label-md press-effect">
+                    Add Module
+                </button>
+</div>
+</nav>
+<!-- Footer Links -->
+<div class="px-sm mt-auto border-t border-outline-variant pt-lg">
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-md px-md py-sm font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/50 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+                Support
+            </a>
+</div>
+</aside>
+<!-- TopNavBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-240px)] rtl:left-0 rtl:right-auto z-40 bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex justify-between items-center h-16 px-margin-desktop ml-[240px] rtl:mr-[240px] rtl:ml-0">
+<div class="flex items-center gap-xl flex-1">
+<h2 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-inverse-primary">Global ERP</h2>
+<!-- Dashboard Nav Links -->
+<nav class="hidden md:flex items-center gap-lg h-full">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-all" href="#">Dashboard</a>
+<a class="font-label-md text-label-md text-primary font-bold border-b-2 border-primary pb-1" href="#">Reports</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-all" href="#">Timeline</a>
+</nav>
+<!-- Search Bar On Left -->
+<div class="relative w-64 max-w-xs">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-body-md" data-icon="search">search</span>
+<input class="w-full pl-xl pr-sm py-1.5 bg-surface-container-low border border-outline-variant rounded focus:ring-2 focus:ring-primary/30 focus:border-primary font-body-md outline-none" placeholder="Search catalog..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<button class="bg-primary text-on-primary px-lg py-1.5 rounded font-label-md text-label-md press-effect">Create New</button>
+<div class="flex items-center gap-md text-on-surface-variant">
+<button class="p-sm hover:bg-surface-variant/50 rounded transition-colors" onclick="toggleRTL()" title="Toggle RTL/LTR">
+<span class="material-symbols-outlined" data-icon="language">language</span>
+</button>
+<button class="p-sm hover:bg-surface-variant/50 rounded transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-variant overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional user profile avatar for a corporate manager, featuring soft lighting and a minimalist background, styled in a high-density enterprise dashboard aesthetic with iris purple and neutral tones. The portrait is high-quality, professional, and centered." src="https://lh3.googleusercontent.com/aida-public/AB6AXuByhVsiYzd_55jQN6WrGbcVfPSAgyw4jeq_4_-f7Uvj6m-7uK62zd21QPY95MF2hhxvCtR7uu4I8irEaoD5XOB7s-pv67-xw3lubDVTy6zL51HHoTjqnKALVVdC43m4qdhs-qxPvudNHcaSXMp_zMvKhupUgvI1WZaX7itZgWt0uHyQXsXDrePf4B1pD1W53fWGlox2r6tUq8mAxO7bf803SciXoQWMmm8APRAALdcSDBODjqLy7--FQnsKltwpq1CcXcneE92byNI"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-16 ml-[240px] rtl:mr-[240px] rtl:ml-0 min-h-screen">
+<div class="p-lg max-w-max-width mx-auto">
+<!-- Page Header Area -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-lg mb-xl">
+<div>
+<nav class="flex items-center gap-xs text-label-md font-label-md text-on-surface-variant mb-xs">
+<a class="hover:text-primary" href="#">Inventory</a>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface">Products Catalog</span>
+</nav>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Products Catalog</h2>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Manage enterprise inventory levels and product specifications.</p>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex bg-surface-container-high rounded p-1">
+<button class="p-sm bg-surface-container-lowest shadow-sm rounded text-primary">
+<span class="material-symbols-outlined" data-icon="list">list</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+</button>
+</div>
+<button class="flex items-center gap-xs px-md py-sm bg-surface-container-lowest border border-outline-variant rounded font-label-md text-label-md hover:bg-surface-variant/10 transition-colors press-effect">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+                        Filters
+                    </button>
+<button class="flex items-center gap-xs px-md py-sm bg-surface-container-lowest border border-outline-variant rounded font-label-md text-label-md hover:bg-surface-variant/10 transition-colors press-effect">
+<span class="material-symbols-outlined" data-icon="file_download">file_download</span>
+                        Export
+                    </button>
+</div>
+</div>
+<!-- Dashboard Summary Widgets (High-Density) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Total Products</p>
+<h3 class="font-display-lg text-headline-lg text-on-surface mt-xs">1,248</h3>
+<p class="text-label-md font-label-md text-secondary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
+                        +12% this month
+                    </p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Low Stock Alert</p>
+<h3 class="font-display-lg text-headline-lg text-error mt-xs">42</h3>
+<p class="text-label-md font-label-md text-on-surface-variant mt-1">Requires immediate restock</p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Out of Stock</p>
+<h3 class="font-display-lg text-headline-lg text-on-surface mt-xs">12</h3>
+<p class="text-label-md font-label-md text-on-surface-variant mt-1">8 inactive listings</p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Inventory Value</p>
+<h3 class="font-display-lg text-headline-lg text-on-surface mt-xs">$2.4M</h3>
+<p class="text-label-md font-label-md text-on-surface-variant mt-1">Calculated at cost</p>
+</div>
+</div>
+<!-- Advanced Filter Strip -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded mb-lg p-md flex flex-wrap gap-md items-center shadow-sm">
+<div class="flex items-center gap-sm">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase">Status:</span>
+<select class="bg-transparent border-none focus:ring-0 text-body-md font-body-md text-primary font-semibold py-0 cursor-pointer">
+<option>All Statuses</option>
+<option>In Stock</option>
+<option>Low Stock</option>
+<option>Out of Stock</option>
+</select>
+</div>
+<div class="w-px h-6 bg-outline-variant"></div>
+<div class="flex items-center gap-sm">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase">Category:</span>
+<select class="bg-transparent border-none focus:ring-0 text-body-md font-body-md text-primary font-semibold py-0 cursor-pointer">
+<option>All Categories</option>
+<option>Raw Materials</option>
+<option>Finished Goods</option>
+<option>Packaging</option>
+</select>
+</div>
+<div class="w-px h-6 bg-outline-variant"></div>
+<div class="flex items-center gap-sm flex-1">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase">SKU Range:</span>
+<input class="w-24 bg-transparent border-none focus:ring-0 text-body-md py-0" placeholder="Start SKU" type="text"/>
+<span class="text-on-surface-variant text-label-md">to</span>
+<input class="w-24 bg-transparent border-none focus:ring-0 text-body-md py-0" placeholder="End SKU" type="text"/>
+</div>
+<button class="text-label-md font-label-md text-on-surface-variant hover:text-primary transition-colors">Clear All</button>
+</div>
+<!-- Main Data Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded shadow-sm overflow-hidden flex flex-col">
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead>
+<tr class="bg-surface-container-high border-b border-outline-variant">
+<th class="w-12 px-lg py-md">
+<input class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">SKU</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Product Name</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Category</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Price</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Stock Level</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-body-md text-body-md">
+<!-- Row 1 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<input class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="px-md py-md font-data-mono text-data-mono text-on-surface">PRD-90234-X</td>
+<td class="px-md py-md font-semibold text-primary">Ultra-Strength Titanium Alloy 500</td>
+<td class="px-md py-md text-on-surface-variant">Raw Materials</td>
+<td class="px-md py-md text-right font-data-mono">$1,240.00</td>
+<td class="px-md py-md text-right font-data-mono">842 Units</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full bg-secondary-container text-on-secondary-container text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                        In Stock
+                                    </span>
+</td>
+<td class="px-lg py-md text-center">
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<input class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="px-md py-md font-data-mono text-data-mono text-on-surface">PRD-77812-Y</td>
+<td class="px-md py-md font-semibold text-primary">High-Performance Turbine Core B</td>
+<td class="px-md py-md text-on-surface-variant">Finished Goods</td>
+<td class="px-md py-md text-right font-data-mono">$45,900.50</td>
+<td class="px-md py-md text-right font-data-mono">14 Units</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full bg-error-container text-on-error-container text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                        Low Stock
+                                    </span>
+</td>
+<td class="px-lg py-md text-center">
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<input class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="px-md py-md font-data-mono text-data-mono text-on-surface">PKG-11200-Z</td>
+<td class="px-md py-md font-semibold text-primary">Eco-Reinforced Shipping Crate</td>
+<td class="px-md py-md text-on-surface-variant">Packaging</td>
+<td class="px-md py-md text-right font-data-mono">$12.25</td>
+<td class="px-md py-md text-right font-data-mono">0 Units</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full bg-surface-container-highest text-on-surface-variant text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                        Out of Stock
+                                    </span>
+</td>
+<td class="px-lg py-md text-center">
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<input class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="px-md py-md font-data-mono text-data-mono text-on-surface">PRD-88210-A</td>
+<td class="px-md py-md font-semibold text-primary">Precision Copper Wiring (Bulk)</td>
+<td class="px-md py-md text-on-surface-variant">Raw Materials</td>
+<td class="px-md py-md text-right font-data-mono">$320.10</td>
+<td class="px-md py-md text-right font-data-mono">2,150 Units</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full bg-secondary-container text-on-secondary-container text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                        In Stock
+                                    </span>
+</td>
+<td class="px-lg py-md text-center">
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-primary-container/5 transition-colors group">
+<td class="px-lg py-md">
+<input class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="px-md py-md font-data-mono text-data-mono text-on-surface">PRD-33441-S</td>
+<td class="px-md py-md font-semibold text-primary">Industrial Grade Lubricant V4</td>
+<td class="px-md py-md text-on-surface-variant">Consumables</td>
+<td class="px-md py-md text-right font-data-mono">$88.00</td>
+<td class="px-md py-md text-right font-data-mono">42 Units</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full bg-secondary-container text-on-secondary-container text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                        In Stock
+                                    </span>
+</td>
+<td class="px-lg py-md text-center">
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+<button class="p-1 hover:bg-surface-variant/50 rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="p-md bg-surface border-t border-outline-variant flex items-center justify-between font-label-md text-label-md">
+<div class="flex items-center gap-lg">
+<p class="text-on-surface-variant">Showing <span class="font-bold text-on-surface">1 - 5</span> of <span class="font-bold text-on-surface">1,248</span> products</p>
+<div class="flex items-center gap-sm">
+<span class="text-on-surface-variant">Rows per page:</span>
+<select class="bg-transparent border-none focus:ring-0 font-bold py-0 cursor-pointer">
+<option>5</option>
+<option>10</option>
+<option>25</option>
+<option>50</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<button class="p-1.5 hover:bg-surface-variant/50 rounded transition-colors text-on-surface-variant disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined" data-icon="first_page">first_page</span>
+</button>
+<button class="p-1.5 hover:bg-surface-variant/50 rounded transition-colors text-on-surface-variant disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<div class="flex items-center">
+<button class="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant">3</button>
+<span class="px-2 text-on-surface-variant">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-variant/50 text-on-surface-variant">250</button>
+</div>
+<button class="p-1.5 hover:bg-surface-variant/50 rounded transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="p-1.5 hover:bg-surface-variant/50 rounded transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="last_page">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual FAB for high-level screens -->
+<button class="fixed bottom-lg right-lg w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center press-effect z-50 hover:bg-primary-container transition-colors" title="Create New Product">
+<span class="material-symbols-outlined text-[28px]" data-icon="add">add</span>
+</button>
+<script>
+        function toggleRTL() {
+            const html = document.documentElement;
+            const currentDir = html.getAttribute('dir');
+            if (currentDir === 'ltr') {
+                html.setAttribute('dir', 'rtl');
+                html.setAttribute('lang', 'ar');
+            } else {
+                html.setAttribute('dir', 'ltr');
+                html.setAttribute('lang', 'en');
+            }
+        }
+
+        // Simple row hover micro-interaction effect
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.boxShadow = 'inset 4px 0 0 0 #451ebb';
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.boxShadow = 'none';
+            });
+        });
+    </script>
+</body></html>

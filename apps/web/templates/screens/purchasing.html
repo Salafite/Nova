@@ -1,0 +1,44 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+  <!-- Header -->
+  <div class="flex justify-between items-end mb-lg mt-lg">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs" data-i18n="screens.purchasing.title">Purchasing</h2>
+      <p class="text-body-md text-on-surface-variant mt-1" data-i18n="screens.purchasing.subtitle">Manage Purchase Orders and incoming inventory.</p>
+    </div>
+    <div class="flex gap-sm">
+      <button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.purchasing.showCreateForm()">
+        <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+        <span data-i18n="screens.purchasing.new_po">New PO</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-gutter mb-xl items-stretch">
+    <!-- Purchasing Table -->
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+      <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+        <h3 class="font-title-md text-title-md font-bold" data-i18n="screens.purchasing.table_title">Purchase Orders</h3>
+        <div class="flex gap-sm">
+           <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs rounded-full hover:bg-surface-container-high" onclick="controllers.purchasing.refresh()">refresh</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto flex-1">
+        <table class="w-full text-left border-collapse erp-table">
+          <thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+            <tr>
+              <th class="px-lg py-sm font-semibold" data-i18n="screens.purchasing.col_po_number">PO Number</th>
+              <th class="px-lg py-sm font-semibold" data-i18n="screens.purchasing.col_supplier">Supplier</th>
+              <th class="px-lg py-sm font-semibold" data-i18n="screens.purchasing.col_date">Date</th>
+              <th class="px-lg py-sm font-semibold text-right" data-i18n="screens.purchasing.col_total">Total</th>
+              <th class="px-lg py-sm font-semibold text-center" data-i18n="screens.purchasing.col_status">Status</th>
+              <th class="px-lg py-sm font-semibold text-center" data-i18n="screens.purchasing.col_actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant" id="purchasingTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

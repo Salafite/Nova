@@ -1,0 +1,1 @@
+﻿window.SubscriptionModel = class Subscription {constructor(d){Object.assign(this,d)}}

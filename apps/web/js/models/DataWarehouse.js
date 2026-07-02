@@ -1,0 +1,1 @@
+﻿window.DataWarehouseModel = class DataWarehouse {constructor(d){Object.assign(this,d)}}

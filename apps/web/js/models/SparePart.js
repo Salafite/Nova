@@ -1,0 +1,1 @@
+﻿window.SparePartModel = class SparePart {constructor(d){Object.assign(this,d)}}

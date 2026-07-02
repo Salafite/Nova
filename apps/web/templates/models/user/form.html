@@ -1,0 +1,37 @@
+<div class="max-w-2xl mx-auto py-xl">
+  <div class="flex items-center gap-sm mb-lg">
+    <button class="w-10 h-10 rounded-full hover:bg-surface-variant/50 flex items-center justify-center text-on-surface-variant transition-colors" onclick="app.loadModule('admin')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <h2 class="font-headline-md text-headline-md text-on-surface">Add User</h2>
+  </div>
+
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm p-xl">
+    <form id="userForm" onsubmit="return controllers.admin.saveForm()" class="space-y-md">
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface-variant mb-xs">Username</label>
+        <input type="text" id="userFormUsername" required class="w-full px-md py-sm border border-outline-variant rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-body-md outline-none transition-all">
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface-variant mb-xs">Password</label>
+          <input type="password" id="userFormPassword" required class="w-full px-md py-sm border border-outline-variant rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-body-md outline-none transition-all">
+        </div>
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface-variant mb-xs">Role</label>
+          <select id="userFormRole" class="w-full px-md py-sm border border-outline-variant rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-body-md outline-none transition-all">
+            <option value="Admin">Admin</option>
+            <option value="Sales Rep">Sales Rep</option>
+            <option value="Viewer">Viewer</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pt-lg mt-lg border-t border-outline-variant flex justify-end gap-sm">
+        <button type="button" class="px-lg py-sm rounded-lg font-label-md text-label-md text-primary hover:bg-primary-container/20 transition-colors" onclick="app.loadModule('admin')">Cancel</button>
+        <button type="submit" class="px-lg py-sm bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary/90 transition-colors shadow-sm">Add User</button>
+      </div>
+    </form>
+  </div>
+</div>

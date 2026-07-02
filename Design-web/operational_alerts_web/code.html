@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP | Operational Alerts &amp; Insights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#c9c4d7",
+                        "background": "#f9f9ff",
+                        "tertiary": "#3d4551",
+                        "on-surface-variant": "#484554",
+                        "surface-bright": "#f9f9ff",
+                        "primary-container": "#5d3fd3",
+                        "surface-container-low": "#f1f3ff",
+                        "on-primary-fixed": "#1c0062",
+                        "tertiary-fixed": "#dce2f3",
+                        "secondary": "#006a6a",
+                        "surface": "#f9f9ff",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "on-secondary-fixed": "#002020",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#90efef",
+                        "surface-container-highest": "#dce2f7",
+                        "on-secondary-container": "#006e6e",
+                        "on-primary-fixed-variant": "#4723be",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "on-tertiary-fixed": "#151c27",
+                        "inverse-primary": "#cabeff",
+                        "inverse-surface": "#293040",
+                        "secondary-fixed": "#93f2f2",
+                        "on-background": "#141b2b",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e1e8fd",
+                        "primary-fixed-dim": "#cabeff",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#edf0ff",
+                        "surface-dim": "#d3daef",
+                        "primary-fixed": "#e6deff",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#d8ceff",
+                        "on-tertiary-container": "#ced4e4",
+                        "on-surface": "#141b2b",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "surface-variant": "#dce2f7",
+                        "on-secondary": "#ffffff",
+                        "outline": "#797586",
+                        "tertiary-container": "#555c69",
+                        "surface-tint": "#6042d6",
+                        "surface-container": "#e9edff",
+                        "primary": "#451ebb",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "max-width": "1440px",
+                        "margin-desktop": "32px",
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "title-md": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #E5E7EB;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #dce2f7; border-radius: 10px; }
+        .integrity-gauge {
+            transition: stroke-dashoffset 1s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- SIDE NAVIGATION BAR -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-md z-50">
+<div class="px-md mb-xl">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">ERP Enterprise</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Global Operations</p>
+</div>
+<nav class="flex-1 space-y-1 overflow-y-auto px-sm">
+<!-- Nav Item: Foundation -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="apps">apps</span>
+<span class="font-label-md text-label-md">Foundation</span>
+</a>
+<!-- Nav Item: CRM -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+<span class="font-label-md text-label-md">CRM</span>
+</a>
+<!-- Nav Item: Procurement -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-label-md text-label-md">Procurement</span>
+</a>
+<!-- Nav Item: Manufacturing -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="factory">factory</span>
+<span class="font-label-md text-label-md">Manufacturing</span>
+</a>
+<!-- Nav Item: Inventory -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<!-- Nav Item: Accounting -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_balance">account_balance</span>
+<span class="font-label-md text-label-md">Accounting</span>
+</a>
+<!-- Nav Item: Settings -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+<div class="px-md mt-auto pt-md border-t border-outline-variant">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold text-xs">JD</div>
+<div class="overflow-hidden">
+<p class="font-label-md text-label-md font-bold truncate">John Doe</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Ops Admin</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- TOP NAVIGATION BAR -->
+<header class="fixed top-0 right-0 left-[240px] h-16 bg-surface border-b border-outline-variant flex justify-between items-center px-lg z-40">
+<div class="flex items-center gap-lg">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile font-black text-on-surface">ERP System</h2>
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]" data-icon="search">search</span>
+<input class="w-full bg-surface-container border-none rounded-full pl-10 pr-4 py-1.5 text-body-md focus:ring-2 focus:ring-primary/20" placeholder="Global Search..." type="text"/>
+</div>
+<nav class="hidden md:flex items-center gap-md">
+<a class="font-title-md text-title-md text-on-surface-variant hover:text-primary transition-all" href="#">Dashboard</a>
+<a class="font-title-md text-title-md text-on-surface-variant hover:text-primary transition-all" href="#">Reports</a>
+<a class="font-title-md text-title-md text-primary border-b-2 border-primary" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-transform active:scale-95"><span class="material-symbols-outlined" data-icon="language">language</span></button>
+<button class="p-2 text-on-surface-variant hover:text-primary relative active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-transform active:scale-95"><span class="material-symbols-outlined" data-icon="help">help</span></button>
+</div>
+</header>
+<!-- MAIN CONTENT AREA -->
+<main class="ml-[240px] mt-16 p-lg bg-background min-h-screen">
+<div class="max-w-[1440px] mx-auto">
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-xl">
+<div>
+<h3 class="font-headline-lg text-headline-lg font-bold text-on-background">System Intelligence Center</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Centralized operational alerts, predictive insights, and system status.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-md py-2 border border-primary text-primary rounded font-label-md hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span>
+                        Filter Views
+                    </button>
+<button class="flex items-center gap-xs px-md py-2 bg-primary text-on-primary rounded font-label-md shadow-sm active:translate-y-[1px] transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="refresh">refresh</span>
+                        Refresh Data
+                    </button>
+</div>
+</div>
+<!-- Dashboard Grid (Bento Style) -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- System Integrity Gauge Card -->
+<div class="col-span-12 lg:col-span-4 bg-white border border-outline-variant p-lg rounded-xl flex flex-col items-center justify-center text-center">
+<h4 class="font-label-md text-label-md font-bold text-on-surface-variant mb-md self-start uppercase tracking-widest">System Integrity</h4>
+<div class="relative w-48 h-48 mb-md">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container-high" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-primary-container integrity-gauge" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-dasharray="552.92" stroke-dashoffset="10" stroke-linecap="round" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display-lg text-display-lg text-on-background">98.2%</span>
+<span class="font-label-md text-label-md text-on-secondary-container font-bold bg-secondary-container px-2 py-0.5 rounded">OPTIMAL</span>
+</div>
+</div>
+<div class="grid grid-cols-2 w-full gap-sm mt-md">
+<div class="bg-surface-container-low p-sm rounded text-left">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Uptime</p>
+<p class="font-data-mono text-data-mono text-on-surface">99.998%</p>
+</div>
+<div class="bg-surface-container-low p-sm rounded text-left">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Latency</p>
+<p class="font-data-mono text-data-mono text-on-surface">14ms</p>
+</div>
+</div>
+</div>
+<!-- Alert Summary Cards -->
+<div class="col-span-12 lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Critical Alert Card -->
+<div class="bg-white border border-outline-variant border-l-4 border-l-error p-lg rounded-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-error" data-icon="report" style="font-variation-settings: 'FILL' 1;">report</span>
+<span class="font-label-md text-label-md text-error font-bold">CRITICAL</span>
+</div>
+<h5 class="font-title-md text-title-md text-on-background mb-xs">Low Stock Warning</h5>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">SKU-9028 (Iris Fiber) has fallen below safety threshold (5% remaining).</p>
+<button class="w-full py-2 bg-primary text-on-primary rounded font-label-md text-sm active:translate-y-[1px] transition-transform">Reorder Now</button>
+</div>
+<!-- Insight Card -->
+<div class="bg-white border border-outline-variant border-l-4 border-l-secondary p-lg rounded-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-secondary" data-icon="trending_up">trending_up</span>
+<span class="font-label-md text-label-md text-secondary font-bold">INSIGHT</span>
+</div>
+<h5 class="font-title-md text-title-md text-on-background mb-xs">Growth Insights</h5>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">B2B services up <span class="text-secondary font-bold">12%</span> this quarter. Recommendation: Expand regional sales team.</p>
+<button class="w-full py-2 border border-secondary text-secondary rounded font-label-md text-sm hover:bg-secondary/5">View Analysis</button>
+</div>
+<!-- Warning/System Card -->
+<div class="bg-white border border-outline-variant border-l-4 border-l-tertiary p-lg rounded-xl shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-tertiary" data-icon="schedule">schedule</span>
+<span class="font-label-md text-label-md text-tertiary font-bold">SYSTEM</span>
+</div>
+<h5 class="font-title-md text-title-md text-on-background mb-xs">Maintenance Window</h5>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">Scheduled core upgrade on <span class="font-bold">Sat, 04 May 02:00 GMT</span>. Expected downtime: 15m.</p>
+<button class="w-full py-2 bg-surface-container-high text-on-surface-variant rounded font-label-md text-sm">Acknowledge</button>
+</div>
+</div>
+<!-- High Density Feed -->
+<div class="col-span-12 bg-white border border-outline-variant rounded-xl overflow-hidden flex flex-col">
+<div class="bg-surface-container-low px-lg py-md border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-lg">
+<h4 class="font-title-md text-title-md text-on-background">Activity Intelligence Feed</h4>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-error text-on-error">3 CRITICAL</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-tertiary-fixed text-on-tertiary-fixed">12 WARNINGS</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-secondary-container text-on-secondary-container">5 INSIGHTS</span>
+</div>
+</div>
+<div class="flex gap-sm">
+<span class="text-on-surface-variant text-label-md">Sort by: <b>Most Recent</b></span>
+<span class="material-symbols-outlined text-[18px] cursor-pointer" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full border-collapse">
+<thead>
+<tr class="bg-surface-container-lowest border-b border-outline-variant">
+<th class="px-lg py-sm text-left font-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-sm text-left font-label-md text-on-surface-variant uppercase tracking-wider">Origin</th>
+<th class="px-lg py-sm text-left font-label-md text-on-surface-variant uppercase tracking-wider">Event Details</th>
+<th class="px-lg py-sm text-left font-label-md text-on-surface-variant uppercase tracking-wider">Timestamp</th>
+<th class="px-lg py-sm text-right font-label-md text-on-surface-variant uppercase tracking-wider">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-lg py-sm">
+<div class="flex items-center gap-sm">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="font-label-md text-on-background">Critical</span>
+</div>
+</td>
+<td class="px-lg py-sm font-label-md text-on-surface-variant">Inventory API</td>
+<td class="px-lg py-sm">
+<p class="font-body-md text-on-background font-medium">Batch processing timeout for Cluster-04</p>
+<p class="text-[12px] text-on-surface-variant">Attempted retry 3 times without success.</p>
+</td>
+<td class="px-lg py-sm font-data-mono text-data-mono text-on-surface-variant">10:42:01 AM</td>
+<td class="px-lg py-sm text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-lg py-sm">
+<div class="flex items-center gap-sm">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-md text-on-background">Insight</span>
+</div>
+</td>
+<td class="px-lg py-sm font-label-md text-on-surface-variant">ML Engine</td>
+<td class="px-lg py-sm">
+<p class="font-body-md text-on-background font-medium">Customer churn risk detected for 'Atlas Corp'</p>
+<p class="text-[12px] text-on-surface-variant">Activity dropped by 45% in last 14 days.</p>
+</td>
+<td class="px-lg py-sm font-data-mono text-data-mono text-on-surface-variant">10:15:33 AM</td>
+<td class="px-lg py-sm text-right">
+<button class="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-lg font-label-md text-[11px] group-hover:bg-secondary group-hover:text-white transition-all">Review</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-lg py-sm">
+<div class="flex items-center gap-sm">
+<span class="w-2 h-2 rounded-full bg-outline-variant"></span>
+<span class="font-label-md text-on-background">Warning</span>
+</div>
+</td>
+<td class="px-lg py-sm font-label-md text-on-surface-variant">Procurement</td>
+<td class="px-lg py-sm">
+<p class="font-body-md text-on-background font-medium">Pending approval for PO #98221</p>
+<p class="text-[12px] text-on-surface-variant">Exceeds standard lead time by 48 hours.</p>
+</td>
+<td class="px-lg py-sm font-data-mono text-data-mono text-on-surface-variant">09:58:20 AM</td>
+<td class="px-lg py-sm text-right">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary" data-icon="mail">mail</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-lg py-sm">
+<div class="flex items-center gap-sm">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="font-label-md text-on-background">System</span>
+</div>
+</td>
+<td class="px-lg py-sm font-label-md text-on-surface-variant">Backup Core</td>
+<td class="px-lg py-sm">
+<p class="font-body-md text-on-background font-medium">Nightly snapshot complete</p>
+<p class="text-[12px] text-on-surface-variant">4.2TB archived to region us-east-1.</p>
+</td>
+<td class="px-lg py-sm font-data-mono text-data-mono text-on-surface-variant">04:00:05 AM</td>
+<td class="px-lg py-sm text-right">
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-md flex justify-between items-center bg-surface-container-lowest border-t border-outline-variant">
+<p class="text-[12px] text-on-surface-variant">Showing 4 of 24 alerts</p>
+<div class="flex gap-2">
+<button class="px-3 py-1 border border-outline-variant rounded hover:bg-surface-container transition-colors font-label-md">Previous</button>
+<button class="px-3 py-1 bg-primary text-white rounded font-label-md">Next Page</button>
+</div>
+</div>
+</div>
+<!-- Footer Area Cards -->
+<div class="col-span-12 md:col-span-6 bg-white border border-outline-variant p-lg rounded-xl flex items-start gap-lg overflow-hidden relative">
+<div class="absolute -right-4 -bottom-4 opacity-5">
+<span class="material-symbols-outlined text-[120px]" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div class="bg-primary-fixed w-12 h-12 rounded-xl flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary" data-icon="tips_and_updates">tips_and_updates</span>
+</div>
+<div>
+<h5 class="font-title-md text-title-md text-on-background mb-xs">Nova AI Suggestion</h5>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">Based on current transaction velocity, we recommend increasing liquidity allocation by 5% to cover end-of-month procurement peaks.</p>
+<a class="mt-md inline-block text-primary font-label-md hover:underline" href="#">Draft Allocation Proposal →</a>
+</div>
+</div>
+<div class="col-span-12 md:col-span-6 bg-surface-container-high border border-outline-variant p-lg rounded-xl flex items-start gap-lg overflow-hidden">
+<div class="bg-white w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface" data-icon="hub">hub</span>
+</div>
+<div>
+<h5 class="font-title-md text-title-md text-on-background mb-xs">Integration Health</h5>
+<div class="flex gap-4 mt-sm">
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="text-[12px] font-bold">AWS (US-EAST)</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span class="text-[12px] font-bold">SAP Bridge</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+<span class="text-[12px] font-bold text-error">FedEx API (Latency)</span>
+</div>
+</div>
+<p class="mt-md font-body-md text-body-md text-on-surface-variant">Total active nodes: 14/15. Overall external ecosystem connectivity is stable.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button (FAB) - Suppression Logic applied where necessary, here relevant for 'Report Incident' -->
+<button class="fixed bottom-lg right-lg w-14 h-14 bg-primary text-on-primary rounded-full shadow-xl flex items-center justify-center active:scale-95 transition-transform group">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span class="absolute right-16 bg-inverse-surface text-inverse-on-surface px-md py-1 rounded text-label-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Report Alert</span>
+</button>
+<script>
+        // Micro-interactions and Animation triggers
+        document.addEventListener('DOMContentLoaded', () => {
+            const gauge = document.querySelector('.integrity-gauge');
+            // 552.92 is circumference for r=88. 98.2% = 542.9 circumference filled. Offset = 552.92 * (1 - 0.982)
+            const targetOffset = 552.92 * (1 - 0.982);
+            setTimeout(() => {
+                gauge.style.strokeDashoffset = targetOffset;
+            }, 300);
+
+            // Row hover press effect simulation
+            document.querySelectorAll('tr').forEach(row => {
+                row.addEventListener('mousedown', () => {
+                    row.style.transform = 'translateY(1px)';
+                });
+                row.addEventListener('mouseup', () => {
+                    row.style.transform = 'translateY(0)';
+                });
+            });
+        });
+    </script>
+</body></html>

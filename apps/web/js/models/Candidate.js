@@ -1,0 +1,1 @@
+﻿window.CandidateModel = class Candidate {constructor(data){Object.assign(this,data);}}

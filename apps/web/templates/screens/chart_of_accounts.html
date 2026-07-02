@@ -1,0 +1,63 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+  <div class="flex justify-between items-end mb-lg mt-lg">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Chart of Accounts</h2>
+      <p class="text-body-md text-on-surface-variant mt-1">Manage your general ledger accounts.</p>
+    </div>
+    <div class="flex gap-sm">
+      <button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.chart_of_accounts.showCreateForm()">
+        <span class="material-symbols-outlined text-[18px]">add</span> New Account
+      </button>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-6 gap-gutter mb-xl">
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Total</p>
+      <p class="font-display-lg text-[28px] leading-tight text-on-surface font-bold">{{total}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Active</p>
+      <p class="font-display-lg text-[28px] leading-tight text-success font-bold">{{active}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Asset</p>
+      <p class="font-display-lg text-[28px] leading-tight text-primary font-bold">{{assetCount}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Liability</p>
+      <p class="font-display-lg text-[28px] leading-tight text-primary font-bold">{{liabilityCount}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Equity</p>
+      <p class="font-display-lg text-[28px] leading-tight text-primary font-bold">{{equityCount}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Rev/Exp</p>
+      <p class="font-display-lg text-[28px] leading-tight text-primary font-bold">{{revenueCount}}/{{expenseCount}}</p>
+    </div>
+  </div>
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+      <h3 class="font-title-md text-title-md font-bold">Accounts</h3>
+      <div class="flex gap-sm">
+        <input id="coaSearch" oninput="controllers.chart_of_accounts.search(this.value)" placeholder="Search by code or name..." class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm focus:ring-2 focus:ring-primary/20">
+        <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs rounded-full hover:bg-surface-container-high" onclick="controllers.chart_of_accounts.refresh()">refresh</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto flex-1">
+      <table class="w-full text-left border-collapse erp-table">
+        <thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+          <tr>
+            <th class="px-lg py-sm font-semibold">Code</th>
+            <th class="px-lg py-sm font-semibold">Name</th>
+            <th class="px-lg py-sm font-semibold">Type</th>
+            <th class="px-lg py-sm font-semibold">Currency</th>
+            <th class="px-lg py-sm font-semibold">Status</th>
+            <th class="px-lg py-sm font-semibold text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant">{{rows}}</tbody>
+      </table>
+    </div>
+  </div>
+</div>

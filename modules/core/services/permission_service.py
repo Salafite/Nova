@@ -1,0 +1,13 @@
+_ROLE_PERMISSIONS = {
+    'Admin': ['*'],
+    'Sales Rep': ['DASHBOARD_VIEW', 'SALES_VIEW', 'CUSTOMERS_VIEW', 'PRODUCTS_VIEW', 'INVENTORY_VIEW'],
+    'Manager': ['DASHBOARD_VIEW', 'SALES_VIEW', 'CUSTOMERS_VIEW', 'SUPPLIERS_VIEW',
+                'PRODUCTS_VIEW', 'INVENTORY_VIEW', 'WAREHOUSE_VIEW', 'PURCHASING_VIEW',
+                'FINANCE_VIEW', 'MFG_VIEW', 'PLANNING_VIEW', 'SHOPFLOOR_VIEW', 'QUALITY_VIEW'],
+    'Cashier': ['DASHBOARD_VIEW', 'POS_VIEW', 'CUSTOMERS_VIEW'],
+    'Viewer': ['DASHBOARD_VIEW', 'PRODUCTS_VIEW', 'CUSTOMERS_VIEW'],
+}
+
+
+def derive_permissions(role: str) -> list[str]:
+    return _ROLE_PERMISSIONS.get(role, ['DASHBOARD_VIEW'])

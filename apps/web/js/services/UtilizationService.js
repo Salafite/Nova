@@ -1,0 +1,1 @@
+﻿window.UtilizationService = class UtilizationService {}

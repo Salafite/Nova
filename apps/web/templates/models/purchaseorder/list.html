@@ -1,0 +1,38 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Purchase Orders</h2>
+<p class="text-body-md text-on-surface-variant mt-1">Manage vendor procurement and track order fulfillment.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.purchasing.showCreateForm()">
+<span class="material-symbols-outlined text-[18px]">add</span>
+New Purchase Order
+</button>
+</div>
+</div>
+<!-- Main Content Columns -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Recent Orders</h3>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-semibold">PO #</th>
+<th class="px-lg py-sm font-semibold">Supplier</th>
+<th class="px-lg py-sm font-semibold">Items</th>
+<th class="px-lg py-sm font-semibold text-right">Total</th>
+<th class="px-lg py-sm font-semibold text-center">Status</th>
+<th class="px-lg py-sm font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{rows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

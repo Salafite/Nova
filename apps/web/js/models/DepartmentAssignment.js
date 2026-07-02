@@ -1,0 +1,1 @@
+﻿window.DepartmentAssignmentModel = class DepartmentAssignment {constructor(data){Object.assign(this,data);}}

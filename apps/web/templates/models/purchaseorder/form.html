@@ -1,0 +1,26 @@
+<div class="max-w-xl mx-auto flex flex-col h-full space-y-xl mt-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+  <div class="border-b border-outline-variant pb-md mb-lg">
+    <h2 class="font-headline-md text-headline-md font-bold text-on-surface">{{title}}</h2>
+    <p class="text-body-md text-on-surface-variant mt-1">Fill out the details below to generate a new purchase order.</p>
+  </div>
+  <form id="poForm" onsubmit="return controllers.purchasing.saveForm()" class="space-y-lg">
+    <div class="flex flex-col gap-sm">
+      <label class="font-label-md text-label-md font-bold text-on-surface">Supplier Name</label>
+      <input type="text" id="poFormSupplier" value="{{supplier}}" required class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-body-md focus:ring-2 focus:ring-primary/20 transition-all">
+    </div>
+    <div class="flex flex-col gap-sm">
+      <label class="font-label-md text-label-md font-bold text-on-surface">Number of Items</label>
+      <input type="number" id="poFormItemCount" value="1" min="1" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-body-md focus:ring-2 focus:ring-primary/20 transition-all">
+    </div>
+    <div class="pt-md border-t border-outline-variant mt-md">
+      <h3 class="font-title-md text-title-md font-bold mb-md">Order Items</h3>
+      <div id="poFormItems" class="space-y-md">{{itemInputs}}</div>
+    </div>
+    <div class="flex gap-md pt-lg border-t border-outline-variant mt-lg">
+      <button type="button" class="px-lg py-2 border border-outline-variant rounded-lg font-label-md text-label-md hover:bg-surface-container transition-all flex-1" onclick="app.loadModule('purchasing')">Cancel</button>
+      <button type="submit" class="px-lg py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:brightness-110 press-effect transition-all flex-1">Create PO</button>
+    </div>
+  </form>
+</div>
+</div>

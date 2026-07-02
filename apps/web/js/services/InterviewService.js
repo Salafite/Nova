@@ -1,0 +1,1 @@
+﻿window.InterviewService = class InterviewService {}

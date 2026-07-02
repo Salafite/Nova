@@ -1,0 +1,1 @@
+﻿window.SLAModel = class SLA {constructor(d){Object.assign(this,d)}}

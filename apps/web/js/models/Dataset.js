@@ -1,0 +1,1 @@
+﻿window.DatasetModel = class Dataset {constructor(d){Object.assign(this,d)}}

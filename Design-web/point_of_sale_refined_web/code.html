@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dce2f7;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c9c4d7;
+        }
+        .pos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+        }
+        /* Custom interactions */
+        .product-card:active { transform: scale(0.98); }
+        .checkout-btn:active { transform: translateY(1px); }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#151c27",
+                        "on-surface": "#141b2b",
+                        "surface-bright": "#f9f9ff",
+                        "surface-container": "#e9edff",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "secondary-fixed": "#93f2f2",
+                        "on-surface-variant": "#484554",
+                        "outline": "#797586",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "tertiary-container": "#555c69",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "primary-fixed": "#e6deff",
+                        "surface-container-high": "#e1e8fd",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-primary-fixed-variant": "#4723be",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#293040",
+                        "on-tertiary-container": "#ced4e4",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#006e6e",
+                        "surface-dim": "#d3daef",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "secondary": "#006a6a",
+                        "on-primary-fixed": "#1c0062",
+                        "inverse-on-surface": "#edf0ff",
+                        "error": "#ba1a1a",
+                        "primary-container": "#5d3fd3",
+                        "primary": "#451ebb",
+                        "outline-variant": "#c9c4d7",
+                        "inverse-primary": "#cabeff",
+                        "primary-fixed-dim": "#cabeff",
+                        "on-primary-container": "#d8ceff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#3d4551",
+                        "surface-container-highest": "#dce2f7",
+                        "surface": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#6042d6",
+                        "on-secondary-fixed": "#002020",
+                        "secondary-container": "#90efef",
+                        "on-background": "#141b2b",
+                        "surface-variant": "#dce2f7",
+                        "surface-container-low": "#f1f3ff",
+                        "background": "#f9f9ff",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "md": "16px",
+                        "margin-desktop": "32px",
+                        "margin-mobile": "16px",
+                        "max-width": "1440px",
+                        "lg": "24px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "title-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Sidebar Navigation Shell -->
+<aside class="w-60 h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col py-md z-30">
+<div class="px-md mb-xl">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">Nova ERP</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Enterprise Suite</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="domain">domain</span>
+<span class="font-body-md text-body-md">Foundation</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-md text-body-md">CRM</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-body-md text-body-md">Procurement</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+<span class="font-body-md text-body-md">Manufacturing</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-primary bg-primary-container/10 border-r-4 border-primary" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-body-md text-body-md">Inventory</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-body-md text-body-md">Accounting</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="px-md mt-auto pt-md border-t border-outline-variant space-y-1">
+<a class="flex items-center gap-sm py-xs text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="headset_mic">headset_mic</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<a class="flex items-center gap-sm py-xs text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help_outline">help_outline</span>
+<span class="font-label-md text-label-md">Help</span>
+</a>
+</div>
+</aside>
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 right-0 left-60 h-16 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between px-margin-desktop z-20">
+<div class="flex items-center gap-lg flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-body-lg" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded px-10 py-2 font-body-md focus:outline-none focus:border-primary transition-all" placeholder="Search products, SKUs, or categories..." type="text"/>
+</div>
+<div class="hidden lg:flex items-center gap-md">
+<a class="font-label-md text-label-md text-primary border-b-2 border-primary pb-1" href="#">Dashboard</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-all" href="#">Reports</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-all" href="#">Analytics</a>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 transition-all active:scale-95" data-icon="language">language</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 relative transition-all active:scale-95" data-icon="notifications">
+                notifications
+                <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 transition-all active:scale-95" data-icon="apps">apps</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container ml-sm">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-60 pt-16 h-screen overflow-hidden flex">
+<!-- Left Panel: Product Grid -->
+<section class="flex-1 overflow-y-auto p-md bg-surface-bright border-r border-outline-variant">
+<!-- Category Filters -->
+<div class="flex items-center gap-sm mb-lg">
+<button class="px-md py-sm bg-primary text-on-primary font-label-md rounded flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="grid_view">grid_view</span>
+                    All Items
+                </button>
+<button class="px-md py-sm bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md rounded flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="devices">devices</span>
+                    Electronics
+                </button>
+<button class="px-md py-sm bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md rounded flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="precision_manufacturing">precision_manufacturing</span>
+                    Industrial
+                </button>
+<button class="px-md py-sm bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md rounded flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="architecture">architecture</span>
+                    Hardware
+                </button>
+<div class="ml-auto flex items-center gap-sm">
+<span class="text-label-md text-on-surface-variant">View:</span>
+<button class="material-symbols-outlined text-primary" data-icon="grid_on">grid_on</button>
+<button class="material-symbols-outlined text-on-surface-variant" data-icon="view_list">view_list</button>
+</div>
+</div>
+<!-- Grid -->
+<div class="pos-grid">
+<!-- Product Card 1 -->
+<div class="product-card bg-surface-container-lowest border border-outline-variant rounded p-sm flex flex-col group transition-all hover:border-primary/50 hover:shadow-sm cursor-pointer">
+<div class="aspect-square bg-surface-container-low rounded mb-sm overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="A professional product photography shot of a sleek industrial terminal device with a matte black finish, placed against a clean minimalist gray background with soft studio lighting reflecting off its glass screen. The image is crisp and detailed, emphasizing enterprise-grade hardware quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZJ7NGA_Z8fQ7LAX9XRPLcrx3MKi_LtzkQu-s1C3CT6pztEsPBPEbKXDc3W2wv6v703r_2r4jRWAnn-k9v0HmqC7GS0-3yTqfMXqPyej5c17LqQrr8jt8uLpCKVacezMpUfn73MDmgwJRiLGzUcd6ELRdNr8Y6yXVrt0MqMC4LRJI-UUhour_bxdMZK26iforiVqKHNMK_TBVRwvlHl_x4-lJwJmnhz6fJ1id4fS_rch3IpvqBPtqADbzFv3_EbgeBkfVCMTh7KLk"/>
+<span class="absolute top-2 right-2 bg-primary-container/80 text-on-primary-container px-2 py-0.5 rounded text-[10px] font-bold">NEW</span>
+</div>
+<div class="flex-1">
+<h3 class="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Industrial Tablet X5</h3>
+<p class="font-data-mono text-[11px] text-on-surface-variant mb-xs">SKU: NOVA-T500</p>
+<div class="flex items-center justify-between mt-sm">
+<span class="font-data-mono text-primary font-bold">$1,240.00</span>
+<span class="text-[10px] text-on-secondary px-1.5 py-0.5 bg-secondary rounded">In Stock</span>
+</div>
+</div>
+<button class="mt-md w-full bg-primary-container text-on-primary-container py-2 rounded font-label-md flex items-center justify-center gap-xs group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add to Cart
+                    </button>
+</div>
+<!-- Product Card 2 -->
+<div class="product-card bg-surface-container-lowest border border-outline-variant rounded p-sm flex flex-col group transition-all hover:border-primary/50 hover:shadow-sm cursor-pointer">
+<div class="aspect-square bg-surface-container-low rounded mb-sm overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="Close up of high-quality precision engineering calipers resting on a technical blueprint. The scene is illuminated by cool, bright overhead office lighting, creating sharp shadows and highlighting the metallic texture of the tool. The overall mood is analytical, industrial, and high-precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhMeGakhuEmw4woFwzwRiFeQG-tPs8raPrpcRwiTUwfMnyt10Wk4BMdpQ7lB6kjutrgzh3GaryEByMlmFVn4alAInMJzON1nejBwpd2O_SedvBxKIcfwOoB2vNBCkif4r2yxBieVrY0ogzbjz_rGYuHmrJQMrgHNKniyzK33nlS-eheZOAqhBNlUV_GyK6jSDwn0dugApFdLckq2ymIcPTiPtMlRaq1XgpAInGjol_8R2DI-MXSiAXYLePj3AUtyfEtdDeZXF3Rdg"/>
+</div>
+<div class="flex-1">
+<h3 class="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Digital Caliper Pro</h3>
+<p class="font-data-mono text-[11px] text-on-surface-variant mb-xs">SKU: NOVA-CP88</p>
+<div class="flex items-center justify-between mt-sm">
+<span class="font-data-mono text-primary font-bold">$85.50</span>
+<span class="text-[10px] text-on-error-container px-1.5 py-0.5 bg-error-container rounded">Low Stock</span>
+</div>
+</div>
+<button class="mt-md w-full bg-primary-container text-on-primary-container py-2 rounded font-label-md flex items-center justify-center gap-xs group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add to Cart
+                    </button>
+</div>
+<!-- Product Card 3 -->
+<div class="product-card bg-surface-container-lowest border border-outline-variant rounded p-sm flex flex-col group transition-all hover:border-primary/50 hover:shadow-sm cursor-pointer">
+<div class="aspect-square bg-surface-container-low rounded mb-sm overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="A macro shot of a series of industrial-grade networking switches stacked in a server rack, with tiny green and orange status LED lights glowing in the dark environment. The lighting is low and moody, emphasizing the technological and reliable nature of the hardware within a data center setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuF-mcBwjqXSYnybuwCgNBgdm7Z2WYgntUfBY5rNV8eTgbiH6W3kyyDx78n-NFxlm-b0EX1cA5g5gWBAuaBxbiOvlEZKAicykED3FOHEhi1b1LaCrymrafuxLf4HmZ0jjR1iZLZ7GiLuj1YFXF-GD-lfgWEHmAhh-nS-uA_c3wOa_E6MF5Mr38JAOnR4s2gPW3KHfvofPMDaXyxvQn9Jbp4KvPkMX2rg3TkQyHk4MJZAeV-j8gKhhlSHSiLz4zD2eBnmJXAaSR9VI"/>
+</div>
+<div class="flex-1">
+<h3 class="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Network Hub G4</h3>
+<p class="font-data-mono text-[11px] text-on-surface-variant mb-xs">SKU: NOVA-NW9</p>
+<div class="flex items-center justify-between mt-sm">
+<span class="font-data-mono text-primary font-bold">$430.00</span>
+<span class="text-[10px] text-on-secondary px-1.5 py-0.5 bg-secondary rounded">In Stock</span>
+</div>
+</div>
+<button class="mt-md w-full bg-primary-container text-on-primary-container py-2 rounded font-label-md flex items-center justify-center gap-xs group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add to Cart
+                    </button>
+</div>
+<!-- Product Card 4 -->
+<div class="product-card bg-surface-container-lowest border border-outline-variant rounded p-sm flex flex-col group transition-all hover:border-primary/50 hover:shadow-sm cursor-pointer">
+<div class="aspect-square bg-surface-container-low rounded mb-sm overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="An industrial smart power sensor module with copper terminals and a small OLED readout, photographed on a white surface with crisp, clean commercial lighting. The aesthetic is extremely professional, functional, and organized, reflecting a high-end enterprise procurement environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtZhOf_RmM4Rahinz-uP8crrg2xcP-euFyGkCpoCAIROdRdA6zQEmyAJ-82_avyoWa14VJ83sK-kxYmn_6iFe_QwHyKJg6dc74wOqXgdjTyxtRTno0qnesZ5HxdCXuSzxXZhmcsxiwyJdsOkzL44GOKkdx6jbPTtDTRqXf_BIrMeoVNSa4FT67vOgm4fG3neDmVKT-tdQc4nGmkS3guHP0q4yCnzUYW_qEIRguKX9O5bXdseTmzJ9-DmiPm5OCUSHzJotmVJPnSik"/>
+</div>
+<div class="flex-1">
+<h3 class="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Smart Power Meter</h3>
+<p class="font-data-mono text-[11px] text-on-surface-variant mb-xs">SKU: NOVA-PW1</p>
+<div class="flex items-center justify-between mt-sm">
+<span class="font-data-mono text-primary font-bold">$210.00</span>
+<span class="text-[10px] text-on-secondary px-1.5 py-0.5 bg-secondary rounded">In Stock</span>
+</div>
+</div>
+<button class="mt-md w-full bg-primary-container text-on-primary-container py-2 rounded font-label-md flex items-center justify-center gap-xs group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add to Cart
+                    </button>
+</div>
+<!-- Product Card 5 -->
+<div class="product-card bg-surface-container-lowest border border-outline-variant rounded p-sm flex flex-col group transition-all hover:border-primary/50 hover:shadow-sm cursor-pointer">
+<div class="aspect-square bg-surface-container-low rounded mb-sm overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="Close-up photograph of a brushed aluminum handheld scanner with an ergonomic grip, resting on a polished wooden counter under warm, focused point lights. The scanner has a glowing blue laser aperture, signifying readiness. The mood is efficient, retail-ready, and modern." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaUEWbAsCtpQkEcV1fQiKN2lnJbbxMtKHYS4e4voL2gEnuUMws8NSf4wW5LxGHxAXNKrTROu5uX9Xs3uohr21USvl_I7VgBCQ577C-ubrxgYT7ROqXVBslf7sN2gAgJJPkEm9wijP53aA6YzhYktgl2LAHA0BDBeJUOSdAKTCRC4w_nL_vratLKGZCdOPZrrR7kyTPrIUEhhLujJ3sLuPANYkwUOcbPffojYXfw9BoojXj1OSaiXyFqjNPSlpouV-fe3EQ17fZ9Hg"/>
+</div>
+<div class="flex-1">
+<h3 class="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Laser Scanner Pro</h3>
+<p class="font-data-mono text-[11px] text-on-surface-variant mb-xs">SKU: NOVA-LS02</p>
+<div class="flex items-center justify-between mt-sm">
+<span class="font-data-mono text-primary font-bold">$155.00</span>
+<span class="text-[10px] text-on-secondary px-1.5 py-0.5 bg-secondary rounded">In Stock</span>
+</div>
+</div>
+<button class="mt-md w-full bg-primary-container text-on-primary-container py-2 rounded font-label-md flex items-center justify-center gap-xs group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add to Cart
+                    </button>
+</div>
+<!-- Product Card 6 -->
+<div class="product-card bg-surface-container-lowest border border-outline-variant rounded p-sm flex flex-col group transition-all hover:border-primary/50 hover:shadow-sm cursor-pointer">
+<div class="aspect-square bg-surface-container-low rounded mb-sm overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="A minimalist architectural model of a futuristic warehouse, made of white resin and acrylic, placed on a black glass table reflecting soft studio lights. The image conveys themes of logistics, planning, and industrial scale within a sophisticated, high-tech context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCamKNikepJjFy4Y2TkHbpTRAeP3c12DpHQveziuNbnYLlW4_4QaNgtapZuQ1LR6RVnJa4YX0D6gD5F031IyEmkuwuJB3UHh66ZpBVXQOYEn7-h8amKOmasFPfflAMMmtlNnUIBMtROZuy_Ypj2Yw2BvicGOnp6A_L7CsUmuQSndSxXy11ORj5QU5dRq6CtsnRe-zRlqRQ6cs_bM8yqtBWaH6EdbMuuilqNlEIfGbixBvw-q1mEKa8s7wPxmBAtpnPFd9B6dx2cxJM"/>
+</div>
+<div class="flex-1">
+<h3 class="font-title-md text-body-md font-semibold text-on-surface line-clamp-1">Logistics Module A</h3>
+<p class="font-data-mono text-[11px] text-on-surface-variant mb-xs">SKU: NOVA-LM7</p>
+<div class="flex items-center justify-between mt-sm">
+<span class="font-data-mono text-primary font-bold">$890.00</span>
+<span class="text-[10px] text-on-error-container px-1.5 py-0.5 bg-error-container rounded">Low Stock</span>
+</div>
+</div>
+<button class="mt-md w-full bg-primary-container text-on-primary-container py-2 rounded font-label-md flex items-center justify-center gap-xs group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add to Cart
+                    </button>
+</div>
+</div>
+</section>
+<!-- Right Panel: Persistent Cart -->
+<aside class="w-[400px] bg-surface flex flex-col shadow-[-4px_0_12px_rgba(0,0,0,0.02)]">
+<div class="p-md border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="shopping_basket">shopping_basket</span>
+<h2 class="font-title-md text-title-md text-on-surface">Current Cart</h2>
+</div>
+<button class="text-error font-label-md hover:underline decoration-error/30 transition-all flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="delete_sweep">delete_sweep</span>
+                    Clear
+                </button>
+</div>
+<!-- Cart Items -->
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<!-- Item 1 -->
+<div class="flex gap-sm items-center group">
+<div class="w-16 h-16 bg-surface-container-low rounded border border-outline-variant flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Industrial sensor device macro shot with soft lighting and professional gray tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbVQXsHJEqltIl3_TFQ8q3z0q2aBA4hbMmOHhNdWCp0NzwJux5PJGwa_M-SOEvWL5kyxJIKFKxpJ4W6bG33SH6QhTTchS82N2FSXv7kAkKv63RWyrYwV1SRAFZF4hTi4DxFlq8npl4mN7GLA3DRHkHJOxLz5wfbplMTZ1AqVLlKvfVW554uFiF8GPVfwd2lfh_kf4C7q-6Y36yGPjKSzqvNNbHRwViVKZfQ60svAqY9YoOafVJklwr4SPAYOMoFRA-MjFhBmMIjcw"/>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-body-md text-on-surface font-semibold truncate">Industrial Tablet X5</h4>
+<p class="font-data-mono text-[11px] text-on-surface-variant">$1,240.00 / unit</p>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<div class="flex items-center border border-outline-variant rounded bg-surface-container-low">
+<button class="w-6 h-6 flex items-center justify-center hover:bg-outline-variant transition-colors"><span class="material-symbols-outlined text-[14px]" data-icon="remove">remove</span></button>
+<span class="w-8 text-center font-data-mono text-xs">01</span>
+<button class="w-6 h-6 flex items-center justify-center hover:bg-outline-variant transition-colors"><span class="material-symbols-outlined text-[14px]" data-icon="add">add</span></button>
+</div>
+<span class="font-data-mono text-primary font-bold">$1,240.00</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex gap-sm items-center group">
+<div class="w-16 h-16 bg-surface-container-low rounded border border-outline-variant flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Precision engineering tool macro with cool blue tones and sharp highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuwTvdnki1ayXAl7SAOJLdC-aIGs6kgkzvZDBiL4pLGlHcLfwzN7LrUaFh968zoljLe3sF1u-F494PsSjq7NqYZ_5Qrw2iXHnOpgJsAdbCbvohvdRfpiIx51dsVs8Fag2bOy8I6ww_jHfZmB5I6vZi2IgGWFVnpJbP2F-VdB7bDTJJ-JN22pj-UsnjxN_EYDfc-H5JaqkH2MJDeUEAkWDJxlKqYYozH6EGbJ5JAheaqnDdSWF2Gx96EqCU0QbwpSt78g_CI5NhI8c"/>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-body-md text-on-surface font-semibold truncate">Digital Caliper Pro</h4>
+<p class="font-data-mono text-[11px] text-on-surface-variant">$85.50 / unit</p>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<div class="flex items-center border border-outline-variant rounded bg-surface-container-low">
+<button class="w-6 h-6 flex items-center justify-center hover:bg-outline-variant transition-colors"><span class="material-symbols-outlined text-[14px]" data-icon="remove">remove</span></button>
+<span class="w-8 text-center font-data-mono text-xs">02</span>
+<button class="w-6 h-6 flex items-center justify-center hover:bg-outline-variant transition-colors"><span class="material-symbols-outlined text-[14px]" data-icon="add">add</span></button>
+</div>
+<span class="font-data-mono text-primary font-bold">$171.00</span>
+</div>
+</div>
+<div class="h-1 border-t border-dashed border-outline-variant my-lg"></div>
+<!-- Customer info -->
+<div class="p-sm bg-surface-container-low rounded border border-outline-variant">
+<div class="flex items-center justify-between mb-sm">
+<span class="font-label-md text-on-surface-variant">Selected Customer</span>
+<button class="text-primary font-label-md">Change</button>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 bg-tertiary-container rounded-full flex items-center justify-center text-on-tertiary-container">
+<span class="material-symbols-outlined" data-icon="business">business</span>
+</div>
+<div>
+<p class="font-body-md font-semibold">Global Logistics Corp.</p>
+<p class="font-label-md text-on-surface-variant">Acc #GLC-9920</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Checkout Section -->
+<div class="p-md bg-surface-container border-t border-outline-variant">
+<div class="space-y-sm mb-lg">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-md">Subtotal</span>
+<span class="font-data-mono">$1,411.00</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-md">Tax (VAT 5%)</span>
+<span class="font-data-mono">$70.55</span>
+</div>
+<div class="flex justify-between items-center text-on-surface pt-sm">
+<span class="font-title-md font-bold">Total Amount</span>
+<span class="font-display-lg text-title-md text-primary font-bold">$1,481.55</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-sm mb-sm">
+<button class="py-sm border border-primary text-primary font-label-md rounded flex items-center justify-center gap-xs hover:bg-primary-container/10 transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="receipt_long">receipt_long</span>
+                        Hold Order
+                    </button>
+<button class="py-sm border border-primary text-primary font-label-md rounded flex items-center justify-center gap-xs hover:bg-primary-container/10 transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="percent">percent</span>
+                        Discount
+                    </button>
+</div>
+<button class="checkout-btn w-full bg-primary text-white py-lg rounded font-headline-lg text-title-md shadow-lg shadow-primary/20 flex items-center justify-center gap-sm transition-all hover:brightness-110 active:scale-[0.99]">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                    PROCEED TO CHECKOUT
+                </button>
+</div>
+</aside>
+</main>
+<!-- Micro-interaction JS -->
+<script>
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', () => {
+                // Flash effect for feedback
+                card.classList.add('bg-primary-container/5');
+                setTimeout(() => card.classList.remove('bg-primary-container/5'), 200);
+                
+                // Audio or visual cue can go here
+                console.log('Item added to cart semantic trigger');
+            });
+        });
+
+        // Search bar focus effect
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('ring-2', 'ring-primary/20');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('ring-2', 'ring-primary/20');
+        });
+    </script>
+</body></html>

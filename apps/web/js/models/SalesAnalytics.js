@@ -1,0 +1,1 @@
+﻿window.SalesAnalyticsModel = class SalesAnalytics {constructor(d){Object.assign(this,d)}}

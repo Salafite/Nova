@@ -1,0 +1,12 @@
+.sort-link { color: var(--color-text-secondary); text-decoration: none; }
+.sort-link:hover { color: var(--color-primary); }
+
+tbody tr { transition: background 0.15s; }
+tbody tr:hover { background: rgba(69, 30, 187, 0.02); }
+
+.surface-card { background: var(--color-card); }
+
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}

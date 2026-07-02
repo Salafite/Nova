@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP | Password Reset</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-container": "#90efef",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "on-secondary-fixed": "#002020",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#dce2f3",
+                    "secondary": "#006a6a",
+                    "surface-container-low": "#f1f3ff",
+                    "on-primary-fixed": "#1c0062",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "surface": "#f9f9ff",
+                    "outline-variant": "#c9c4d7",
+                    "background": "#f9f9ff",
+                    "primary-container": "#5d3fd3",
+                    "surface-bright": "#f9f9ff",
+                    "tertiary": "#3d4551",
+                    "on-surface-variant": "#484554",
+                    "surface-variant": "#dce2f7",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "surface-tint": "#6042d6",
+                    "surface-container": "#e9edff",
+                    "primary": "#451ebb",
+                    "error": "#ba1a1a",
+                    "tertiary-container": "#555c69",
+                    "outline": "#797586",
+                    "on-primary-container": "#d8ceff",
+                    "on-tertiary": "#ffffff",
+                    "primary-fixed": "#e6deff",
+                    "on-tertiary-container": "#ced4e4",
+                    "on-surface": "#141b2b",
+                    "error-container": "#ffdad6",
+                    "on-background": "#141b2b",
+                    "secondary-fixed": "#93f2f2",
+                    "surface-dim": "#d3daef",
+                    "primary-fixed-dim": "#cabeff",
+                    "on-error-container": "#93000a",
+                    "inverse-on-surface": "#edf0ff",
+                    "surface-container-high": "#e1e8fd",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "on-tertiary-fixed": "#151c27",
+                    "on-primary-fixed-variant": "#4723be",
+                    "surface-container-highest": "#dce2f7",
+                    "on-secondary-container": "#006e6e",
+                    "inverse-surface": "#293040",
+                    "inverse-primary": "#cabeff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "md": "16px",
+                    "xs": "4px",
+                    "base": "4px",
+                    "xl": "32px",
+                    "sm": "8px",
+                    "margin-desktop": "32px",
+                    "margin-mobile": "16px",
+                    "lg": "24px",
+                    "gutter": "16px",
+                    "max-width": "1440px"
+            },
+            "fontFamily": {
+                    "data-mono": ["JetBrains Mono"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "title-md": ["Inter"],
+                    "display-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        body {
+            background-color: #F9FAFB;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md text-on-surface min-h-screen flex flex-col items-center justify-center p-margin-mobile overflow-x-hidden">
+<!-- Subtle Background Atmosphere -->
+<div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary opacity-[0.03] blur-[120px] rounded-full"></div>
+<div class="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] bg-secondary opacity-[0.03] blur-[120px] rounded-full"></div>
+</div>
+<!-- Main Container -->
+<main class="w-full max-w-[400px] flex flex-col items-center">
+<!-- Logo Branding -->
+<header class="mb-xl flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+<div class="flex items-center gap-sm mb-xs">
+<div class="w-10 h-10 bg-primary-container flex items-center justify-center rounded-lg shadow-sm">
+<span class="material-symbols-outlined text-on-primary-container !text-[24px]" data-icon="bolt">bolt</span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-bold tracking-tight">Nova ERP</h1>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-[0.1em]">Security Protocol</p>
+</header>
+<!-- Reset Card -->
+<section class="w-full glass-panel border border-outline-variant rounded-xl p-lg shadow-sm animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+<!-- Contextual Header -->
+<div class="mb-lg">
+<h2 class="font-title-md text-title-md text-on-surface mb-xs">Reset your password</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                    Enter your username or email to receive a reset link
+                </p>
+</div>
+<!-- Form -->
+<form class="space-y-lg" id="resetForm">
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant ml-xs" for="identity">Username or Email</label>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors" data-icon="mail">mail</span>
+<input class="w-full pl-[48px] pr-md py-md bg-surface-container-lowest border border-outline-variant rounded-lg text-body-md outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-outline" id="identity" name="identity" placeholder="e.g. j.smith@enterprise.com" required="" type="text"/>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full bg-primary-container text-on-primary-container font-body-md font-semibold py-md px-lg rounded-lg press-effect hover:bg-primary transition-colors flex items-center justify-center gap-sm shadow-md" id="submitBtn" type="submit">
+<span>Send Reset Link</span>
+<span class="material-symbols-outlined !text-[18px]" data-icon="send">send</span>
+</button>
+</form>
+<!-- Success State Overlay (Hidden by default) -->
+<div class="hidden flex flex-col items-center text-center py-md animate-in zoom-in-95 duration-300" id="successState">
+<div class="w-16 h-16 bg-secondary-container rounded-full flex items-center justify-center mb-md">
+<span class="material-symbols-outlined text-on-secondary-container !text-[32px]" data-icon="check_circle">check_circle</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface mb-xs">Check your inbox</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">We've sent a recovery link to the address associated with your account.</p>
+<button class="font-body-md text-primary font-semibold hover:underline" onclick="window.location.reload()">
+                    Didn't get the email? Try again
+                </button>
+</div>
+</section>
+<!-- Secondary Navigation -->
+<footer class="mt-xl flex flex-col items-center gap-md animate-in fade-in duration-1000 delay-300">
+<a class="group flex items-center gap-xs font-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined !text-[18px] group-hover:-translate-x-1 transition-transform" data-icon="arrow_back">arrow_back</span>
+<span>Back to Login</span>
+</a>
+<!-- Support Link -->
+<div class="pt-lg border-t border-outline-variant w-full flex justify-center">
+<p class="font-label-md text-label-md text-on-surface-variant">
+                    Need help? <a class="text-primary font-semibold hover:underline" href="#">Contact IT Support</a>
+</p>
+</div>
+</footer>
+</main>
+<!-- Interactive Logic -->
+<script>
+        const form = document.getElementById('resetForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const successState = document.getElementById('successState');
+        const header = document.querySelector('header');
+        const contextHeader = document.querySelector('.mb-lg');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Show loading state
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="animate-spin material-symbols-outlined !text-[18px]" data-icon="progress_activity">progress_activity</span>
+                <span>Processing...</span>
+            `;
+
+            // Simulate API delay
+            setTimeout(() => {
+                form.classList.add('hidden');
+                contextHeader.classList.add('hidden');
+                successState.classList.remove('hidden');
+                submitBtn.classList.add('hidden');
+            }, 1500);
+        });
+
+        // Simple parallax effect on input focus for modern feel
+        const input = document.getElementById('identity');
+        input.addEventListener('focus', () => {
+            document.body.style.backgroundColor = '#F1F3FF';
+        });
+        input.addEventListener('blur', () => {
+            document.body.style.backgroundColor = '#F9FAFB';
+        });
+    </script>
+</body></html>

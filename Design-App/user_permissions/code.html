@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .tonal-layer-1 {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+        }
+        .press-effect:active {
+            transform: translateY(1px);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e1e8fd;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#141b2b",
+                        "on-secondary-container": "#006e6e",
+                        "on-primary": "#ffffff",
+                        "secondary": "#006a6a",
+                        "tertiary-container": "#555c69",
+                        "primary": "#451ebb",
+                        "on-secondary-fixed": "#002020",
+                        "outline": "#797586",
+                        "surface-container-highest": "#dce2f7",
+                        "on-primary-fixed": "#1c0062",
+                        "surface-container": "#e9edff",
+                        "on-primary-fixed-variant": "#4723be",
+                        "surface-dim": "#d3daef",
+                        "surface": "#f9f9ff",
+                        "surface-container-high": "#e1e8fd",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "primary-fixed-dim": "#cabeff",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "surface-tint": "#6042d6",
+                        "primary-fixed": "#e6deff",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#dce2f7",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-surface-variant": "#484554",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#3d4551",
+                        "surface-bright": "#f9f9ff",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c9c4d7",
+                        "inverse-on-surface": "#edf0ff",
+                        "secondary-container": "#90efef",
+                        "on-tertiary-fixed": "#151c27",
+                        "inverse-surface": "#293040",
+                        "background": "#f9f9ff",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#ced4e4",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "error": "#ba1a1a",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f1f3ff",
+                        "on-primary-container": "#d8ceff",
+                        "inverse-primary": "#cabeff",
+                        "on-background": "#141b2b",
+                        "secondary-fixed": "#93f2f2",
+                        "tertiary-fixed": "#dce2f3",
+                        "primary-container": "#5d3fd3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "margin-desktop": "32px",
+                        "lg": "24px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "gutter": "16px",
+                        "max-width": "1440px",
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "title-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen pb-24">
+<!-- Top AppBar Component -->
+<header class="sticky top-0 w-full z-40 flex justify-between items-center px-margin-mobile h-14 bg-surface-container-lowest dark:bg-inverse-surface border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed-dim p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors rounded-full" data-icon="menu">menu</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-primary-fixed-dim">System Admin</h1>
+</div>
+<button class="text-primary dark:text-primary-fixed-dim font-bold font-title-md text-title-md p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors rounded-lg active:translate-y-px duration-100">
+            EN/AR
+        </button>
+</header>
+<main class="px-margin-mobile py-lg space-y-lg">
+<!-- High-Density Stats Dashboard -->
+<section class="grid grid-cols-1 gap-gutter">
+<h2 class="font-title-md text-title-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary" data-icon="analytics">analytics</span>
+                Access Analytics
+            </h2>
+<div class="grid grid-cols-3 gap-sm">
+<!-- Total Users Card -->
+<div class="tonal-layer-1 p-md flex flex-col items-center justify-center text-center rounded-xl">
+<span class="material-symbols-outlined text-primary mb-xs" data-icon="group">group</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Total Users</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-bold">1,248</span>
+</div>
+<!-- Active Roles Card -->
+<div class="tonal-layer-1 p-md flex flex-col items-center justify-center text-center rounded-xl">
+<span class="material-symbols-outlined text-secondary mb-xs" data-icon="shield_person">shield_person</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Active Roles</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-secondary font-bold">12</span>
+</div>
+<!-- Security Alerts Card -->
+<div class="tonal-layer-1 p-md flex flex-col items-center justify-center text-center rounded-xl bg-error-container/10 border-error/20">
+<span class="material-symbols-outlined text-error mb-xs" data-icon="security_update_warning">security_update_warning</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Alerts</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-error font-bold">3</span>
+</div>
+</div>
+</section>
+<!-- User Roles List -->
+<section class="space-y-md">
+<div class="flex justify-between items-end">
+<h2 class="font-title-md text-title-md text-on-surface-variant">Role Matrix</h2>
+<button class="bg-primary text-on-primary px-md py-xs rounded-lg font-label-md text-label-md flex items-center gap-xs press-effect">
+<span class="material-symbols-outlined !text-[18px]" data-icon="grid_view">grid_view</span>
+                    Matrix View
+                </button>
+</div>
+<div class="space-y-sm">
+<!-- Role Item: Admin -->
+<div class="tonal-layer-1 p-md rounded-xl flex justify-between items-center hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span>
+</div>
+<div>
+<p class="font-title-md text-body-lg text-on-surface font-semibold">Admin</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Full System Control</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-mono text-data-mono text-primary">4 Users</p>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Role Item: Manager -->
+<div class="tonal-layer-1 p-md rounded-xl flex justify-between items-center hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="manage_accounts">manage_accounts</span>
+</div>
+<div>
+<p class="font-title-md text-body-lg text-on-surface font-semibold">Manager</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Department Lead</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-mono text-data-mono text-secondary">28 Users</p>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-secondary transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Role Item: Cashier -->
+<div class="tonal-layer-1 p-md rounded-xl flex justify-between items-center hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-tertiary-fixed-dim/30 rounded-lg flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" data-icon="point_of_sale">point_of_sale</span>
+</div>
+<div>
+<p class="font-title-md text-body-lg text-on-surface font-semibold">Cashier</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Transaction Level</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-mono text-data-mono text-tertiary">142 Users</p>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-tertiary transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Role Item: Viewer -->
+<div class="tonal-layer-1 p-md rounded-xl flex justify-between items-center hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-outline-variant/20 rounded-lg flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</div>
+<div>
+<p class="font-title-md text-body-lg text-on-surface font-semibold">Viewer</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Read-only Access</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-mono text-data-mono text-on-surface-variant">1,074 Users</p>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-on-surface transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Security Logs -->
+<section class="space-y-md">
+<h2 class="font-title-md text-title-md text-on-surface-variant flex items-center gap-xs">
+<span class="material-symbols-outlined text-tertiary" data-icon="history">history</span>
+                Security Trail
+            </h2>
+<div class="bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant">
+<div class="p-md space-y-gutter divide-y divide-outline-variant/30">
+<!-- Log Entry: Login -->
+<div class="flex items-start gap-md pt-gutter first:pt-0">
+<div class="mt-1 w-2 h-2 rounded-full bg-secondary shrink-0"></div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider">Login Successful</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">14:22:10</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mt-xs">User <span class="font-semibold">admin_sarah</span> logged in from IP <span class="font-data-mono">192.168.1.45</span></p>
+</div>
+</div>
+<!-- Log Entry: Password Reset -->
+<div class="flex items-start gap-md pt-gutter">
+<div class="mt-1 w-2 h-2 rounded-full bg-primary shrink-0"></div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-primary uppercase tracking-wider">Password Reset</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">13:05:44</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mt-xs">Password changed for <span class="font-semibold">m_jackson_44</span> via Admin Portal</p>
+</div>
+</div>
+<!-- Log Entry: Access Denied -->
+<div class="flex items-start gap-md pt-gutter">
+<div class="mt-1 w-2 h-2 rounded-full bg-error shrink-0"></div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-error uppercase tracking-wider">Access Denied</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">12:59:12</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mt-xs">Unauthorized attempt on <span class="font-semibold">Financials/Q3_Audit</span> by <span class="font-semibold">guest_user</span></p>
+</div>
+</div>
+</div>
+<button class="w-full py-md text-primary font-label-md text-label-md bg-surface-container-high/50 hover:bg-surface-container-high transition-colors">
+                    View Full Audit Trail
+                </button>
+</div>
+</section>
+<!-- Informational Prompt -->
+<div class="tonal-layer-1 p-lg rounded-2xl flex gap-md items-start bg-primary-container/5 border-primary/10">
+<span class="material-symbols-outlined text-primary" data-icon="info">info</span>
+<div class="space-y-xs">
+<h4 class="font-body-lg text-body-lg font-bold text-on-surface">Compliance Warning</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Your last security audit was 14 days ago. Regular reviews are recommended for ISO/IEC 27001 compliance.</p>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center px-sm py-xs bg-surface dark:bg-surface-dim border-t border-outline-variant dark:border-outline">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-95 duration-100">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container dark:bg-on-primary-fixed-variant text-on-primary-container dark:text-primary-fixed rounded-full px-4 py-1 transition-all active:scale-95 duration-100">
+<span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span>
+<span class="font-label-md text-label-md">Permissions</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-95 duration-100">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+<span class="font-label-md text-label-md">Logs</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-95 duration-100">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</button>
+</nav>
+<!-- Floating Action Button Contextual Check: Suppressed on Details Screen -->
+<script>
+        // Simple language toggle micro-interaction
+        document.querySelector('header button').addEventListener('click', function() {
+            const currentLang = this.textContent.trim();
+            this.textContent = currentLang === 'EN/AR' ? 'AR/EN' : 'EN/AR';
+            
+            // Add a brief animation trigger
+            this.classList.add('scale-105');
+            setTimeout(() => this.classList.remove('scale-105'), 200);
+        });
+
+        // Add press effect to role items
+        document.querySelectorAll('.tonal-layer-1').forEach(card => {
+            card.addEventListener('mousedown', () => card.style.transform = 'scale(0.98)');
+            card.addEventListener('mouseup', () => card.style.transform = 'scale(1)');
+            card.addEventListener('mouseleave', () => card.style.transform = 'scale(1)');
+        });
+    </script>
+</body></html>

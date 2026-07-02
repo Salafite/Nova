@@ -1,0 +1,62 @@
+<div class="max-w-max-width mx-auto">
+<!-- Page Header Area -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-lg mb-xl">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Products Catalog</h2>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Manage enterprise inventory levels and product specifications.</p>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-md py-sm bg-primary text-on-primary rounded font-label-md text-label-md press-effect" onclick="controllers.products.showAddForm()">
+<span class="material-symbols-outlined text-[18px]">add</span>
+Add Product
+</button>
+</div>
+</div>
+<!-- Dashboard Summary Widgets -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Total Products</p>
+<h3 class="font-display-lg text-headline-lg text-on-surface mt-xs">{{totalProducts}}</h3>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Low Stock Alert</p>
+<h3 class="font-display-lg text-headline-lg text-error mt-xs">{{lowStock}}</h3>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Out of Stock</p>
+<h3 class="font-display-lg text-headline-lg text-on-surface mt-xs">{{outOfStock}}</h3>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant p-lg rounded">
+<p class="font-label-md text-label-md text-on-surface-variant">Inventory Value</p>
+<h3 class="font-display-lg text-headline-lg text-on-surface mt-xs">${{inventoryValue}}</h3>
+</div>
+</div>
+<!-- Advanced Filter Strip -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded mb-lg p-md flex flex-wrap gap-md items-center shadow-sm">
+<div class="flex items-center gap-sm flex-1">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+<input type="text" id="productSearch" placeholder="Search products..." class="w-full bg-transparent border-none focus:ring-0 text-body-md py-0 outline-none" oninput="controllers.products.search(this.value)">
+</div>
+</div>
+<!-- Main Data Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded shadow-sm overflow-hidden flex flex-col">
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead>
+<tr class="bg-surface-container-high border-b border-outline-variant">
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">SKU</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Product Name</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Price</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Stock Level</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Category</th>
+<th class="px-md py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-body-md text-body-md" id="productTableBody">
+{{rows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

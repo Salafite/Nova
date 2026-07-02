@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .app-card:hover .app-icon {
+            transform: translateY(-4px);
+        }
+        .sidebar-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        [dir="rtl"] .sidebar-transition {
+            left: auto;
+            right: 0;
+            border-right: none;
+            border-left-width: 1px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline": "#797586",
+                      "secondary-fixed-dim": "#76d6d5",
+                      "surface-container": "#e9edff",
+                      "tertiary-fixed-dim": "#c0c7d6",
+                      "secondary-fixed": "#93f2f2",
+                      "on-surface-variant": "#484554",
+                      "inverse-surface": "#293040",
+                      "on-tertiary-container": "#ced4e4",
+                      "tertiary-container": "#555c69",
+                      "on-tertiary-fixed-variant": "#404754",
+                      "primary-fixed": "#e6deff",
+                      "surface-container-high": "#e1e8fd",
+                      "on-secondary-fixed-variant": "#004f4f",
+                      "on-primary-fixed-variant": "#4723be",
+                      "tertiary-fixed": "#dce2f3",
+                      "on-error": "#ffffff",
+                      "on-tertiary-fixed": "#151c27",
+                      "on-surface": "#141b2b",
+                      "surface-bright": "#f9f9ff",
+                      "surface-tint": "#6042d6",
+                      "on-secondary-fixed": "#002020",
+                      "on-primary-container": "#d8ceff",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#3d4551",
+                      "surface-container-highest": "#dce2f7",
+                      "surface": "#f9f9ff",
+                      "on-tertiary": "#ffffff",
+                      "on-background": "#141b2b",
+                      "surface-variant": "#dce2f7",
+                      "surface-container-low": "#f1f3ff",
+                      "background": "#f9f9ff",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#90efef",
+                      "surface-dim": "#d3daef",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-container": "#006e6e",
+                      "inverse-primary": "#cabeff",
+                      "primary-fixed-dim": "#cabeff",
+                      "secondary": "#006a6a",
+                      "on-primary-fixed": "#1c0062",
+                      "inverse-on-surface": "#edf0ff",
+                      "error": "#ba1a1a",
+                      "primary-container": "#5d3fd3",
+                      "primary": "#451ebb",
+                      "outline-variant": "#c9c4d7"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "max-width": "1440px",
+                      "lg": "24px",
+                      "margin-mobile": "16px",
+                      "base": "4px",
+                      "md": "16px",
+                      "margin-desktop": "32px",
+                      "xl": "32px",
+                      "gutter": "16px",
+                      "xs": "4px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "headline-lg": ["Inter"],
+                      "title-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "display-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-surface-container-low font-body-md text-on-surface antialiased overflow-x-hidden">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-[240px] z-40 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant dark:border-outline flex flex-col h-full py-lg sidebar-transition" id="side-nav">
+<div class="px-md mb-xl">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" data-icon="cloud">cloud</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-black text-primary dark:text-primary-fixed-dim leading-none">Global ERP</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Admin Console</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1"><div class="px-md py-xs mb-xs">
+<p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant opacity-50">Navigation Mode</p>
+</div>
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-primary dark:text-primary-fixed-dim font-bold border-r-4 border-primary hover:bg-surface-container-high dark:hover:bg-on-tertiary-fixed-variant transition-all active:translate-y-px duration-100" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-tertiary-fixed-variant transition-all active:translate-y-px duration-100" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-tertiary-fixed-variant transition-all active:translate-y-px duration-100" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="payments">payments</span>
+<span>Sales</span>
+</a>
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-tertiary-fixed-variant transition-all active:translate-y-px duration-100" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="handshake">handshake</span>
+<span>CRM</span>
+</a>
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-tertiary-fixed-variant transition-all active:translate-y-px duration-100" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="account_balance">account_balance</span>
+<span>Finance</span>
+</a>
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-on-tertiary-fixed-variant transition-all active:translate-y-px duration-100" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="factory">factory</span>
+<span>Manufacturing</span>
+</a>
+</nav>
+<div class="px-md pt-lg">
+<button class="w-full py-sm bg-primary text-on-primary rounded-xl font-bold flex items-center justify-center gap-sm hover:opacity-90 active:translate-y-px transition-all shadow-sm">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span>New Module</span>
+</button>
+</div>
+<div class="mt-auto space-y-1">
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="help">help</span>
+<span>Help</span>
+</a>
+<a class="flex items-center px-md py-sm font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined mr-md" data-icon="logout">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="ml-[240px] transition-all duration-300" id="main-content">
+<!-- TopNavBar Anchor -->
+<header class="w-full h-16 flex items-center bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline px-margin-desktop justify-between sticky top-0 z-30">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" data-icon="search">search</span>
+<input class="w-full pl-xl pr-md py-sm bg-surface-container border-none rounded-full font-body-md focus:ring-2 focus:ring-primary focus:bg-surface transition-all outline-none" placeholder="Search modules, features, or records..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-base text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors active:translate-y-px" title="Notifications">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-base text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors active:translate-y-px" title="Apps">
+<span class="material-symbols-outlined" data-icon="apps">apps</span>
+</button>
+<div class="relative group">
+<button class="flex items-center gap-xs px-sm py-xs font-label-md text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors" id="layout-toggle">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+<span>App Grid</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<div class="absolute top-full right-0 mt-xs w-48 bg-surface border border-outline-variant rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+<button class="w-full flex items-center gap-sm px-md py-sm hover:bg-surface-container-low text-left font-label-md text-primary">
+<span class="material-symbols-outlined">grid_view</span>
+<span>App Grid</span>
+</button>
+<button class="w-full flex items-center gap-sm px-md py-sm hover:bg-surface-container-low text-left font-label-md text-on-surface-variant">
+<span class="material-symbols-outlined">side_navigation</span>
+<span>Sidebar Nav</span>
+</button>
+</div>
+</div><button class="px-sm py-xs font-label-md text-primary border border-primary rounded-lg hover:bg-primary-fixed transition-colors" id="lang-toggle">
+                    AR
+                </button>
+<button class="p-base text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors active:translate-y-px" title="Settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-surface-container-highest cursor-pointer">
+<img class="w-full h-full object-cover" data-alt="A high-quality professional portrait of a senior corporate executive in a modern glass office, soft natural lighting, business casual attire, extremely sharp focus, blurred architectural background, minimalist enterprise aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnVC_9NiP0UUBEW7SBMjtoB2jQusca2vw6jnvF6EifEerqW32tswkYhyWYKaZ1xaptJf6UYfbFr-Aeh7en66AmAnd095nG0o_wq01q6KCwdviQ2C9z-2pfUrnCpES5FjCn9LF1FIvlnVdM3DQ6N65JjImyVVAbzXRgUUADo4heb_xLTv4pEdWwiAJLRPV74eXl8PnHoCoH3rQFf4MWdY9K7a9UGd-MjKqSvRLQ4rhdz8GqqJR99LXWgjuvzWmmmCfL13lwR-VQu8I"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<section class="p-lg">
+<div class="mb-xl flex items-center justify-between">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Welcome, Admin</h2>
+<p class="font-body-md text-on-surface-variant">Select an application to start your workflow.</p>
+</div>
+<div class="flex gap-sm">
+<button class="px-md py-sm border border-outline-variant rounded-lg font-label-md flex items-center gap-xs hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+                        Customize Grid
+                    </button>
+</div>
+</div>
+<!-- Bento App Grid -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-lg layout-app-grid">
+<!-- Inventory -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#5C6BC0] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Inventory</span>
+</div>
+<!-- Sales -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#EF5350] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="payments" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Sales</span>
+</div>
+<!-- CRM -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#66BB6A] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="handshake" style="font-variation-settings: 'FILL' 1;">handshake</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">CRM</span>
+</div>
+<!-- Finance -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#26A69A] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="account_balance" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Finance</span>
+</div>
+<!-- Manufacturing -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#AB47BC] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="factory" style="font-variation-settings: 'FILL' 1;">factory</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Manufacturing</span>
+</div>
+<!-- Project -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#42A5F5] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="assignment" style="font-variation-settings: 'FILL' 1;">assignment</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Project</span>
+</div>
+<!-- HR -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#FFA726] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="groups" style="font-variation-settings: 'FILL' 1;">groups</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">HR</span>
+</div>
+<!-- Quality -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#26C6DA] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Quality</span>
+</div>
+<!-- Warehouse -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#78909C] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="warehouse" style="font-variation-settings: 'FILL' 1;">warehouse</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Warehouse</span>
+</div>
+<!-- POS -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#EC407A] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="point_of_sale" style="font-variation-settings: 'FILL' 1;">point_of_sale</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">POS</span>
+</div>
+<!-- Analytics -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#8D6E63] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Analytics</span>
+</div>
+<!-- Settings -->
+<div class="app-card group flex flex-col items-center p-lg bg-surface border border-outline-variant rounded-xl cursor-pointer hover:shadow-lg transition-all">
+<div class="app-icon w-16 h-16 rounded-2xl bg-[#607D8B] flex items-center justify-center text-white mb-md transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+</div>
+<span class="font-title-md text-on-surface group-hover:text-primary transition-colors">Settings</span>
+</div>
+</div>
+<!-- Dashboard Stats Preview -->
+<div class="mt-xl grid grid-cols-1 lg:grid-cols-3 gap-lg layout-app-grid">
+<div class="col-span-1 lg:col-span-2 bg-surface border border-outline-variant rounded-xl p-lg">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-title-md text-on-surface">Company Performance</h3>
+<span class="text-xs text-on-surface-variant">Real-time update</span>
+</div>
+<div class="h-64 flex items-end gap-md px-md">
+<div class="w-full bg-primary-container h-[40%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary h-[70%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary-container h-[55%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary h-[85%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary-container h-[65%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary h-[95%] rounded-t-lg transition-all hover:opacity-80"></div>
+</div>
+</div>
+<div class="bg-surface border border-outline-variant rounded-xl p-lg flex flex-col">
+<h3 class="font-title-md text-on-surface mb-md">Quick Insights</h3>
+<div class="space-y-md flex-1">
+<div class="p-sm bg-surface-container-low rounded-lg flex items-center gap-md">
+<span class="material-symbols-outlined text-primary" data-icon="trending_up">trending_up</span>
+<div>
+<p class="font-label-md text-on-surface-variant">Sales Target</p>
+<p class="font-title-md text-primary">82% Reached</p>
+</div>
+</div>
+<div class="p-sm bg-surface-container-low rounded-lg flex items-center gap-md">
+<span class="material-symbols-outlined text-secondary" data-icon="inventory">inventory</span>
+<div>
+<p class="font-label-md text-on-surface-variant">Active Stock</p>
+<p class="font-title-md text-secondary">2,410 Units</p>
+</div>
+</div>
+<div class="p-sm bg-surface-container-low rounded-lg flex items-center gap-md">
+<span class="material-symbols-outlined text-error" data-icon="warning">warning</span>
+<div>
+<p class="font-label-md text-on-surface-variant">Pending Alerts</p>
+<p class="font-title-md text-error">4 Critical</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-md py-sm border border-primary text-primary font-bold rounded-lg hover:bg-primary-fixed transition-colors">
+                        View Detailed Reports
+                    </button>
+</div>
+</div>
+</section>
+<!-- Floating Action Button -->
+<button class="fixed bottom-lg right-lg w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all group z-50">
+<span class="material-symbols-outlined text-[28px]" data-icon="add_task">add_task</span>
+<span class="absolute right-16 bg-inverse-surface text-on-primary px-sm py-xs rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-md">Create Task</span>
+</button>
+</main>
+<script>
+        const langToggle = document.getElementById('lang-toggle');
+        const body = document.body;
+        const sideNav = document.getElementById('side-nav');
+        const mainContent = document.getElementById('main-content');
+
+        langToggle.addEventListener('click', () => {
+            const isRtl = body.dir === 'rtl';
+            if (isRtl) {
+                body.dir = 'ltr';
+                langToggle.innerText = 'AR';
+                sideNav.classList.replace('right-0', 'left-0');
+                sideNav.classList.replace('border-l', 'border-r');
+                mainContent.style.marginLeft = '240px';
+                mainContent.style.marginRight = '0';
+            } else {
+                body.dir = 'rtl';
+                langToggle.innerText = 'EN';
+                sideNav.classList.replace('left-0', 'right-0');
+                sideNav.classList.replace('border-r', 'border-l');
+                mainContent.style.marginLeft = '0';
+                mainContent.style.marginRight = '240px';
+            }
+        });
+
+        // Simple smooth interactive feedback for app cards
+        document.querySelectorAll('.app-card').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'translateY(1px)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'translateY(0)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body></html>

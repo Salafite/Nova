@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+
+<html class="light" dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP | Sales Orders</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#dce2f3",
+                        "primary": "#451ebb",
+                        "inverse-primary": "#cabeff",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#5d3fd3",
+                        "on-secondary-container": "#006e6e",
+                        "surface": "#f9f9ff",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "surface-tint": "#6042d6",
+                        "secondary-container": "#90efef",
+                        "on-secondary-fixed": "#002020",
+                        "on-tertiary-container": "#ced4e4",
+                        "surface-dim": "#d3daef",
+                        "on-primary-container": "#d8ceff",
+                        "surface-container-low": "#f1f3ff",
+                        "outline-variant": "#c9c4d7",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#3d4551",
+                        "on-surface-variant": "#484554",
+                        "surface-bright": "#f9f9ff",
+                        "primary-fixed": "#e6deff",
+                        "on-surface": "#141b2b",
+                        "on-background": "#141b2b",
+                        "inverse-surface": "#293040",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-primary-fixed": "#1c0062",
+                        "background": "#f9f9ff",
+                        "outline": "#797586",
+                        "surface-container-high": "#e1e8fd",
+                        "surface-container": "#e9edff",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#4723be",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "on-tertiary-fixed": "#151c27",
+                        "on-error-container": "#93000a",
+                        "secondary": "#006a6a",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#93f2f2",
+                        "inverse-on-surface": "#edf0ff",
+                        "tertiary-container": "#555c69",
+                        "surface-variant": "#dce2f7",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "max-width": "1440px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            vertical-align: middle;
+        }
+        .press-effect:active { transform: translateY(1px); }
+        .row-hover:hover { background-color: rgba(69, 30, 187, 0.02); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+        
+        /* RTL Adjustments */
+        [dir="rtl"] .ml-\[240px\] { margin-left: 0; margin-right: 240px; }
+        [dir="rtl"] .fixed.left-0 { left: auto; right: 0; border-left-width: 1px; border-right-width: 0; }
+        [dir="rtl"] .absolute.left-sm { left: auto; right: 8px; }
+        [dir="rtl"] .pl-\[40px\] { padding-left: 16px; padding-right: 40px; }
+        [dir="rtl"] .text-left { text-align: right; }
+        [dir="rtl"] .text-right { text-align: left; }
+        [dir="rtl"] .mr-1\.5 { margin-right: 0; margin-left: 0.375rem; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen">
+<!-- NavigationDrawer -->
+<aside class="fixed left-0 top-0 h-full w-[240px] flex flex-col py-lg bg-surface border-r border-outline-variant z-50 transition-transform lg:translate-x-0 -translate-x-full" id="sidebar">
+<div class="px-md mb-xl flex items-center justify-between">
+<span class="font-headline-lg text-headline-lg font-bold text-primary">Nova ERP</span>
+<button class="lg:hidden material-symbols-outlined p-xs hover:bg-surface-container-high rounded-full" id="close-sidebar">close</button>
+</div>
+<nav class="flex-1 space-y-xs overflow-y-auto">
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl" data-page="dashboard" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl" data-page="inventory" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-body-md text-body-md">Inventory</span>
+</a>
+<a class="nav-item active flex items-center gap-md bg-primary-container text-on-primary-container rounded-xl px-md py-sm mx-sm press-effect" data-page="sales" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-body-md text-body-md">Sales</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl" data-page="accounting" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-body-md text-body-md">Accounting</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl" data-page="hr" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-md text-body-md">HR</span>
+</a>
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl" data-page="settings" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="px-md mt-auto pt-md border-t border-outline-variant relative">
+<button class="flex items-center gap-sm w-full p-xs hover:bg-surface-container-high rounded-xl transition-colors" id="profile-trigger">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold text-xs shrink-0">JD</div>
+<div class="flex flex-col items-start overflow-hidden">
+<span class="text-xs font-bold truncate w-full text-left">Jane Doe</span>
+<span class="text-[10px] text-on-surface-variant truncate w-full text-left">Admin Access</span>
+</div>
+<span class="material-symbols-outlined text-sm ml-auto">expand_more</span>
+</button>
+<!-- Profile Dropdown -->
+<div class="absolute bottom-full left-md right-md mb-sm bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg hidden flex-col overflow-hidden z-50" id="profile-dropdown">
+<a class="px-md py-sm text-body-md hover:bg-surface-container-high transition-colors flex items-center gap-sm" href="#">
+<span class="material-symbols-outlined text-sm">person</span> Profile
+            </a>
+<a class="px-md py-sm text-body-md hover:bg-surface-container-high transition-colors flex items-center gap-sm" href="#">
+<span class="material-symbols-outlined text-sm">security</span> Security
+            </a>
+<div class="h-px bg-outline-variant"></div>
+<a class="px-md py-sm text-body-md hover:bg-error-container text-error transition-colors flex items-center gap-sm" href="#">
+<span class="material-symbols-outlined text-sm">logout</span> Logout
+            </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:ml-[240px] flex-1 flex flex-col min-w-0 transition-all duration-300">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-mobile lg:px-margin-desktop h-[64px] bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-40">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high p-sm rounded-full transition-colors" id="menu-toggle">menu</button>
+<h1 class="font-title-md text-title-md text-on-surface">Operations</h1>
+</div>
+<div class="flex items-center gap-md lg:gap-lg">
+<div class="hidden sm:flex items-center gap-sm bg-surface-container-low px-md py-xs rounded-full border border-outline-variant focus-within:ring-2 focus-within:ring-primary-container transition-all">
+<span class="material-symbols-outlined text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-32 lg:w-48" id="global-search" placeholder="Quick search..." type="text"/>
+<span class="text-[10px] text-on-surface-variant bg-surface-container px-xs rounded border border-outline-variant">⌘ K</span>
+</div>
+<button class="font-title-md text-title-md text-primary hover:text-primary-fixed-dim transition-colors font-semibold" id="lang-toggle">
+<span class="en-label">AR</span>
+<span class="ar-label hidden">EN</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high lg:hidden"></div>
+</div>
+</header>
+<!-- Page Header & Filter Bar -->
+<div class="px-margin-mobile lg:px-margin-desktop py-lg space-y-md">
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Sales Orders</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage and track your global sales transactions.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex-1 sm:flex-none flex items-center justify-center gap-xs px-md py-sm border border-outline text-on-surface rounded-xl hover:bg-surface-container-high transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+                    Export
+                </button>
+<button class="flex-1 sm:flex-none flex items-center justify-center gap-xs px-md py-sm bg-primary text-on-primary rounded-xl hover:opacity-90 transition-all press-effect font-label-md text-label-md shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    New Order
+                </button>
+</div>
+</div>
+<!-- Bento Filter Bar -->
+<div class="bg-white border border-outline-variant rounded-xl p-md flex flex-wrap gap-md items-center shadow-sm">
+<div class="flex-1 min-w-[240px] relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-[40px] pr-md py-sm border-outline-variant rounded-lg focus:border-primary focus:ring-primary-container text-body-md" placeholder="Search Order ID, Customer, or Product..." type="text"/>
+</div>
+<div class="flex gap-sm w-full lg:w-auto">
+<select class="flex-1 lg:flex-none border-outline-variant rounded-lg py-sm text-body-md focus:ring-primary-container">
+<option>Status: All</option>
+<option>Pending</option>
+<option>Processing</option>
+<option>Shipped</option>
+<option>Delivered</option>
+<option>Cancelled</option>
+</select>
+<select class="flex-1 lg:flex-none border-outline-variant rounded-lg py-sm text-body-md focus:ring-primary-container">
+<option>Date: Last 30 Days</option>
+<option>This Month</option>
+<option>Last Quarter</option>
+<option>Specific Range</option>
+</select>
+<button class="p-sm border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Data Table Section -->
+<div class="px-margin-mobile lg:px-margin-desktop pb-xl flex-1 min-h-0">
+<div class="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col h-full max-h-[600px]">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-gray-50 border-b border-outline-variant sticky top-0 z-10">
+<tr>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Order ID</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Customer</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Date</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Amount</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="row-hover transition-colors cursor-pointer">
+<td class="px-md py-md"><input class="rounded border-outline-variant text-primary" type="checkbox"/></td>
+<td class="px-md py-md font-data-mono text-data-mono font-medium text-primary">ORD-2023-9421</td>
+<td class="px-md py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-xs font-bold">AL</div>
+<div>
+<div class="font-body-md font-semibold">Apex Logistics</div>
+<div class="text-[10px] text-on-surface-variant">Tier: Platinum</div>
+</div>
+</div>
+</td>
+<td class="px-md py-md font-body-md">Oct 24, 2023</td>
+<td class="px-md py-md font-data-mono text-data-mono font-bold">$12,450.00</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-secondary-container text-on-secondary-container text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-1.5"></span>
+                                    PROCESSING
+                                </span>
+</td>
+<td class="px-md py-md text-right">
+<button class="action-btn material-symbols-outlined text-on-surface-variant hover:text-primary p-xs rounded-full hover:bg-surface-container-high">more_vert</button>
+</td>
+</tr>
+<tr class="row-hover transition-colors cursor-pointer">
+<td class="px-md py-md"><input class="rounded border-outline-variant text-primary" type="checkbox"/></td>
+<td class="px-md py-md font-data-mono text-data-mono font-medium text-primary">ORD-2023-9422</td>
+<td class="px-md py-md">
+<div class="flex items-center gap-sm">
+<img alt="Customer Avatar" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDE900lTHqbd-j9RiFgzqOPQnGs-LcNGZCWFl9Z8iJLANuSLeJQ9vk-D1YGC0QhsgQSqHVnRmMBFvfCL5XWyk1oMyOMc_TIH_PpMTFBd0OVAO0P3qEA5etOfC_kNa4C6KTZoqVAKFh6ekO3HhMgOJeHpjk0g5oLXFFjwWFcfmI9BVHzwCP0m0wW1Q37lYqSHJmI6b1yrVVpY9XrVl-pvRQJawyaOI1hQvIFX3PYuBPlNXKRiw1wAdIemGcAbyh_AFH0SVpIIdWrrPY"/>
+<div>
+<div class="font-body-md font-semibold">Global Retailers</div>
+<div class="text-[10px] text-on-surface-variant">Tier: Gold</div>
+</div>
+</div>
+</td>
+<td class="px-md py-md font-body-md">Oct 24, 2023</td>
+<td class="px-md py-md font-data-mono text-data-mono font-bold">$4,200.50</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-green-100 text-green-700 text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-green-600 mr-1.5"></span>
+                                    DELIVERED
+                                </span>
+</td>
+<td class="px-md py-md text-right">
+<button class="action-btn material-symbols-outlined text-on-surface-variant hover:text-primary p-xs rounded-full hover:bg-surface-container-high">more_vert</button>
+</td>
+</tr>
+<tr class="row-hover transition-colors cursor-pointer">
+<td class="px-md py-md"><input class="rounded border-outline-variant text-primary" type="checkbox"/></td>
+<td class="px-md py-md font-data-mono text-data-mono font-medium text-primary">ORD-2023-9423</td>
+<td class="px-md py-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded bg-primary-fixed-dim flex items-center justify-center text-xs font-bold text-on-primary-fixed">SC</div>
+<div>
+<div class="font-body-md font-semibold">Starlight Corp</div>
+<div class="text-[10px] text-on-surface-variant">Tier: Silver</div>
+</div>
+</div>
+</td>
+<td class="px-md py-md font-body-md">Oct 23, 2023</td>
+<td class="px-md py-md font-data-mono text-data-mono font-bold">$890.00</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-error-container text-on-error-container text-[11px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-error mr-1.5"></span>
+                                    CANCELLED
+                                </span>
+</td>
+<td class="px-md py-md text-right">
+<button class="action-btn material-symbols-outlined text-on-surface-variant hover:text-primary p-xs rounded-full hover:bg-surface-container-high">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="mt-auto border-t border-outline-variant px-md py-sm flex flex-col sm:flex-row justify-between items-center bg-gray-50 gap-sm">
+<span class="font-label-md text-label-md text-on-surface-variant order-2 sm:order-1">Showing 1-3 of 1,248 orders</span>
+<div class="flex items-center gap-xs order-1 sm:order-2">
+<button class="p-xs border border-outline-variant rounded-lg hover:bg-white disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="px-sm py-xs bg-primary text-on-primary rounded-lg font-label-md text-label-md">1</button>
+<button class="px-sm py-xs hover:bg-white rounded-lg font-label-md text-label-md transition-colors">2</button>
+<button class="px-sm py-xs hover:bg-white rounded-lg font-label-md text-label-md transition-colors">3</button>
+<span class="px-sm py-xs">...</span>
+<button class="p-xs border border-outline-variant rounded-lg hover:bg-white transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<div class="hidden sm:flex items-center gap-sm order-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Rows:</span>
+<select class="border-outline-variant rounded-lg py-xs text-xs focus:ring-primary-container">
+<option>10</option>
+<option selected="">25</option>
+<option>50</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Overlay -->
+<div class="fixed inset-0 bg-black/20 z-40 hidden backdrop-blur-sm lg:hidden" id="sidebar-overlay"></div>
+<!-- FAB for New Order -->
+<button class="fixed bottom-lg right-lg w-14 h-14 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-all press-effect z-50 group">
+<span class="material-symbols-outlined text-[28px] group-hover:rotate-90 transition-transform">add</span>
+<div class="absolute right-16 bg-inverse-surface text-inverse-on-surface px-md py-xs rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity shadow-lg">
+        Create New Order
+    </div>
+</button>
+<script>
+    // --- Modular Navigation Logic ---
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeSidebar = document.getElementById('close-sidebar');
+
+    function toggleSidebar() {
+        const isOpen = !sidebar.classList.contains('-translate-x-full');
+        if (isOpen) {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        } else {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+        }
+    }
+
+    menuToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSidebar();
+    });
+    
+    closeSidebar.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    // --- Profile Dropdown Logic ---
+    const profileTrigger = document.getElementById('profile-trigger');
+    const profileDropdown = document.getElementById('profile-dropdown');
+
+    profileTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileDropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+        profileDropdown.classList.add('hidden');
+    });
+
+    // --- Language Toggle (LTR/RTL) ---
+    const langToggle = document.getElementById('lang-toggle');
+    const enLabels = document.querySelectorAll('.en-label');
+    const arLabels = document.querySelectorAll('.ar-label');
+
+    langToggle.addEventListener('click', () => {
+        const isRtl = document.documentElement.dir === 'rtl';
+        if (isRtl) {
+            document.documentElement.dir = 'ltr';
+            document.documentElement.lang = 'en';
+            enLabels.forEach(el => el.classList.remove('hidden'));
+            arLabels.forEach(el => el.classList.add('hidden'));
+        } else {
+            document.documentElement.dir = 'rtl';
+            document.documentElement.lang = 'ar';
+            enLabels.forEach(el => el.classList.add('hidden'));
+            arLabels.forEach(el => el.classList.remove('hidden'));
+        }
+    });
+
+    // --- Navigation Item Selection ---
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            navItems.forEach(i => {
+                i.classList.remove('active', 'bg-primary-container', 'text-on-primary-container');
+                i.classList.add('text-on-surface-variant');
+                const icon = i.querySelector('.material-symbols-outlined');
+                if (icon) icon.style.fontVariationSettings = "'FILL' 0";
+            });
+            item.classList.add('active', 'bg-primary-container', 'text-on-primary-container');
+            item.classList.remove('text-on-surface-variant');
+            const icon = item.querySelector('.material-symbols-outlined');
+            if (icon) icon.style.fontVariationSettings = "'FILL' 1";
+            
+            if (window.innerWidth < 1024) toggleSidebar();
+        });
+    });
+
+    // --- Table Row & Action Button Clicks ---
+    document.querySelectorAll('tbody tr').forEach(row => {
+        row.addEventListener('click', (e) => {
+            const isActionBtn = e.target.closest('.action-btn');
+            const isCheckbox = e.target.type === 'checkbox';
+            
+            if (isActionBtn) {
+                console.log('Action menu for:', row.querySelector('td:nth-child(2)').innerText);
+                return;
+            }
+            if (!isCheckbox) {
+                console.log('Opening details for:', row.querySelector('td:nth-child(2)').innerText);
+            }
+        });
+    });
+
+    // --- Search Shortcut ---
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            document.getElementById('global-search').focus();
+        }
+    });
+
+    // Handle Responsive Resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.add('hidden');
+        } else {
+            sidebar.classList.add('-translate-x-full');
+        }
+    });
+</script>
+</body></html>

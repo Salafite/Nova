@@ -1,0 +1,43 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+  <!-- Header -->
+  <div class="flex justify-between items-end mb-lg mt-lg">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs" data-i18n="screens.customers.title">Customers</h2>
+      <p class="text-body-md text-on-surface-variant mt-1" data-i18n="screens.customers.subtitle">Manage customer directory and accounts.</p>
+    </div>
+    <div class="flex gap-sm">
+      <button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.customers.showCreateForm()">
+        <span class="material-symbols-outlined text-[18px]">person_add</span>
+        <span data-i18n="screens.customers.add_customer">Add Customer</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-gutter mb-xl items-stretch">
+    <!-- Customers Table -->
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+      <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+        <h3 class="font-title-md text-title-md font-bold" data-i18n="screens.customers.table_title">Customer Directory</h3>
+        <div class="flex gap-sm">
+           <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs rounded-full hover:bg-surface-container-high" onclick="controllers.customers.refresh()">refresh</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto flex-1">
+        <table class="w-full text-left border-collapse erp-table">
+          <thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+            <tr>
+              <th class="px-lg py-sm font-semibold" data-i18n="screens.customers.col_name">Name</th>
+              <th class="px-lg py-sm font-semibold" data-i18n="screens.customers.col_email">Email</th>
+              <th class="px-lg py-sm font-semibold" data-i18n="screens.customers.col_phone">Phone</th>
+              <th class="px-lg py-sm font-semibold text-center" data-i18n="screens.customers.col_status">Status</th>
+              <th class="px-lg py-sm font-semibold text-center" data-i18n="screens.customers.col_actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant" id="customersTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

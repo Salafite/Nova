@@ -1,0 +1,1 @@
+﻿window.WebhookModel = class Webhook {constructor(d){Object.assign(this,d)}}

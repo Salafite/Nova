@@ -1,0 +1,1 @@
+﻿window.TimeLogModel = class TimeLog {constructor(data){Object.assign(this,data);}}

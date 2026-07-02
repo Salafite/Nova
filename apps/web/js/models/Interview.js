@@ -1,0 +1,1 @@
+﻿window.InterviewModel = class Interview {constructor(data){Object.assign(this,data);}}

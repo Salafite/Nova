@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+
+<html class="light" dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventory Catalog | Nova ERP</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#dce2f3",
+                        "primary": "#451ebb",
+                        "inverse-primary": "#cabeff",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#5d3fd3",
+                        "on-secondary-container": "#006e6e",
+                        "surface": "#f9f9ff",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "surface-tint": "#6042d6",
+                        "secondary-container": "#90efef",
+                        "on-secondary-fixed": "#002020",
+                        "on-tertiary-container": "#ced4e4",
+                        "surface-dim": "#d3daef",
+                        "on-primary-container": "#d8ceff",
+                        "surface-container-low": "#f1f3ff",
+                        "outline-variant": "#c9c4d7",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#3d4551",
+                        "on-surface-variant": "#484554",
+                        "surface-bright": "#f9f9ff",
+                        "primary-fixed": "#e6deff",
+                        "on-surface": "#141b2b",
+                        "on-background": "#141b2b",
+                        "inverse-surface": "#293040",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#004f4f",
+                        "on-primary-fixed": "#1c0062",
+                        "background": "#f9f9ff",
+                        "outline": "#797586",
+                        "surface-container-high": "#e1e8fd",
+                        "surface-container": "#e9edff",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#4723be",
+                        "secondary-fixed-dim": "#76d6d5",
+                        "on-tertiary-fixed": "#151c27",
+                        "on-error-container": "#93000a",
+                        "secondary": "#006a6a",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#93f2f2",
+                        "inverse-on-surface": "#edf0ff",
+                        "tertiary-container": "#555c69",
+                        "surface-variant": "#dce2f7",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#dce2f7",
+                        "primary-fixed-dim": "#cabeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "margin-mobile": "16px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "max-width": "1440px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "data-mono": ["JetBrains Mono"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-row-hover:hover {
+            background-color: rgba(69, 30, 187, 0.02);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #dce2f7;
+            border-radius: 10px;
+        }
+        body {
+            background-color: #f9f9ff;
+        }
+        /* RTL Transitions */
+        [dir="rtl"] .rtl-flip {
+            transform: scaleX(-1);
+        }
+        /* Sidebar transition */
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        [dir="ltr"] #sidebar { left: 0; }
+        [dir="rtl"] #sidebar { right: 0; }
+        
+        @media (max-width: 1024px) {
+            [dir="ltr"] #sidebar { transform: translateX(-100%); }
+            [dir="rtl"] #sidebar { transform: translateX(100%); }
+            #sidebar.open { transform: translateX(0); }
+            main { margin-left: 0 !important; margin-right: 0 !important; }
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface select-none overflow-x-hidden">
+<!-- NavigationDrawer -->
+<aside class="fixed top-0 h-full w-[240px] border-r border-outline-variant bg-surface flex flex-col py-lg z-50" id="sidebar">
+<div class="px-md mb-xl flex justify-between items-center">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">Nova ERP</h1>
+<button class="lg:hidden p-xs hover:bg-surface-variant rounded-full" id="close-sidebar">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<nav class="flex-1 flex flex-col gap-xs overflow-y-auto custom-scrollbar" id="nav-links">
+<!-- Dashboard -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl group" data-id="dashboard" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md" data-ar="لوحة القيادة" data-en="Dashboard">Dashboard</span>
+</a>
+<!-- Inventory (ACTIVE) -->
+<a class="nav-item flex items-center gap-md bg-primary-container text-on-primary-container rounded-xl px-md py-sm mx-sm transition-all" data-id="inventory" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-body-md font-semibold" data-ar="المخزون" data-en="Inventory">Inventory</span>
+</a>
+<!-- Sales -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl group" data-id="sales" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md" data-ar="المبيعات" data-en="Sales">Sales</span>
+</a>
+<!-- Accounting -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl group" data-id="accounting" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-body-md" data-ar="المحاسبة" data-en="Accounting">Accounting</span>
+</a>
+<!-- HR -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl group" data-id="hr" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-md" data-ar="الموارد البشرية" data-en="HR">HR</span>
+</a>
+<!-- Settings -->
+<div class="mt-auto">
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm hover:bg-surface-container-high transition-colors rounded-xl group" data-id="settings" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md" data-ar="الإعدادات" data-en="Settings">Settings</span>
+</a>
+</div>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] rtl:mr-[240px] rtl:ml-0 flex flex-col min-h-screen transition-all duration-300">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-desktop h-[64px] border-b border-outline-variant bg-surface-container-lowest sticky top-0 z-40">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary p-xs hover:bg-surface-variant rounded-full transition-all active:scale-95 duration-100" data-icon="menu" id="menu-toggle">menu</button>
+<h2 class="font-title-md text-title-md text-primary" data-ar="العمليات" data-en="Operations">Operations</h2>
+</div>
+<div class="flex items-center gap-lg">
+<div class="relative group hidden sm:block">
+<span class="material-symbols-outlined absolute left-sm rtl:left-auto rtl:right-sm top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="bg-surface-container-low border-none rounded-xl pl-xl rtl:pl-md rtl:pr-xl pr-md py-xs text-body-md w-64 focus:ring-2 focus:ring-primary/30 transition-all outline-none" data-placeholder-ar="بحث في الكتالوج..." data-placeholder-en="Search catalog..." id="global-search" placeholder="Search catalog..." type="text"/>
+</div>
+<button class="text-on-surface-variant font-label-md hover:text-primary transition-colors px-sm py-xs hover:bg-surface-container-high rounded-lg" id="lang-toggle">EN/AR</button>
+<div class="relative">
+<button class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-xs hover:ring-2 hover:ring-primary/20 transition-all" id="profile-trigger">JD</button>
+<!-- Profile Dropdown (Hidden by default) -->
+<div class="hidden absolute right-0 rtl:left-0 rtl:right-auto mt-2 w-48 bg-white border border-outline-variant rounded-xl shadow-xl z-50 p-sm animate-in fade-in slide-in-from-top-2 duration-200" id="profile-dropdown">
+<a class="flex items-center gap-sm p-sm hover:bg-surface-container-low rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">person</span>
+<span class="font-body-md" data-ar="ملفي الشخصي" data-en="My Profile">My Profile</span>
+</a>
+<a class="flex items-center gap-sm p-sm hover:bg-surface-container-low rounded-lg transition-colors text-error" href="#">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+<span class="font-body-md" data-ar="تسجيل الخروج" data-en="Sign Out">Sign Out</span>
+</a>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="p-margin-desktop space-y-lg">
+<!-- Bento Stats Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-md">
+<!-- Critical Stock Card -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg flex flex-col justify-between h-32 hover:border-error transition-colors cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md" data-ar="مخزون حرج" data-en="CRITICAL STOCK">CRITICAL STOCK</span>
+<span class="material-symbols-outlined text-error group-hover:scale-110 transition-transform" data-icon="warning">warning</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-headline-lg text-headline-lg text-error">12</span>
+<span class="text-body-md text-on-surface-variant" data-ar="أصناف منخفضة" data-en="items low">items low</span>
+</div>
+</div>
+<!-- Reorder Points Card -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg flex flex-col justify-between h-32 hover:border-primary transition-colors cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md" data-ar="قائمة إعادة الطلب" data-en="REORDER QUEUE">REORDER QUEUE</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform" data-icon="shopping_cart_checkout">shopping_cart_checkout</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-headline-lg text-headline-lg text-on-surface">48</span>
+<span class="text-body-md text-on-surface-variant" data-ar="أصناف معلقة" data-en="pending SKUs">pending SKUs</span>
+</div>
+</div>
+<!-- Warehouse Utilization -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg flex flex-col justify-between h-32 lg:col-span-2 relative overflow-hidden group cursor-pointer">
+<div class="flex justify-between items-start z-10">
+<span class="text-on-surface-variant font-label-md" data-ar="استخدام المستودع" data-en="WAREHOUSE UTILIZATION">WAREHOUSE UTILIZATION</span>
+<span class="material-symbols-outlined text-secondary" data-icon="warehouse">warehouse</span>
+</div>
+<div class="flex flex-col gap-xs z-10">
+<div class="flex justify-between items-end">
+<span class="font-headline-lg text-headline-lg text-on-surface">82%</span>
+<span class="text-body-md text-secondary font-medium">9.4k / 11.5k m³</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-[82%] transition-all duration-700"></div>
+</div>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:scale-110 transition-transform duration-500 rtl:right-auto rtl:-left-4">
+<span class="material-symbols-outlined text-[120px]" data-icon="inventory">inventory</span>
+</div>
+</div>
+</section>
+<!-- Table Section -->
+<section class="bg-white border border-outline-variant rounded-xl flex flex-col overflow-hidden">
+<div class="p-md border-b border-outline-variant flex flex-wrap gap-md items-center justify-between">
+<div class="flex items-center gap-xs overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+<button class="filter-btn px-md py-sm bg-primary-container text-on-primary-container rounded-lg font-label-md whitespace-nowrap" data-ar="كل المخزون" data-en="All Stock">All Stock</button>
+<button class="filter-btn px-md py-sm text-on-surface-variant hover:bg-surface-container-low rounded-lg font-label-md transition-colors whitespace-nowrap" data-ar="إلكترونيات" data-en="Electronics">Electronics</button>
+<button class="filter-btn px-md py-sm text-on-surface-variant hover:bg-surface-container-low rounded-lg font-label-md transition-colors whitespace-nowrap" data-ar="مستودع أ" data-en="Warehouse A">Warehouse A</button>
+<button class="filter-btn px-md py-sm text-on-surface-variant hover:bg-surface-container-low rounded-lg font-label-md transition-colors whitespace-nowrap" data-ar="نفذ من المخزون" data-en="Out of Stock">Out of Stock</button>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded-lg font-label-md hover:bg-surface-container-low transition-colors" id="filter-trigger">
+<span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span>
+<span data-ar="تصفية" data-en="Filter">Filter</span>
+</button>
+<button class="flex items-center gap-xs px-md py-sm bg-primary text-white rounded-lg font-label-md hover:opacity-90 active:translate-y-[1px] transition-all" id="add-product-btn">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+<span data-ar="منتج جديد" data-en="New Product">New Product</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left rtl:text-right border-collapse">
+<thead class="bg-surface-container-lowest">
+<tr class="text-on-surface-variant font-label-md uppercase tracking-wider">
+<th class="px-lg py-md font-semibold border-b border-outline-variant" data-ar="المنتج" data-en="Product">Product</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant" data-ar="رمز الصنف" data-en="SKU / ID">SKU / ID</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant" data-ar="الفئة" data-en="Category">Category</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant" data-ar="الموقع" data-en="Location">Location</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant text-right rtl:text-left" data-ar="مستوى المخزون" data-en="Stock Level">Stock Level</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant" data-ar="الحالة" data-en="Status">Status</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="active-row-hover group transition-colors cursor-pointer">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container-low flex-shrink-0 overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQ8Z9ok6SE_hCdlMzS5Du1nYuB0EUu4LId9HstwvxtEDlMFaXFT80eN53HH8ljbgt3FPkqVLllrOOh9H4ygpp1pznWa45JsE7Ei7ADs07zDqvT3dV-OQGEQSiMCIAxIBASAlAdfVbcK7rff2SNKZxibHfE3OiRQ8r1TJUB8E6JSC3odVhpanHFBIMescbsMX-j63X1AxJr5rvVUIlB3jtU_vwIbsOi06jk7M6YSRu60r65AeX6_8hF3La5_zWaW_eBKBFHN8fxWik"/>
+</div>
+<div>
+<div class="font-body-md font-semibold text-on-surface">Precision X1 Carbon</div>
+<div class="text-xs text-on-surface-variant">Last updated 2h ago</div>
+</div>
+</div>
+</td>
+<td class="px-lg py-md font-data-mono text-data-mono text-on-surface-variant">PRC-9920-X1</td>
+<td class="px-lg py-md"><span class="px-sm py-xs bg-tertiary-fixed text-on-tertiary-fixed-variant rounded text-[11px] font-medium uppercase">Electronics</span></td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">Rack A-42</td>
+<td class="px-lg py-md text-right rtl:text-left font-data-mono font-medium">840</td>
+<td class="px-lg py-md">
+<div class="flex items-center gap-xs text-secondary font-medium">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                                    Healthy
+                                </div>
+</td>
+<td class="px-lg py-md text-right rtl:text-left">
+<button class="row-action material-symbols-outlined text-outline hover:text-primary transition-colors" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- More rows follow similar structure -->
+</tbody>
+</table>
+</div>
+<!-- Table Footer -->
+<div class="px-lg py-md bg-surface-container-lowest border-t border-outline-variant flex items-center justify-between flex-wrap gap-md">
+<span class="text-body-md text-on-surface-variant" data-ar="عرض 1-10 من 1,248 منتج" data-en="Showing 1-10 of 1,248 products">Showing 1-10 of 1,248 products</span>
+<div class="flex items-center gap-sm">
+<button class="p-xs hover:bg-surface-variant rounded-lg transition-colors disabled:opacity-30 rtl-flip" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<div class="flex items-center gap-xs">
+<button class="w-8 h-8 rounded-lg bg-primary text-white font-label-md">1</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-variant font-label-md transition-colors">2</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-variant font-label-md transition-colors">3</button>
+<span class="px-xs text-outline">...</span>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-variant font-label-md transition-colors">125</button>
+</div>
+<button class="p-xs hover:bg-surface-variant rounded-lg transition-colors rtl-flip">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer -->
+<footer class="mt-auto p-margin-desktop text-on-surface-variant flex flex-col sm:flex-row justify-between items-center gap-md border-t border-outline-variant/30 text-xs">
+<div>© 2024 Nova ERP System v4.2.1-Stable</div>
+<div class="flex gap-lg">
+<a class="hover:text-primary transition-colors" data-ar="التوثيق" data-en="Documentation" href="#">Documentation</a>
+<a class="hover:text-primary transition-colors" data-ar="مفاتيح API" data-en="API Keys" href="#">API Keys</a>
+<a class="hover:text-primary transition-colors" data-ar="الدعم" data-en="Support" href="#">Support</a>
+</div>
+</footer>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-lg right-lg rtl:left-lg rtl:right-auto w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-50 group" id="fab">
+<span class="material-symbols-outlined text-[28px]" data-icon="add_box">add_box</span>
+<span class="absolute right-full rtl:right-auto rtl:left-full mr-sm rtl:mr-0 rtl:ml-sm px-md py-xs bg-inverse-surface text-inverse-on-surface text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap" data-ar="إدخال سريع" data-en="Quick Intake">Quick Intake</span>
+</button>
+<script>
+    // Language and Layout Toggle Logic
+    const langToggle = document.getElementById('lang-toggle');
+    const htmlEl = document.documentElement;
+    let currentLang = 'en';
+
+    const translations = {
+        en: {
+            dir: 'ltr',
+            lang: 'en'
+        },
+        ar: {
+            dir: 'rtl',
+            lang: 'ar'
+        }
+    };
+
+    langToggle.addEventListener('click', () => {
+        currentLang = currentLang === 'en' ? 'ar' : 'en';
+        htmlEl.dir = translations[currentLang].dir;
+        htmlEl.lang = translations[currentLang].lang;
+        
+        // Update text content for elements with data-en/data-ar
+        document.querySelectorAll('[data-en]').forEach(el => {
+            el.textContent = el.getAttribute(`data-${currentLang}`);
+        });
+
+        // Update placeholders
+        document.querySelectorAll('[data-placeholder-en]').forEach(el => {
+            el.placeholder = el.getAttribute(`data-placeholder-${currentLang}`);
+        });
+    });
+
+    // Sidebar Toggle Logic
+    const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeSidebar = document.getElementById('close-sidebar');
+
+    menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+    });
+
+    closeSidebar.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+    });
+
+    // Close sidebar on click outside for mobile
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth < 1024 && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            sidebar.classList.remove('open');
+        }
+    });
+
+    // Profile Dropdown Toggle
+    const profileTrigger = document.getElementById('profile-trigger');
+    const profileDropdown = document.getElementById('profile-dropdown');
+
+    profileTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileDropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+        profileDropdown.classList.add('hidden');
+    });
+
+    // Navigation Item States
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            navItems.forEach(nav => {
+                nav.classList.remove('bg-primary-container', 'text-on-primary-container');
+                nav.classList.add('text-on-surface-variant');
+                const icon = nav.querySelector('.material-symbols-outlined');
+                if (icon) icon.style.fontVariationSettings = "'FILL' 0";
+            });
+            item.classList.add('bg-primary-container', 'text-on-primary-container');
+            item.classList.remove('text-on-surface-variant');
+            const icon = item.querySelector('.material-symbols-outlined');
+            if (icon) icon.style.fontVariationSettings = "'FILL' 1";
+        });
+    });
+
+    // Interactive Buttons & Ripple Effect
+    const buttons = document.querySelectorAll('button, .nav-item, tr.active-row-hover');
+    buttons.forEach(btn => {
+        btn.addEventListener('mousedown', function(e) {
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const ripple = document.createElement('span');
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            ripple.className = 'absolute bg-primary/10 rounded-full w-4 h-4 transform scale-0 animate-ping pointer-events-none';
+            
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Action Handlers
+    document.getElementById('add-product-btn').addEventListener('click', () => {
+        console.log('Open New Product Modal');
+    });
+
+    document.getElementById('filter-trigger').addEventListener('click', () => {
+        console.log('Toggle Filter Panel');
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('bg-primary-container', 'text-on-primary-container');
+                b.classList.add('text-on-surface-variant');
+            });
+            this.classList.add('bg-primary-container', 'text-on-primary-container');
+            this.classList.remove('text-on-surface-variant');
+        });
+    });
+
+    // Search bar micro-interaction
+    const searchInput = document.getElementById('global-search');
+    searchInput.addEventListener('focus', () => {
+        searchInput.parentElement.classList.add('ring-2', 'ring-primary/20');
+    });
+    searchInput.addEventListener('blur', () => {
+        searchInput.parentElement.classList.remove('ring-2', 'ring-primary/20');
+    });
+</script>
+</body></html>

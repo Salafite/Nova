@@ -1,0 +1,85 @@
+<div class="max-w-4xl mx-auto py-xl">
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+    <div class="px-lg py-md border-b border-outline-variant bg-surface-container-low">
+      <h3 class="font-title-md text-title-md font-bold">New Sales Order</h3>
+    </div>
+    <form onsubmit="return controllers.sales.saveOrder()" class="p-lg space-y-lg">
+      <input type="hidden" id="soFormId" value="">
+      <!-- Header fields -->
+      <div class="grid grid-cols-2 gap-lg">
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Customer</label>
+          <select id="soCustomer" required class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20"></select>
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Price List</label>
+          <select id="soPriceList" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20" onchange="controllers.sales.recalc()">
+            <option value="">-- Default --</option>
+            {{priceListOptions}}
+          </select>
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Tax Rate</label>
+          <select id="soTaxRate" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20" onchange="controllers.sales.recalc()">
+            <option value="">-- None --</option>
+            {{taxRateOptions}}
+          </select>
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Payment Terms</label>
+          <select id="soPaymentTerm" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Line Items Table -->
+      <div class="border-t border-outline-variant pt-lg">
+        <div class="flex justify-between items-center mb-md">
+          <h4 class="font-title-sm text-title-sm font-bold">Line Items</h4>
+          <button type="button" class="flex items-center gap-xs px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors text-label-sm font-bold" onclick="controllers.sales.addLine()">
+            <span class="material-symbols-outlined text-[18px]">add</span> Add Line
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-surface-container-low text-label-sm text-on-surface-variant uppercase tracking-wider">
+              <tr>
+                <th class="px-2 py-2">Product</th>
+                <th class="px-2 py-2">Select</th>
+                <th class="px-2 py-2 w-20">Qty</th>
+                <th class="px-2 py-2 w-24">Unit Price</th>
+                <th class="px-2 py-2 w-24 text-right">Total</th>
+                <th class="px-2 py-2 w-10"></th>
+              </tr>
+            </thead>
+            <tbody id="soLinesBody" class="divide-y divide-outline-variant">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Totals -->
+      <div class="border-t border-outline-variant pt-md space-y-1 text-right">
+        <div class="flex justify-end items-center gap-lg">
+          <span class="font-label-sm text-label-sm text-on-surface-variant">Subtotal:</span>
+          <span id="soSubtotal" class="font-data-mono text-data-mono w-28 text-right">$0.00</span>
+        </div>
+        <div class="flex justify-end items-center gap-lg">
+          <span class="font-label-sm text-label-sm text-on-surface-variant">Tax:</span>
+          <span id="soTax" class="font-data-mono text-data-mono w-28 text-right">$0.00</span>
+        </div>
+        <div class="flex justify-end items-center gap-lg border-t border-outline-variant pt-1">
+          <span class="font-title-sm text-title-sm font-bold">Grand Total:</span>
+          <span id="soGrandTotal" class="font-title-sm text-title-sm font-bold text-primary w-28 text-right">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex justify-end gap-sm pt-md border-t border-outline-variant">
+        <button type="button" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors" onclick="controllers.sales.render()">Cancel</button>
+        <button type="submit" class="px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-all press-effect">Create Sales Order</button>
+      </div>
+    </form>
+  </div>
+</div>

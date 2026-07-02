@@ -1,0 +1,51 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+  <div class="flex justify-between items-end mb-lg mt-lg">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Payment Terms</h2>
+      <p class="text-body-md text-on-surface-variant mt-1">Define payment due dates and early payment discounts.</p>
+    </div>
+    <div class="flex gap-sm">
+      <button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.payment_terms.showCreateForm()">
+        <span class="material-symbols-outlined text-[18px]">add</span> New Payment Term
+      </button>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Total</p>
+      <p class="font-display-lg text-[28px] leading-tight text-on-surface font-bold">{{total}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Active</p>
+      <p class="font-display-lg text-[28px] leading-tight text-success font-bold">{{active}}</p>
+    </div>
+    <div class="bg-surface-container-lowest border border-outline-variant p-lg rounded-xl shadow-sm">
+      <p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">Default</p>
+      <p class="font-display-lg text-[28px] leading-tight text-primary font-bold">{{defaultCount}}</p>
+    </div>
+  </div>
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+    <div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+      <h3 class="font-title-md text-title-md font-bold">Payment Terms</h3>
+      <div class="flex gap-sm">
+        <input id="paymentTermSearch" oninput="controllers.payment_terms.search(this.value)" placeholder="Search by name or code..." class="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-body-sm focus:ring-2 focus:ring-primary/20">
+        <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs rounded-full hover:bg-surface-container-high" onclick="controllers.payment_terms.refresh()">refresh</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto flex-1">
+      <table class="w-full text-left border-collapse erp-table">
+        <thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+          <tr>
+            <th class="px-lg py-sm font-semibold">Name</th>
+            <th class="px-lg py-sm font-semibold">Code</th>
+            <th class="px-lg py-sm font-semibold">Due Days</th>
+            <th class="px-lg py-sm font-semibold">Discount</th>
+            <th class="px-lg py-sm font-semibold">Status</th>
+            <th class="px-lg py-sm font-semibold text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant">{{rows}}</tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,71 @@
+<!-- Bento Stats Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-md mb-lg">
+<!-- Critical Stock Card -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg flex flex-col justify-between h-32 hover:border-error transition-colors cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md">CRITICAL STOCK</span>
+<span class="material-symbols-outlined text-error group-hover:scale-110 transition-transform">warning</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-headline-lg text-headline-lg text-error">{{criticalStock}}</span>
+<span class="text-body-md text-on-surface-variant">items low</span>
+</div>
+</div>
+<!-- Reorder Points Card -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg flex flex-col justify-between h-32 hover:border-primary transition-colors cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md">REORDER QUEUE</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">shopping_cart_checkout</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-headline-lg text-headline-lg text-on-surface">{{reorderQueue}}</span>
+<span class="text-body-md text-on-surface-variant">pending SKUs</span>
+</div>
+</div>
+<!-- Warehouse Utilization -->
+<div class="bg-white border border-outline-variant rounded-xl p-lg flex flex-col justify-between h-32 lg:col-span-2 relative overflow-hidden group cursor-pointer">
+<div class="flex justify-between items-start z-10">
+<span class="text-on-surface-variant font-label-md">WAREHOUSE UTILIZATION</span>
+<span class="material-symbols-outlined text-secondary">warehouse</span>
+</div>
+<div class="flex flex-col gap-xs z-10">
+<div class="flex justify-between items-end">
+<span class="font-headline-lg text-headline-lg text-on-surface">{{warehouseUtil}}%</span>
+<span class="text-body-md text-secondary font-medium">{{warehouseUsedLabel}}</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full transition-all duration-700" style="width: {{warehouseUtil}}%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Table Section -->
+<section class="bg-white border border-outline-variant rounded-xl flex flex-col overflow-hidden">
+<div class="p-md border-b border-outline-variant flex flex-wrap gap-md items-center justify-between">
+<div class="flex items-center gap-xs overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+<input type="text" id="invSearch" placeholder="Search inventory..." class="px-md py-sm bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md outline-none focus:border-primary" oninput="controllers.inventory.search(this.value)">
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-md py-sm bg-primary text-white rounded-lg font-label-md hover:opacity-90 transition-all" onclick="controllers.inventory.showMoveForm()">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Move Stock</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-lowest">
+<tr class="text-on-surface-variant font-label-md uppercase tracking-wider">
+<th class="px-lg py-md font-semibold border-b border-outline-variant">Product</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant">Location</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant text-right">Quantity</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant text-right">Min/Max</th>
+<th class="px-lg py-md font-semibold border-b border-outline-variant">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{rows}}
+</tbody>
+</table>
+</div>
+</section>

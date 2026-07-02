@@ -1,0 +1,1 @@
+﻿window.TaskService = class TaskService {}

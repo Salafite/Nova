@@ -1,0 +1,75 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Module Manager</h2>
+<p class="text-body-md text-on-surface-variant mt-1">Install, enable, or disable Nova ERP modules.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.module_manager.discoverModules()">
+<span class="material-symbols-outlined text-[18px]">search</span>
+Scan for Modules
+</button>
+</div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm text-center">
+<div class="text-primary text-[2rem] font-bold">{{totalInstalled}}</div>
+<div class="text-body-md text-on-surface-variant">Installed</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm text-center">
+<div class="text-success text-[2rem] font-bold">{{totalActive}}</div>
+<div class="text-body-md text-on-surface-variant">Active</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm text-center">
+<div class="text-on-surface text-[2rem] font-bold">{{totalAvailable}}</div>
+<div class="text-body-md text-on-surface-variant">Available</div>
+</div>
+</div>
+
+<div class="grid grid-cols-1 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Installed Modules</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-semibold">Module</th>
+<th class="px-lg py-sm font-semibold">Version</th>
+<th class="px-lg py-sm font-semibold">Category</th>
+<th class="px-lg py-sm font-semibold text-center">Status</th>
+<th class="px-lg py-sm font-semibold text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant" id="installedModulesBody">
+{{installedRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div class="grid grid-cols-1 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Available Modules</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-semibold">Module</th>
+<th class="px-lg py-sm font-semibold">Has Controllers</th>
+<th class="px-lg py-sm font-semibold text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant" id="availableModulesBody">
+{{availableRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>

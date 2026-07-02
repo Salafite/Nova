@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enterprise Suite - Warehouse Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#dce2f7",
+                    "primary-fixed-dim": "#cabeff",
+                    "tertiary-container": "#555c69",
+                    "surface-variant": "#dce2f7",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#93f2f2",
+                    "inverse-on-surface": "#edf0ff",
+                    "secondary": "#006a6a",
+                    "on-error": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#151c27",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "on-primary-fixed-variant": "#4723be",
+                    "surface-container-high": "#e1e8fd",
+                    "surface-container": "#e9edff",
+                    "on-secondary": "#ffffff",
+                    "outline": "#797586",
+                    "background": "#f9f9ff",
+                    "on-primary-fixed": "#1c0062",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "on-primary": "#ffffff",
+                    "on-background": "#141b2b",
+                    "inverse-surface": "#293040",
+                    "on-surface": "#141b2b",
+                    "surface-bright": "#f9f9ff",
+                    "primary-fixed": "#e6deff",
+                    "on-surface-variant": "#484554",
+                    "tertiary": "#3d4551",
+                    "on-tertiary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c9c4d7",
+                    "surface-container-low": "#f1f3ff",
+                    "on-primary-container": "#d8ceff",
+                    "surface-dim": "#d3daef",
+                    "on-tertiary-container": "#ced4e4",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "surface-tint": "#6042d6",
+                    "secondary-container": "#90efef",
+                    "on-secondary-fixed": "#002020",
+                    "surface": "#f9f9ff",
+                    "primary-container": "#5d3fd3",
+                    "on-secondary-container": "#006e6e",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "inverse-primary": "#cabeff",
+                    "tertiary-fixed": "#dce2f3",
+                    "primary": "#451ebb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "max-width": "1440px",
+                    "margin-desktop": "32px",
+                    "gutter": "16px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "margin-mobile": "16px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "body-lg": ["Inter"],
+                    "title-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f9f9ff;
+            color: #141b2b;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .press-effect:active {
+            transform: translateY(1px) scale(0.98);
+            transition: transform 75ms ease;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        [dir="rtl"] .material-symbols-outlined {
+            transform: scaleX(-1);
+        }
+        [dir="rtl"] .no-mirror .material-symbols-outlined {
+            transform: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col min-h-screen pb-16">
+<!-- TopAppBar -->
+<header class="docked full-width top-0 z-50 bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex justify-between items-center w-full px-margin-mobile h-14 fixed">
+<div class="flex items-center gap-md">
+<button aria-label="Menu" class="press-effect text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed-dim">Enterprise Suite</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="press-effect px-2 py-1 border border-outline-variant rounded font-label-md text-label-md text-on-surface-variant" onclick="toggleRTL()">
+                EN/AR
+            </button>
+</div>
+</header>
+<main class="mt-14 p-margin-mobile space-y-md">
+<!-- Search Bar -->
+<section class="relative">
+<div class="flex items-center bg-surface-container border border-outline-variant rounded-lg px-md h-12 focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full font-body-md text-body-md px-sm placeholder-on-surface-variant/60" placeholder="Search SKU, location or zone..." type="text"/>
+<button class="material-symbols-outlined text-on-surface-variant press-effect">qr_code_scanner</button>
+</div>
+</section>
+<!-- Warehouse Zones Utilization -->
+<section class="space-y-sm">
+<div class="flex justify-between items-end">
+<h2 class="font-title-md text-title-md text-on-surface">Zone Utilization</h2>
+<span class="font-label-md text-label-md text-primary">Live Data</span>
+</div>
+<div class="grid grid-cols-1 gap-sm">
+<!-- Zone Card: Receiving -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">input</span>
+<span class="font-body-lg font-semibold">Receiving</span>
+</div>
+<span class="font-data-mono text-on-surface-variant">84%</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 84%"></div>
+</div>
+<div class="flex justify-between font-label-md text-on-surface-variant">
+<span>4,200 / 5,000 Units</span>
+<span class="text-error flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">warning</span> High Load
+                        </span>
+</div>
+</div>
+<!-- Zone Card: Storage -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-body-lg font-semibold">Main Storage</span>
+</div>
+<span class="font-data-mono text-on-surface-variant">62%</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 62%"></div>
+</div>
+<div class="flex justify-between font-label-md text-on-surface-variant">
+<span>12,400 / 20,000 Units</span>
+<span class="text-on-secondary-container">Optimized</span>
+</div>
+</div>
+<!-- Zone Card: Cold Storage -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-secondary-fixed-variant" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+<span class="font-body-lg font-semibold">Cold Storage</span>
+</div>
+<span class="font-data-mono text-on-surface-variant">45%</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary-fixed-dim rounded-full" style="width: 45%"></div>
+</div>
+<div class="flex justify-between font-label-md text-on-surface-variant">
+<span>900 / 2,000 Units</span>
+<span class="text-on-secondary-fixed-variant">-18°C Stable</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Stock by Location List -->
+<section class="space-y-sm">
+<div class="flex justify-between items-center">
+<h2 class="font-title-md text-title-md text-on-surface">Live Inventory</h2>
+<button class="press-effect flex items-center gap-xs font-label-md text-primary">
+<span class="material-symbols-outlined text-[18px]">filter_list</span> Filter
+                </button>
+</div>
+<div class="overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest">
+<table class="w-full text-left rtl:text-right">
+<thead class="bg-surface-container-high border-b border-outline-variant">
+<tr>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">SKU / Item</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Loc</th>
+<th class="px-md py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right rtl:text-left">Qty</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Item 1 -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="px-md py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">APL-M2-BLK</span>
+<span class="font-label-md text-on-surface-variant">MacBook Pro 14"</span>
+</div>
+</td>
+<td class="px-md py-md">
+<span class="font-data-mono text-sm px-1.5 py-0.5 bg-surface-container rounded border border-outline-variant">A-12-B</span>
+</td>
+<td class="px-md py-md text-right rtl:text-left">
+<span class="font-data-mono font-bold text-on-surface">142</span>
+</td>
+</tr>
+<!-- Item 2 -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="px-md py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">WCH-SR9-TIT</span>
+<span class="font-label-md text-on-surface-variant">Apple Watch Series 9</span>
+</div>
+</td>
+<td class="px-md py-md">
+<span class="font-data-mono text-sm px-1.5 py-0.5 bg-surface-container rounded border border-outline-variant">B-04-F</span>
+</td>
+<td class="px-md py-md text-right rtl:text-left">
+<span class="font-data-mono font-bold text-on-surface">56</span>
+</td>
+</tr>
+<!-- Item 3 -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="px-md py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">PHN-15P-BLU</span>
+<span class="font-label-md text-on-surface-variant">iPhone 15 Pro Blue</span>
+</div>
+</td>
+<td class="px-md py-md">
+<span class="font-data-mono text-sm px-1.5 py-0.5 bg-surface-container rounded border border-outline-variant">A-08-A</span>
+</td>
+<td class="px-md py-md text-right rtl:text-left">
+<span class="font-data-mono font-bold text-on-surface">211</span>
+</td>
+</tr>
+<!-- Item 4 -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="px-md py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">AUD-AX2-WHT</span>
+<span class="font-label-md text-on-surface-variant">AirPods Max White</span>
+</div>
+</td>
+<td class="px-md py-md">
+<span class="font-data-mono text-sm px-1.5 py-0.5 bg-surface-container rounded border border-outline-variant">C-22-D</span>
+</td>
+<td class="px-md py-md text-right rtl:text-left">
+<span class="font-data-mono font-bold text-on-surface">18</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Quick Action Grid -->
+<section class="grid grid-cols-2 gap-sm">
+<button class="press-effect flex flex-col items-center justify-center gap-xs p-lg bg-primary-container text-on-primary-container rounded-xl">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add_box</span>
+<span class="font-label-md">Stock In</span>
+</button>
+<button class="press-effect flex flex-col items-center justify-center gap-xs p-lg bg-secondary-container text-on-secondary-container rounded-xl">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">package_2</span>
+<span class="font-label-md">Stock Out</span>
+</button>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-16 px-xs bg-surface dark:bg-surface-dim border-t border-outline-variant dark:border-outline">
+<button class="press-effect flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="font-label-md text-label-md">POS</span>
+</button>
+<button class="press-effect flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-label-md">Catalog</span>
+</button>
+<button class="press-effect flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-full px-3 py-1">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warehouse</span>
+<span class="font-label-md text-label-md">Warehouse</span>
+</button>
+<button class="press-effect flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">CRM</span>
+</button>
+<button class="press-effect flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="font-label-md text-label-md">Suppliers</span>
+</button>
+</nav>
+<!-- Floating Action Button Contextual -->
+<button class="fixed bottom-20 right-4 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center press-effect z-40">
+<span class="material-symbols-outlined text-[28px]">barcode_scanner</span>
+</button>
+<script>
+        function toggleRTL() {
+            const html = document.documentElement;
+            const currentDir = html.getAttribute('dir');
+            if (currentDir === 'ltr') {
+                html.setAttribute('dir', 'rtl');
+            } else {
+                html.setAttribute('dir', 'ltr');
+            }
+        }
+
+        // Simulating some dynamic behavior for high-density feel
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', () => {
+                // Flash effect
+                row.classList.add('bg-primary-container');
+                setTimeout(() => row.classList.remove('bg-primary-container'), 200);
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,1 @@
+﻿window.EarningModel = class Earning {constructor(data){Object.assign(this,data);}}

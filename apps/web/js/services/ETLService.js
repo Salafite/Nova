@@ -1,0 +1,1 @@
+﻿window.ETLService = class ETLService {}

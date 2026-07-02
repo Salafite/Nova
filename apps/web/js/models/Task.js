@@ -1,0 +1,1 @@
+﻿window.TaskModel = class Task {constructor(d){Object.assign(this,d)}}

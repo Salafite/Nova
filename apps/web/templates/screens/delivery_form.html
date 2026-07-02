@@ -1,0 +1,45 @@
+<div class="max-w-2xl mx-auto mt-xl">
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+    <div class="flex items-center gap-sm mb-lg">
+      <span class="material-symbols-outlined text-primary text-[24px]">local_shipping</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">{{title}}</h2>
+    </div>
+    <form onsubmit="return controllers.delivery.saveForm()">
+      <input type="hidden" id="delFormId" value="{{id}}">
+
+      <div class="flex flex-col gap-xs">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Delivery Number</label>
+        <input type="text" id="delFormNumber" value="{{deliveryNumber}}" readonly class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-md">
+      </div>
+
+      <div class="grid grid-cols-2 gap-gutter mt-md">
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Sales Order ID</label>
+          <input type="number" id="delFormSO" value="{{salesOrderId}}" placeholder="SO ID" required class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Delivery Date</label>
+          <input type="date" id="delFormDate" value="{{deliveryDate}}" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-xs mt-md">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Warehouse ID</label>
+        <input type="number" id="delFormWarehouse" value="{{warehouseId}}" placeholder="Warehouse code" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+      </div>
+
+      <div class="flex flex-col gap-xs mt-md">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Notes</label>
+        <textarea id="delFormNotes" rows="3" placeholder="Additional notes..." class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">{{notes}}</textarea>
+      </div>
+
+      <div class="flex justify-end gap-sm mt-xl">
+        <button type="button" class="bg-surface-container-high text-on-surface px-lg py-sm rounded-lg font-label-md" onclick="controllers.delivery.render(); controllers.delivery.mount()">Cancel</button>
+        <button type="submit" class="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-md flex items-center gap-xs">
+          <span class="material-symbols-outlined text-[18px]">save</span>
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

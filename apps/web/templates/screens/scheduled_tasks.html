@@ -1,0 +1,38 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Scheduled Tasks</h2>
+<p class="text-body-md text-on-surface-variant">Manage cron-based job scheduling.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center gap-xs font-label-md press-effect" onclick="controllers.scheduled_tasks.showAddForm()">
+<span class="material-symbols-outlined text-[18px]">add</span> Add Task
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm"><p class="font-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Total Tasks</p><p class="font-headline-lg text-headline-lg text-primary">{{total}}</p></div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm"><p class="font-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Active</p><p class="font-headline-lg text-headline-lg text-secondary">{{active}}</p></div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm"><p class="font-label-md text-on-surface-variant uppercase tracking-wider mb-xs">Running</p><p class="font-headline-lg text-headline-lg text-warning">{{running}}</p></div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Task Name</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Type</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Cron Expression</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Last Run</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Next Run</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider">Status</th>
+<th class="px-lg py-3 font-label-md text-label-md text-on-surface-variant font-semibold uppercase tracking-wider text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{rows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

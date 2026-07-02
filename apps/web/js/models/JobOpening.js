@@ -1,0 +1,1 @@
+﻿window.JobOpeningModel = class JobOpening {constructor(data){Object.assign(this,data);}}

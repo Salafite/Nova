@@ -1,0 +1,50 @@
+<div class="max-w-2xl mx-auto mt-xl">
+  <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+    <div class="flex items-center gap-sm mb-lg">
+      <span class="material-symbols-outlined text-primary text-[24px]">assignment_returned</span>
+      <h2 class="font-headline-sm text-headline-sm text-on-surface">{{title}}</h2>
+    </div>
+    <form onsubmit="return controllers.purchase_returns.saveForm()">
+      <input type="hidden" id="retFormId" value="{{id}}">
+
+      <div class="grid grid-cols-2 gap-gutter">
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Return Number</label>
+          <input type="text" id="retFormNumber" value="{{returnNumber}}" readonly class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-3 py-2 text-body-md">
+        </div>
+        <div class="flex flex-col gap-xs">
+          <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Return Date</label>
+          <input type="date" id="retFormDate" value="{{returnDate}}" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-xs mt-md">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Supplier ID</label>
+        <input type="number" id="retFormSupplier" value="{{supplierId}}" placeholder="Supplier ID" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+      </div>
+
+      <div class="flex flex-col gap-xs mt-md">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Purchase Order ID</label>
+        <input type="number" id="retFormPO" value="{{purchaseOrderId}}" placeholder="PO ID (optional)" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">
+      </div>
+
+      <div class="flex flex-col gap-xs mt-md">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Reason</label>
+        <textarea id="retFormReason" rows="3" placeholder="Why is this being returned?" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">{{reason}}</textarea>
+      </div>
+
+      <div class="flex flex-col gap-xs mt-md">
+        <label class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Notes</label>
+        <textarea id="retFormNotes" rows="2" placeholder="Additional notes..." class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-md focus:ring-2 focus:ring-primary/20">{{notes}}</textarea>
+      </div>
+
+      <div class="flex justify-end gap-sm mt-xl">
+        <button type="button" class="bg-surface-container-high text-on-surface px-lg py-sm rounded-lg font-label-md" onclick="controllers.purchase_returns.render(); controllers.purchase_returns.mount()">Cancel</button>
+        <button type="submit" class="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-md flex items-center gap-xs">
+          <span class="material-symbols-outlined text-[18px]">save</span>
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

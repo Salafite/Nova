@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enterprise Suite - Suppliers</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#dce2f7",
+                    "primary-fixed-dim": "#cabeff",
+                    "tertiary-container": "#555c69",
+                    "surface-variant": "#dce2f7",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#93f2f2",
+                    "inverse-on-surface": "#edf0ff",
+                    "secondary": "#006a6a",
+                    "on-error": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#151c27",
+                    "secondary-fixed-dim": "#76d6d5",
+                    "on-primary-fixed-variant": "#4723be",
+                    "surface-container-high": "#e1e8fd",
+                    "surface-container": "#e9edff",
+                    "on-secondary": "#ffffff",
+                    "outline": "#797586",
+                    "background": "#f9f9ff",
+                    "on-primary-fixed": "#1c0062",
+                    "on-secondary-fixed-variant": "#004f4f",
+                    "on-primary": "#ffffff",
+                    "on-background": "#141b2b",
+                    "inverse-surface": "#293040",
+                    "on-surface": "#141b2b",
+                    "surface-bright": "#f9f9ff",
+                    "primary-fixed": "#e6deff",
+                    "on-surface-variant": "#484554",
+                    "tertiary": "#3d4551",
+                    "on-tertiary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#c9c4d7",
+                    "surface-container-low": "#f1f3ff",
+                    "on-primary-container": "#d8ceff",
+                    "surface-dim": "#d3daef",
+                    "on-tertiary-container": "#ced4e4",
+                    "tertiary-fixed-dim": "#c0c7d6",
+                    "surface-tint": "#6042d6",
+                    "secondary-container": "#90efef",
+                    "on-secondary-fixed": "#002020",
+                    "surface": "#f9f9ff",
+                    "primary-container": "#5d3fd3",
+                    "on-secondary-container": "#006e6e",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#404754",
+                    "inverse-primary": "#cabeff",
+                    "tertiary-fixed": "#dce2f3",
+                    "primary": "#451ebb"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "max-width": "1440px",
+                    "margin-desktop": "32px",
+                    "gutter": "16px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "margin-mobile": "16px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "base": "4px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "body-lg": ["Inter"],
+                    "title-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .press-effect:active {
+            transform: translateY(1px) scale(0.98);
+        }
+        /* Custom scrollbar for high density views */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c9c4d7;
+            border-radius: 10px;
+        }
+        /* RTL support for icons */
+        [dir="rtl"] .material-symbols-outlined:not(.no-flip) {
+            transform: scaleX(-1);
+        }
+        /* Glassmorphism utility */
+        .glass-surface {
+            background: rgba(249, 249, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md text-body-md overflow-x-hidden pb-20">
+<!-- Top AppBar - Anchored from JSON -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline docked full-width top-0 sticky z-50 flex justify-between items-center w-full px-margin-mobile h-14">
+<div class="flex items-center gap-md">
+<button class="press-effect duration-75 text-primary dark:text-primary-fixed-dim">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed-dim">Enterprise Suite</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="font-label-md text-label-md px-2 py-1 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded" id="language-toggle">EN/AR</button>
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">account_circle</span>
+</div>
+</header>
+<main class="max-w-max-width mx-auto">
+<!-- Search & Filter Area - High Density Design -->
+<section class="px-margin-mobile py-md space-y-md sticky top-14 glass-surface z-40 border-b border-outline-variant">
+<div class="flex items-center gap-sm bg-surface-container-low border border-outline-variant rounded-lg px-md h-12 focus-within:ring-2 ring-primary ring-opacity-30 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-body-md text-on-surface placeholder:text-outline h-full" placeholder="Search suppliers, IDs, or contacts..." type="text"/>
+<button class="press-effect text-on-surface-variant">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</div>
+<div class="flex items-center gap-xs overflow-x-auto no-scrollbar pb-1">
+<button class="flex items-center gap-xs bg-primary text-on-primary px-3 py-1.5 rounded-full font-label-md text-label-md">
+<span>All</span>
+</button>
+<button class="flex items-center gap-xs bg-surface-container-high text-on-surface-variant px-3 py-1.5 rounded-full font-label-md text-label-md border border-outline-variant">
+<span>Active</span>
+</button>
+<button class="flex items-center gap-xs bg-surface-container-high text-on-surface-variant px-3 py-1.5 rounded-full font-label-md text-label-md border border-outline-variant">
+<span>Outstanding</span>
+</button>
+<button class="flex items-center gap-xs bg-surface-container-high text-on-surface-variant px-3 py-1.5 rounded-full font-label-md text-label-md border border-outline-variant">
+<span>New</span>
+</button>
+</div>
+</section>
+<!-- Supplier Grid (High Density) -->
+<section class="px-margin-mobile mt-md grid grid-cols-1 gap-md">
+<!-- Supplier Card 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:border-primary transition-colors">
+<div class="p-md flex items-start gap-md">
+<div class="w-12 h-12 rounded-lg bg-secondary-container flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container">local_shipping</span>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-title-md text-title-md font-bold text-on-surface truncate">Global Logistics Corp</h3>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-1.5 py-0.5 rounded">SUP-8821</span>
+</div>
+<p class="text-on-surface-variant text-body-md truncate">Primary Freight & Drayage</p>
+</div>
+</div>
+<div class="px-md pb-md grid grid-cols-2 gap-y-sm text-sm border-t border-outline-variant pt-md">
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Contact</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs no-flip">call</span>
+                            +1 (555) 098-2231
+                        </p>
+</div>
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Payment Terms</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+                            Net 30 Days
+                        </p>
+</div>
+<div class="col-span-2 mt-xs">
+<div class="bg-surface-container-low rounded-lg p-sm border border-outline-variant flex justify-between items-center">
+<div>
+<p class="text-outline text-label-md">Current Balance</p>
+<p class="font-data-mono text-primary font-bold">$12,450.00</p>
+</div>
+<button class="bg-primary text-on-primary px-md py-1.5 rounded-lg font-label-md press-effect">Pay Now</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Supplier Card 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:border-primary transition-colors">
+<div class="p-md flex items-start gap-md">
+<div class="w-12 h-12 rounded-lg bg-tertiary-fixed flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-on-tertiary-fixed-variant">inventory_2</span>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-title-md text-title-md font-bold text-on-surface truncate">Apex Raw Materials</h3>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold px-1.5 py-0.5 rounded">SUP-4412</span>
+</div>
+<p class="text-on-surface-variant text-body-md truncate">Aluminium & Steel Alloy</p>
+</div>
+</div>
+<div class="px-md pb-md grid grid-cols-2 gap-y-sm text-sm border-t border-outline-variant pt-md">
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Contact</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs no-flip">mail</span>
+                            orders@apex.com
+                        </p>
+</div>
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Payment Terms</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+                            Due on Receipt
+                        </p>
+</div>
+<div class="col-span-2 mt-xs">
+<div class="bg-surface-container-low rounded-lg p-sm border border-outline-variant flex justify-between items-center">
+<div>
+<p class="text-outline text-label-md">Current Balance</p>
+<p class="font-data-mono text-on-surface font-bold">$0.00</p>
+</div>
+<button class="bg-surface-container-highest text-on-surface-variant px-md py-1.5 rounded-lg font-label-md">View Ledger</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Supplier Card 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:border-primary transition-colors">
+<div class="p-md flex items-start gap-md">
+<div class="w-12 h-12 rounded-lg bg-error-container flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-on-error-container">warning</span>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-title-md text-title-md font-bold text-on-surface truncate">Techno Components</h3>
+<span class="bg-error-container text-on-error-container text-[10px] font-bold px-1.5 py-0.5 rounded">SUP-2201</span>
+</div>
+<p class="text-error font-semibold text-label-md">Past Due Account</p>
+</div>
+</div>
+<div class="px-md pb-md grid grid-cols-2 gap-y-sm text-sm border-t border-outline-variant pt-md">
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Contact</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs no-flip">call</span>
+                            +44 20 7946 0958
+                        </p>
+</div>
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Payment Terms</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+                            Net 60 Days
+                        </p>
+</div>
+<div class="col-span-2 mt-xs">
+<div class="bg-error-container bg-opacity-30 rounded-lg p-sm border border-error border-opacity-20 flex justify-between items-center">
+<div>
+<p class="text-error text-label-md">Overdue Amount</p>
+<p class="font-data-mono text-error font-bold">$45,120.50</p>
+</div>
+<button class="bg-error text-on-error px-md py-1.5 rounded-lg font-label-md press-effect">Resolve</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Supplier Card 4 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm hover:border-primary transition-colors">
+<div class="p-md flex items-start gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-primary">precision_manufacturing</span>
+</div>
+<div class="flex-grow min-w-0">
+<div class="flex justify-between items-start">
+<h3 class="font-title-md text-title-md font-bold text-on-surface truncate">Modern Fab Inc.</h3>
+<span class="bg-surface-container text-on-surface-variant text-[10px] font-bold px-1.5 py-0.5 rounded">SUP-7092</span>
+</div>
+<p class="text-on-surface-variant text-body-md truncate">Precision Machining</p>
+</div>
+</div>
+<div class="px-md pb-md grid grid-cols-2 gap-y-sm text-sm border-t border-outline-variant pt-md">
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Contact</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs no-flip">call</span>
+                            +1 (212) 555-0198
+                        </p>
+</div>
+<div>
+<p class="text-outline text-label-md font-label-md uppercase tracking-wider">Payment Terms</p>
+<p class="text-on-surface flex items-center gap-xs mt-0.5">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+                            Net 15 Days
+                        </p>
+</div>
+<div class="col-span-2 mt-xs">
+<div class="bg-surface-container-low rounded-lg p-sm border border-outline-variant flex justify-between items-center">
+<div>
+<p class="text-outline text-label-md">Pending POs</p>
+<p class="font-data-mono text-on-surface font-bold">4 Active</p>
+</div>
+<button class="bg-primary text-on-primary px-md py-1.5 rounded-lg font-label-md press-effect">Create PO</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar - Anchored from JSON -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-16 px-xs bg-surface dark:bg-surface-dim border-t border-outline-variant dark:border-outline">
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 scale-95 duration-75">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="font-label-md text-label-md">POS</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 scale-95 duration-75">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-label-md">Catalog</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 scale-95 duration-75">
+<span class="material-symbols-outlined">warehouse</span>
+<span class="font-label-md text-label-md">Warehouse</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-3 py-1 scale-95 duration-75">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">CRM</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-full px-3 py-1 scale-95 duration-75">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+<span class="font-label-md text-label-md">Suppliers</span>
+</div>
+</nav>
+<!-- Floating Action Button for Adding Supplier -->
+<button class="fixed bottom-20 right-6 w-14 h-14 bg-primary-container text-on-primary-container rounded-2xl shadow-lg flex items-center justify-center press-effect z-40">
+<span class="material-symbols-outlined text-2xl">add</span>
+</button>
+<script>
+        // RTL Toggle Mock Logic
+        const languageToggle = document.getElementById('language-toggle');
+        let isRTL = false;
+
+        languageToggle.addEventListener('click', () => {
+            isRTL = !isRTL;
+            document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+            languageToggle.textContent = isRTL ? 'AR/EN' : 'EN/AR';
+        });
+
+        // Micro-interaction: Card Hover Tonal Shift
+        const cards = document.querySelectorAll('.bg-surface-container-lowest');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('bg-surface-container-low');
+            });
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('bg-surface-container-low');
+            });
+        });
+    </script>
+</body></html>

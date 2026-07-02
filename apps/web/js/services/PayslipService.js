@@ -1,0 +1,1 @@
+﻿window.PayslipService = class PayslipService {}

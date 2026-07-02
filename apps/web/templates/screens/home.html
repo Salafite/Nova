@@ -1,0 +1,63 @@
+<section class="p-lg">
+<div class="mb-xl flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface"><span id="lblHomeWelcome">Welcome, </span><span id="homeUserName">User</span></h2>
+<p id="lblHomeSubtitle" class="font-body-md text-on-surface-variant">Select an application to start your workflow.</p>
+</div>
+<div class="flex gap-sm">
+<button class="px-md py-sm border border-outline-variant rounded-lg font-label-md flex items-center gap-xs hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+                        <span id="lblHomeCustomize">Customize Grid</span>
+                    </button>
+</div>
+</div>
+<!-- Bento App Grid -->
+<div id="homeAppGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-lg layout-app-grid">
+</div>
+<!-- Dashboard Stats Preview -->
+<div class="mt-xl grid grid-cols-1 lg:grid-cols-3 gap-lg layout-app-grid">
+<div class="col-span-1 lg:col-span-2 bg-surface border border-outline-variant rounded-xl p-lg">
+<div class="flex justify-between items-center mb-md">
+<h3 id="lblHomeCompanyPerf" class="font-title-md text-on-surface">Company Performance</h3>
+<span id="lblHomeRealtime" class="text-xs text-on-surface-variant">Real-time update</span>
+</div>
+<div class="h-64 flex items-end gap-md px-md">
+<div class="w-full bg-primary-container h-[40%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary h-[70%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary-container h-[55%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary h-[85%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary-container h-[65%] rounded-t-lg transition-all hover:opacity-80"></div>
+<div class="w-full bg-primary h-[95%] rounded-t-lg transition-all hover:opacity-80"></div>
+</div>
+</div>
+<div class="bg-surface border border-outline-variant rounded-xl p-lg flex flex-col">
+<h3 id="lblHomeInsights" class="font-title-md text-on-surface mb-md">Quick Insights</h3>
+<div class="space-y-md flex-1">
+<div class="p-sm bg-surface-container-low rounded-lg flex items-center gap-md">
+<span class="material-symbols-outlined text-primary">trending_up</span>
+<div>
+<p id="lblHomeSalesTarget" class="font-label-md text-on-surface-variant">Sales Target</p>
+<p id="lblHomeReached" class="font-title-md text-primary">82% Reached</p>
+</div>
+</div>
+<div class="p-sm bg-surface-container-low rounded-lg flex items-center gap-md">
+<span class="material-symbols-outlined text-secondary">inventory</span>
+<div>
+<p id="lblHomeActiveStock" class="font-label-md text-on-surface-variant">Active Stock</p>
+<p class="font-title-md text-secondary" id="homeActiveStock">0 Items</p>
+</div>
+</div>
+<div class="p-sm bg-surface-container-low rounded-lg flex items-center gap-md">
+<span class="material-symbols-outlined text-error">warning</span>
+<div>
+<p id="lblHomePendingAlerts" class="font-label-md text-on-surface-variant">Pending Alerts</p>
+<p class="font-title-md text-error" id="homePendingAlerts">0 Critical</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-md py-sm border border-primary text-primary font-bold rounded-lg hover:bg-primary-fixed transition-colors" onclick="app.loadModule('dashboard')">
+                        <span id="lblHomeViewReports">View Detailed Reports</span>
+                    </button>
+</div>
+</div>
+</section>

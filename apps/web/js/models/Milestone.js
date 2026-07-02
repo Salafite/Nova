@@ -1,0 +1,1 @@
+﻿window.MilestoneModel = class Milestone {constructor(d){Object.assign(this,d)}}

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+
+<html class="light" dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nova ERP - Dashboard Overview</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed": "#dce2f3",
+                      "primary": "#451ebb",
+                      "inverse-primary": "#cabeff",
+                      "on-tertiary-fixed-variant": "#404754",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-container": "#5d3fd3",
+                      "on-secondary-container": "#006e6e",
+                      "surface": "#f9f9ff",
+                      "tertiary-fixed-dim": "#c0c7d6",
+                      "surface-tint": "#6042d6",
+                      "secondary-container": "#90efef",
+                      "on-secondary-fixed": "#002020",
+                      "on-tertiary-container": "#ced4e4",
+                      "surface-dim": "#d3daef",
+                      "on-primary-container": "#d8ceff",
+                      "surface-container-low": "#f1f3ff",
+                      "outline-variant": "#c9c4d7",
+                      "on-tertiary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#3d4551",
+                      "on-surface-variant": "#484554",
+                      "surface-bright": "#f9f9ff",
+                      "primary-fixed": "#e6deff",
+                      "on-surface": "#141b2b",
+                      "on-background": "#141b2b",
+                      "inverse-surface": "#293040",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed-variant": "#004f4f",
+                      "on-primary-fixed": "#1c0062",
+                      "background": "#f9f9ff",
+                      "outline": "#797586",
+                      "surface-container-high": "#e1e8fd",
+                      "surface-container": "#e9edff",
+                      "on-secondary": "#ffffff",
+                      "on-primary-fixed-variant": "#4723be",
+                      "secondary-fixed-dim": "#76d6d5",
+                      "on-tertiary-fixed": "#151c27",
+                      "on-error-container": "#93000a",
+                      "secondary": "#006a6a",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#93f2f2",
+                      "inverse-on-surface": "#edf0ff",
+                      "tertiary-container": "#555c69",
+                      "surface-variant": "#dce2f7",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#dce2f7",
+                      "primary-fixed-dim": "#cabeff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "margin-mobile": "16px",
+                      "xs": "4px",
+                      "lg": "24px",
+                      "base": "4px",
+                      "gutter": "16px",
+                      "sm": "8px",
+                      "xl": "32px",
+                      "max-width": "1440px",
+                      "margin-desktop": "32px"
+              },
+              "fontFamily": {
+                      "title-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "body-md": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: #F9FAFB;
+            color: #141B2B;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .active-tab {
+            background-color: #5d3fd3;
+            color: #d8ceff;
+        }
+        .erp-table tr:hover {
+            background-color: rgba(69, 30, 187, 0.02);
+        }
+        .surface-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+        }
+        .press-effect:active {
+            transform: scale(0.98);
+        }
+        /* RTL support for margins and positioning */
+        html[dir="rtl"] .ml-\[240px\] { margin-left: 0; margin-right: 240px; }
+        html[dir="rtl"] .fixed.left-0 { left: auto; right: 0; }
+        html[dir="rtl"] aside { border-right: none; border-left: 1px solid #c9c4d7; }
+        html[dir="rtl"] .pl-xl { padding-left: 16px; padding-right: 32px; }
+        html[dir="rtl"] .absolute.left-sm { left: auto; right: 8px; }
+        html[dir="rtl"] .text-right { text-align: left; }
+    </style>
+</head>
+<body class="font-body-md text-body-md overflow-hidden h-screen flex transition-all duration-300">
+<!-- NavigationDrawer -->
+<aside class="fixed left-0 top-0 h-full w-[240px] border-r border-outline-variant bg-surface flex flex-col py-lg z-50 transition-transform duration-300" id="navigation-drawer">
+<div class="px-md mb-xl flex items-center justify-between">
+<span class="font-headline-lg text-headline-lg font-bold text-primary">Nova ERP</span>
+<button class="material-symbols-outlined lg:hidden text-on-surface-variant hover:bg-surface-container-high p-xs rounded-full" id="close-drawer">close</button>
+</div>
+<nav class="flex-1 space-y-xs overflow-y-auto" id="sidebar-nav">
+<!-- Dashboard (Active) -->
+<a class="nav-item flex items-center gap-md px-md py-sm mx-sm rounded-xl active-tab transition-all hover:bg-surface-container-high" data-nav="dashboard" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md" data-ar="لوحة القيادة" data-en="Dashboard">Dashboard</span>
+</a>
+<!-- Inventory -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl transition-all hover:bg-surface-container-high" data-nav="inventory" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-body-md text-body-md" data-ar="المخزون" data-en="Inventory">Inventory</span>
+</a>
+<!-- Sales -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl transition-all hover:bg-surface-container-high" data-nav="sales" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-body-md text-body-md" data-ar="المبيعات" data-en="Sales">Sales</span>
+</a>
+<!-- Accounting -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl transition-all hover:bg-surface-container-high" data-nav="accounting" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span class="font-body-md text-body-md" data-ar="المحاسبة" data-en="Accounting">Accounting</span>
+</a>
+<!-- HR -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl transition-all hover:bg-surface-container-high" data-nav="hr" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-md text-body-md" data-ar="الموارد البشرية" data-en="HR">HR</span>
+</a>
+<!-- Settings -->
+<a class="nav-item flex items-center gap-md text-on-surface-variant px-md py-sm mx-sm rounded-xl transition-all hover:bg-surface-container-high" data-nav="settings" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md" data-ar="الإعدادات" data-en="Settings">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[240px] flex-1 flex flex-col h-screen bg-background transition-all duration-300">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-desktop h-[64px] bg-surface-container-lowest border-b border-outline-variant z-40 sticky top-0">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs hover:bg-surface-container-low rounded-full" id="menu-toggle">menu</button>
+<h1 class="font-title-md text-title-md text-primary font-bold" data-ar="العمليات" data-en="Operations" id="page-title">Operations</h1>
+</div>
+<div class="flex items-center gap-lg">
+<!-- Search Bar -->
+<div class="relative hidden lg:block w-96 group">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full pl-xl pr-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none text-body-md" data-ar-placeholder="البحث عن الطلبات، الفواتير، المنتجات..." data-en-placeholder="Search orders, invoices, products..." id="main-search" placeholder="Search orders, invoices, products..." type="text"/>
+</div>
+<div class="flex items-center gap-md">
+<!-- Language Toggle -->
+<button class="flex items-center gap-xs text-label-md font-bold text-on-surface-variant hover:text-primary transition-colors press-effect bg-surface-container-low px-sm py-xs rounded-lg border border-outline-variant" id="lang-toggle">
+<span id="lang-label">EN/AR</span>
+<span class="w-2 h-2 bg-error rounded-full animate-pulse"></span>
+</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs hover:bg-surface-container-low rounded-full">notifications</button>
+<!-- Profile Dropdown -->
+<div class="relative">
+<button class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant hover:ring-2 hover:ring-primary transition-all press-effect" id="profile-trigger">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDo1akTyANoib9g12MOhhVdYlmeyjxkCqAea00ILXnbRNVRyCijnhIR31xMj8io20t3pCIv_lM8_tZbelqpfSfFLEu6IfmiNWt08X412DlDuNnWhatd4wY9Bmhl8plhzElOayBZRevE9cSxVgog2Lz8aYPMF1oZO1rPALudIhMb5vBUFgG3xfedzkSTRtr3NGgB165_ED4ph1bib8-2drJDnJMRwOCydiRIL99pGrLU75n_lvO2lQzOHjhCNnI700igCRb7AHvT94w"/>
+</button>
+<!-- Modular Dropdown -->
+<div class="absolute right-0 mt-xs w-48 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl hidden py-xs transform origin-top-right transition-all" id="profile-menu">
+<a class="flex items-center gap-sm px-md py-sm hover:bg-surface-container-high text-body-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">person</span>
+<span data-ar="ملفي الشخصي" data-en="My Profile">My Profile</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm hover:bg-surface-container-high text-body-md transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span data-ar="الدعم" data-en="Support">Support</span>
+</a>
+<hr class="my-xs border-outline-variant"/>
+<a class="flex items-center gap-sm px-md py-sm hover:bg-surface-container-high text-error font-bold transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span data-ar="تسجيل الخروج" data-en="Sign Out">Sign Out</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Scrollable Dashboard Content -->
+<div class="flex-1 overflow-y-auto p-margin-desktop space-y-lg" id="dashboard-content">
+<!-- Quick Actions Section -->
+<section>
+<h2 class="font-label-md text-label-md text-on-surface-variant mb-md uppercase tracking-wider" data-ar="إجراءات سريعة" data-en="Quick Actions">Quick Actions</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<button class="action-btn flex items-center justify-center gap-sm bg-primary text-on-primary py-md px-lg rounded-xl font-body-md font-bold hover:bg-primary-container transition-all press-effect shadow-sm">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span data-ar="فتح نظام نقاط البيع" data-en="Open POS System">Open POS System</span>
+</button>
+<button class="action-btn flex items-center justify-center gap-sm bg-surface-container-lowest text-primary border border-primary py-md px-lg rounded-xl font-body-md font-bold hover:bg-surface-container-high transition-all press-effect">
+<span class="material-symbols-outlined">add_box</span>
+<span data-ar="إنشاء منتج" data-en="Create Product">Create Product</span>
+</button>
+<button class="action-btn flex items-center justify-center gap-sm bg-surface-container-lowest text-primary border border-primary py-md px-lg rounded-xl font-body-md font-bold hover:bg-surface-container-high transition-all press-effect">
+<span class="material-symbols-outlined">receipt_long</span>
+<span data-ar="أمر شراء" data-en="Purchase Order">Purchase Order</span>
+</button>
+</div>
+</section>
+<!-- KPI Row -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<div class="surface-card p-lg rounded-xl flex flex-col gap-xs hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<span class="text-label-md font-label-md text-on-surface-variant" data-ar="مبيعات اليوم" data-en="Today's Sales">Today's Sales</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-xs rounded-lg">trending_up</span>
+</div>
+<span class="font-headline-lg text-headline-lg text-on-surface font-data-mono">$12,450.00</span>
+<div class="flex items-center gap-xs mt-sm text-green-600 text-label-md font-label-md">
+<span class="material-symbols-outlined text-[16px]">north</span>
+<span data-ar="12% من أمس" data-en="12% from yesterday">12% from yesterday</span>
+</div>
+</div>
+<div class="surface-card p-lg rounded-xl flex flex-col gap-xs hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<span class="text-label-md font-label-md text-on-surface-variant" data-ar="إجمالي الطلبات" data-en="Total Orders">Total Orders</span>
+<span class="material-symbols-outlined text-secondary bg-secondary-fixed p-xs rounded-lg">shopping_cart</span>
+</div>
+<span class="font-headline-lg text-headline-lg text-on-surface font-data-mono">148</span>
+<div class="flex items-center gap-xs mt-sm text-green-600 text-label-md font-label-md">
+<span class="material-symbols-outlined text-[16px]">north</span>
+<span data-ar="4% من أمس" data-en="4% from yesterday">4% from yesterday</span>
+</div>
+</div>
+<div class="surface-card p-lg rounded-xl flex flex-col gap-xs border-l-4 border-l-error hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start">
+<span class="text-label-md font-label-md text-on-surface-variant" data-ar="مواد منخفضة المخزون" data-en="Low Stock Items">Low Stock Items</span>
+<span class="material-symbols-outlined text-error bg-error-container p-xs rounded-lg">inventory</span>
+</div>
+<span class="font-headline-lg text-headline-lg text-on-surface font-data-mono">23</span>
+<div class="flex items-center gap-xs mt-sm text-error text-label-md font-label-md">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+<span data-ar="يتطلب تجديد المخزون" data-en="Requires replenishment">Requires replenishment</span>
+</div>
+</div>
+</section>
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Recent Sales Table -->
+<section class="lg:col-span-2 surface-card rounded-xl flex flex-col overflow-hidden">
+<div class="p-lg flex justify-between items-center border-b border-outline-variant">
+<h3 class="font-title-md text-title-md text-on-surface" data-ar="المبيعات الأخيرة" data-en="Recent Sales">Recent Sales</h3>
+<button class="text-primary text-label-md font-bold hover:underline" data-ar="عرض الكل" data-en="View All">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left erp-table">
+<thead class="bg-surface-container-low text-label-md font-label-md text-on-surface-variant">
+<tr>
+<th class="px-lg py-md" data-ar="رقم الطلب" data-en="ORDER ID">ORDER ID</th>
+<th class="px-lg py-md" data-ar="العميل" data-en="CUSTOMER">CUSTOMER</th>
+<th class="px-lg py-md" data-ar="التاريخ" data-en="DATE">DATE</th>
+<th class="px-lg py-md text-right" data-ar="الإجمالي" data-en="TOTAL">TOTAL</th>
+<th class="px-lg py-md" data-ar="الحالة" data-en="STATUS">STATUS</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+<tr class="border-b border-outline-variant">
+<td class="px-lg py-md font-data-mono text-data-mono">#INV-9021</td>
+<td class="px-lg py-md">Tech Solutions Inc.</td>
+<td class="px-lg py-md">Oct 24, 2023</td>
+<td class="px-lg py-md text-right font-data-mono text-data-mono">$1,250.00</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs bg-green-100 text-green-700 rounded-full text-[11px] font-bold uppercase" data-ar="مكتمل" data-en="Completed">Completed</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant">
+<td class="px-lg py-md font-data-mono text-data-mono">#INV-9022</td>
+<td class="px-lg py-md">Ahmad Al-Mansour</td>
+<td class="px-lg py-md">Oct 24, 2023</td>
+<td class="px-lg py-md text-right font-data-mono text-data-mono">$840.50</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs bg-yellow-100 text-yellow-700 rounded-full text-[11px] font-bold uppercase" data-ar="قيد الانتظار" data-en="Pending">Pending</span>
+</td>
+</tr>
+<tr class="border-b border-outline-variant">
+<td class="px-lg py-md font-data-mono text-data-mono">#INV-9023</td>
+<td class="px-lg py-md">Global Logistics</td>
+<td class="px-lg py-md">Oct 23, 2023</td>
+<td class="px-lg py-md text-right font-data-mono text-data-mono">$2,400.00</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs bg-green-100 text-green-700 rounded-full text-[11px] font-bold uppercase" data-ar="مكتمل" data-en="Completed">Completed</span>
+</td>
+</tr>
+<tr>
+<td class="px-lg py-md font-data-mono text-data-mono">#INV-9024</td>
+<td class="px-lg py-md">Sarah Williams</td>
+<td class="px-lg py-md">Oct 23, 2023</td>
+<td class="px-lg py-md text-right font-data-mono text-data-mono">$120.00</td>
+<td class="px-lg py-md">
+<span class="px-sm py-xs bg-red-100 text-red-700 rounded-full text-[11px] font-bold uppercase" data-ar="ملغي" data-en="Cancelled">Cancelled</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Inventory Status Side Card -->
+<section class="surface-card rounded-xl p-lg flex flex-col gap-lg overflow-hidden">
+<div>
+<h3 class="font-title-md text-title-md text-on-surface mb-md" data-ar="نظرة عامة على المخزون" data-en="Stock Overview">Stock Overview</h3>
+<div class="space-y-md">
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between text-body-md">
+<span data-ar="المستودع الرئيسي" data-en="Main Warehouse">Main Warehouse</span>
+<span class="font-bold font-data-mono">85%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[85%] transition-all duration-1000"></div>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between text-body-md">
+<span data-ar="مركز التوزيع" data-en="Distribution Center">Distribution Center</span>
+<span class="font-bold font-data-mono">42%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-[42%] transition-all duration-1000"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-low rounded-xl p-md flex flex-col items-center justify-center text-center relative overflow-hidden group">
+<div class="z-10">
+<span class="material-symbols-outlined text-[48px] text-primary mb-sm">analytics</span>
+<h4 class="font-body-lg font-bold text-on-surface mb-xs" data-ar="توقعات المخزون" data-en="Inventory Forecast">Inventory Forecast</h4>
+<p class="text-body-md text-on-surface-variant mb-md px-md" data-ar="تشير التحليلات التنبؤية إلى ضرورة إعادة التخزين لذروة الربع الرابع." data-en="Predictive analysis suggests restocking for Q4 peak.">Predictive analysis suggests restocking for Q4 peak.</p>
+<button class="bg-white text-primary border border-primary px-lg py-sm rounded-xl font-bold hover:bg-primary-container hover:text-white transition-all press-effect" data-ar="تحليل البيانات" data-en="Analyze Data">Analyze Data</button>
+</div>
+<div class="absolute inset-0 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
+<div class="w-full h-full" style="background-image: radial-gradient(#451ebb 1px, transparent 1px); background-size: 20px 20px;"></div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Meta -->
+<footer class="flex flex-col md:flex-row justify-between items-center pt-xl border-t border-outline-variant pb-margin-desktop gap-md">
+<span class="text-label-md text-on-surface-variant" data-ar="© 2023 أنظمة نوفا ERP v4.2.0" data-en="© 2023 Nova ERP Systems v4.2.0">© 2023 Nova ERP Systems v4.2.0</span>
+<div class="flex gap-lg">
+<a class="text-label-md text-on-surface-variant hover:text-primary" data-ar="دليل المستخدم" data-en="User Guide" href="#">User Guide</a>
+<a class="text-label-md text-on-surface-variant hover:text-primary" data-ar="حالة النظام" data-en="System Status" href="#">System Status</a>
+<a class="text-label-md text-on-surface-variant hover:text-primary" data-ar="الدعم" data-en="Support" href="#">Support</a>
+</div>
+</footer>
+</div>
+</main>
+<script>
+    // --- Modular Header & Navigation State Management ---
+    
+    // Sidebar State Management
+    const sidebar = document.getElementById('navigation-drawer');
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeDrawer = document.getElementById('close-drawer');
+    const mainContent = document.querySelector('main');
+
+    const toggleSidebar = () => {
+        const isHidden = sidebar.classList.contains('-translate-x-full');
+        if (window.innerWidth < 1024) {
+            if (sidebar.style.transform === 'translateX(-100%)' || !sidebar.style.transform) {
+                sidebar.style.transform = 'translateX(0)';
+            } else {
+                sidebar.style.transform = 'translateX(-100%)';
+            }
+        } else {
+            // Desktop toggle: Collapse/Expand behavior
+            const isCollapsed = mainContent.style.marginLeft === '0px';
+            mainContent.style.marginLeft = isCollapsed ? '240px' : '0px';
+            sidebar.style.transform = isCollapsed ? 'translateX(0)' : 'translateX(-240px)';
+        }
+    };
+
+    menuToggle.addEventListener('click', toggleSidebar);
+    if(closeDrawer) closeDrawer.addEventListener('click', toggleSidebar);
+
+    // Sidebar Navigation Click Handlers
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            navItems.forEach(nav => {
+                nav.classList.remove('active-tab', 'text-on-primary-container');
+                nav.classList.add('text-on-surface-variant');
+            });
+            this.classList.add('active-tab');
+            this.classList.remove('text-on-surface-variant');
+            
+            // Mobile auto-close
+            if (window.innerWidth < 1024) {
+                sidebar.style.transform = 'translateX(-100%)';
+            }
+        });
+    });
+
+    // --- Profile Dropdown Logic ---
+    const profileTrigger = document.getElementById('profile-trigger');
+    const profileMenu = document.getElementById('profile-menu');
+
+    profileTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+        profileMenu.classList.add('hidden');
+    });
+
+    // --- EN/AR Layout Toggle Logic ---
+    const langToggle = document.getElementById('lang-toggle');
+    const langLabel = document.getElementById('lang-label');
+    const htmlRoot = document.documentElement;
+    const translatableElements = document.querySelectorAll('[data-en]');
+    const searchInput = document.getElementById('main-search');
+
+    let currentLang = 'en';
+
+    const updateLanguage = () => {
+        currentLang = currentLang === 'en' ? 'ar' : 'en';
+        const isRtl = currentLang === 'ar';
+        
+        // Update Layout Direction
+        htmlRoot.dir = isRtl ? 'rtl' : 'ltr';
+        htmlRoot.lang = currentLang;
+        
+        // Update Label
+        langLabel.textContent = isRtl ? 'EN/AR (عربي)' : 'EN/AR';
+
+        // Translate UI Text
+        translatableElements.forEach(el => {
+            el.textContent = el.getAttribute(`data-${currentLang}`);
+        });
+
+        // Translate Placeholder
+        if (searchInput) {
+            searchInput.placeholder = searchInput.getAttribute(`data-${currentLang}-placeholder`);
+        }
+
+        // Adjust specific CSS classes for RTL if needed via style tag or dynamic classes
+        // (Handled partially by tailwind ltr/rtl utilities if configured, 
+        // but here using custom CSS rule in head for manual overrides)
+    };
+
+    langToggle.addEventListener('click', updateLanguage);
+
+    // --- Generic Action Handlers ---
+    const actionButtons = document.querySelectorAll('.action-btn, button:not(#menu-toggle, #lang-toggle, #profile-trigger)');
+    actionButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            console.log('Action triggered:', btn.innerText.trim());
+            // Add a small feedback pulse
+            btn.classList.add('ring-2', 'ring-primary', 'ring-opacity-50');
+            setTimeout(() => btn.classList.remove('ring-2', 'ring-primary', 'ring-opacity-50'), 300);
+        });
+    });
+
+    // Search focus micro-interactions
+    searchInput.addEventListener('focus', () => {
+        searchInput.parentElement.classList.add('scale-[1.02]');
+    });
+    searchInput.addEventListener('blur', () => {
+        searchInput.parentElement.classList.remove('scale-[1.02]');
+    });
+
+    // Initialize mobile view
+    if (window.innerWidth < 1024) {
+        sidebar.style.transform = 'translateX(-100%)';
+        mainContent.style.marginLeft = '0px';
+    }
+</script>
+</body></html>

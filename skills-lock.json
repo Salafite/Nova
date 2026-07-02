@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "skills": {
+    "build-loop-claude-code": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/build-loop-claude-code/SKILL.md",
+      "computedHash": "58f7c7ffe292478de5d1ebc4a55f69e4fc210592a1bc88379ef2a9c947e2f108"
+    },
+    "build-loop-codex": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/build-loop-codex/SKILL.md",
+      "computedHash": "de0037a93f584c7a75a6fd4e03d636b7f1c150d2f0401e6d7a38e5ff96bc8d8a"
+    },
+    "build-loop-cursor": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/build-loop-cursor/SKILL.md",
+      "computedHash": "c69e7cb02faf27a3b6a90d88aa420d5f6383002a754f04489452a2bd45a339a6"
+    },
+    "build-mvp": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/build-mvp/SKILL.md",
+      "computedHash": "c14d15b0552f46ffc2b873fd18e473bc7b8c9ae064a2221fdb5864b5b4c4846c"
+    },
+    "design-system": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/design-system/SKILL.md",
+      "computedHash": "4e16cbd812cc3902ea9c0b64900492dbbdf6b3c4567e5fe0135b0a6846fbdba0"
+    },
+    "idea-generator": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/idea-generator/SKILL.md",
+      "computedHash": "84990bb94f30f95fe3edf3f414b9b4907ac82e263d4af32d3cef8aabeb320273"
+    },
+    "idea-validator": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/idea-validator/SKILL.md",
+      "computedHash": "f9b6b4d7ab5a84a09221c33ea22a7d509f004d6da9ff2323d8102efe2404a0ac"
+    },
+    "launch-checklist": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/launch-checklist/SKILL.md",
+      "computedHash": "a98195023ce9d951b37f031f281b114266ab3b6780b43da5f154fbb9ede72023"
+    },
+    "product-planner": {
+      "source": "BuildGreatProducts/builder-os",
+      "sourceType": "github",
+      "skillPath": "skills/product-planner/SKILL.md",
+      "computedHash": "f24a728b0b1f37028d6c6ca9ce8a163a6dfd56eb51e40a7fe817db73dbf98123"
+    }
+  }
+}

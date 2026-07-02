@@ -1,0 +1,1 @@
+﻿window.DowntimeTrackingService = class DowntimeTrackingService{record(e){return e}}

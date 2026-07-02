@@ -1,0 +1,70 @@
+<div class="max-w-max-width mx-auto flex flex-col h-full space-y-xl">
+<div class="flex justify-between items-end mb-lg mt-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-surface mb-xs">Governance & Compliance</h2>
+<p class="text-body-md text-on-surface-variant mt-1">Manage compliance rules, risk assessments, and audit trails.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center justify-center gap-xs font-label-md active:translate-y-[1px] transition-all press-effect" onclick="controllers.governance.showCreateForm()">
+<span class="material-symbols-outlined text-[18px]">add</span>
+Add Rule
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md uppercase tracking-wider">Total Rules</span>
+<span class="material-symbols-outlined text-primary">gavel</span>
+</div>
+<div class="flex items-baseline gap-sm mt-2">
+<span class="font-headline-lg text-headline-lg text-on-surface">{{totalRules}}</span>
+<span class="text-body-md text-on-surface-variant">compliance rules</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md uppercase tracking-wider">Active Rules</span>
+<span class="material-symbols-outlined text-secondary">verified</span>
+</div>
+<div class="flex items-baseline gap-sm mt-2">
+<span class="font-headline-lg text-headline-lg text-secondary">{{activeRules}}</span>
+<span class="text-body-md text-on-surface-variant">enforced</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col justify-between shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-on-surface-variant font-label-md uppercase tracking-wider">High Risk</span>
+<span class="material-symbols-outlined text-error">warning</span>
+</div>
+<div class="flex items-baseline gap-sm mt-2">
+<span class="font-headline-lg text-headline-lg text-error">{{highRiskRules}}</span>
+<span class="text-body-md text-on-surface-variant">items</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-title-md font-bold">Compliance Rules</h3>
+<div class="flex gap-sm">
+<input type="text" id="ruleSearch" placeholder="Search rules..." class="px-md py-sm bg-surface-container-lowest border border-outline-variant rounded-lg font-body-md outline-none focus:border-primary text-body-md" oninput="controllers.governance.search(this.value)">
+</div>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse erp-table">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Rule Name</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Category</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Last Audit</th>
+<th class="px-lg py-sm font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Risk Level</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+{{ruleRows}}
+</tbody>
+</table>
+</div>
+</div>
+</div>

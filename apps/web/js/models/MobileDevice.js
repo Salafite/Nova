@@ -1,0 +1,1 @@
+﻿window.MobileDeviceModel = class MobileDevice {constructor(d){Object.assign(this,d)}}

@@ -1,0 +1,1 @@
+﻿window.EmployeeDocumentService = class EmployeeDocumentService {}

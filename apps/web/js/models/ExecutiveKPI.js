@@ -1,0 +1,1 @@
+﻿window.ExecutiveKPIModel = class ExecutiveKPI {constructor(d){Object.assign(this,d)}}

@@ -1,0 +1,1 @@
+﻿window.ContractModel = class Contract {constructor(d){Object.assign(this,d)}}

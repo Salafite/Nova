@@ -1,0 +1,1 @@
+﻿window.EquipmentAnalyticsService = class EquipmentAnalyticsService{generate(){return {availability:0}}}

@@ -1,0 +1,301 @@
+<div class="max-w-[1200px] mx-auto h-full flex flex-col">
+  <header class="mb-xl flex justify-between items-end">
+    <div>
+      <nav class="flex text-on-surface-variant font-label-md mb-2 items-center gap-1">
+        <a class="hover:text-primary" href="#">System</a>
+        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        <span class="text-on-surface">Configuration</span>
+      </nav>
+      <h3 class="font-headline-lg text-headline-lg text-on-surface">System Settings</h3>
+      <p class="text-body-md text-on-surface-variant">Manage global ERP configurations and organizational preferences.
+      </p>
+    </div>
+    <div class="flex gap-md">
+      <button
+        class="px-lg py-2 border border-primary text-primary rounded-lg font-label-md hover:bg-primary/5 transition-all" onclick="controllers.settings.loadSettings()">Discard
+        Changes</button>
+      <button id="btnSaveSettings"
+        class="px-lg py-2 bg-primary text-white rounded-lg font-label-md hover:shadow-lg hover:shadow-primary/20 transition-all active:translate-y-[1px]" onclick="controllers.settings.saveChanges()">Save
+        All Changes</button>
+    </div>
+  </header>
+  <!-- Settings Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter flex-1 overflow-hidden">
+    <!-- Navigation Column (Internal) -->
+    <nav class="col-span-1 md:col-span-3 flex flex-col gap-sm overflow-y-auto pr-sm" id="settingsNav">
+      <a class="p-md bg-primary-container text-white rounded-xl flex items-center justify-between group shadow-lg shadow-primary/10 transition-all"
+        href="#company" onclick="controllers.settings.scrollTo('company', this)">
+        <div class="flex items-center gap-md">
+          <span class="material-symbols-outlined">business</span>
+          <span class="font-label-md font-semibold">Company Profile</span>
+        </div>
+        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+      </a>
+      <a class="p-md hover:bg-surface-container-high rounded-xl flex items-center justify-between group transition-colors"
+        href="#operational" onclick="controllers.settings.scrollTo('operational', this)">
+        <div class="flex items-center gap-md">
+          <span
+            class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">settings_applications</span>
+          <span class="font-label-md text-on-surface-variant group-hover:text-primary">Operational Controls</span>
+        </div>
+        <span class="material-symbols-outlined text-[18px] text-outline-variant">chevron_right</span>
+      </a>
+      <a class="p-md hover:bg-surface-container-high rounded-xl flex items-center justify-between group transition-colors"
+        href="#security" onclick="controllers.settings.scrollTo('security', this)">
+        <div class="flex items-center gap-md">
+          <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">verified_user</span>
+          <span class="font-label-md text-on-surface-variant group-hover:text-primary">Security &amp; Access</span>
+        </div>
+        <span class="material-symbols-outlined text-[18px] text-outline-variant">chevron_right</span>
+      </a>
+      <a class="p-md hover:bg-surface-container-high rounded-xl flex items-center justify-between group transition-colors"
+        href="#preferences" onclick="controllers.settings.scrollTo('preferences', this)">
+        <div class="flex items-center gap-md">
+          <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">palette</span>
+          <span class="font-label-md text-on-surface-variant group-hover:text-primary">App Preferences</span>
+        </div>
+        <span class="material-symbols-outlined text-[18px] text-outline-variant">chevron_right</span>
+      </a>
+      <div class="mt-xl pt-xl border-t border-outline-variant px-md hidden md:block">
+        <h4 class="font-label-md text-outline uppercase tracking-widest text-[10px] mb-4">Quick Links</h4>
+        <ul class="space-y-4">
+          <li><a class="text-body-md text-primary flex items-center gap-2 hover:underline" href="#"
+              onclick="app.loadModule('admin')"><span class="material-symbols-outlined text-[16px]">history</span>Audit
+              Logs</a></li>
+          <li><a class="text-body-md text-primary flex items-center gap-2 hover:underline" href="#"
+              onclick="app.loadModule('admin')"><span class="material-symbols-outlined text-[16px]">groups</span>User
+              Directory</a></li>
+        </ul>
+      </div>
+    </nav>
+    <!-- Content Column -->
+    <div class="col-span-1 md:col-span-9 flex flex-col gap-gutter overflow-y-auto pb-xl" id="settingsContent">
+      <!-- Company Profile Section -->
+      <section
+        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm transition-all hover:border-primary/50 hover:bg-surface-variant/10"
+        id="company">
+        <div class="flex items-center justify-between mb-xl">
+          <div>
+            <h4 class="font-title-md text-title-md text-on-surface">Company Profile</h4>
+            <p class="text-body-md text-on-surface-variant">Update your organization's core identification and branding.
+            </p>
+          </div>
+          <button class="p-2 bg-surface-container hover:bg-surface-variant rounded-lg transition-colors">
+            <span class="material-symbols-outlined">edit</span>
+          </button>
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-xl">
+          <div class="space-y-gutter">
+            <div>
+              <label class="block font-label-md text-on-surface-variant mb-1">Company Name</label>
+              <input id="COMPANY_NAME"
+                class="w-full bg-background border border-outline-variant rounded-lg p-md text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                type="text" value="" />
+            </div>
+            <div>
+              <label class="block font-label-md text-on-surface-variant mb-1">Company Registration Number</label>
+              <input id="COMPANY_REG_NUM"
+                class="w-full bg-background border border-outline-variant rounded-lg p-md text-body-md font-data-mono"
+                type="text" value="" />
+            </div>
+          </div>
+          <div
+            class="flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-xl bg-background p-xl hover:bg-surface-container-low transition-colors cursor-pointer">
+            <div class="w-20 h-20 bg-primary-container/10 rounded-full flex items-center justify-center mb-md">
+              <span class="material-symbols-outlined text-primary text-[40px]"
+                style="font-variation-settings: 'FILL' 1;">upload_file</span>
+            </div>
+            <span class="font-label-md text-primary">Upload New Logo</span>
+            <span class="text-[10px] text-outline mt-1">PNG, JPG up to 10MB</span>
+          </div>
+        </div>
+        <div class="mt-xl pt-xl border-t border-outline-variant flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h5 class="font-body-lg font-semibold mb-1">System Language</h5>
+            <p class="text-body-md text-on-surface-variant">Choose the interface language for all users.</p>
+          </div>
+          <div class="flex gap-2 p-1 bg-surface-container-low border border-outline-variant rounded-xl">
+            <button
+              class="px-lg py-2 bg-white text-primary font-label-md rounded-lg shadow-sm border border-outline-variant"
+              onclick="app.toggleLang()">English (US)</button>
+            <button class="px-lg py-2 text-on-surface-variant font-label-md rounded-lg hover:bg-surface-variant/20"
+              onclick="app.toggleLang()">العربية (Arabic)</button>
+          </div>
+        </div>
+      </section>
+      <!-- Operational Controls -->
+      <section
+        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm transition-all hover:border-primary/50 hover:bg-surface-variant/10"
+        id="operational">
+        <h4 class="font-title-md text-title-md text-on-surface mb-xl">Operational Controls</h4>
+        <div class="space-y-xl">
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex gap-md">
+              <div
+                class="w-10 h-10 bg-on-secondary-container/10 text-on-secondary-container rounded-lg flex items-center justify-center">
+                <span class="material-symbols-outlined">payments</span>
+              </div>
+              <div>
+                <h5 class="font-body-lg font-semibold">Automatic Invoicing</h5>
+                <p class="text-body-md text-on-surface-variant">Generate invoices immediately after manufacturing
+                  completion.</p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="AUTO_INVOICING" class="sr-only peer" type="checkbox" />
+              <div class="w-11 h-6 bg-outline-variant peer-checked:bg-primary rounded-full transition-colors relative">
+                <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-5"></div>
+              </div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex gap-md">
+              <div class="w-10 h-10 bg-primary-container/10 text-primary rounded-lg flex items-center justify-center">
+                <span class="material-symbols-outlined">precision_manufacturing</span>
+              </div>
+              <div>
+                <h5 class="font-body-lg font-semibold">Batch Tracking</h5>
+                <p class="text-body-md text-on-surface-variant">Enforce mandatory batch IDs for all raw material
+                  arrivals.</p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="BATCH_TRACKING" class="sr-only peer" type="checkbox" />
+              <div class="w-11 h-6 bg-outline-variant peer-checked:bg-primary rounded-full transition-colors relative">
+                <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-5"></div>
+              </div>
+            </label>
+          </div>
+          <div
+            class="bg-surface-container-low p-md rounded-xl border border-outline-variant flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-md">
+              <span class="material-symbols-outlined text-on-secondary-fixed-variant">info</span>
+              <span class="text-body-md italic text-on-surface-variant">Advanced manufacturing rules can be configured
+                in the module settings.</span>
+            </div>
+            <button class="text-primary font-label-md flex items-center gap-1 hover:underline"
+              onclick="app.loadModule('manufacturing')">
+              Manage Rules <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+            </button>
+          </div>
+        </div>
+      </section>
+      <!-- Security & Access -->
+      <section
+        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm transition-all hover:border-primary/50 hover:bg-surface-variant/10"
+        id="security">
+        <div class="flex items-center gap-md mb-xl">
+          <span class="material-symbols-outlined text-error text-[32px]">security</span>
+          <div>
+            <h4 class="font-title-md text-title-md text-on-surface">Security &amp; Access</h4>
+            <p class="text-body-md text-on-surface-variant">Protect your enterprise data with multi-layered
+              authentication.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+          <div
+            class="p-lg bg-surface border border-outline-variant rounded-xl flex flex-col justify-between min-h-[160px]">
+            <div class="flex justify-between">
+              <h5 class="font-body-lg font-semibold">Multi-Factor (MFA)</h5>
+              <span
+                class="px-2 py-1 bg-on-secondary-container/10 text-on-secondary-container rounded text-[10px] font-bold uppercase tracking-widest">Recommended</span>
+            </div>
+            <p class="text-body-md text-on-surface-variant mb-4 flex-1">Require a verification code in addition to
+              password.</p>
+            <div class="mt-4 flex justify-end">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="REQUIRE_MFA" class="sr-only peer" type="checkbox" />
+                <div class="w-11 h-6 bg-outline-variant peer-checked:bg-primary rounded-full transition-colors relative">
+                  <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-5"></div>
+                </div>
+              </label>
+            </div>
+          </div>
+          <div
+            class="p-lg bg-surface border border-outline-variant rounded-xl flex flex-col justify-between min-h-[160px]">
+            <h5 class="font-body-lg font-semibold">Role Matrix</h5>
+            <p class="text-body-md text-on-surface-variant mb-4 flex-1">Define granular permissions for various user
+              groups.</p>
+            <button
+              class="w-full py-2 border border-outline text-on-surface-variant rounded-lg font-label-md text-center hover:bg-surface-variant/20 transition-all"
+              onclick="app.loadModule('admin')">View Permissions</button>
+          </div>
+        </div>
+      </section>
+      <!-- App Preferences -->
+      <section
+        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm transition-all hover:border-primary/50 hover:bg-surface-variant/10"
+        id="preferences">
+        <h4 class="font-title-md text-title-md text-on-surface mb-xl">App Preferences</h4>
+        <div class="space-y-xl">
+          <div class="pb-md border-b border-outline-variant">
+            <label class="block font-label-md text-on-surface-variant mb-3">Navigation Style</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+              <button
+                class="flex flex-col items-start gap-2 p-md border border-primary bg-primary/5 rounded-xl text-left transition-all nav-style-btn" onclick="controllers.settings.setNavStyle('grid', this)">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">apps</span>
+                  <span class="font-label-md font-semibold text-primary">App Grid</span>
+                </div>
+                <p class="text-[10px] text-on-surface-variant leading-tight">A modular, icon-based launcher</p>
+              </button>
+              <button
+                class="flex flex-col items-start gap-2 p-md border border-outline-variant rounded-xl text-left hover:border-primary transition-all nav-style-btn" onclick="controllers.settings.setNavStyle('sidebar', this)">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-on-surface-variant">side_navigation</span>
+                  <span class="font-label-md text-on-surface-variant">Sidebar Navigation</span>
+                </div>
+                <p class="text-[10px] text-on-surface-variant leading-tight">Classic persistent left-hand navigation</p>
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h5 class="font-body-lg font-semibold">Dark Mode</h5>
+              <p class="text-body-md text-on-surface-variant">Switch the interface to a high-contrast dark theme.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="DARK_MODE" class="sr-only peer" type="checkbox"
+                onchange="document.documentElement.classList.toggle('dark'); controllers.settings.handleDarkModeToggle(this)" />
+              <div class="w-11 h-6 bg-outline-variant peer-checked:bg-primary rounded-full transition-colors relative">
+                <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-5"></div>
+              </div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h5 class="font-body-lg font-semibold">Push Notifications</h5>
+              <p class="text-body-md text-on-surface-variant">Receive alerts for manufacturing delays and approvals.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="PUSH_NOTIFICATIONS" class="sr-only peer" type="checkbox" />
+              <div class="w-11 h-6 bg-outline-variant peer-checked:bg-primary rounded-full transition-colors relative">
+                <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-5"></div>
+              </div>
+            </label>
+          </div>
+          <div class="pt-md">
+            <label class="block font-label-md text-on-surface-variant mb-3">Density Level</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-md">
+              <button
+                class="flex flex-col items-center justify-center gap-2 p-md border border-outline-variant rounded-xl hover:border-primary transition-all text-on-surface-variant hover:text-primary density-btn" onclick="controllers.settings.setDensity('compact', this)">
+                <span class="material-symbols-outlined">density_small</span>
+                <span class="font-label-md">Compact</span>
+              </button>
+              <button
+                class="flex flex-col items-center justify-center gap-2 p-md border border-primary bg-primary/5 text-primary rounded-xl transition-all density-btn" onclick="controllers.settings.setDensity('standard', this)">
+                <span class="material-symbols-outlined">density_medium</span>
+                <span class="font-label-md font-semibold">Standard</span>
+              </button>
+              <button
+                class="flex flex-col items-center justify-center gap-2 p-md border border-outline-variant rounded-xl hover:border-primary transition-all text-on-surface-variant hover:text-primary density-btn" onclick="controllers.settings.setDensity('spacious', this)">
+                <span class="material-symbols-outlined">density_large</span>
+                <span class="font-label-md">Spacious</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

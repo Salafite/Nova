@@ -1,0 +1,1 @@
+﻿window.PayrollCalculationService = class PayrollCalculationService {}

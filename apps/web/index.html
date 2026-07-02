@@ -1,0 +1,462 @@
+<!doctype html>
+<html class="light" lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nova ERP</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@450&display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL,wght@0..1,100..700&display=swap" rel="stylesheet"/>
+<link href="css/dynamic-screen.css" rel="stylesheet"/>
+
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      "colors": {
+              "tertiary-fixed": "#dce2f3",
+              "primary": "#451ebb",
+              "inverse-primary": "#cabeff",
+              "on-tertiary-fixed-variant": "#404754",
+              "surface-container-lowest": "#ffffff",
+              "primary-container": "#5d3fd3",
+              "on-secondary-container": "#006e6e",
+              "surface": "#f9f9ff",
+              "tertiary-fixed-dim": "#c0c7d6",
+              "surface-tint": "#6042d6",
+              "secondary-container": "#90efef",
+              "on-secondary-fixed": "#002020",
+              "on-tertiary-container": "#ced4e4",
+              "surface-dim": "#d3daef",
+              "on-primary-container": "#d8ceff",
+              "surface-container-low": "#f1f3ff",
+              "outline-variant": "#c9c4d7",
+              "on-tertiary": "#ffffff",
+              "error-container": "#ffdad6",
+              "tertiary": "#3d4551",
+              "on-surface-variant": "#484554",
+              "surface-bright": "#f9f9ff",
+              "primary-fixed": "#e6deff",
+              "on-surface": "#141b2b",
+              "on-background": "#141b2b",
+              "inverse-surface": "#293040",
+              "on-primary": "#ffffff",
+              "on-secondary-fixed-variant": "#004f4f",
+              "on-primary-fixed": "#1c0062",
+              "background": "#f9f9ff",
+              "outline": "#797586",
+              "surface-container-high": "#e1e8fd",
+              "surface-container": "#e9edff",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#4723be",
+              "secondary-fixed-dim": "#76d6d5",
+              "on-tertiary-fixed": "#151c27",
+              "on-error-container": "#93000a",
+              "secondary": "#006a6a",
+              "on-error": "#ffffff",
+              "secondary-fixed": "#93f2f2",
+              "inverse-on-surface": "#edf0ff",
+              "tertiary-container": "#555c69",
+              "surface-variant": "#dce2f7",
+              "error": "#ba1a1a",
+              "surface-container-highest": "#dce2f7",
+              "primary-fixed-dim": "#cabeff"
+      },
+      "borderRadius": {
+              "DEFAULT": "0.125rem",
+              "lg": "0.25rem",
+              "xl": "0.5rem",
+              "full": "0.75rem"
+      },
+      "spacing": {
+              "md": "16px",
+              "margin-mobile": "16px",
+              "xs": "4px",
+              "lg": "24px",
+              "base": "4px",
+              "gutter": "16px",
+              "sm": "8px",
+              "xl": "32px",
+              "max-width": "1440px",
+              "margin-desktop": "32px"
+      },
+      "fontFamily": {
+              "title-md": ["Inter"],
+              "label-md": ["Inter"],
+              "headline-lg-mobile": ["Inter"],
+              "body-md": ["Inter"],
+              "display-lg": ["Inter"],
+              "headline-lg": ["Inter"],
+              "data-mono": ["JetBrains Mono"],
+              "body-lg": ["Inter"]
+      },
+      "fontSize": {
+              "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+              "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+              "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+              "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+              "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+              "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+              "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "450"}],
+              "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+      }
+    },
+  },
+}
+</script>
+<style>
+body {
+    background-color: #F9FAFB;
+    color: #141B2B;
+}
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+}
+.active-tab {
+    background-color: #5d3fd3;
+    color: #d8ceff;
+}
+.erp-table tr:hover {
+    background-color: rgba(69, 30, 187, 0.02);
+}
+.surface-card {
+    background-color: #FFFFFF;
+    border: 1px solid #E5E7EB;
+}
+.press-effect:active {
+    transform: scale(0.98);
+}
+html[dir="rtl"] .ml-\[240px\] { margin-left: 0; margin-right: 240px; }
+html[dir="rtl"] .fixed.left-0 { left: auto; right: 0; }
+html[dir="rtl"] aside { border-right: none; border-left: 1px solid #c9c4d7; }
+html[dir="rtl"] .pl-xl { padding-left: 16px; padding-right: 32px; }
+html[dir="rtl"] .absolute.left-sm { left: auto; right: 8px; }
+html[dir="rtl"] .text-right { text-align: left; }
+html[dir="rtl"] #content::-webkit-scrollbar { display: none; }
+html[dir="rtl"] #content { scrollbar-width: none; }
+
+.auth-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #F9FAFB;
+    z-index: 9999;
+    display: none;
+    overflow-y: auto;
+}
+.auth-overlay.active {
+    display: block;
+}
+</style>
+</head>
+<body class="font-body-md text-body-md overflow-hidden h-screen flex transition-all duration-300">
+
+<div class="app-shell flex w-full h-full" style="display:none;">
+    <!-- NavigationDrawer -->
+    <aside class="fixed left-0 top-[64px] h-[calc(100vh-64px)] w-[240px] border-r border-outline-variant bg-surface flex flex-col py-lg z-40 transition-transform duration-300" id="navigation-drawer">
+        <nav class="flex-1 space-y-xs overflow-y-auto" id="nav"></nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-0 lg:ml-[240px] flex-1 flex flex-col h-screen pt-[64px] bg-background transition-all duration-300">
+        <!-- TopAppBar -->
+        <header class="fixed left-0 top-0 flex justify-between items-center w-full px-margin-desktop h-[64px] bg-surface-container-lowest border-b border-outline-variant z-50">
+            <div class="flex items-center gap-md">
+                <button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors press-effect p-xs hover:bg-surface-container-low rounded-full" onclick="app.toggleSidebar()">menu</button>
+                <span class="font-headline-lg text-[24px] font-bold text-primary mr-md lg:mr-xl hidden sm:block">Nova ERP</span>
+                <h1 class="font-title-md text-title-md text-on-surface-variant font-medium sm:border-l sm:border-outline-variant sm:pl-md" id="page-title"></h1>
+            </div>
+            <div class="flex items-center gap-lg">
+                <!-- Search Bar -->
+                <div class="relative hidden lg:block w-96 group">
+                    <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">search</span>
+                    <input class="w-full pl-xl pr-md py-xs bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none text-body-md" id="globalSearch" placeholder="Search modules..." oninput="app.search(this.value)" type="text"/>
+                </div>
+                <div class="flex items-center gap-md">
+                    <!-- Language Toggle -->
+                    <button class="flex items-center gap-xs text-label-md font-bold text-on-surface-variant hover:text-primary transition-colors press-effect bg-surface-container-low px-sm py-xs rounded-lg border border-outline-variant" onclick="app.toggleLang()">
+                        <span id="lang-label">EN/AR</span>
+                    </button>
+                    
+                    <span class="font-label-md text-on-surface-variant" id="userRole"></span>
+                    <button id="lblLogoutBtn" class="font-label-md text-error hover:underline transition-colors press-effect p-xs" onclick="app.logout()">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Scrollable Dashboard Content -->
+        <div class="flex-1 overflow-y-auto p-margin-desktop space-y-lg" id="content"></div>
+    </main>
+</div>
+
+<div class="auth-overlay" id="authOverlay"></div>
+
+<!-- Scripts -->
+<script src="js/services/config.js"></script>
+<script src="js/badges/badges.js"></script>
+<script src="js/models/Product.js"></script>
+<script src="js/models/Customer.js"></script>
+<script src="js/models/Supplier.js"></script>
+<script src="js/models/Lead.js"></script>
+<script src="js/models/Opportunity.js"></script>
+<script src="js/models/InventoryEntry.js"></script>
+<script src="js/models/SalesOrder.js"></script>
+<script src="js/models/Quotation.js"></script>
+<script src="js/models/PurchaseOrder.js"></script>
+<script src="js/services/InventoryService.js"></script>
+<script src="js/services/SalesService.js"></script>
+<script src="js/services/QuotationService.js"></script>
+<script src="js/services/PurchaseService.js"></script>
+<script src="js/services/CustomerService.js"></script>
+<script src="js/services/ProductService.js"></script>
+<script src="js/services/FinanceService.js"></script>
+<script src="js/services/PosService.js"></script>
+<script src="js/services/SupplierService.js"></script>
+<script src="js/services/LeadService.js"></script>
+<script src="js/services/OpportunityService.js"></script>
+<script src="js/services/ManufacturingService.js"></script>
+<script src="js/services/QualityService.js"></script>
+<script src="js/services/ShopfloorService.js"></script>
+<script src="js/services/PlanningService.js"></script>
+<script src="js/services/AdminService.js"></script>
+<script src="js/services/ModuleRegistryService.js"></script>
+<script src="js/services/WarehouseService.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/clients/ApiClient.js"></script>
+<script src="js/clients/ProductClient.js"></script>
+<script src="js/clients/CustomerClient.js"></script>
+<script src="js/clients/SupplierClient.js"></script>
+<script src="js/clients/InventoryClient.js"></script>
+<script src="js/clients/SalesOrderClient.js"></script>
+<script src="js/clients/PurchaseOrderClient.js"></script>
+<script src="js/services/store.js"></script>
+<script src="js/utils/i18n.js?v=2"></script>
+<script src="js/template-loader.js?v=2"></script>
+<script src="js/modules/core.js"></script>
+<script src="js/modules/shell.js?v=2"></script>
+<script src="js/modules/auth-ui.js"></script>
+<script src="js/modules/notifications.js"></script>
+<script src="js/app.js?v=2"></script>
+<script src="js/components/DynamicScreen.js"></script>
+    <script src="js/models/DepartmentAssignment.js"></script>
+    <script src="js/models/Designation.js"></script>
+    <script src="js/models/EmergencyContact.js"></script>
+    <script src="js/models/Employee.js"></script>
+    <script src="js/models/EmployeeDocument.js"></script>
+    <script src="js/models/EmploymentContract.js"></script>
+    <script src="js/services/ContractService.js"></script>
+    <script src="js/services/EmployeeDocumentService.js"></script>
+    <script src="js/services/EmployeeService.js"></script>
+    <script src="js/services/OrganizationChartService.js"></script>
+    <script src="js/controllers/hr.js"></script>
+    <script src="js/models/Attendance.js"></script>
+    <script src="js/models/OvertimeEntry.js"></script>
+    <script src="js/models/Shift.js"></script>
+    <script src="js/models/TimeLog.js"></script>
+    <script src="js/services/AttendanceService.js"></script>
+    <script src="js/services/ShiftService.js"></script>
+    <script src="js/services/TimeTrackingService.js"></script>
+    <script src="js/controllers/attendance.js"></script>
+    <script src="js/models/LeaveBalance.js"></script>
+    <script src="js/models/LeaveRequest.js"></script>
+    <script src="js/models/LeaveType.js"></script>
+    <script src="js/services/LeaveApprovalService.js"></script>
+    <script src="js/services/LeaveService.js"></script>
+    <script src="js/controllers/leave.js"></script>
+    <script src="js/models/Deduction.js"></script>
+    <script src="js/models/Earning.js"></script>
+    <script src="js/models/Payroll.js"></script>
+    <script src="js/models/Payslip.js"></script>
+    <script src="js/services/PayrollCalculationService.js"></script>
+    <script src="js/services/PayrollService.js"></script>
+    <script src="js/services/PayslipService.js"></script>
+    <script src="js/controllers/payroll.js"></script>
+    <script src="js/models/Candidate.js"></script>
+    <script src="js/models/Interview.js"></script>
+    <script src="js/models/JobOpening.js"></script>
+    <script src="js/models/OnboardingPlan.js"></script>
+    <script src="js/services/InterviewService.js"></script>
+    <script src="js/services/OnboardingService.js"></script>
+    <script src="js/services/RecruitmentService.js"></script>
+    <script src="js/controllers/recruitment.js"></script>
+    <script src="js/models/Asset.js"></script>
+    <script src="js/models/Equipment.js"></script>
+    <script src="js/models/MaintenanceRequest.js"></script>
+    <script src="js/models/MaintenanceWorkOrder.js"></script>
+    <script src="js/models/SparePart.js"></script>
+    <script src="js/services/AssetService.js"></script>
+    <script src="js/services/MaintenanceService.js"></script>
+    <script src="js/services/CorrectiveMaintenanceService.js"></script>
+    <script src="js/services/DowntimeTrackingService.js"></script>
+    <script src="js/services/EquipmentAnalyticsService.js"></script>
+    <script src="js/services/PreventiveMaintenanceService.js"></script>
+    <script src="js/controllers/maintenance.js"></script>
+    <script src="js/models/Milestone.js"></script>
+    <script src="js/models/Project.js"></script>
+    <script src="js/models/Task.js"></script>
+    <script src="js/services/ProjectService.js"></script>
+    <script src="js/services/TaskService.js"></script>
+    <script src="js/controllers/project.js"></script>
+    <script src="js/models/Allocation.js"></script>
+    <script src="js/models/Resource.js"></script>
+    <script src="js/services/CapacityService.js"></script>
+    <script src="js/services/ResourcePlanningService.js"></script>
+    <script src="js/controllers/resource.js"></script>
+    <script src="js/models/TimeEntry.js"></script>
+    <script src="js/models/Timesheet.js"></script>
+    <script src="js/services/TimesheetService.js"></script>
+    <script src="js/services/UtilizationService.js"></script>
+    <script src="js/controllers/timesheets.js"></script>
+    <script src="js/models/FieldServiceJob.js"></script>
+    <script src="js/models/ServiceRequest.js"></script>
+    <script src="js/services/DispatchService.js"></script>
+    <script src="js/services/ServiceManagementService.js"></script>
+    <script src="js/controllers/service.js"></script>
+    <script src="js/models/Contract.js"></script>
+    <script src="js/models/SLA.js"></script>
+    <script src="js/services/ContractService.js"></script>
+    <script src="js/services/SLAService.js"></script>
+    <script src="js/controllers/contracts.js"></script>
+    <script src="js/models/Dataset.js"></script>
+    <script src="js/models/DataWarehouse.js"></script>
+    <script src="js/models/KPI.js"></script>
+    <script src="js/services/AnalyticsService.js"></script>
+    <script src="js/services/ETLService.js"></script>
+    <script src="js/controllers/bi.js"></script>
+    <script src="js/models/ExecutiveDashboard.js"></script>
+    <script src="js/models/ExecutiveKPI.js"></script>
+    <script src="js/services/DashboardService.js"></script>
+    <script src="js/controllers/executive.js"></script>
+    <script src="js/models/InventoryAnalytics.js"></script>
+    <script src="js/models/SalesAnalytics.js"></script>
+    <script src="js/services/OperationalAnalyticsService.js"></script>
+    <script src="js/controllers/operational.js"></script>
+    <script src="js/models/DemandForecast.js"></script>
+    <script src="js/models/RevenueForecast.js"></script>
+    <script src="js/services/ForecastService.js"></script>
+    <script src="js/controllers/forecast.js"></script>
+    <script src="js/models/Prediction.js"></script>
+    <script src="js/models/Recommendation.js"></script>
+    <script src="js/services/InsightService.js"></script>
+    <script src="js/controllers/insights.js"></script>
+    <script src="js/models/MobileDevice.js"></script>
+    <script src="js/models/MobileSession.js"></script>
+    <script src="js/services/MobileApiService.js"></script>
+    <script src="js/services/SyncService.js"></script>
+    <script src="js/controllers/mobile.js"></script>
+    <script src="js/models/MobileCart.js"></script>
+    <script src="js/models/MobileOrder.js"></script>
+    <script src="js/services/MobilePOSService.js"></script>
+    <script src="js/services/OfflineSyncService.js"></script>
+    <script src="js/controllers/mobilepos.js"></script>
+    <script src="js/models/OnlineOrder.js"></script>
+    <script src="js/models/StoreConnection.js"></script>
+    <script src="js/services/CatalogSyncService.js"></script>
+    <script src="js/services/ECommerceService.js"></script>
+    <script src="js/controllers/ecommerce.js"></script>
+    <script src="js/models/Integration.js"></script>
+    <script src="js/models/Webhook.js"></script>
+    <script src="js/services/PaymentGatewayService.js"></script>
+    <script src="js/services/ShippingService.js"></script>
+    <script src="js/controllers/integrations.js"></script>
+    <script src="js/models/ApiClient.js"></script>
+    <script src="js/models/ApiKey.js"></script>
+    <script src="js/services/ApiGatewayService.js"></script>
+    <script src="js/services/DeveloperPortalService.js"></script>
+    <script src="js/controllers/api.js"></script>
+    <script src="js/models/Subscription.js"></script>
+    <script src="js/models/Tenant.js"></script>
+    <script src="js/services/ProvisioningService.js"></script>
+    <script src="js/services/TenantService.js"></script>
+    <script src="js/controllers/tenant.js"></script>
+    <script src="js/models/BusinessRule.js"></script>
+    <script src="js/models/Workflow.js"></script>
+    <script src="js/services/AutomationService.js"></script>
+    <script src="js/services/WorkflowEngineService.js"></script>
+    <script src="js/controllers/workflow.js"></script>
+    <script src="js/models/Document.js"></script>
+    <script src="js/models/DocumentVersion.js"></script>
+    <script src="js/services/DocumentService.js"></script>
+    <script src="js/services/StorageService.js"></script>
+    <script src="js/controllers/documents.js"></script>
+    <script src="js/models/CompliancePolicy.js"></script>
+    <script src="js/models/RiskAssessment.js"></script>
+    <script src="js/services/ComplianceService.js"></script>
+    <script src="js/services/RiskService.js"></script>
+    <script src="js/controllers/governance.js"></script>
+    <script src="js/models/DeploymentProfile.js"></script>
+    <script src="js/models/SystemHealth.js"></script>
+    <script src="js/services/PerformanceService.js"></script>
+    <script src="js/services/PlatformService.js"></script>
+    <script src="js/controllers/platform.js"></script>
+    <script src="js/models/Quotation.js"></script>
+    <script src="js/services/QuotationService.js"></script>
+    <script src="js/controllers/quotations.js"></script>
+    <script src="js/models/PurchaseRequisition.js"></script>
+    <script src="js/services/PurchaseRequisitionService.js"></script>
+    <script src="js/controllers/purchase_requisitions.js"></script>
+    <script src="js/models/RFQ.js"></script>
+    <script src="js/services/RFQService.js"></script>
+    <script src="js/controllers/rfqs.js"></script>
+    <script src="js/models/GoodsReceipt.js"></script>
+    <script src="js/services/GoodsReceiptService.js"></script>
+    <script src="js/controllers/goods_receipt.js"></script>
+    <script src="js/models/Delivery.js"></script>
+    <script src="js/services/DeliveryService.js"></script>
+    <script src="js/controllers/delivery.js"></script>
+    <script src="js/models/SalesReturn.js"></script>
+    <script src="js/services/SalesReturnService.js"></script>
+    <script src="js/controllers/sales_returns.js"></script>
+    <script src="js/models/PurchaseReturn.js"></script>
+    <script src="js/services/PurchaseReturnService.js"></script>
+    <script src="js/models/TaxRate.js"></script>
+    <script src="js/services/TaxRateService.js"></script>
+    <script src="js/controllers/tax_rates.js"></script>
+    <script src="js/controllers/purchase_returns.js"></script>
+    <script src="js/models/PriceList.js"></script>
+    <script src="js/services/PriceListService.js"></script>
+    <script src="js/controllers/price_lists.js"></script>
+    <script src="js/models/Invoice.js"></script>
+    <script src="js/services/InvoiceService.js"></script>
+    <script src="js/controllers/invoices.js"></script>
+    <script src="js/models/Payment.js"></script>
+    <script src="js/services/PaymentService.js"></script>
+    <script src="js/controllers/payments.js"></script>
+    <script src="js/models/SerialNumber.js"></script>
+    <script src="js/services/SerialNumberService.js"></script>
+    <script src="js/controllers/serial_numbers.js"></script>
+    <script src="js/models/BatchNumber.js"></script>
+    <script src="js/services/BatchNumberService.js"></script>
+    <script src="js/controllers/batch_numbers.js"></script>
+    <script src="js/models/ChartOfAccount.js"></script>
+    <script src="js/services/ChartOfAccountService.js"></script>
+    <script src="js/controllers/chart_of_accounts.js"></script>
+    <script src="js/models/JournalEntry.js"></script>
+    <script src="js/services/JournalEntryService.js"></script>
+    <script src="js/controllers/journal_entries.js"></script>
+    <script src="js/models/PaymentTerm.js"></script>
+    <script src="js/services/PaymentTermService.js"></script>
+    <script src="js/controllers/payment_terms.js"></script>
+    <script src="js/models/PaymentMethod.js"></script>
+    <script src="js/services/PaymentMethodService.js"></script>
+    <script src="js/controllers/payment_methods.js"></script>
+    <script src="js/controllers/leads.js"></script>
+    <script src="js/controllers/opportunities.js"></script>
+    <script src="js/models/Notification.js"></script>
+    <script src="js/models/Notification.js"></script>
+    <script src="js/services/NotificationService.js"></script>
+    <script src="js/controllers/notifications.js"></script>
+    <script src="js/models/ScheduledTask.js"></script>
+    <script src="js/services/ScheduledTaskService.js"></script>
+    <script src="js/controllers/scheduled_tasks.js"></script>
+    <script src="js/services/AuditLogService.js"></script>
+    <script src="js/controllers/audit_log.js"></script>
+<script src="js/controllers/module_manager.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>
