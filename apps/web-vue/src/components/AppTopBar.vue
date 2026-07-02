@@ -5,6 +5,10 @@
     </button>
     <h2 class="page-title">{{ title }}</h2>
     <div class="spacer"></div>
+    <LocaleSwitcher />
+    <button class="theme-btn" @click="theme.toggle" :aria-label="theme.dark ? 'Light mode' : 'Dark mode'" :title="theme.dark ? 'Light mode' : 'Dark mode'">
+      <span class="material-symbols-outlined">{{ theme.dark ? 'light_mode' : 'dark_mode' }}</span>
+    </button>
     <span class="user-role">{{ auth.role }}</span>
     <button class="logout-btn" @click="logout" aria-label="Log out">{{ t('logout') }}</button>
   </header>
@@ -14,11 +18,14 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useI18n } from '../composables/useI18n.js'
+import { useTheme } from '../composables/useTheme.js'
+import LocaleSwitcher from './LocaleSwitcher.vue'
 
 defineProps({ title: { type: String, default: '' } })
 defineEmits(['toggle'])
 
 const { t } = useI18n()
+const theme = useTheme()
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -29,12 +36,14 @@ function logout() {
 </script>
 
 <style scoped>
-.topbar { height: 56px; display: flex; align-items: center; padding: 0 24px; gap: 16px; background: #fff; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
-.menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px; color: #333; border-radius: 8px; }
-.menu-btn:hover { background: #f0f0f0; }
-.page-title { font-size: 18px; font-weight: 600; color: #1a1a2e; }
+.topbar { height: 56px; display: flex; align-items: center; padding: 0 24px; gap: 16px; background: var(--bg-surface); border-bottom: 1px solid var(--border-default); flex-shrink: 0; }
+.menu-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 4px; color: var(--text-secondary); border-radius: 8px; }
+.menu-btn:hover { background: var(--bg-surface-hover); }
+.page-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
 .spacer { flex: 1; }
-.user-role { font-size: 13px; color: #666; padding: 4px 12px; background: #f5f5f5; border-radius: 4px; }
+.user-role { font-size: 13px; color: var(--text-muted); padding: 4px 12px; background: var(--bg-surface-hover); border-radius: 4px; }
+.theme-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px; color: var(--text-muted); border-radius: 8px; display: flex; align-items: center; }
+.theme-btn:hover { background: var(--bg-surface-hover); color: var(--color-primary); }
 .logout-btn { font-size: 13px; color: #ba1a1a; background: none; border: 1px solid #ba1a1a; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
 .logout-btn:hover { background: #ba1a1a; color: #fff; }
 </style>

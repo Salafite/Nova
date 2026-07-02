@@ -49,6 +49,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../../api/client.js'
 import { useI18n } from '../../composables/useI18n.js'
+import { useWebSocket } from '../../composables/useWebSocket.js'
+import { useAuthStore } from '../../stores/auth.js'
 import SkeletonTable from '../../components/SkeletonTable.vue'
 import ErrorState from '../../components/ErrorState.vue'
 
@@ -58,6 +60,15 @@ const error = ref('')
 const items = ref([])
 const products = ref([])
 const warehouses = ref([])
+
+const auth = useAuthStore()
+const businessId = auth.user?.business_id || '1'
+const wsInventory = useWebSocket(`/ws/inventory/${businessId}`)
+wsInventory.on('stock_updated', () => {
+  console.log('[WS] stock_updated received, refreshing inventory')
+  loadLookups()
+  load()
+})
 
 function productSku(id) {
   const p = products.value.find(x => x.id === id)

@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from packages.auth.schemas import LoginRequest, RefreshRequest, TokenResponse, CurrentUserResponse
-from packages.auth.service import login, refresh
+from packages.auth.schemas import (
+    LoginRequest, RefreshRequest, TokenResponse, CurrentUserResponse,
+    SignupRequest, SignupResponse, InviteRequest, InviteResponse,
+)
+from packages.auth.service import login, refresh, signup, invite_user
 from packages.auth.deps import get_current_user
 
 router = APIRouter(tags=['auth'])
@@ -31,4 +34,27 @@ def me_endpoint(user: dict = Depends(get_current_user)):
         'email': user['email'],
         'role': user['role'],
         'permissions': user['permissions'] or [],
+        'business_id': user.get('business_id'),
     }
+
+
+@router.post('/signup', response_model=SignupResponse)
+def signup_endpoint(body: SignupRequest):
+    result = signup(body.business_name, body.username, body.password, body.full_name, body.email)
+    if not result:
+        existing_user = body.username
+        raise HTTPException(status.HTTP_409_CONFLICT, f'User or email already exists: {existing_user}')
+    return result
+
+
+@router.post('/invite', response_model=InviteResponse)
+def invite_endpoint(body: InviteRequest, user: dict = Depends(get_current_user)):
+    if user['role'] != 'Admin':
+        raise HTTPException(status.HTTP_403_FORBIDDEN, 'Only admins can invite users')
+    business_id = user.get('business_id')
+    if not business_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'User is not associated with a business')
+    result = invite_user(body.email, body.role, body.full_name, business_id, user['id'])
+    if not result:
+        raise HTTPException(status.HTTP_409_CONFLICT, 'User with this email already exists in this business')
+    return result

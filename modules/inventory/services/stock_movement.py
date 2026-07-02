@@ -3,7 +3,7 @@ from modules.core.repositories.base import CrudRepository
 STOCK_REPO = CrudRepository('T0009', business_columns=['id', 'product_id', 'warehouse_id', 'qty', 'reserved_qty', 'reorder_level'])
 
 def _get_stock(product_id, warehouse_id):
-    rows = STOCK_REPO.list(filters={'product_id': product_id, 'warehouse_id': warehouse_id, 'is_active': True})
+    rows = STOCK_REPO.list(filters={'product_id': product_id, 'warehouse_id': warehouse_id})
     return rows[0] if rows else None
 
 class StockMovementService:
@@ -11,7 +11,7 @@ class StockMovementService:
         self.repo = CrudRepository('T0064', business_columns=['id', 'product_id', 'warehouse_id', 'movement_type', 'reference_type', 'reference_id', 'qty_change', 'balance_after', 'description', 'movement_date'])
 
     def record_movement(self, product_id, warehouse_id, movement_type, qty_change, reference_type=None, reference_id=None, description=None, user_id=None):
-        stock_rows = STOCK_REPO.list(filters={'product_id': product_id, 'warehouse_id': warehouse_id, 'is_active': True})
+        stock_rows = STOCK_REPO.list(filters={'product_id': product_id, 'warehouse_id': warehouse_id})
         current_qty = stock_rows[0]['qty'] if stock_rows else 0
         new_balance = current_qty + qty_change
         if new_balance < 0:

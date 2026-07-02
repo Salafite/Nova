@@ -1,4 +1,4 @@
-from models import InstallPaymentCreate, InstallPaymentUpdate, InstallPaymentResponse
+from modules.sales.models.sales import InstallPaymentCreate, InstallPaymentUpdate, InstallPaymentResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router

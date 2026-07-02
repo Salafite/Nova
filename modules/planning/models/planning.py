@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import date
 from pydantic import Field
-from models.factory import crud_model
+from modules.core.models.factory import crud_model
 
 
 PlanCreate, PlanUpdate, PlanResponse = crud_model('Plan', [

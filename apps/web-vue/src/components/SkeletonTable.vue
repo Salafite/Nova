@@ -19,11 +19,11 @@ const columnWidths = ['140px', '100px', '180px', '80px', '120px', '90px', '150px
 </script>
 
 <style scoped>
-.skeleton-table { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+.skeleton-table { border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; }
 .skeleton-header, .skeleton-row { display: flex; gap: 16px; padding: 14px 20px; }
-.skeleton-header { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
-.skeleton-row { border-bottom: 1px solid #f3f4f6; }
+.skeleton-header { background: var(--bg-surface-low); border-bottom: 1px solid var(--border-default); }
+.skeleton-row { border-bottom: 1px solid var(--border-light); }
 .skeleton-row:last-child { border-bottom: none; }
-.skeleton-cell { height: 14px; background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+.skeleton-cell { height: 14px; background: linear-gradient(90deg, var(--skeleton-from, #e5e7eb) 25%, var(--skeleton-to, #f3f4f6) 50%, var(--skeleton-from, #e5e7eb) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>

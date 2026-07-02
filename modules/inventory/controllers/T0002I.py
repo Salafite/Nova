@@ -1,4 +1,4 @@
-from models import UOMConvCreate, UOMConvUpdate, UOMConvResponse
+from modules.inventory.models.product import UOMConvCreate, UOMConvUpdate, UOMConvResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router

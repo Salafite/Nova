@@ -1,4 +1,4 @@
-from models import QCInspectionCreate, QCInspectionUpdate, QCInspectionResponse
+from modules.manufacturing.models.manufacturing import QCInspectionCreate, QCInspectionUpdate, QCInspectionResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router

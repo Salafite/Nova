@@ -59,8 +59,8 @@ function navigate(item) {
   position: relative;
   z-index: 1000;
   width: 240px;
-  background: #1a1a2e;
-  color: #ccc;
+  background: var(--sidebar-bg, #1a1a2e);
+  color: var(--sidebar-text, #ccc);
   display: flex;
   flex-direction: column;
   transition: width 0.3s;
@@ -68,15 +68,15 @@ function navigate(item) {
   flex-shrink: 0;
 }
 .sidebar.collapsed { width: 64px; }
-.logo { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px; font-weight: 700; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.logo { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px; font-weight: 700; color: var(--sidebar-logo, #fff); border-bottom: 1px solid var(--sidebar-border, rgba(255,255,255,0.08)); }
 nav { flex: 1; overflow-y: auto; padding: 8px 0; }
-.nav-section { padding: 8px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); }
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 16px; color: #ccc; text-decoration: none; cursor: pointer; border-left: 3px solid transparent; margin: 2px 8px; border-radius: 8px; transition: all 0.15s; }
-.nav-item:hover { background: rgba(255,255,255,0.06); }
-.nav-item.active { background: rgba(93,63,211,0.2); color: #cabeff; border-left-color: #5d3fd3; }
-.sidebar-footer { padding: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
-.collapse-btn { width: 100%; padding: 8px; background: none; border: none; color: #ccc; cursor: pointer; border-radius: 8px; }
-.collapse-btn:hover { background: rgba(255,255,255,0.06); }
+.nav-section { padding: 8px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--sidebar-muted, rgba(255,255,255,0.3)); }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 16px; color: var(--sidebar-text, #ccc); text-decoration: none; cursor: pointer; border-left: 3px solid transparent; margin: 2px 8px; border-radius: 8px; transition: all 0.15s; }
+.nav-item:hover { background: var(--sidebar-hover, rgba(255,255,255,0.06)); }
+.nav-item.active { background: var(--sidebar-active-bg, rgba(93,63,211,0.2)); color: var(--sidebar-active-text, #cabeff); border-left-color: var(--color-primary); }
+.sidebar-footer { padding: 8px; border-top: 1px solid var(--sidebar-border, rgba(255,255,255,0.08)); }
+.collapse-btn { width: 100%; padding: 8px; background: none; border: none; color: var(--sidebar-text, #ccc); cursor: pointer; border-radius: 8px; }
+.collapse-btn:hover { background: var(--sidebar-hover, rgba(255,255,255,0.06)); }
 .sidebar.collapsed .collapse-btn span { transform: rotate(180deg); }
 
 @media (max-width: 767px) {

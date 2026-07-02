@@ -10,6 +10,25 @@
       </button>
     </div>
 
+    <div class="nav-cards mb-6">
+      <router-link to="/purchasing/requisitions" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">receipt_long</span>
+        <span class="nav-label">{{ t('pr-title', 'Requisitions') }}</span>
+      </router-link>
+      <router-link to="/purchasing/rfqs" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">request_quote</span>
+        <span class="nav-label">{{ t('rfq-title', 'RFQs') }}</span>
+      </router-link>
+      <router-link to="/purchasing" class="nav-card nav-card-active">
+        <span class="material-symbols-outlined nav-icon">receipt</span>
+        <span class="nav-label">{{ t('purchase-orders', 'Purchase Orders') }}</span>
+      </router-link>
+      <router-link to="/purchasing/returns" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">assignment_return</span>
+        <span class="nav-label">{{ t('returns-title', 'Returns') }}</span>
+      </router-link>
+    </div>
+
     <SkeletonTable v-if="loading" />
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <div v-else-if="!items.length" class="empty-state">
@@ -34,7 +53,7 @@
           </thead>
           <tbody>
             <tr v-for="item in items" :key="item.id">
-              <td class="cell-order">{{ item.order_number }}</td>
+              <td class="cell-order"><a class="order-link" @click="router.push(`/purchasing/orders/${item.id}`)">{{ item.order_number }}</a></td>
               <td>{{ supplierName(item.supplier_id) }}</td>
               <td class="col-num"><strong>${{ (item.total || 0).toFixed(2) }}</strong></td>
               <td class="text-center">
@@ -121,6 +140,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../../api/client.js'
 import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
@@ -130,6 +150,7 @@ import ErrorState from '../../components/ErrorState.vue'
 
 const { show: toast } = useToast()
 const { t, dir } = useI18n()
+const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const items = ref([])
@@ -292,6 +313,16 @@ onMounted(() => { loadSuppliers(); load() })
 select.form-input { appearance: auto; }
 textarea.form-input { resize: vertical; }
 .required { color: #dc2626; }
+
+.nav-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.nav-card { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 18px 12px; transition: all 0.15s; color: #555; }
+.nav-card:hover { border-color: #5d3fd3; background: #f8f7ff; color: #5d3fd3; }
+.nav-card-active { border-color: #5d3fd3; background: #f0eeff; color: #5d3fd3; }
+.nav-card-active .nav-label { font-weight: 700; }
+.nav-icon { font-size: 28px; }
+.nav-label { font-size: 12px; font-weight: 600; text-align: center; }
+.order-link { color: #5d3fd3; cursor: pointer; text-decoration: none; }
+.order-link:hover { text-decoration: underline; }
 
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }

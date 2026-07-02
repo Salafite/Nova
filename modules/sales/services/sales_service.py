@@ -2,6 +2,7 @@ from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 
 VALID_SALES_STATUS_TRANSITIONS = {
+    'Draft': ['Confirmed', 'Cancelled'],
     'Pending': ['Confirmed', 'Cancelled'],
     'Confirmed': ['Shipped', 'Cancelled'],
     'Shipped': ['Delivered', 'Cancelled'],
@@ -51,11 +52,11 @@ class SalesOrderService(CrudService):
                 if new_status not in allowed:
                     from fastapi import HTTPException
                     raise HTTPException(400, f'Invalid status transition: {old_status} -> {new_status}. Allowed: {allowed}')
-                if new_status == 'Confirmed' and old_status == 'Pending':
+                if new_status == 'Confirmed' and old_status in ('Draft', 'Pending'):
                     self._reserve_order_stock(id_val)
                 elif new_status == 'Delivered' and old_status == 'Shipped':
                     self._create_invoice_from_order(id_val)
-                elif new_status == 'Cancelled' and old_status in ('Pending', 'Confirmed'):
+                elif new_status == 'Cancelled' and old_status in ('Draft', 'Pending', 'Confirmed'):
                     self._release_order_stock(id_val)
         return super().update(id_val, payload)
 

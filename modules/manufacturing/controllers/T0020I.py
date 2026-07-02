@@ -1,4 +1,4 @@
-from models import ShopJobCreate, ShopJobUpdate, ShopJobResponse
+from modules.manufacturing.models.manufacturing import ShopJobCreate, ShopJobUpdate, ShopJobResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router

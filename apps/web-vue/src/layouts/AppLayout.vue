@@ -18,6 +18,7 @@
           </a>
         </nav>
         <div class="grid-actions">
+          <LocaleSwitcher />
           <span class="grid-user">{{ userLabel }}</span>
           <button class="grid-logout" @click="logout">
             <span class="material-symbols-outlined">logout</span>
@@ -47,6 +48,7 @@ import { useToast } from '../composables/useToast.js'
 import { useI18n } from '../composables/useI18n.js'
 import AppSidebar from '../components/AppSidebar.vue'
 import AppTopBar from '../components/AppTopBar.vue'
+import LocaleSwitcher from '../components/LocaleSwitcher.vue'
 import { useNavStore } from '../stores/nav.js'
 import { useAuthStore } from '../stores/auth.js'
 
@@ -99,7 +101,7 @@ onMounted(() => { navStore.load() })
 
 <style scoped>
 .app-shell { display: flex; height: 100vh; }
-.main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f5f5f9; }
+.main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-body); }
 .content { flex: 1; overflow-y: auto; padding: 24px; }
 .content-wide { padding: 0; }
 
@@ -107,8 +109,8 @@ onMounted(() => { navStore.load() })
   display: flex;
   align-items: center;
   height: 56px;
-  background: #1a1a2e;
-  color: #ccc;
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
   padding: 0 16px;
   gap: 24px;
   flex-shrink: 0;

@@ -33,11 +33,14 @@ def confirm_order(id: int):
     order = service.get(id)
     if not order:
         raise HTTPException(404, 'Order not found')
-    if order.get('status') != 'Pending':
-        raise HTTPException(400, f'Only pending orders can be confirmed. Current status: {order.get("status")}')
+    if order.get('status') not in ('Draft', 'Pending'):
+        raise HTTPException(400, f'Only Draft or Pending orders can be confirmed. Current status: {order.get("status")}')
     try:
         result = service.update(id, {'status': 'Confirmed'})
-        asyncio.create_task(order_status_changed(1, id, order.get('order_number', ''), 'Confirmed'))
+        try:
+            asyncio.create_task(order_status_changed(1, id, order.get('order_number', ''), 'Confirmed'))
+        except RuntimeError:
+            pass
         return result
     except Exception as e:
         raise HTTPException(400, str(e))
@@ -52,7 +55,10 @@ def cancel_order(id: int):
         raise HTTPException(400, f'Order cannot be cancelled. Current status: {order.get("status")}')
     try:
         result = service.update(id, {'status': 'Cancelled'})
-        asyncio.create_task(order_status_changed(1, id, order.get('order_number', ''), 'Cancelled'))
+        try:
+            asyncio.create_task(order_status_changed(1, id, order.get('order_number', ''), 'Cancelled'))
+        except RuntimeError:
+            pass
         return result
     except Exception as e:
         raise HTTPException(400, str(e))

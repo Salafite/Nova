@@ -31,12 +31,12 @@ function cancel() { emit('cancel') }
 
 <style scoped>
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10000; }
-.dialog { background: #fff; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
-.dialog-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-.dialog-msg { font-size: 14px; color: #666; margin-bottom: 20px; }
+.dialog { background: var(--bg-surface); border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.dialog-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+.dialog-msg { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
 .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
-.btn-outline { padding: 8px 20px; border: 1px solid #ddd; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 600; cursor: pointer; }
-.btn-outline:hover { background: #f0f0f0; }
+.btn-outline { padding: 8px 20px; border: 1px solid var(--border-input); border-radius: 8px; background: transparent; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-secondary); }
+.btn-outline:hover { background: var(--bg-surface-hover); }
 .btn-danger { padding: 8px 20px; border: none; border-radius: 8px; background: #c62828; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-danger:hover { background: #b71c1c; }
 </style>

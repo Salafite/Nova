@@ -1,4 +1,4 @@
-from models import AttrDefCreate, AttrDefUpdate, AttrDefResponse
+from modules.inventory.models.product import AttrDefCreate, AttrDefUpdate, AttrDefResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router

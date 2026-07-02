@@ -64,7 +64,7 @@ Open `http://localhost:8070`.
 | `POSTGRES_DB` | `nova_erp` | Database name |
 | `POSTGRES_USER` | `nova` | Database user |
 | `POSTGRES_PASSWORD` | `nova_secret` | Database password |
-| `JWT_SECRET` | `change-me` | JWT signing key |
+| `SECRET_KEY` | `change-me` | JWT signing key |
 | `JWT_ALGORITHM` | `HS256` | JWT algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Token expiry |
 | `ALLOWED_ORIGINS` | `*` | CORS origins |
@@ -72,7 +72,7 @@ Open `http://localhost:8070`.
 
 ## Production Checklist
 
-- [ ] Change `JWT_SECRET` to a strong random value
+- [ ] Change `SECRET_KEY` to a strong random value
 - [ ] Set `ALLOWED_ORIGINS` to your frontend domain
 - [ ] Set up PostgreSQL backup (pg_dump cron job)
 - [ ] Configure SSL (reverse proxy with nginx/caddy + Let's Encrypt)

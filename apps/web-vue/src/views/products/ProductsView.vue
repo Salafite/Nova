@@ -5,9 +5,14 @@
         <h2 class="page-title">{{ locale === 'ar-EG' ? 'المنتجات' : 'Products' }}</h2>
         <p class="page-subtitle">{{ locale === 'ar-EG' ? 'إدارة كتالوج المنتجات' : 'Manage your product catalog' }}</p>
       </div>
-      <button class="btn-primary" @click="openAdd">
-        <span class="material-symbols-outlined">add</span> {{ locale === 'ar-EG' ? 'منتج جديد' : 'New Product' }}
-      </button>
+      <div class="page-actions">
+        <button class="btn-outline" @click="scanPhantoms" :disabled="scanning">
+          <span class="material-symbols-outlined">scan</span> {{ scanning ? (locale === 'ar-EG' ? 'جاري المسح...' : 'Scanning...') : (locale === 'ar-EG' ? 'مسح المنتجات القديمة' : 'Scan Phantoms') }}
+        </button>
+        <button class="btn-primary" @click="openAdd">
+          <span class="material-symbols-outlined">add</span> {{ locale === 'ar-EG' ? 'منتج جديد' : 'New Product' }}
+        </button>
+      </div>
     </div>
 
     <div class="stats-row">
@@ -187,6 +192,8 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { api } from '../../api/client.js'
 import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
+import { useWebSocket } from '../../composables/useWebSocket.js'
+import { useAuthStore } from '../../stores/auth.js'
 import SkeletonTable from '../../components/SkeletonTable.vue'
 import ErrorState from '../../components/ErrorState.vue'
 import FormFieldError from '../../components/FormFieldError.vue'
@@ -202,11 +209,20 @@ const showModal = ref(false)
 const showDelete = ref(false)
 const isEditing = ref(false)
 const saving = ref(false)
+const scanning = ref(false)
 const deletingItem = ref(null)
 const editingId = ref(null)
 const suppliers = ref([])
 const supplierLinks = ref([])
 const newSupplier = ref({ supplier_id: null, unit_cost: 0, lead_time_days: 0 })
+
+const auth = useAuthStore()
+const businessId = auth.user?.business_id || '1'
+const wsInventory = useWebSocket(`/ws/inventory/${businessId}`)
+wsInventory.on('stock_updated', () => {
+  console.log('[WS] stock_updated received, refreshing products')
+  load()
+})
 
 const fv = useFormValidation({
   name: [required('Name is required'), maxLength(200)],
@@ -357,6 +373,19 @@ async function removeSupplier(link) {
   }
 }
 
+async function scanPhantoms() {
+  scanning.value = true
+  try {
+    const res = await api.post('/T0003I/scan-phantoms')
+    toast(`${res.data?.flagged || 0} products flagged as phantom`, 'success')
+    await load()
+  } catch {
+    toast('Failed to scan phantoms', 'error')
+  } finally {
+    scanning.value = false
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -456,6 +485,7 @@ onMounted(load)
 .badge-sm { font-size: 10px !important; padding: 1px 6px !important; }
 .empty-section { font-size: 12px; color: #999; padding: 8px 0; }
 
+.page-actions { display: flex; align-items: center; gap: 8px; }
 [dir="rtl"] .page-header { flex-direction: row-reverse; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }

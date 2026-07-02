@@ -1,7 +1,7 @@
--- Nova ERP — Consolidated Full Schema
+-- Nova ERP ï¿½ Consolidated Full Schema
 -- Combines 001_full_schema.sql + 002_missing_tables.sql
 -- Run against an empty PostgreSQL database.
--- Creates the "Nova" schema and ALL business tables (T0001–T0100).
+-- Creates the "Nova" schema and ALL business tables (T0001ï¿½T0100).
 
 BEGIN;
 
@@ -38,11 +38,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE TYPE user_role    AS ENUM ('Admin','Sales Rep','Viewer','Manager','Cashier');
+  CREATE TYPE user_role    AS ENUM ('Admin','Sales Rep','Viewer','Manager','Cashier','Salesman','Warehouse','Accountant');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE TYPE user_status  AS ENUM ('Active','Inactive');
+  CREATE TYPE user_status  AS ENUM ('Active','Inactive','Invited');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
@@ -410,6 +410,7 @@ CREATE TABLE IF NOT EXISTS "Nova".t0021 (
     role          VARCHAR(30) NOT NULL DEFAULT 'Viewer',
     permissions   TEXT[] DEFAULT '{}',
     status        VARCHAR(20) NOT NULL DEFAULT 'Active',
+    business_id   INT REFERENCES "Nova".t0059(id),
     last_login    TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
@@ -2298,5 +2299,43 @@ COMMENT ON COLUMN "Nova".t0095.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0095_opportunity_id ON "Nova".t0095(opportunity_id);
 CREATE INDEX IF NOT EXISTS idx_t0095_product_id ON "Nova".t0095(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0095_active ON "Nova".t0095(is_active);
+
+-- ============================================================
+-- BUSINESS SIGN-UP & INVITE MIGRATION
+-- ============================================================
+
+-- Add business_id column to users table if not exists
+DO $$ BEGIN
+  ALTER TABLE "Nova".t0021 ADD COLUMN business_id INT REFERENCES "Nova".t0059(id);
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Add invite_link column to users table
+DO $$ BEGIN
+  ALTER TABLE "Nova".t0021 ADD COLUMN invite_token VARCHAR(100);
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Extend user_role enum with new roles
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'Salesman';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'Warehouse';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'Accountant';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Extend user_status enum
+DO $$ BEGIN
+  ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'Invited';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_t0021_business_id ON "Nova".t0021(business_id);
 
 COMMIT;

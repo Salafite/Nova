@@ -18,11 +18,14 @@ from controllers import all_routers
 from packages.auth.controller import router as auth_router
 from packages.ws.handlers import router as ws_router
 from packages.billing.controller import router as billing_router
+from modules.bi.controllers.dashboard import router as bi_dashboard_router
 from packages.rate_limit import RateLimitMiddleware
+from packages.analytics.sentry import init_sentry
 from packages.cache.middleware import CacheControlMiddleware
 from packages.security.middleware import SecurityHeadersMiddleware
 
 app = FastAPI(title="Nova ERP API", version="1.0")
+init_sentry()
 
 origins = os.getenv('ALLOWED_ORIGINS', '*').split(',')
 
@@ -45,6 +48,7 @@ for router in all_routers:
 
 app.include_router(ws_router)
 app.include_router(billing_router)
+app.include_router(bi_dashboard_router)
 
 
 @app.get('/api')
@@ -83,4 +87,5 @@ if STATIC_DIR:
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run('main:app', host='0.0.0.0', port=8070, reload=True)
+    is_prod = os.getenv('NOVA_ENV') == 'production'
+    uvicorn.run('main:app', host='0.0.0.0', port=8070, reload=not is_prod, workers=4 if is_prod else 1)

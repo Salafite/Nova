@@ -8,8 +8,8 @@ export function useWebSocket(path) {
   let handlers = {}
 
   function connect() {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${location.host}${path}`
+    const wsBase = window.wsHost || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}`
+    const url = `${wsBase}${path}`
     try {
       ws = new WebSocket(url)
     } catch {
@@ -17,10 +17,11 @@ export function useWebSocket(path) {
       return
     }
 
-    ws.onopen = () => { connected.value = true }
+    ws.onopen = () => { connected.value = true; console.log(`[WS] connected: ${url}`) }
 
     ws.onclose = () => {
       connected.value = false
+      console.log(`[WS] disconnected, reconnecting in 3s`)
       scheduleReconnect()
     }
 

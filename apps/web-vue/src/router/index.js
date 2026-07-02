@@ -1,7 +1,67 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth.js'
+
+// Maps route names to permission keys. Routes with a permission entry
+// require that the authenticated user has that permission.
+const ROUTE_PERMISSIONS = {
+  products: 'products',
+  'product-detail': 'products',
+  categories: 'products',
+  barcodes: 'products',
+  attributes: 'products',
+  inventory: 'inventory',
+  warehouses: 'warehouse',
+  'stock-movements': 'inventory',
+  'pick-lists': 'warehouse',
+  'pick-list-detail': 'warehouse',
+  sales: 'sales',
+  'sales-detail': 'sales',
+  'sales-quotations': 'sales',
+  'sales-quotation-detail': 'sales',
+  'sales-deliveries': 'sales',
+  'sales-returns': 'sales',
+  'sales-price-lists': 'sales',
+  'sales-tax-rates': 'sales',
+  finance: 'finance',
+  'invoice-detail': 'finance',
+  'chart-of-accounts': 'finance',
+  'journal-entries': 'finance',
+  payments: 'finance',
+  'payment-terms': 'finance',
+  'payment-methods': 'finance',
+  customers: 'customers',
+  'customer-detail': 'customers',
+  suppliers: 'suppliers',
+  'purchasing-requisitions': 'purchasing',
+  'purchasing-rfqs': 'purchasing',
+  'purchasing-order-detail': 'purchasing',
+  'purchasing-returns': 'purchasing',
+  purchasing: 'purchasing',
+  admin: 'admin',
+  modules: 'admin',
+  subscription: 'admin',
+  migration: 'admin',
+  departments: 'hr',
+  designations: 'hr',
+  employees: 'hr',
+  'bi-kpis': 'bi',
+  'bi-dashboards': 'bi',
+  'bi-view': 'bi',
+  'bi-reports': 'bi',
+  'mfg-bom': 'manufacturing',
+  'mfg-orders': 'manufacturing',
+  'mfg-qc': 'manufacturing',
+  'production-plans': 'planning',
+  'hr-leaves': 'hr',
+  'hr-attendance': 'hr',
+  'hr-payroll': 'hr',
+  'hr-jobs': 'hr',
+  'hr-candidates': 'hr',
+}
 
 const routes = [
   { path: '/login', name: 'login', component: () => import('../views/auth/LoginView.vue') },
+  { path: '/signup', name: 'signup', component: () => import('../views/auth/SignUpView.vue') },
   { path: '/landing', name: 'landing', component: () => import('../views/landing/LandingView.vue') },
   {
     path: '/',
@@ -17,7 +77,17 @@ const routes = [
       { path: 'suppliers', name: 'suppliers', meta: { requiresAuth: true }, component: () => import('../views/suppliers/SuppliersView.vue') },
       { path: 'sales', name: 'sales', meta: { requiresAuth: true }, component: () => import('../views/sales/SalesView.vue') },
       { path: 'sales/:id', name: 'sales-detail', meta: { requiresAuth: true }, component: () => import('../views/sales/OrderDetailView.vue') },
+      { path: 'sales/quotations', name: 'sales-quotations', meta: { requiresAuth: true }, component: () => import('../views/sales/QuotationsView.vue') },
+      { path: 'sales/quotations/:id', name: 'sales-quotation-detail', meta: { requiresAuth: true }, component: () => import('../views/sales/QuotationDetailView.vue') },
+      { path: 'sales/deliveries', name: 'sales-deliveries', meta: { requiresAuth: true }, component: () => import('../views/sales/DeliveriesView.vue') },
+      { path: 'sales/returns', name: 'sales-returns', meta: { requiresAuth: true }, component: () => import('../views/sales/SalesReturnsView.vue') },
+      { path: 'sales/price-lists', name: 'sales-price-lists', meta: { requiresAuth: true }, component: () => import('../views/sales/PriceListsView.vue') },
+      { path: 'sales/tax-rates', name: 'sales-tax-rates', meta: { requiresAuth: true }, component: () => import('../views/sales/TaxRatesView.vue') },
       { path: 'purchasing', name: 'purchasing', meta: { requiresAuth: true }, component: () => import('../views/purchasing/PurchasingView.vue') },
+      { path: 'purchasing/requisitions', name: 'purchasing-requisitions', meta: { requiresAuth: true }, component: () => import('../views/purchasing/PurchaseRequisitionsView.vue') },
+      { path: 'purchasing/rfqs', name: 'purchasing-rfqs', meta: { requiresAuth: true }, component: () => import('../views/purchasing/RFQView.vue') },
+      { path: 'purchasing/orders/:id', name: 'purchasing-order-detail', meta: { requiresAuth: true }, component: () => import('../views/purchasing/PurchaseOrdersDetailView.vue') },
+      { path: 'purchasing/returns', name: 'purchasing-returns', meta: { requiresAuth: true }, component: () => import('../views/purchasing/PurchaseReturnsView.vue') },
       { path: 'inventory', name: 'inventory', meta: { requiresAuth: true }, component: () => import('../views/inventory/InventoryView.vue') },
       { path: 'warehouse', meta: { requiresAuth: true }, redirect: { name: 'warehouses' } },
       { path: 'finance', name: 'finance', meta: { requiresAuth: true }, component: () => import('../views/finance/FinanceView.vue') },
@@ -44,16 +114,36 @@ const routes = [
       { path: 'warehouse/pick-lists', name: 'pick-lists', meta: { requiresAuth: true }, component: () => import('../views/warehouse/PickListsView.vue') },
       { path: 'warehouse/pick-lists/:id', name: 'pick-list-detail', meta: { requiresAuth: true }, component: () => import('../views/warehouse/PickListDetailView.vue') },
       { path: 'migration', name: 'migration', meta: { requiresAuth: true }, component: () => import('../views/migration/MigrateView.vue') },
+      { path: 'bi/kpis', name: 'bi-kpis', meta: { requiresAuth: true }, component: () => import('../views/bi/KPIManagementView.vue') },
+      { path: 'bi/dashboards', name: 'bi-dashboards', meta: { requiresAuth: true }, component: () => import('../views/bi/DashboardBuilderView.vue') },
+      { path: 'bi/view/:id', name: 'bi-view', meta: { requiresAuth: true }, component: () => import('../views/bi/DashboardViewerView.vue') },
+      { path: 'bi/reports', name: 'bi-reports', meta: { requiresAuth: true }, component: () => import('../views/bi/ReportBuilderView.vue') },
+      { path: 'manufacturing/bom', name: 'mfg-bom', meta: { requiresAuth: true }, component: () => import('../views/manufacturing/BOMView.vue') },
+      { path: 'manufacturing/orders', name: 'mfg-orders', meta: { requiresAuth: true }, component: () => import('../views/manufacturing/ManufacturingOrdersView.vue') },
+      { path: 'manufacturing/qc', name: 'mfg-qc', meta: { requiresAuth: true }, component: () => import('../views/manufacturing/QCInspectionView.vue') },
+      { path: 'planning', name: 'production-plans', meta: { requiresAuth: true }, component: () => import('../views/planning/ProductionPlansView.vue') },
+      { path: 'hr/leaves', name: 'hr-leaves', meta: { requiresAuth: true }, component: () => import('../views/hr/LeaveRequestsView.vue') },
+      { path: 'hr/attendance', name: 'hr-attendance', meta: { requiresAuth: true }, component: () => import('../views/hr/AttendanceView.vue') },
+      { path: 'hr/payroll', name: 'hr-payroll', meta: { requiresAuth: true }, component: () => import('../views/hr/PayrollView.vue') },
+      { path: 'hr/jobs', name: 'hr-jobs', meta: { requiresAuth: true }, component: () => import('../views/hr/JobOpeningsView.vue') },
+      { path: 'hr/candidates', name: 'hr-candidates', meta: { requiresAuth: true }, component: () => import('../views/hr/JobCandidatesView.vue') },
     ]
-  }
+  },
+  { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/errors/NotFoundView.vue') },
 ]
 
 const router = createRouter({ history: createWebHashHistory(), routes })
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('nova_token')
-  if (to.meta.requiresAuth && !token) next('/login')
-  else next()
+  if (to.meta.requiresAuth && !token) return next('/login')
+  if (token && (to.name === 'login' || to.name === 'signup')) return next('/dashboard')
+  const required = ROUTE_PERMISSIONS[to.name]
+  if (required) {
+    const auth = useAuthStore()
+    if (!auth.hasPermission(required)) return next('/dashboard')
+  }
+  next()
 })
 
 export default router

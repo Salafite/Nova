@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import Field
-from models.factory import crud_model
+from modules.core.models.factory import crud_model
 
 
 CustomerCreate, CustomerUpdate, CustomerResponse = crud_model('Customer', [

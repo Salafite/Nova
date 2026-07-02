@@ -18,7 +18,7 @@ CREATE SCHEMA IF NOT EXISTS "Nova";
 -- DOMAINS / ENUMS
 -- ============================================================
 DO $$ BEGIN
-  CREATE TYPE order_status AS ENUM ('Pending','Confirmed','Processing','Shipped','Delivered','Invoiced','Paid','Cancelled');
+  CREATE TYPE order_status AS ENUM ('Draft','Pending','Confirmed','Processing','Shipped','Delivered','Invoiced','Paid','Cancelled');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
@@ -454,6 +454,48 @@ CREATE TABLE IF NOT EXISTS "Nova".t0023 (
     update_number INT NOT NULL DEFAULT 1
 );
 
+-- Production Plans
+CREATE TABLE IF NOT EXISTS "Nova".t0024 (
+    id SERIAL PRIMARY KEY,
+    plan_number VARCHAR(30) NOT NULL,
+    product_id INT,
+    product_name VARCHAR(200) NOT NULL,
+    quantity NUMERIC(12,2) NOT NULL DEFAULT 0,
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'Draft',
+    notes TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0024 IS 'Production Plans';
+CREATE INDEX IF NOT EXISTS idx_t0024_status ON "Nova".t0024(status);
+CREATE INDEX IF NOT EXISTS idx_t0024_plan_number ON "Nova".t0024(plan_number);
+
+-- Global Settings
+CREATE TABLE IF NOT EXISTS "Nova".t0025 (
+    id SERIAL PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT,
+    description TEXT,
+    setting_group VARCHAR(50),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0025 IS 'Global Settings';
+COMMENT ON COLUMN "Nova".t0025.setting_key IS 'Key identifier for the setting';
+COMMENT ON COLUMN "Nova".t0025.setting_group IS 'Group name for UI organisation';
+CREATE INDEX IF NOT EXISTS idx_t0025_group ON "Nova".t0025(setting_group);
+CREATE INDEX IF NOT EXISTS idx_t0025_key ON "Nova".t0025(setting_key);
+
 -- ============================================================
 -- ACCOUNTING
 -- ============================================================
@@ -545,8 +587,32 @@ CREATE TABLE IF NOT EXISTS "Nova".t0030 (
 );
 
 -- ============================================================
--- INVOICES & PAYMENTS
+-- JOURNAL LINES, INVOICES & PAYMENTS
 -- ============================================================
+
+-- Journal Entry Lines (Detail lines for T0027 Journal Entries)
+CREATE TABLE IF NOT EXISTS "Nova".t0089 (
+    id SERIAL PRIMARY KEY,
+    journal_entry_id INT NOT NULL REFERENCES "Nova".t0027(id),
+    account_id INT NOT NULL REFERENCES "Nova".t0026(id),
+    description VARCHAR(255),
+    debit NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (debit >= 0),
+    credit NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (credit >= 0),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0089 IS 'Journal Entry Lines';
+COMMENT ON COLUMN "Nova".t0089.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0089.journal_entry_id IS 'Reference to Journal Entry';
+COMMENT ON COLUMN "Nova".t0089.account_id IS 'Reference to Chart of Accounts';
+COMMENT ON COLUMN "Nova".t0089.debit IS 'Debit amount';
+COMMENT ON COLUMN "Nova".t0089.credit IS 'Credit amount';
+CREATE INDEX IF NOT EXISTS idx_t0089_journal_entry_id ON "Nova".t0089(journal_entry_id);
+CREATE INDEX IF NOT EXISTS idx_t0089_account_id ON "Nova".t0089(account_id);
 
 CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     id              SERIAL PRIMARY KEY,
@@ -2063,6 +2129,30 @@ CREATE INDEX IF NOT EXISTS idx_t0082_return_id ON "Nova".t0082(return_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_product_id ON "Nova".t0082(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_uom_id ON "Nova".t0082(uom_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_active ON "Nova".t0082(is_active);
+
+-- Price Lists
+CREATE TABLE IF NOT EXISTS "Nova".t0083 (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0083 IS 'Price Lists';
+COMMENT ON COLUMN "Nova".t0083.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0083.name IS 'Price list name';
+COMMENT ON COLUMN "Nova".t0083.code IS 'Unique price list code';
+COMMENT ON COLUMN "Nova".t0083.is_default IS 'Default price list flag';
+CREATE INDEX IF NOT EXISTS idx_t0083_code ON "Nova".t0083(code);
+CREATE INDEX IF NOT EXISTS idx_t0083_default ON "Nova".t0083(is_default);
+CREATE INDEX IF NOT EXISTS idx_t0083_active ON "Nova".t0083(is_active);
 
 -- Price List Items
 CREATE TABLE IF NOT EXISTS "Nova".t0084 (

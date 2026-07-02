@@ -5,3 +5,11 @@ PyJWT
 bcrypt
 python-dotenv
 uvicorn
+pytest>=8.0
+pytest-asyncio>=0.23
+pytest-cov>=4.1
+httpx>=0.26
+stripe>=8.0
+resend>=0.8
+posthog>=3.0
+sentry-sdk>=2.0

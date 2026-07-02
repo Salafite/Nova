@@ -5,9 +5,14 @@
         <h2 class="page-title">{{ t('admin-title') }}</h2>
         <p class="page-subtitle">{{ t('admin-sub') }}</p>
       </div>
-      <button class="btn-primary" @click="openAdd">
-        <span class="material-symbols-outlined">add</span> {{ t('new-user') }}
-      </button>
+      <div class="flex gap-2">
+        <button class="btn-primary" @click="openAdd">
+          <span class="material-symbols-outlined">add</span> {{ t('new-user') }}
+        </button>
+        <button class="btn-outline" @click="openInvite">
+          <span class="material-symbols-outlined">person_add</span> {{ t('invite-user') }}
+        </button>
+      </div>
     </div>
 
     <SkeletonTable v-if="loading" />
@@ -40,8 +45,8 @@
                 <span :class="'role-badge role-' + item.role.toLowerCase()">{{ item.role }}</span>
               </td>
               <td class="text-center">
-                <span :class="item.status === 'Active' ? 'badge badge-active' : 'badge badge-inactive'">
-                  {{ item.status === 'Active' ? t('active') : t('inactive') }}
+                <span :class="item.status === 'Active' ? 'badge badge-active' : item.status === 'Invited' ? 'badge badge-invited' : 'badge badge-inactive'">
+                  {{ item.status === 'Active' ? t('active') : item.status === 'Invited' ? 'Invited' : t('inactive') }}
                 </span>
               </td>
               <td class="cell-mono">{{ item.last_login ? formatDate(item.last_login) : '-' }}</td>
@@ -130,6 +135,58 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showInvite" class="modal-overlay" @click.self="closeInvite">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ t('invite-user') }}</h3>
+          <button class="btn-icon" @click="closeInvite" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div v-if="inviteResult" class="invite-result">
+            <p class="invite-success">{{ t('invite-sent') }}</p>
+            <div class="form-group">
+              <label>{{ t('invite-link') }}</label>
+              <div class="invite-link-box">
+                <input type="text" :value="inviteResult.invite_link" readonly class="form-input" @click="$event.target.select()" />
+                <button class="btn-icon" @click="copyLink" :title="t('edit')">
+                  <span class="material-symbols-outlined">content_copy</span>
+                </button>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="btn-primary" @click="closeInvite">{{ t('close') }}</button>
+            </div>
+          </div>
+          <div v-else>
+            <div class="form-group">
+              <label>{{ t('invite-email') }} <span class="required">*</span></label>
+              <input type="email" v-model="inviteForm.email" class="form-input" required />
+            </div>
+            <div class="form-group">
+              <label>{{ t('invite-role') }} <span class="required">*</span></label>
+              <select v-model="inviteForm.role" class="form-input">
+                <option value="Sales Rep">Sales Rep</option>
+                <option value="Salesman">Salesman</option>
+                <option value="Warehouse">Warehouse</option>
+                <option value="Accountant">Accountant</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ t('invite-full-name') }}</label>
+              <input type="text" v-model="inviteForm.full_name" class="form-input" />
+            </div>
+            <div v-if="inviteError" class="alert error">{{ inviteError }}</div>
+            <div class="modal-actions">
+              <button class="btn-outline" @click="closeInvite">{{ t('cancel') }}</button>
+              <button class="btn-primary" :disabled="inviting" @click="sendInvite">
+                {{ inviting ? t('invite-sending') : t('invite-user') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -154,6 +211,11 @@ const deleting = ref(false)
 const deleteTarget = ref(null)
 const form = ref({ username: '', password_hash: '', full_name: '', email: '', role: 'Viewer', status: 'Active' })
 const editId = ref(null)
+const showInvite = ref(false)
+const inviting = ref(false)
+const inviteError = ref('')
+const inviteResult = ref(null)
+const inviteForm = ref({ email: '', role: 'Sales Rep', full_name: '' })
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString()
@@ -244,6 +306,49 @@ async function confirmDelete() {
   }
 }
 
+function openInvite() {
+  inviteForm.value = { email: '', role: 'Sales Rep', full_name: '' }
+  inviteResult.value = null
+  inviteError.value = ''
+  showInvite.value = true
+}
+
+function closeInvite() {
+  showInvite.value = false
+  inviteResult.value = null
+  inviteError.value = ''
+}
+
+async function sendInvite() {
+  if (!inviteForm.value.email) return
+  inviting.value = true
+  inviteError.value = ''
+  try {
+    const res = await api.post('/auth/invite', {
+      email: inviteForm.value.email,
+      role: inviteForm.value.role,
+      full_name: inviteForm.value.full_name || null,
+    })
+    inviteResult.value = res.data
+    await load()
+  } catch {
+    inviteError.value = t('invite-failed')
+  } finally {
+    inviting.value = false
+  }
+}
+
+async function copyLink() {
+  if (!inviteResult.value) return
+  try {
+    await navigator.clipboard.writeText(window.location.origin + '/#' + inviteResult.value.invite_link)
+    toast(t('invite-copied'), 'success')
+  } catch {
+    const input = document.querySelector('.invite-link-box input')
+    if (input) { input.select(); document.execCommand('copy') }
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -266,6 +371,7 @@ onMounted(load)
 
 .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 .badge-active { background: #dcfce7; color: #16a34a; }
+.badge-invited { background: #fef3c7; color: #b45309; }
 .badge-inactive { background: #f3f4f6; color: #888; }
 
 .role-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
@@ -304,6 +410,14 @@ onMounted(load)
 .form-input:focus { border-color: #5d3fd3; }
 select.form-input { appearance: auto; }
 .required { color: #dc2626; }
+.invite-result { padding: 0; }
+.invite-success { color: #16a34a; font-weight: 600; font-size: 14px; margin-bottom: 12px; }
+.invite-link-box { display: flex; gap: 6px; align-items: center; }
+.invite-link-box input { flex: 1; }
+.alert { padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 13px; text-align: center; }
+.alert.error { background: #fef2f2; color: #ba1a1a; border: 1px solid #fecaca; }
+.flex { display: flex; }
+.gap-2 { gap: 8px; }
 
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }

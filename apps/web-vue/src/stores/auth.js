@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', {
     isLoggedIn: state => !!state.token,
     permissions: state => state.user?.permissions || [],
     role: state => state.user?.role || '',
+    businessId: state => state.user?.business_id || null,
   },
   actions: {
     async login(username, password) {
@@ -21,6 +22,17 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('nova_user', JSON.stringify(this.user))
         return true
       } catch { return false }
+    },
+    async signup(payload) {
+      const res = await api.post('/auth/signup', payload)
+      this.token = res.data.access_token
+      this.user = res.data.user
+      localStorage.setItem('nova_token', this.token)
+      localStorage.setItem('nova_user', JSON.stringify(this.user))
+    },
+    async invite(payload) {
+      const res = await api.post('/auth/invite', payload)
+      return res.data
     },
     logout() {
       this.token = null
