@@ -1,116 +1,36 @@
 # Nova ERP Launch Checklist
 
 - **Product**: Nova ERP — a full-featured Enterprise Resource Planning (ERP) web application
-- **Tech stack**: Vue 3 frontend + Python FastAPI backend + PostgreSQL 16 database
-- **Estimated total time**: 5–8 hours for a single person
+- **Tech stack**: Vue 3 + Vite frontend, Python FastAPI backend, PostgreSQL 16, hosted on Railway
+- **Current status**: App is live at `https://nova-production-2e9d.up.railway.app` (Railway, auto-deploys from GitHub master)
 - **Estimated monthly cost**: ~$50–120 (PostgreSQL hosting + VPS + optional services)
 
 **Legend:**
 - 🧑 **You** — requires your identity, accounts, payment details, or a decision. An agent can't do this for you.
-- 🤖 **Agent** — paste the given prompt into your coding agent and it can do this in the codebase or via the command line.
+- 🤖 **Agent** — pasting the given prompt into your coding agent will let it do this in the codebase or via command line.
 - 🤝 **Together** — the agent prepares it, you click the final button or paste in a value.
-
----
-
-## Phase 0: Fix Launch Blockers (⏱ 2–3 hours)
-
-Before anything else, these must be fixed — they will prevent the app from running in production or expose it to security risks.
-
-### 0.1 Remove hardcoded database passwords from debug files
-
-🧑 **You** — these 17 debug scripts contain your database password as plain text and must be deleted before production:
-
-- `apps/api/_db_check.py`
-- `apps/api/_db_check2.py`
-- `apps/api/_db_check3.py`
-- `apps/api/_db_check4.py`
-- `apps/api/_db_check_all.py`
-- `apps/api/_db_check_case.py`
-- `apps/api/_db_check_nova.py`
-- `apps/api/_db_check_tables.py`
-- `apps/api/_db_list.py`
-- `apps/api/_db_list2.py`
-- `apps/api/_db_setup_schema.py`
-- `apps/api/_db_verify.py`
-- `apps/api/set_passwords.py`
-- `scripts/run_migration.py`
-- `scripts/init_db.py`
-- `scripts/seed_demo.py`
-- `scripts/fix_t0010.py`
-
-Delete each file (the `Remove-Item` PowerShell command works on Windows). **You'll know it worked when:** `git status` shows no more `_db_` prefixed files in `apps/api/`.
-
-### 0.2 Fix JWT secret key name mismatch
-
-🤖 **Agent** — there's a mismatch: `packages/auth/jwt.py` reads `SECRET_KEY` from environment but `apps/api/.env` uses `JWT_SECRET`. Make them consistent.
-
-Update `apps/api/.env.example` and `apps/api/.env` to use `SECRET_KEY` instead of `JWT_SECRET`, matching what `packages/auth/jwt.py` expects:
-
-> Edit `apps/api/.env` and `apps/api/.env.example`: find `JWT_SECRET=...` and change it to `SECRET_KEY=...` with a strong random value (at least 32 characters). Then verify `SECRET_KEY` is the only name used in `packages/auth/jwt.py` on line 5.
-
-**You'll know it worked when:** `Select-String "JWT_SECRET" apps/api/.env` returns no matches, and `Select-String "SECRET_KEY" packages/auth/jwt.py` shows the env var read.
-
-### 0.3 Add missing production SDKs to requirements.txt
-
-🤖 **Agent** — `apps/api/requirements.txt` is missing several packages that production relies on:
-
-> Add these lines to `apps/api/requirements.txt`:
-> ```
-> stripe>=8.0
-> resend>=0.8
-> posthog>=3.0
-> sentry-sdk>=2.0
-> ```
-> Then run `pip install -r apps/api/requirements.txt` to verify they install cleanly.
-
-**You'll know it worked when:** `python -c "import stripe; import resend; import posthog; import sentry_sdk; print('OK')"` runs without errors.
-
-### 0.4 Initialize Sentry at app startup
-
-🤖 **Agent** — `packages/analytics/sentry.py` has `init_sentry()` but it's never called from the main app. Add the call:
-
-> In `apps/api/main.py`, add `from packages.analytics.sentry import init_sentry` at the top. Then call `init_sentry()` right after the `app = FastAPI(...)` line (before any middleware). Only call it when `SENTRY_DSN` env var is set.
-
-**You'll know it worked when:** Starting the app with `SENTRY_DSN` set prints no Sentry-related errors.
-
-### 0.5 Fix `reload=True` in production startup
-
-🤖 **Agent** — `apps/api/main.py` runs uvicorn with `reload=True` which is a development-only feature:
-
-> Change `uvicorn.run('main:app', host='0.0.0.0', port=8070, reload=True)` to use `reload=False`. Better yet, make it conditional: `reload=os.getenv('NOVA_ENV') != 'production'`. Also add `workers=4` for multi-process serving.
-
-**You'll know it worked when:** The app starts without the "auto-reload" message in the logs.
-
-### 0.6 Remove `.env` from Git tracking
-
-🧑 **You** — `apps/api/.env` is checked into Git, which means your secrets are in version history. This is a security risk.
-
-> Run `git rm --cached apps/api/.env` to stop tracking it (this removes it from Git but keeps the file on disk). Then add `.env` to the root `.gitignore`. Rotate any secrets that were in that file (database password, JWT secret).
-
-**You'll know it worked when:** `git status` shows `apps/api/.env` as deleted (staged) without actually deleting the file from disk.
-
----
+- ✅ **Done** — already completed.
 
 ## Phase 1: Accounts & Prerequisites (⏱ 30 min)
 
 ### 1.1 Create accounts for production services
 
-🧑 **You** — sign up for these services. Pick the free or cheapest tier that works — you can upgrade later.
+🧑 **You** — sign up for these services. Pick the free or cheapest tier — you can upgrade later.
 
 | Service | Purpose | Approx. cost/month | Sign-up link |
 |---|---|---|---|
-| **Railway.app** or **Fly.io** | Host the app (deploy the Docker container) | $5–20 | https://railway.app or https://fly.io |
-| **Neon.tech** or **Supabase** | PostgreSQL 16 database (managed, with backups) | $0–19 (free tier available) | https://neon.tech or https://supabase.com |
-| **Stripe** | Payment processing (only if billing is enabled) | 2.9% + $0.30 per transaction | https://stripe.com |
+| ✅ **Railway.app** | Hosting (Docker-based deploys) | $5–20 | https://railway.app |
+| ✅ **Neon.tech** (via Railway) | PostgreSQL 16 database | Included with Railway | https://neon.tech |
+| **Stripe** | Payment processing (only if billing enabled) | 2.9% + $0.30/transaction | https://stripe.com |
 | **Sentry** | Error tracking (find crashes) | Free (5k events/month) | https://sentry.io |
 | **Resend** | Transactional email (password reset, invoices) | Free (100 emails/day) | https://resend.com |
 | **PostHog** | Product analytics (see what users do) | Free (1m events/month) | https://posthog.com |
-| **Namecheap** or **Cloudflare** | Domain name (e.g., novaerp.com) | $10–15/year | https://namecheap.com or https://cloudflare.com |
-| **Cloudflare** | DNS, CDN, DDoS protection | Free (free tier is excellent) | https://cloudflare.com |
+| **Namecheap** or **Cloudflare** | Domain name (e.g., novaerp.com) | $10–15/year | https://namecheap.com |
+| **Cloudflare** | DNS, CDN, DDoS protection | Free | https://cloudflare.com |
 
 After each sign-up, save the dashboard URL and any API keys — you'll need them in Phase 2.
 
-**You'll know it worked when:** You can log into each service dashboard and see the "getting started" screen.
+**You'll know it worked when:** You can log into each service dashboard.
 
 ---
 
@@ -118,48 +38,44 @@ After each sign-up, save the dashboard URL and any API keys — you'll need them
 
 ### 2.1 Generate production secrets
 
-🧑 **You** — create a strong random secret for JWT token signing, and a strong database password.
+🧑 **You** — create a strong random secret for JWT signing and a strong database password.
 
-> Generate a 64-character random string for `SECRET_KEY`. On Windows PowerShell, run:
-> ```
+> Generate a 64-character random string for `SECRET_KEY`:
+> ```powershell
 > -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 64 | ForEach-Object {[char]$_})
 > ```
-> Save this somewhere safe (like a password manager). Generate a different 32-character random string for the database password.
+> Save this somewhere safe (like a password manager). Generate a different 32-character string for the DB password.
 
-**You'll know it worked when:** You have a long random string saved that you can paste into the hosting platform's settings.
+**You'll know it worked when:** You have long random strings saved.
 
 ### 2.2 Set environment variables on the hosting platform
 
-🤝 **Together** — go to your hosting platform's dashboard (Railway.app, Fly.io, or wherever you deployed), find the environment variables / secrets section, and set each of these:
+🤝 **Together** — in Railway dashboard, find your project → Variables tab, and set each of these:
 
-| Variable | What to put |
-|---|---|
-| `DB_HOST` | Your database host URL (from Neon/Supabase dashboard) |
-| `DB_PORT` | `5432` |
-| `DB_NAME` | Your database name |
-| `DB_USER` | Your database username |
-| `DB_PASSWORD` | The strong password you generated in step 2.1 |
-| `DB_SCHEMA` | `Nova` |
-| `SECRET_KEY` | The 64-char random string from step 2.1 |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` (24 hours) |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` |
-| `ALLOWED_ORIGINS` | Your domain, e.g., `https://novaerp.com` |
-| `NOVA_ENV` | `production` |
-| `APP_URL` | Your domain, e.g., `https://novaerp.com` |
-| `STRIPE_SECRET_KEY` | Your Stripe live secret key (starts with `sk_live_`) — skip if not using payments |
-| `STRIPE_PRICE_ID` | Your Stripe price ID — skip if not using payments |
-| `STRIPE_WEBHOOK_SECRET` | Your Stripe webhook signing secret — skip if not using payments |
-| `POSTHOG_API_KEY` | Your PostHog project API key — skip if not using analytics |
-| `SENTRY_DSN` | Your Sentry DSN URL — skip if not using error tracking |
-| `RESEND_API_KEY` | Your Resend API key — skip if not using email |
-| `RESEND_FROM_EMAIL` | `noreply@yourdomain.com` — skip if not using email |
-| `RELEASE_VERSION` | `1.0.0` |
+| Variable | What to put | Required? |
+|---|---|---|
+| `DB_HOST` | Database host URL (from Neon dashboard) | ✅ Yes |
+| `DB_PORT` | `5432` | ✅ Yes |
+| `DB_NAME` | Database name | ✅ Yes |
+| `DB_USER` | Database username | ✅ Yes |
+| `DB_PASSWORD` | The strong password from step 2.1 | ✅ Yes |
+| `DB_SCHEMA` | `Nova` | ✅ Yes |
+| `SECRET_KEY` | The 64-char random string from step 2.1 | ✅ Yes |
+| `NOVA_ENV` | `production` | ✅ Yes |
+| `ALLOWED_ORIGINS` | Your domain, e.g., `https://novaerp.com` | ✅ Yes |
+| `APP_URL` | Your domain, e.g., `https://novaerp.com` | ✅ Yes |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` (24 hours) | No |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | No |
+| `STRIPE_SECRET_KEY` | Stripe live secret (`sk_live_...`) | If billing |
+| `STRIPE_PRICE_ID` | Your Stripe price ID | If billing |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | If billing |
+| `POSTHOG_API_KEY` | PostHog project API key | If analytics |
+| `SENTRY_DSN` | Sentry DSN URL | If monitoring |
+| `RELEASE_VERSION` | `1.0.0` | No |
+| `RESEND_API_KEY` | Resend API key | If email |
+| `RESEND_FROM_EMAIL` | `noreply@yourdomain.com` | If email |
 
-🤖 **Agent** — then run this to verify the production app starts without crashing:
-> ```
-> $env:NOVA_ENV="production"
-> uvicorn apps.api.main:app --host 0.0.0.0 --port 8070
-> ```
+> **Note:** Railway uses `DB_*` variables (not `DATABASE_URL`). If using Neon standalone (outside Railway), the DB connector auto-detects Railway Neon's internal connection.
 
 **Never paste secrets into chat or commit them to code.** They go directly into the hosting platform's settings panel.
 
@@ -171,43 +87,65 @@ After each sign-up, save the dashboard URL and any API keys — you'll need them
 
 ### 3.1 Set up the production database
 
-🤝 **Together** — create your database on Neon/Supabase. They'll give you a connection string that looks like `postgresql://user:password@host:5432/dbname`.
+🤝 **Together** — create your database. Railway projects come with a Neon Postgres plugin:
+1. In Railway dashboard → New → Database → PostgreSQL (powered by Neon)
+2. Railway auto-creates the DB and sets `DB_*` env vars
+3. Copy the connection details from Railway's Variables tab if you need them externally
 
-> Copy the connection details (host, port, name, user, password) from the database provider's dashboard. You'll paste them as the `DB_*` environment variables in step 2.2.
+If using standalone Neon: create a project, copy the connection string, and set the `DB_*` vars manually.
 
-**You'll know it worked when:** You can connect from a database tool (like pgAdmin or DBeaver) using those credentials.
+**You'll know it worked when:** Railway shows the database as "Running" with green health.
 
-### 3.2 Run database migrations on the production database
+### 3.2 Run database migrations
 
-🤖 **Agent** — once the database is created and the environment variables are set, apply the schema to create all tables:
+✅ **Done** — migrations run automatically at startup via `scripts/docker-entrypoint.sh` which calls `scripts/run_migration.py`. There are currently **13 migration files** (`database/migrations/001_*.sql` through `013_*.sql`). Each migration is tracked in the `"Nova"._migrations` table and only applied once.
 
-> Create a migration script that runs all SQL migration files in order from `database/migrations/` against the production database, using the `DB_*` environment variables for connection. Handle errors gracefully and report which migrations succeeded or failed.
+🤖 **Agent** — to run migrations manually against a given database:
+```bash
+python scripts/run_migration.py
+```
 
-**You'll know it worked when:** The script reports all 9 migration files applied successfully.
+**You'll know it worked when:** The script reports "OK" for all 13 migration files.
 
 ### 3.3 Create admin user
 
-🧑 **You** — after the database is ready and the app is deployed (Phase 4), visit your app's URL, go through signup, and verify you can log in as the first user. If signup is disabled in production, use the API directly:
+🧑 **You** — after the app is deployed, visit your app's URL, go through signup, and verify you can log in as the first user.
 
-> Use a tool like Postman or curl to POST to `https://yourdomain.com/api/auth/signup` with `{"email": "admin@yourcompany.com", "password": "a-strong-password-you-will-remember", "full_name": "Admin"}`.
+> Use the API directly:
+> ```bash
+> curl -X POST https://yourdomain.com/api/auth/signup \
+>   -H "Content-Type: application/json" \
+>   -d '{"email":"admin@yourcompany.com","password":"a-strong-password","full_name":"Admin"}'
+> ```
 
 **You'll know it worked when:** You can log into the app with that email and password.
 
 ### 3.4 Configure Stripe webhooks (only if billing is enabled)
 
-🤝 **Together** — in the Stripe dashboard, go to Developers > Webhooks and add an endpoint:
+🤝 **Together** — in Stripe Dashboard → Developers → Webhooks → Add endpoint:
+- Endpoint URL: `https://yourdomain.com/api/billing/webhook`
+- Events: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`
+- Copy the webhook signing secret → set as `STRIPE_WEBHOOK_SECRET`
 
-> Endpoint URL: `https://yourdomain.com/api/billing/webhook`
-> Events to listen for: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
-> Copy the webhook signing secret and set it as the `STRIPE_WEBHOOK_SECRET` environment variable.
-
-**You'll know it worked when:** Stripe shows the webhook endpoint as "Enabled" with a 200 status on the latest ping attempt.
+**You'll know it worked when:** Stripe shows the endpoint as "Enabled" with a 200 status.
 
 ### 3.5 Verify Resend email delivery (only if email is enabled)
 
-🤝 **Together** — in the Resend dashboard, add and verify your sending domain (e.g., `novaerp.com`). You'll need to add DNS TXT records at your domain provider to prove you own the domain.
+🤝 **Together** — in Resend dashboard, add and verify your sending domain. Add the DNS TXT records at your domain registrar.
 
-**You'll know it worked when:** Resend shows your domain as "Verified" with a green checkmark.
+**You'll know it worked when:** Resend shows your domain as "Verified".
+
+### 3.6 Seed initial data
+
+🧑 **You** — the app starts empty. You'll need to add core setup data manually:
+1. Create UOM (Units of Measure) — e.g., "Each", "Kg", "Hour"
+2. Create at least one warehouse
+3. Create Chart of Accounts (or use the defaults)
+4. Add any payment terms and payment methods
+5. Create departments and designations (if using HR)
+6. Create the admin user's employee record
+
+**You'll know it worked when:** Dropdowns in the app show your configured options.
 
 ---
 
@@ -215,85 +153,95 @@ After each sign-up, save the dashboard URL and any API keys — you'll need them
 
 ### 4.1 Build the frontend for production
 
-🤖 **Agent** — build the Vue 3 frontend into static files that the backend can serve:
+✅ **Done** — the Dockerfile (`Dockerfile`) uses a multi-stage build:
+1. Stage 1 (`node:20-alpine`): `npm ci && npm run build` → creates `apps/web-vue/dist/`
+2. Stage 2 (`python:3.11-slim`): copies the dist and runs the FastAPI server
 
-> In `apps/web-vue/`, run `npm install` then `npm run build`. Verify the `dist/` folder is created with an `index.html` and compiled JS/CSS files. Check that the build doesn't have any errors.
+To build manually:
+```bash
+cd apps/web-vue && npm install && npm run build
+```
 
-**You'll know it worked when:** `apps/web-vue/dist/` exists with files inside and no errors in the build output.
+### 4.2 Deploy to Railway
 
-### 4.2 Fix the Dockerfile for production
+✅ **Done** — the app is live at `https://nova-production-2e9d.up.railway.app`. Railway:
+1. Connects to the GitHub repo (`Salafite/Nova`)
+2. Auto-detects the `Dockerfile`
+3. Builds and deploys on every push to `master`
+4. Runs `scripts/docker-entrypoint.sh` which applies migrations then starts uvicorn
 
-🤖 **Agent** — the current Dockerfile has several issues: no multi-stage build, no frontend build, copies everything, runs as root.
+To deploy to a new Railway project:
+1. Create a new Railway project → "Deploy from GitHub repo"
+2. Point it to your fork of `Salafite/Nova`
+3. Set all env vars from Phase 2.2
+4. Deploy
 
-> Rewrite `Dockerfile` as a multi-stage build:
-> - **Stage 1 (node)**: Build the Vue frontend using `node:20-alpine`. Copy `apps/web-vue/`, run `npm ci && npm run build`.
-> - **Stage 2 (python)**: Start from `python:3.11-slim`. Copy only `apps/api/requirements.txt`, install deps. Copy the built frontend from stage 1. Copy only the `apps/api/` and `packages/` directories. Add a non-root user (`adduser --disabled-password appuser`), switch to it. Set `CMD` with `--workers 4` on uvicorn.
+### 4.3 Set up a custom domain with SSL
 
-Also create a `.dockerignore` file that excludes everything except what's needed.
+🧑 **You** — Railway handles SSL automatically for custom domains:
+1. In Railway dashboard → your project → Settings → Domains
+2. Add your custom domain (e.g., `novaerp.com`)
+3. Railway generates a TLS certificate via Let's Encrypt
+4. At your domain registrar, add a CNAME record pointing your domain to Railway's URL (e.g., `nova-production-2e9d.up.railway.app`)
 
-**You'll know it worked when:** `docker build -t nova-erp . && docker run nova-erp python -c "import app; print('OK')"` succeeds quickly (under 2 minutes) and the image is under 500MB.
-
-### 4.3 Deploy to the hosting platform
-
-🧑 **You** — follow your hosting platform's instructions to deploy. The general flow:
-
-1. **Push to a Git repo** (GitHub, GitLab, etc.)
-2. **Connect the repo** to your hosting platform
-3. **Set all environment variables** from step 2.2 in the platform's dashboard
-4. **Trigger a deploy** — the platform reads the Dockerfile, builds the image, and runs it
-
-**For Railway.app:** Create a new project → "Deploy from GitHub repo" → add your repo → Railway auto-detects the Dockerfile → add env vars → deploy.
-**For Fly.io:** Run `fly launch` in the project root → `fly secrets set KEY=VALUE` for each env var → `fly deploy`.
-
-**You'll know it worked when:** The hosting platform shows a green "healthy" or "running" status and you can visit the URL it gives you.
-
-### 4.4 Set up a reverse proxy with SSL
-
-🧑 **You** — if your hosting platform doesn't handle SSL automatically, you need a reverse proxy. Cloudflare is the easiest option (and free):
-
-1. Sign up at Cloudflare.com, add your domain
-2. Change your domain's nameservers at your domain registrar to Cloudflare's (they'll show you which ones)
-3. In Cloudflare DNS, create an A record pointing your domain to your server's IP
-4. Enable "Proxy" (orange cloud) — this gives you free SSL, CDN, and DDoS protection
-5. Enable "Always Use HTTPS" in Cloudflare's SSL/TLS settings
-
-**If you need your own nginx config:**
-
-🤖 **Agent** — create `infrastructure/nginx.conf`:
-
-> Write an nginx config that:
-> - Listens on port 80 and 443
-> - SSL certificate paths as placeholders (or use Let's Encrypt via Certbot)
-> - Proxies `/api/` and `/` to `http://127.0.0.1:8070`
-> - Sets proper `X-Forwarded-For`, `X-Forwarded-Proto` headers
-> - Enables gzip compression for static assets
-> - Sets a reasonable `client_max_body_size` (e.g., 10M)
-
-**You'll know it worked when:** Visiting `https://yourdomain.com` shows your app with a padlock icon in the browser.
+**You'll know it worked when:** Visiting `https://yourdomain.com` shows your app with a padlock icon.
 
 ---
 
-## Phase 5: Domain (⏱ 30 min + DNS propagation)
+## Phase 5: Continuous Integration (⏱ 1 hour)
 
-### 5.1 Buy your domain
+### 5.1 Set up GitHub Actions for CI/CD
 
-🧑 **You** — if you don't have one already, buy a domain from Namecheap, Cloudflare, or your preferred registrar. Something short and memorable like `novaerp.com` or your company name.
+🤖 **Agent** — create `.github/workflows/ci.yml`:
 
-**Cost:** ~$10–15 per year.
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nova_erp
+          POSTGRES_USER: nova
+          POSTGRES_PASSWORD: nova_secret
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install -r apps/api/requirements.txt
+      - env: { DB_HOST: localhost, DB_PORT: 5432, DB_NAME: nova_erp, DB_USER: nova, DB_PASSWORD: nova_secret, DB_SCHEMA: Nova, SECRET_KEY: ci-test-key, ACCESS_TOKEN_EXPIRE_MINUTES: "1440", REFRESH_TOKEN_EXPIRE_DAYS: "7", ALLOWED_ORIGINS: "*" }
+        run: python -m pytest --tb=short -x
 
-**You'll know it worked when:** You get a confirmation email and can log into the registrar's dashboard showing your new domain.
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd apps/web-vue && npm ci && npm test
+```
 
-### 5.2 Point the domain to your app
+**You'll know it worked when:** The Actions tab shows green checkmarks on your latest commit.
 
-🧑 **You** — in your domain registrar's DNS settings, create records that point your domain to your hosting platform:
+### 5.2 Run E2E tests against production
 
-- **For Railway.app:** They provide a `*.railway.app` URL. Add a CNAME record pointing `yourdomain.com` to that URL.
-- **For Fly.io:** They provide a `*.fly.dev` URL. Same — add a CNAME record.
-- **For a VPS (DigitalOcean, Linode, etc.):** Add an A record pointing to your server's IP address.
+🤖 **Agent** — point Playwright at the production URL to smoke-test:
 
-**DNS propagation can take up to 24 hours**, but usually happens within 1–2 hours.
+```bash
+cd apps/web-vue
+PLAYWRIGHT_BASE_URL=https://yourdomain.com npx playwright test --workers=1
+```
 
-**You'll know it worked when:** `ping yourdomain.com` returns an IP address (or CNAME), and visiting `https://yourdomain.com` in a browser shows your app.
+Current test coverage: **84 tests** across 13 spec files (auth, hr, purchasing, manufacturing, planning, landing, navigation, products, sales, finance, warehouse, bi, inventory-counts, adjustments).
+
+**You'll know it worked when:** All 84 tests pass against the production build.
 
 ---
 
@@ -301,43 +249,45 @@ Also create a `.dockerignore` file that excludes everything except what's needed
 
 ### 6.1 Run the E2E smoke test as a real user
 
-🧑 **You** — walk through the core user journey manually, just like a customer would:
-
-1. Open an incognito/private browser window
-2. Visit your domain — you should see the login page
-3. Click "Sign Up" and create an account
-4. Log out, then log back in with your new account
-5. Navigate to a few pages (Purchasing, HR, Manufacturing, Planning)
-6. Try creating a record (e.g., a department, an employee)
-7. Edit and delete a record
-8. Try on your phone's browser — does it render reasonably?
+🧑 **You** — walk through the core user journey manually in an incognito window:
+1. Visit your domain — login page should load
+2. Click "Sign Up" and create an account
+3. Log out, then log back in
+4. Navigate to Purchasing, HR, Manufacturing, Planning pages
+5. Create a record (e.g., a department, an employee)
+6. Edit and delete a record
+7. Test on your phone's browser — does it render reasonably?
 
 **You'll know it worked when:** Every step above works without errors.
 
-### 6.2 Run the automated test suite
+### 6.2 Verify error tracking works
 
-🤖 **Agent** — run the test suite to make sure nothing is broken by the production build:
-
-> ```
-> cd apps/web-vue && npm test
-> cd ../.. && pytest --tb=short -x
-> ```
-
-**You'll know it worked when:** All unit tests pass (Vitest and pytest).
-
-### 6.3 Verify error tracking works
-
-🧑 **You** — deliberately trigger an error to confirm Sentry catches it:
-
-> Visit `https://yourdomain.com/api/nonexistent` — you should get a 404 JSON response. Log into Sentry and check that an error was captured (even 404s may show up depending on configuration).
+🧑 **You** — trigger a deliberate error to confirm Sentry catches it:
+1. Visit `https://yourdomain.com/api/nonexistent` — get a 404
+2. Log into Sentry → check Issues — confirm the error was captured
 
 **You'll know it worked when:** The error appears in your Sentry dashboard.
 
-### 6.4 Verify email delivery (if configured)
+### 6.3 Verify email delivery (if configured)
 
-🧑 **You** — trigger a password reset flow (or any email-generating action) and confirm the email arrives in your inbox (check spam folder too).
+🧑 **You** — trigger a password reset flow. Check your inbox (and spam folder).
 
 **You'll know it worked when:** The email arrives within a few minutes.
+
+### 6.4 Verify the security headers
+
+🤖 **Agent** — check that security headers are properly set:
+
+```bash
+curl -sI https://yourdomain.com | findstr "X-Content-Type-Options X-Frame-Options Content-Security-Policy"
+```
+
+Expected headers:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Content-Security-Policy` (set by `SecurityHeadersMiddleware`)
+
+**You'll know it worked when:** All security headers are present.
 
 ---
 
@@ -345,57 +295,54 @@ Also create a `.dockerignore` file that excludes everything except what's needed
 
 ### 7.1 Set up database backups
 
-🤖 **Agent** — create a database backup script and schedule:
+🤖 **Agent** — create a backup script:
 
-> Create `scripts/backup_db.sh` (or `.ps1` for Windows) that runs `pg_dump` using the same `DB_*` environment variables and writes to a dated file. The backup should be compressed (`.gz`).
+> Create `scripts/backup_db.ps1` that runs `pg_dump` using the same `DB_*` env vars and writes to a dated compressed file.
 
-🧑 **You** — then schedule it to run daily:
-- **On a Linux server:** `crontab -e` and add `0 3 * * * /path/to/backup_db.sh`
-- **On Railway.app or managed DB:** Use the provider's built-in backup feature (they often have daily backups automatically)
+🧑 **You** — schedule it:
+- **Railway Neon**: Enable automated daily backups in the Neon dashboard (Settings → Backups)
+- **Self-hosted DB**: Schedule via Task Scheduler (Windows) or cron (Linux)
 
-**You'll know it worked when:** A backup file exists in your backup directory with today's date.
+**You'll know it worked when:** A backup file exists with today's date.
 
 ### 7.2 Add a privacy policy and terms of service
 
-🧑 **You** — these are legally required if you have users (especially in the EU/GDPR). You have options:
+🧑 **You** — legally required if you have users (especially EU/GDPR):
+1. Use a generator like https://privacyterms.io or https://termly.io
+2. Or pay a lawyer (~$500–2000)
+3. Or adapt an open-source project's policies
 
-1. **Free template:** Use a generator like https://privacyterms.io or https://termly.io
-2. **Pay a lawyer:** ~$500–2000 for custom documents
-3. **Copy an open-source project's policies** (modify for your use case)
+🤖 **Agent** — create placeholder legal pages:
 
-Add the resulting pages at `/privacy` and `/terms` routes.
+> Create `apps/web-vue/src/views/legal/PrivacyView.vue` and `TermsView.vue` with basic layout linking to your external policy. Add unauthenticated routes in `router/index.js` for `/privacy` and `/terms`.
 
-🤖 **Agent** — create placeholder legal pages that link to your external privacy policy and terms:
-
-> Create `apps/web-vue/src/views/legal/PrivacyView.vue` and `TermsView.vue` with basic layout. Add routes in `apps/web-vue/src/router/index.js` for `/privacy` and `/terms` (no auth required). Include a link to your full policy hosted elsewhere, or embed the text.
-
-**You'll know it worked when:** Visiting `https://yourdomain.com/#/privacy` shows your privacy policy content.
+**You'll know it worked when:** Visiting `https://yourdomain.com/#/privacy` shows your policy.
 
 ### 7.3 Set up uptime monitoring
 
-🧑 **You** — use a free monitoring service to get alerted if your site goes down:
+🧑 **You** — use a free monitoring service:
+- **Better Stack** (betterstack.com) — free, monitors every 30s
+- **Uptime Robot** (uptimerobot.com) — free, monitors every 5 min
+- **Pingdom** (pingdom.com) — free tier
 
-- **Better Stack** (betterstack.com) — free, monitors every 30 seconds
-- **Uptime Robot** (uptimerobot.com) — free, monitors every 5 minutes
-- **Pingdom** (pingdom.com) — free tier available
-
-Point it at `https://yourdomain.com/api/health` and set it to alert you via email.
+Point at `https://yourdomain.com/api/health` and set email alerts.
 
 **You'll know it worked when:** You receive the "monitor is up" confirmation email.
 
 ### 7.4 Know where to look when something breaks
 
-🧑 **You** — save these links for troubleshooting:
+🧑 **You** — save these links:
 
 | If you need... | Go to... |
 |---|---|
 | See app errors/crashes | Sentry dashboard |
 | See user behavior | PostHog dashboard |
-| Check if the server is running | Hosting platform dashboard |
-| View server logs | Hosting platform logs tab (or `fly logs` / `railway logs`) |
-| Check database health | Database provider dashboard |
+| Check if the server is running | Railway.app dashboard |
+| View server logs | Railway → project → Deployments → Logs |
+| Restart the app | Railway → project → Settings → Restart |
+| Check database health | Neon dashboard (or Railway → Database tab) |
 | See payment issues | Stripe dashboard |
-| Emergency restart | Hosting platform "Restart" button |
+| Emergency redeploy | Push to GitHub master → auto-deploys |
 
 ---
 
@@ -406,32 +353,37 @@ Point it at `https://yourdomain.com/api/health` and set it to alert you via emai
 cd apps/web-vue && npm run build
 
 # Run backend tests
-pytest --tb=short
+python -m pytest --tb=short -x
 
-# Run frontend tests
+# Run frontend unit tests
 cd apps/web-vue && npm test
 
-# Run E2E tests
-cd apps/web-vue && npx playwright test
+# Run E2E tests (local)
+cd apps/web-vue && npx playwright test --workers=1
+
+# Run E2E tests against production
+cd apps/web-vue && PLAYWRIGHT_BASE_URL=https://yourdomain.com npx playwright test --workers=1
 
 # Create database backup
-pg_dump -h $DB_HOST -U $DB_USER -d $DB_NAME -F c -f backup_$(date +%Y%m%d).dump
+pg_dump -h $env:DB_HOST -U $env:DB_USER -d $env:DB_NAME > backup_$(Get-Date -Format yyyyMMdd).sql
 
-# Apply migrations
+# Apply migrations manually
 python scripts/run_migration.py
+
+# View Railway logs
+railway logs
 ```
 
 ---
 
 ## Summary
 
-- **Total steps:** ~25
-- **🧑 You must do:** ~10 (mostly account sign-ups, DNS, and verification)
-- **🤖 Agent can do:** ~12 (code fixes, config changes, build)
-- **🤝 Together:** ~3 (setting env vars, webhook setup)
+- **Total steps:** ~25 across 7 phases
+- **🧑 You must do:** ~10 (account sign-ups, DNS, domain setup)
+- **🤖 Agent can do:** ~12 (code fixes, config changes, CI setup)
+- **🤝 Together:** ~3 (env vars, webhook config)
+- **✅ Already done:** Hosting on Railway, Dockerfile, migrations auto-apply, frontend build, auth, billing infrastructure
 - **Estimated monthly cost:** $50–120 (varies based on scale)
-- **Biggest risk:** DNS propagation delay (can take hours) and store review if you ever launch a mobile app
+- **Biggest risk:** DNS propagation delay (hours) and forgetting to enable Neon automated backups
 
-**Recommended first step:** Start with Phase 0 (0.1–0.6) to fix the critical security and configuration issues, then move to Phase 1 to create accounts.
-
-Want me to start on any of the 🤖 steps now?
+**Recommended first step:** Sign up for the optional services you need (Sentry, Resend, Stripe) and set their API keys as Railway env vars.
