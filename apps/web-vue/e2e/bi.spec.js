@@ -47,12 +47,7 @@ test.describe('BI & Reporting Module', () => {
 
   test('report builder page renders', async ({ page }) => {
     await page.goto('/#/bi/reports')
-    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
-    const sidebar = page.locator('.report-sidebar')
-    const main = page.locator('.report-main')
-    const placeholder = page.locator('.placeholder')
-    const error = page.locator('.error-state')
-    expect(await sidebar.count() + await main.count() + await placeholder.count() + await error.count())
-      .toBeGreaterThanOrEqual(1)
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.report-layout')).toBeVisible({ timeout: 10000 })
   })
 })
