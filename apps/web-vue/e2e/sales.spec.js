@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Warehouse & Inventory', () => {
+test.describe('Sales Module', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await page.evaluate(() => {
@@ -13,8 +13,8 @@ test.describe('Warehouse & Inventory', () => {
     await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 20000 })
   })
 
-  test('inventory page renders', async ({ page }) => {
-    await page.goto('/#/inventory')
+  test('sales orders page renders', async ({ page }) => {
+    await page.goto('/#/sales')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -24,8 +24,13 @@ test.describe('Warehouse & Inventory', () => {
       .toBeGreaterThanOrEqual(1)
   })
 
-  test('warehouses page renders', async ({ page }) => {
-    await page.goto('/#/warehouses')
+  test('sales orders has add button', async ({ page }) => {
+    await page.goto('/#/sales')
+    await expect(page.getByRole('button', { name: /new sales order/i })).toBeVisible({ timeout: 15000 })
+  })
+
+  test('quotations page renders', async ({ page }) => {
+    await page.goto('/#/sales/quotations')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -35,13 +40,13 @@ test.describe('Warehouse & Inventory', () => {
       .toBeGreaterThanOrEqual(1)
   })
 
-  test('warehouses has add button', async ({ page }) => {
-    await page.goto('/#/warehouses')
-    await expect(page.getByRole('button', { name: /new warehouse/i })).toBeVisible({ timeout: 15000 })
+  test('quotations has add button', async ({ page }) => {
+    await page.goto('/#/sales/quotations')
+    await expect(page.getByRole('button', { name: /new quotation/i })).toBeVisible({ timeout: 15000 })
   })
 
-  test('stock movements page renders', async ({ page }) => {
-    await page.goto('/#/stock-movements')
+  test('deliveries page renders', async ({ page }) => {
+    await page.goto('/#/sales/deliveries')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -51,13 +56,13 @@ test.describe('Warehouse & Inventory', () => {
       .toBeGreaterThanOrEqual(1)
   })
 
-  test('stock movements has add button', async ({ page }) => {
-    await page.goto('/#/stock-movements')
-    await expect(page.getByRole('button', { name: /new movement/i })).toBeVisible({ timeout: 15000 })
+  test('deliveries has add button', async ({ page }) => {
+    await page.goto('/#/sales/deliveries')
+    await expect(page.getByRole('button', { name: /new delivery/i })).toBeVisible({ timeout: 15000 })
   })
 
-  test('categories page renders', async ({ page }) => {
-    await page.goto('/#/categories')
+  test('sales returns page renders', async ({ page }) => {
+    await page.goto('/#/sales/returns')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -67,25 +72,40 @@ test.describe('Warehouse & Inventory', () => {
       .toBeGreaterThanOrEqual(1)
   })
 
-  test('pick lists page renders', async ({ page }) => {
-    await page.goto('/#/warehouse/pick-lists')
+  test('sales returns has add button', async ({ page }) => {
+    await page.goto('/#/sales/returns')
+    await expect(page.getByRole('button', { name: /new return/i })).toBeVisible({ timeout: 15000 })
+  })
+
+  test('price lists page renders', async ({ page }) => {
+    await page.goto('/#/sales/price-lists')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
-    const card = page.locator('.pick-card')
+    const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
     const error = page.locator('.error-state-card')
-    expect(await skeleton.count() + await card.count() + await empty.count() + await error.count())
+    expect(await skeleton.count() + await table.count() + await empty.count() + await error.count())
       .toBeGreaterThanOrEqual(1)
   })
 
-  test('home dashboard renders', async ({ page }) => {
-    await page.goto('/#/dashboard')
+  test('price lists has add button', async ({ page }) => {
+    await page.goto('/#/sales/price-lists')
+    await expect(page.getByRole('button', { name: /new price list/i })).toBeVisible({ timeout: 15000 })
+  })
+
+  test('tax rates page renders', async ({ page }) => {
+    await page.goto('/#/sales/tax-rates')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
-    const content = page.locator('.dashboard-grid, .dashboard-cards, .stat-card')
+    const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
     const error = page.locator('.error-state-card')
-    expect(await skeleton.count() + await content.count() + await empty.count() + await error.count())
+    expect(await skeleton.count() + await table.count() + await empty.count() + await error.count())
       .toBeGreaterThanOrEqual(1)
+  })
+
+  test('tax rates has add button', async ({ page }) => {
+    await page.goto('/#/sales/tax-rates')
+    await expect(page.getByRole('button', { name: /new tax rate/i })).toBeVisible({ timeout: 15000 })
   })
 })
