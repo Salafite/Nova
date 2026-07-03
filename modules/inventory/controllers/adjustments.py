@@ -1,11 +1,9 @@
 from typing import Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from modules.inventory.services.stock_movement import StockMovementService
 from modules.core.repositories.base import CrudRepository
-from packages.auth.middleware import get_current_user
-
-from fastapi import Depends
+from packages.auth.deps import get_current_user
 
 router = APIRouter(prefix='/api/adjustments', tags=['Stock Adjustments'], dependencies=[Depends(get_current_user)])
 
