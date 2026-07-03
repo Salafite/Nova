@@ -1,0 +1,2 @@
+ALTER TABLE "Nova".t0105 DROP COLUMN IF EXISTS business_id;
+DROP INDEX IF EXISTS "Nova".idx_t0105_business;
