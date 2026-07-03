@@ -20,13 +20,16 @@ def authenticate_user(username: str, password: str) -> dict | None:
 
 
 def _build_user_dict(user: dict) -> dict:
+    perms = user['permissions'] or []
+    if user['role'] == 'Admin' and '*' not in perms:
+        perms = ['*']
     return {
         'id': user['id'],
         'username': user['username'],
         'full_name': user['full_name'],
         'email': user['email'],
         'role': user['role'],
-        'permissions': user['permissions'] or [],
+        'permissions': perms,
         'business_id': user.get('business_id'),
     }
 

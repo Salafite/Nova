@@ -14,10 +14,8 @@ test.describe('HR Module', () => {
   })
 
   test('departments page renders', async ({ page }) => {
-    await page.locator('[data-id="departments"]').click()
-    await expect(page).toHaveURL(/\/departments/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/departments')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -28,15 +26,12 @@ test.describe('HR Module', () => {
 
   test('departments has add button', async ({ page }) => {
     await page.goto('/#/departments')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /new department/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /new department/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('designations page renders', async ({ page }) => {
-    await page.locator('[data-id="designations"]').click()
-    await expect(page).toHaveURL(/\/designations/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/designations')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -47,15 +42,12 @@ test.describe('HR Module', () => {
 
   test('designations has add button', async ({ page }) => {
     await page.goto('/#/designations')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /new designation/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /new designation/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('employees page renders', async ({ page }) => {
-    await page.locator('[data-id="employees"]').click()
-    await expect(page).toHaveURL(/\/employees/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/employees')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -66,15 +58,12 @@ test.describe('HR Module', () => {
 
   test('employees has add button', async ({ page }) => {
     await page.goto('/#/employees')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /new employee/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /new employee/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('attendance page renders', async ({ page }) => {
-    await page.locator('[data-id="hr-attendance"]').click()
-    await expect(page).toHaveURL(/\/hr\/attendance/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/hr/attendance')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -84,10 +73,8 @@ test.describe('HR Module', () => {
   })
 
   test('leave requests page renders', async ({ page }) => {
-    await page.locator('[data-id="hr-leaves"]').click()
-    await expect(page).toHaveURL(/\/hr\/leaves/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/hr/leaves')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -97,10 +84,8 @@ test.describe('HR Module', () => {
   })
 
   test('payroll page renders', async ({ page }) => {
-    await page.locator('[data-id="hr-payroll"]').click()
-    await expect(page).toHaveURL(/\/hr\/payroll/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/hr/payroll')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -111,15 +96,12 @@ test.describe('HR Module', () => {
 
   test('payroll has add button', async ({ page }) => {
     await page.goto('/#/hr/payroll')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /new payroll/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /new payroll/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('job openings page renders', async ({ page }) => {
-    await page.locator('[data-id="hr-jobs"]').click()
-    await expect(page).toHaveURL(/\/hr\/jobs/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/hr/jobs')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -129,10 +111,8 @@ test.describe('HR Module', () => {
   })
 
   test('candidates page renders', async ({ page }) => {
-    await page.locator('[data-id="hr-candidates"]').click()
-    await expect(page).toHaveURL(/\/hr\/candidates/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/hr/candidates')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')

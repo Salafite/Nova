@@ -27,13 +27,16 @@ def refresh_endpoint(body: RefreshRequest):
 
 @router.get('/me', response_model=CurrentUserResponse)
 def me_endpoint(user: dict = Depends(get_current_user)):
+    perms = user['permissions'] or []
+    if user['role'] == 'Admin' and '*' not in perms:
+        perms = ['*']
     return {
         'id': user['id'],
         'username': user['username'],
         'full_name': user['full_name'],
         'email': user['email'],
         'role': user['role'],
-        'permissions': user['permissions'] or [],
+        'permissions': perms,
         'business_id': user.get('business_id'),
     }
 

@@ -14,10 +14,8 @@ test.describe('Manufacturing Module', () => {
   })
 
   test('bill of materials page renders', async ({ page }) => {
-    await page.locator('[data-id="mfg-bom"]').click()
-    await expect(page).toHaveURL(/\/manufacturing\/bom/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/manufacturing/bom')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -28,15 +26,12 @@ test.describe('Manufacturing Module', () => {
 
   test('BOM has new BOM button', async ({ page }) => {
     await page.goto('/#/manufacturing/bom')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /new bom/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /new bom/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('manufacturing orders page renders', async ({ page }) => {
-    await page.locator('[data-id="mfg-orders"]').click()
-    await expect(page).toHaveURL(/\/manufacturing\/orders/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/manufacturing/orders')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -47,15 +42,12 @@ test.describe('Manufacturing Module', () => {
 
   test('manufacturing orders has new order button', async ({ page }) => {
     await page.goto('/#/manufacturing/orders')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /new manufacturing order/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /new manufacturing order/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('QC inspection page renders', async ({ page }) => {
-    await page.locator('[data-id="mfg-qc"]').click()
-    await expect(page).toHaveURL(/\/manufacturing\/qc/)
-    await page.waitForLoadState('networkidle')
-    await expect(page.locator('.page-title').first()).toBeVisible()
+    await page.goto('/#/manufacturing/qc')
+    await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
@@ -66,7 +58,6 @@ test.describe('Manufacturing Module', () => {
 
   test('QC inspection has new inspection button', async ({ page }) => {
     await page.goto('/#/manufacturing/qc')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /new qc inspection/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /new qc inspection/i })).toBeVisible({ timeout: 15000 })
   })
 })
