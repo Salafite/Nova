@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS "Nova".t0105 (
     id            SERIAL PRIMARY KEY,
-    business_id   INT NOT NULL REFERENCES "Nova".t0010(id) ON DELETE CASCADE,
     count_number  VARCHAR(30) NOT NULL,
     warehouse_id  INT REFERENCES "Nova".t0008(id) ON DELETE SET NULL,
     count_date    DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -28,7 +27,6 @@ CREATE TABLE IF NOT EXISTS "Nova".t0106 (
     update_number INT NOT NULL DEFAULT 1
 );
 
-CREATE INDEX IF NOT EXISTS idx_t0105_business ON "Nova".t0105(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0105_status ON "Nova".t0105(status);
 CREATE INDEX IF NOT EXISTS idx_t0106_count ON "Nova".t0106(count_id);
 CREATE INDEX IF NOT EXISTS idx_t0106_product ON "Nova".t0106(product_id);
