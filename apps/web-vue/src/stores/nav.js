@@ -33,6 +33,7 @@ export const useNavStore = defineStore('nav', {
           { id: 'inventory', icon: 'warehouse', label: 'Stock Levels', label_ar: 'مستويات المخزون', module: 'inventory' },
           { id: 'warehouses', icon: 'factory', label: 'Warehouses', label_ar: 'المستودعات', module: 'warehouses' },
           { id: 'stock-movements', icon: 'swap_vert', label: 'Stock Movements', label_ar: 'حركات المخزون', module: 'stock-movements' },
+          { id: 'inventory-counts', icon: 'fact_check', label: 'Inventory Counts', label_ar: 'جرد المخزون', module: 'inventory-counts' },
           { id: 'pick-lists', icon: 'assignment', label: 'Pick Lists', label_ar: 'قوائم التجهيز', module: 'pick-lists' },
           { section: 'Accounting & Finance', section_ar: 'المحاسبة والمالية' },
           { id: 'finance', icon: 'account_balance', label: 'Invoices', label_ar: 'الفواتير', module: 'finance' },
