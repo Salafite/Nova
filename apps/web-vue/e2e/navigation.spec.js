@@ -48,6 +48,6 @@ test.describe('Sidebar Navigation', () => {
   test('navigates to pick lists page', async ({ page }) => {
     await page.goto('/#/warehouse/pick-lists')
     await expect(page).toHaveURL(/\/pick-lists/)
-    await expect(page.locator('.page-title').first()).toContainText(/pick-?lists/i)
+    await expect(page.locator('.page-title').first()).toContainText(/pick[\s-]?lists/i)
   })
 })

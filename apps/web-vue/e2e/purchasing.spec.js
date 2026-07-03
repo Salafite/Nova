@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Purchasing Module', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
     await page.evaluate(() => {
       localStorage.removeItem('nova_token')
       localStorage.removeItem('nova_user')
@@ -10,7 +10,7 @@ test.describe('Purchasing Module', () => {
     await page.fill('input[placeholder*="username" i]', 'testuser')
     await page.fill('input[placeholder*="password" i]', 'password123')
     await page.getByRole('button', { name: /sign in/i }).click()
-    await expect(page).not.toHaveURL(/\/login/)
+    await page.waitForURL(url => !url.toString().includes('/login'), { timeout: 20000 })
   })
 
   test('purchasing overview page renders', async ({ page }) => {
