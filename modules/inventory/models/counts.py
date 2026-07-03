@@ -5,6 +5,7 @@ from modules.core.models.base import AuditMixin
 
 
 class InventoryCountCreate(BaseModel):
+    count_number: str = Field(..., max_length=30)
     warehouse_id: Optional[int] = None
     count_date: date
     notes: Optional[str] = None
