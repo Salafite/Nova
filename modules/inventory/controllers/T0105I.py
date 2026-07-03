@@ -72,12 +72,12 @@ def complete_count(id: int):
             cur.execute("""
                 UPDATE "Nova".t0009
                 SET qty = qty + %s
-                WHERE product_id = %s
-            """, (diff, product_id))
+                WHERE product_id = %s AND warehouse_id = (SELECT warehouse_id FROM "Nova".t0105 WHERE id = %s)
+            """, (diff, product_id, id))
 
             cur.execute("""
-                INSERT INTO "Nova".t0064 (product_id, warehouse_id, qty_change, balance, movement_type, description, ref_type, ref_id)
-                SELECT %s, t0105.warehouse_id, %s, COALESCE((SELECT qty FROM "Nova".t0009 WHERE t0009.product_id = %s), 0),
+                INSERT INTO "Nova".t0064 (product_id, warehouse_id, qty_change, balance_after, movement_type, description, reference_type, reference_id)
+                SELECT %s, t0105.warehouse_id, %s, COALESCE((SELECT qty FROM "Nova".t0009 WHERE t0009.product_id = %s AND t0009.warehouse_id = t0105.warehouse_id), 0),
                        'ADJUSTMENT', 'Inventory count adjustment', 'T0105', %s
                 FROM "Nova".t0105 WHERE t0105.id = %s
             """, (product_id, diff, product_id, id, id))
