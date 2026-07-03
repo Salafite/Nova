@@ -14,7 +14,7 @@ router = create_crud_router(BASE, 'T0105 - Inventory Counts', service,
                             InventoryCountCreate, InventoryCountUpdate, InventoryCountResponse)
 
 
-@router.post(f'{BASE}/{{id}}/populate')
+@router.post('/{id}/populate')
 def populate_items(id: int):
     conn = get_connection()
     try:
@@ -42,7 +42,7 @@ def populate_items(id: int):
         release_connection(conn)
 
 
-@router.post(f'{BASE}/{{id}}/complete')
+@router.post('/{id}/complete')
 def complete_count(id: int):
     conn = get_connection()
     try:

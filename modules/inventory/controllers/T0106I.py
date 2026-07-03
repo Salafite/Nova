@@ -13,7 +13,7 @@ router = create_crud_router(BASE, 'T0106 - Inventory Count Items', service,
                             CountItemCreate, CountItemUpdate, CountItemResponse)
 
 
-@router.get(f'{BASE}/by-count/{{count_id}}')
+@router.get('/by-count/{count_id}')
 def get_items_by_count(count_id: int):
     conn = get_connection()
     try:
