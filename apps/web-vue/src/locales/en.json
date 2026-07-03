@@ -441,5 +441,11 @@
   "customers-count.one": "{count} customer",
   "customers-count.other": "{count} customers",
   "days-ago.one": "{count} day ago",
-  "days-ago.other": "{count} days ago"
+  "days-ago.other": "{count} days ago",
+  "new-bom": "New BOM",
+  "new-mfg-order": "New Manufacturing Order",
+  "new-qc": "New QC Inspection",
+  "new-pp": "New Production Plan",
+  "new-pr": "New Requisition",
+  "new-preturn": "New Return"
 }

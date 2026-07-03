@@ -31,7 +31,7 @@ test.describe('Planning Module', () => {
 
   test('production plans has add button and table structure', async ({ page }) => {
     await page.goto('/#/planning')
-    await expect(page.getByRole('button', { name: /new plan/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('button', { name: /new production plan|new-pp/i })).toBeVisible({ timeout: 15000 })
     const table = page.locator('.data-table')
     const empty = page.locator('.empty-state')
     const showTable = await table.count() > 0
