@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const CONFIG = { apiBase: import.meta.env.VITE_API_BASE || 'http://localhost:8070' }
+const CONFIG = { apiBase: import.meta.env.VITE_API_BASE || '' }
 
 const api = axios.create({ baseURL: CONFIG.apiBase + '/api' })
 
