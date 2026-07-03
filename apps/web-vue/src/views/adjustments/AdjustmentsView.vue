@@ -195,7 +195,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/T0064I/adjustments')
+    const res = await api.get('/adjustments/')
     items.value = res.data || []
   } catch {
     error.value = t('failed-load')
@@ -218,7 +218,7 @@ function closeModal() {
 async function saveAdjustment() {
   saving.value = true
   try {
-    await api.post('/T0064I/adjust', {
+    await api.post('/adjustments/', {
       product_id: form.value.product_id,
       warehouse_id: form.value.warehouse_id,
       new_qty: form.value.new_qty,
