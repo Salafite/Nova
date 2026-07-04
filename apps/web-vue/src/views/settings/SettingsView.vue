@@ -8,9 +8,9 @@
       </div>
       <nav class="settings-nav">
         <a v-for="grp in store.filteredGroups" :key="grp.group"
-           :class="['nav-link', { active: activeGroup === grp.group }]"
+           :class="['nav-link', { active: viewMode === 'grid' ? gridGroup === grp.group : activeGroup === grp.group }]"
            href="#"
-           @click.prevent="scrollToGroup(grp.group)">
+           @click.prevent="viewMode === 'grid' ? filterGrid(grp.group) : scrollToGroup(grp.group)">
           <span class="nav-icon">
             <span class="material-symbols-outlined">{{ groupIcon(grp.group) }}</span>
           </span>
@@ -25,16 +25,26 @@
       </div>
     </div>
 
-    <div class="settings-content" ref="contentRef" @scroll="onScroll">
+    <div class="settings-content" ref="contentRef" @scroll="viewMode !== 'grid' ? onScroll() : null">
       <div class="page-header">
         <div>
-          <h2 class="page-title">System Settings</h2>
+          <h1 class="page-title">System Settings</h1>
           <p class="page-subtitle">Manage global system preferences and configurations</p>
         </div>
-        <button class="btn-primary" :disabled="!store.hasChanges || store.saving" @click="saveAll">
-          <span class="material-symbols-outlined">{{ store.saving ? 'hourglass_top' : 'save' }}</span>
-          {{ store.saving ? t('saving') : t('save-all', 'Save All Changes') }}
-        </button>
+        <div class="header-actions">
+          <div class="view-toggle">
+            <button :class="['toggle-btn', { active: viewMode === 'form' }]" @click="viewMode = 'form'" :title="t('form-view', 'Form View')">
+              <span class="material-symbols-outlined">view_day</span>
+            </button>
+            <button :class="['toggle-btn', { active: viewMode === 'grid' }]" @click="switchToGrid" :title="t('grid-view', 'Grid View')">
+              <span class="material-symbols-outlined">view_list</span>
+            </button>
+          </div>
+          <button class="btn-primary" :disabled="!store.hasChanges || store.saving" @click="saveAll">
+            <span class="material-symbols-outlined">{{ store.saving ? 'hourglass_top' : 'save' }}</span>
+            {{ store.saving ? t('saving') : t('save-all', 'Save All Changes') }}
+          </button>
+        </div>
       </div>
 
       <SkeletonCard v-if="store.loading" variant="form" />
@@ -44,7 +54,8 @@
         <p>No settings match "{{ store.searchQuery }}"</p>
       </div>
 
-      <div v-else class="groups-container">
+      <!-- Form View (grouped sidebar view) -->
+      <div v-else-if="viewMode === 'form'" class="groups-container">
         <section v-for="grp in store.filteredGroups" :key="grp.group"
                  :ref="el => setSectionRef(grp.group, el)"
                  class="settings-section"
@@ -113,7 +124,7 @@
                   <button v-if="store.dirtyKeys[setting.setting_key]"
                           class="btn-reset"
                           @click="resetSetting(setting)"
-                          :title="t('reset-value', 'Reset to saved value')">
+                          :title="t('reset-value', 'Reset to saved value')" :aria-label="t('reset-value', 'Reset to saved value')">
                     <span class="material-symbols-outlined">undo</span>
                   </button>
                 </div>
@@ -122,12 +133,76 @@
           </div>
         </section>
       </div>
+
+      <!-- Grid View (table of all settings) -->
+      <div v-else class="grid-view">
+        <div v-if="gridGroup" class="grid-breadcrumb">
+          <a href="#" @click.prevent="gridGroup = ''" class="grid-breadcrumb-link">All Settings</a>
+          <span class="grid-breadcrumb-sep">/</span>
+          <span class="grid-breadcrumb-current">{{ gridGroup }}</span>
+        </div>
+        <div class="data-card">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="col-key">Key</th>
+                  <th class="col-value">Value</th>
+                  <th class="col-desc">Description</th>
+                  <th class="col-group">Group</th>
+                  <th class="col-status">Status</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="setting in gridSettings" :key="setting.id"
+                    :class="{ 'row-dirty': store.dirtyKeys[setting.setting_key] }">
+                  <td><span class="mono">{{ setting.setting_key }}</span></td>
+                  <td class="col-value-cell">
+                    <div v-if="isToggle(setting)" class="grid-toggle-wrap">
+                      <label class="toggle-switch toggle-sm">
+                        <input type="checkbox"
+                               :checked="store.getValue(setting.setting_key) === 'true'"
+                               @change="toggleSetting(setting, $event.target.checked)" />
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
+                    <div v-else-if="isOption(setting)" class="grid-option-group">
+                      <button v-for="opt in getOptions(setting)" :key="opt"
+                              :class="['option-btn-sm', { active: store.getValue(setting.setting_key) === opt }]"
+                              @click="setOption(setting, opt)">
+                        {{ opt }}
+                      </button>
+                    </div>
+                    <input v-else type="text" class="grid-input"
+                           :value="store.getValue(setting.setting_key)"
+                           @input="setTextValue(setting, $event.target.value)" />
+                  </td>
+                  <td class="col-desc-cell">{{ setting.description }}</td>
+                  <td><span class="badge badge-group">{{ setting.setting_group || 'General' }}</span></td>
+                  <td class="text-center">
+                    <span :class="setting.is_active ? 'badge badge-active' : 'badge badge-disabled'">
+                      {{ setting.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <button v-if="store.dirtyKeys[setting.setting_key]" class="btn-icon btn-reset-icon"
+                            @click="resetSetting(setting)" :title="t('reset', 'Reset')">
+                      <span class="material-symbols-outlined">undo</span>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useSettingsStore } from '../../stores/settings.js'
 import { useNavStore } from '../../stores/nav.js'
 import { useToast } from '../../composables/useToast.js'
@@ -145,6 +220,21 @@ const { isToggle, isOption, getOptions, groupIcon } = useSettingsUI()
 const contentRef = ref(null)
 const activeGroup = ref('')
 const sectionRefs = {}
+const viewMode = ref('form')
+const gridGroup = ref('')
+
+const gridSettings = computed(() => {
+  const all = []
+  for (const grp of store.filteredGroups) {
+    for (const s of grp.settings) {
+      all.push(s)
+    }
+  }
+  if (gridGroup.value) {
+    return all.filter(s => (s.setting_group || 'General') === gridGroup.value)
+  }
+  return all
+})
 
 function setSectionRef(groupName, el) {
   if (el) sectionRefs[groupName] = el
@@ -157,6 +247,15 @@ function scrollToGroup(groupName) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     contentRef.value.scrollTop -= 24
   }
+}
+
+function switchToGrid() {
+  viewMode.value = 'grid'
+  gridGroup.value = ''
+}
+
+function filterGrid(groupName) {
+  gridGroup.value = groupName
 }
 
 let scrollRaf = null
@@ -411,6 +510,264 @@ onUnmounted(() => {
 
 .btn-primary .material-symbols-outlined {
   font-size: 18px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-toggle {
+  display: flex;
+  background: #f0f0f4;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.toggle-btn:hover {
+  color: #333;
+}
+
+.toggle-btn.active {
+  background: #fff;
+  color: #5d3fd3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.toggle-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Grid view */
+.grid-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grid-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #999;
+}
+
+.grid-breadcrumb-link {
+  color: #5d3fd3;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.grid-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.grid-breadcrumb-sep {
+  color: #ccc;
+}
+
+.grid-breadcrumb-current {
+  color: #555;
+  font-weight: 600;
+}
+
+.data-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #fafafe;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 8px 16px;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+  color: #333;
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td {
+  background: #fafafe;
+}
+
+.data-table tr.row-dirty td {
+  background: #fffde7;
+}
+
+.col-key { min-width: 180px; }
+.col-value { min-width: 200px; }
+.col-desc { min-width: 220px; }
+.col-group { width: 100px; }
+.col-status { width: 80px; text-align: center; }
+.col-actions { width: 60px; text-align: center; }
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #5d3fd3;
+  font-weight: 600;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.grid-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #333;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+  min-width: 160px;
+}
+
+.grid-input:focus {
+  border-color: #5d3fd3;
+}
+
+.grid-toggle-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-sm {
+  width: 36px;
+  height: 20px;
+}
+
+.toggle-sm .toggle-slider::before {
+  width: 16px;
+  height: 16px;
+}
+
+.toggle-sm input:checked + .toggle-slider::before {
+  transform: translateX(16px);
+}
+
+.grid-option-group {
+  display: flex;
+  gap: 3px;
+  background: #f5f5f9;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.option-btn-sm {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.option-btn-sm:hover {
+  color: #333;
+}
+
+.option-btn-sm.active {
+  background: #fff;
+  color: #5d3fd3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.badge-group {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #e8eaf6;
+  color: #3949ab;
+}
+
+.badge-active {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-disabled {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #f5f5f5;
+  color: #999;
+}
+
+.btn-reset-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  color: #999;
+  transition: all 0.15s;
+}
+
+.btn-reset-icon:hover {
+  border-color: #e65100;
+  color: #e65100;
+  background: #fff3e0;
+}
+
+.btn-reset-icon .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .loading-state,

@@ -5,6 +5,14 @@ const OPTION_CONFIG = {
   SYSTEM_LANGUAGE: { options: ['en-US', 'ar-EG'] },
 }
 const GROUP_ICONS = {
+  General: 'tune',
+  Company: 'business',
+  Regional: 'language',
+  Purchasing: 'shopping_cart',
+  Sales: 'point_of_sale',
+  Finance: 'account_balance',
+  Inventory: 'inventory',
+  System: 'settings',
   'Company Profile': 'business',
   'Operational Controls': 'settings_applications',
   Security: 'security',
