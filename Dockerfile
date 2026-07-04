@@ -24,6 +24,6 @@ COPY scripts/docker-entrypoint.sh scripts/run_migration.py scripts/
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 COPY --from=frontend /build/dist/ apps/web-vue/dist/
 
-EXPOSE 8070
+EXPOSE 8080
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
