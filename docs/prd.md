@@ -3,7 +3,7 @@
 ## 1. Overview
 
 ### Product Summary
-Nova is an open-source ERP for small F&B distributors (5–50M/month revenue) that replaces legacy systems with real-time inventory, automated order-to-cash flows, and a single source of truth across sales, warehouse, and accounting. Built on Nuxt 3 + FastAPI + PostgreSQL, deployable on-prem (Podman) or cloud.
+Nova is an open-source ERP for small F&B distributors (5–50M/month revenue) that replaces legacy systems with real-time inventory, automated order-to-cash flows, and a single source of truth across sales, warehouse, and accounting. Built on Vue 3 + Vite + FastAPI + PostgreSQL, deployable on-prem (Podman) or cloud.
 
 ### Objective
 This PRD covers the MVP (4–8 week build): the end-to-end order-to-cash flow that proves the concept with Makka as the first customer. The MVP includes user auth with role management, product catalog with phantom product detection, real-time inventory, order management with stock reservation, pick list generation, accounts receivable with multi-payment tracking, supplier management, and a legacy migration tool.
@@ -33,9 +33,8 @@ The technical implementation must deliver:
 
 ```mermaid
 graph TB
-    Client[Nuxt 3 PWA] -->|HTTP/WebSocket| API[FastAPI Backend]
+    Client[Vue 3 PWA] -->|HTTP/WebSocket| API[FastAPI Backend]
     API -->|SQLAlchemy| DB[(PostgreSQL)]
-    API -->|Auth0 SDK| Auth[Auth0]
     API -->|Stripe SDK| Payments[Stripe]
     Client -->|PostHog SDK| Analytics[PostHog]
     API -->|Resend SDK| Email[Resend]
@@ -54,47 +53,44 @@ graph TB
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Frontend | Nuxt 3 | Vue framework with SSR, file-based routing, module ecosystem. Hybrid rendering (SSR for public pages, SPA for app behind login). |
+| Frontend | Vue 3 + Vite | Progressive SPA with hash-based routing, Pinia stores, composable-driven architecture. Client-side rendering optimized for ERP workflows. |
 | Backend | FastAPI | Modern Python async framework, type-hint-driven validation, auto OpenAPI docs. Natural for Python-native team. |
 | Database | PostgreSQL | Right choice for ERP with complex relational data (products, orders, inventory, payments). Mature, ACID-compliant. |
-| Auth | Auth0 | Enterprise-ready, works with Python backend, social login and MFA out of the box. Multi-tenant support via organizations. |
+| Auth | Custom JWT (HS256) | Lightweight token-based auth with psycopg2-backed user/business storage. Refresh tokens on 7-day rotation. No external auth provider dependency. |
 | Payments | Stripe | Flexible subscription billing for $5/user/month model. Checkout, customer portal, webhooks. |
 | Analytics | PostHog | Free tier (1M events/month). Session replay and feature flags bundled. |
 | Email | Resend | Transactional email for account management, notifications, receipts. Developer-friendly API. |
-| Error tracking | Sentry | Crash and performance monitoring. SDKs for Nuxt and Python/ASGI. |
+| Error tracking | Sentry | Crash and performance monitoring. SDKs for Vue 3 (via @sentry/vue) and Python/ASGI. |
 
 ### Stack Integration Guide
 
 **Setup order:**
-1. PostgreSQL (local dev) → schema with Alembic migrations
-2. Auth0 tenant → application + API + roles
-3. FastAPI project with SQLAlchemy + Alembic + Auth0 middleware
-4. Nuxt 3 project with auth module, PostHog plugin, Sentry module
-5. Stripe account → products + prices + webhook endpoint
-6. Resend domain verification → transactional email templates
-7. Environment variables wired to `.env` for all secrets
-8. Docker Compose for local development with all services
-9. Podman Compose for on-prem deployment packaging
+1. PostgreSQL (local dev) → schema with raw SQL migrations
+2. FastAPI project with SQLAlchemy + JWT middleware
+3. Vue 3 + Vite project with Pinia stores, vue-router, axios
+4. Stripe account → products + prices + webhook endpoint
+5. Resend domain verification → transactional email templates
+6. Environment variables wired to `.env` for all secrets
+7. Docker Compose for local development with all services
+8. Podman Compose for on-prem deployment packaging
 
 **Integration patterns:**
-- FastAPI uses `python-jose` for Auth0 JWT validation middleware
-- Nuxt 3 uses `@nuxtjs/auth-next` or direct Auth0 SDK for client-side auth
+- FastAPI uses `python-jose` for JWT creation and validation middleware
+- Vue 3 uses `axios` interceptor for attaching JWT Bearer tokens to API requests
 - Stripe webhooks handled via FastAPI route with signature verification
 - Real-time updates via WebSocket (FastAPI's native WebSocket support) for inventory/order status changes
-- Alembic for schema migrations; `asyncpg` for async PostgreSQL driver
-- PostHog: `posthog` Python SDK on backend, `posthog-js` on Nuxt client
-- Sentry: `sentry-sdk` with FastAPI/ASGI integration, `@nuxtjs/sentry` module
+- Raw SQL migration files (numbered) for schema management; `psycopg2` for synchronous PostgreSQL driver
+- PostHog: `posthog` Python SDK on backend, `posthog-js` on Vue 3 client
+- Sentry: `sentry-sdk` with FastAPI/ASGI integration, `@sentry/vue` for frontend
 
 **Required environment variables:**
 ```
-# Auth0
-AUTH0_DOMAIN=
-AUTH0_API_AUDIENCE=
-AUTH0_CLIENT_ID=
-AUTH0_CLIENT_SECRET=
-
 # Database
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/nova
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=Nova
+DB_USER=postgres
+DB_PASSWORD=
 
 # Stripe
 STRIPE_SECRET_KEY=
@@ -161,12 +157,12 @@ nova/
 │   ├── alembic.ini
 │   ├── requirements.txt
 │   └── Dockerfile
-├── frontend/
-│   ├── pages/
-│   │   ├── index.vue
-│   │   ├── login.vue
-│   │   ├── dashboard.vue
-│   │   ├── products/
+├── apps/web-vue/
+│   ├── src/
+│   │   ├── views/
+│   │   │   ├── DashboardView.vue
+│   │   │   ├── LoginView.vue
+│   │   │   ├── products/
 │   │   ├── orders/
 │   │   ├── warehouse/
 │   │   └── accounting/
@@ -174,14 +170,12 @@ nova/
 │   │   ├── ui/
 │   │   └── features/
 │   ├── composables/
-│   ├── plugins/
-│   ├── middleware/
-│   ├── nuxt.config.ts
+│   ├── stores/
+│   ├── views/
+│   ├── main.js
 │   ├── package.json
-│   └── Dockerfile
-├── docker/
-│   ├── docker-compose.yml
-│   └── podman-compose.yml
+│   └── vite.config.js
+├── docker-compose.yml
 ├── .env.example
 ├── README.md
 └── LICENSE
@@ -190,15 +184,14 @@ nova/
 ### Infrastructure & Deployment
 
 **Development:**
-- Docker Compose with FastAPI, PostgreSQL, and Nuxt in separate containers
+- Docker Compose with FastAPI, PostgreSQL, and Vue 3 in separate containers
 - Hot reload for both frontend and backend
 - Local Postgres with persistent volume
 
 **Cloud (staging/production):**
 - FastAPI: Railway, Render, or Fly.io
 - PostgreSQL: Neon (serverless, generous free tier, scale-to-zero)
-- Nuxt: Vercel or Cloudflare Pages
-- Auth0: SaaS (managed)
+- Vue 3: served via FastAPI static files or separate nginx
 - Stripe: SaaS (managed)
 - PostHog: Cloud (managed, free tier)
 
@@ -216,7 +209,7 @@ nova/
 
 ### Security Considerations
 
-- Auth0 JWT validation on every API request (middleware in FastAPI)
+- JWT validation on every API request (middleware in FastAPI)
 - Role-based access control: salesman, warehouse, accountant, admin
 - Stripe webhook signature verification
 - Input validation via FastAPI/Pydantic schemas
@@ -234,7 +227,7 @@ nova/
 
 | Service | Monthly Cost | Free Tier Details |
 |---|---|---|
-| Auth0 | $0 | Free tier: up to 7,000 MAUs |
+| Custom JWT | $0 | Self-managed, no external dependency |
 | Stripe | $0 + 2.9%/transaction | Pay-as-you-go |
 | Neon Postgres | $0 | Free tier: 0.5GB storage, 100hr compute/month |
 | Railway/Render | $0–$7 | Free tier: limited hours/bandwidth |
@@ -251,18 +244,23 @@ nova/
 **Using SQLAlchemy models with asyncpg:**
 
 ```sql
--- users table (managed by Auth0, mirrored for role/org data)
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    auth0_id VARCHAR(255) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    display_name VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'salesman',
-    -- enum: salesman, warehouse, accountant, admin
-    business_id UUID NOT NULL REFERENCES businesses(id),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+-- users table (T0021 in Nova schema, stores hashed passwords, roles, and business_id)
+CREATE TABLE "Nova".t0021 (
+    id            SERIAL PRIMARY KEY,
+    username      VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name     VARCHAR(200),
+    email         VARCHAR(200),
+    role          VARCHAR(30) NOT NULL DEFAULT 'Viewer',
+    permissions   TEXT[] DEFAULT '{}',
+    business_id   INT,
+    status        VARCHAR(20) NOT NULL DEFAULT 'Active',
+    last_login    TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by    INT,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by    INT,
+    update_number INT NOT NULL DEFAULT 1
 );
 
 -- businesses (multi-tenant organization)
@@ -504,7 +502,7 @@ CREATE TABLE product_suppliers (
 
 ### API Design Philosophy
 
-RESTful API with JSON responses. All endpoints require Auth0 JWT Bearer token via `Authorization` header. Business/tenant ID is inferred from the authenticated user's `business_id`. Errors return a consistent format:
+RESTful API with JSON responses. All endpoints require JWT Bearer token via `Authorization` header. Business/tenant ID is inferred from the authenticated user's `business_id`. Errors return a consistent format:
 
 ```json
 {
@@ -518,11 +516,15 @@ Pagination uses cursor-based pagination with `limit` and `cursor` query paramete
 
 ### Endpoints
 
-**Auth** (managed by Auth0 SDK — app mirrors user data):
+**Auth** (custom JWT with psycopg2-backed user/business storage):
 
 ```
-POST /api/v1/auth/callback — Auth0 post-login, creates/updates user record
+POST   /api/v1/auth/register — Create user account
+POST   /api/v1/auth/login — Authenticate and return JWT token
+POST   /api/v1/auth/refresh — Refresh expired JWT token
+POST   /api/v1/auth/logout — Invalidate refresh token
 GET    /api/v1/auth/me — Current user profile
+PUT    /api/v1/auth/me — Update current user profile
 ```
 
 **Products:**
@@ -633,7 +635,7 @@ WS /ws/inventory/{business_id} — Real-time inventory changes (stock levels, re
 **US-001: Business sign-up**
 As a business owner, I want to create an account and invite my team so that we can all use Nova.
 Acceptance Criteria:
-- [ ] Owner signs up via Auth0
+- [ ] Owner signs up via registration form
 - [ ] Business record is created
 - [ ] Owner can invite users by email with role assignment
 - [ ] Invited users receive email with sign-up link
@@ -762,12 +764,12 @@ Acceptance Criteria:
 
 ## 6. Functional Requirements
 
-**FR-001: User authentication via Auth0**
-Priority: P0
-Description: Users sign in via Auth0 with email/password or social login. JWT token is validated on every API request. User role and business ID extracted from token claims.
-Acceptance Criteria:
-- [ ] Auth0 tenant configured with email/password + Google social login
-- [ ] Nuxt auth module or Auth0 SDK handles login flow
+**FR-001: User authentication via custom JWT**
+
+Description: Users sign in with email/password. JWT token (HS256) is validated on every API request. User role and business ID extracted from token claims. Refreshed via refresh token rotation (7-day expiry).
+
+- [ ] Auth endpoints (register, login, refresh, logout, me) implemented in FastAPI
+- [ ] Login page in Vue 3 calls POST /api/v1/auth/login, stores JWT
 - [ ] FastAPI middleware validates JWT on protected routes
 - [ ] User record created/synced in local DB on first login
 - [ ] Role stored in app_metadata returned in JWT
@@ -927,7 +929,7 @@ Related Stories: US-001, US-002
 
 ### Security
 - OWASP Top 10 addressed
-- Auth0 JWT tokens expire every 24 hours; refresh token flow implemented
+- JWT tokens expire every 24 hours; refresh token (7-day) flow implemented
 - Rate limiting: 10 requests/second per user on auth endpoints, 100/second on read endpoints
 - CORS restricted to frontend origin only
 - SQL injection prevention via SQLAlchemy parameterized queries
@@ -950,7 +952,7 @@ Related Stories: US-001, US-002
 
 ### Reliability
 - 99.5% uptime target for cloud deployment
-- Graceful degradation when Auth0, Stripe, or PostHog are unreachable
+- Graceful degradation when Stripe, PostHog, or Sentry are unreachable
 - WebSocket auto-reconnect with exponential backoff
 - Database backups automated daily for cloud, configurable for on-prem
 - Migration rollback capability
@@ -963,11 +965,11 @@ This section covers structural UX — layouts, states, interactions, and which s
 
 ### Screen: Login
 Route: `/login`
-Purpose: User authenticates via Auth0
-Layout: Centered card with Nova logo, "Sign in with Auth0" button. Links: "Don't have an account? Contact your admin."
+Purpose: User authenticates via email/password
+Layout: Centered card with Nova logo, email and password fields, "Sign in" button. Links: "Don't have an account? Contact your admin."
 States:
-- **Loading:** Button shows spinner during Auth0 redirect
-- **Error:** Inline error if Auth0 configuration fails
+- **Loading:** Button shows spinner during authentication
+- **Error:** Inline error if credentials are invalid or server unreachable
 - **Success:** Redirect to role-specific dashboard
 
 ### Screen: Dashboard
@@ -1131,49 +1133,41 @@ States:
 ## 9. Auth Implementation
 
 ### Auth Flow
-1. User visits Nova → redirected to Auth0 Universal Login page
-2. User authenticates (email/password or Google social login)
-3. Auth0 redirects to Nuxt callback page with authorization code
-4. Nuxt exchanges code for JWT token via Auth0 SDK
-5. JWT contains user ID, email, roles (in app_metadata), and business_id (in app_metadata)
-6. FastAPI middleware validates JWT on every API request
-7. On first login, FastAPI creates user record in local DB via `/api/v1/auth/callback`
+1. User visits Nova → login page displayed
+2. User enters email + password on Nova's login form
+3. Vue 3 app sends `POST /api/v1/auth/login` to FastAPI
+4. FastAPI validates credentials (hashed password in DB via psycopg2), returns access_token (24h) + refresh_token (7d)
+5. Token stored in localStorage; axios interceptor attaches Bearer token to all requests
+6. FastAPI middleware validates JWT (HS256) on every API request
+7. On token expiry, Vue 3 app calls `POST /api/v1/auth/refresh` with refresh_token (rotated)
 
-### Auth0 Configuration
-- Tenant: Nova (create in Auth0 dashboard)
-- Application: Single Page Application (Nuxt)
-- API: "Nova API" with identifier `https://api.novaerp.com`
-- Connections: Database (email/password), Google
-- Rules: Add role and business_id to app_metadata on user creation/update
-- Actions: Post-login action syncs user to Nova DB
+### JWT Configuration
+- Algorithm: HS256
+- Secret key: loaded from `SECRET_KEY` environment variable
+- Access token expiry: 24 hours
+- Refresh token expiry: 7 days (configurable via `REFRESH_TOKEN_EXPIRE_DAYS`)
+- Token claims: user_id, business_id, role, exp, iat
+- Roles: owner, admin, salesman, warehouse, accountant
 
 ### FastAPI JWT Validation Middleware
 ```python
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
-from app.core.config import settings
+from packages.auth.jwt import decode_token
+from packages.auth.repository import get_user_by_id
 
 security = HTTPBearer()
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-):
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(
-            token,
-            settings.auth0_jwks,
-            algorithms=["RS256"],
-            audience=settings.auth0_api_audience,
-            issuer=f"https://{settings.auth0_domain}/"
-        )
-        return payload
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication token"
-        )
+def get_current_user(
+    creds: HTTPAuthorizationCredentials = Depends(security)
+) -> dict:
+    payload = decode_token(creds.credentials)
+    if payload.get('type') != 'access':
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'Invalid token type')
+    user = get_user_by_id(int(payload['sub']))
+    if not user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'User not found')
+    return user
 ```
 
 ### Role-Based Access Decorator
@@ -1196,7 +1190,7 @@ def requires_role(*roles: str):
     return decorator
 ```
 
-### Protected Routes (Nuxt)
+### Protected Routes (Vue 3)
 - `/products` — salesman, warehouse (read-only), admin
 - `/orders` — salesman, admin
 - `/warehouse` — warehouse, admin
@@ -1205,8 +1199,8 @@ def requires_role(*roles: str):
 - `/migration` — admin only
 
 ### User Session Management
-- JWT stored in HttpOnly cookie or memory (Auth0 SDK default: in-memory)
-- Token refresh via Auth0 silent auth (using iframe + refresh token rotation)
+- JWT stored in localStorage
+- Token refresh via POST /api/v1/auth/refresh with refresh_token (rotated)
 - Session timeout: 24 hours, or logout clears token
 
 ## 10. Payment Integration
@@ -1287,8 +1281,7 @@ TRIAL_PERIOD_DAYS = 14
 ### Auth
 | Scenario | Expected Behavior | Priority |
 |---|---|---|
- | Auth0 unreachable | Show "We're having trouble connecting to our auth provider. Please try again in a few minutes." Allow retry. | P0 |
- | Token expires mid-session | Auto-refresh via Auth0 silent auth. If refresh fails, redirect to login with "Session expired. Please sign in again." | P0 |
+ | Token expires mid-session | Auto-refresh via refresh token. If refresh fails, redirect to login with "Session expired. Please sign in again." | P0 |
  | User with no role assigned | Default to "salesman" role. Show banner: "Contact your admin to set your role." | P1 |
 
 ### Migration
@@ -1313,17 +1306,12 @@ TRIAL_PERIOD_DAYS = 14
 **Frontend (package.json):**
 ```json
 {
-    "nuxt": "^3.x",
     "vue": "^3.x",
-    "@nuxtjs/auth-next": "^1.x",
     "vue-router": "^4.x",
-    "pinia": "^2.x",
-    "nuxt-posthog": "^1.x",
-    "@nuxtjs/sentry": "^7.x",
-    "vueuse": "^10.x",
-    "tailwindcss": "^3.x",
-    "headlessui": "^1.x",
-    "typescript": "^5.x"
+    "pinia": "^3.x",
+    "axios": "^1.x",
+    "chart.js": "^4.x",
+    "vue-chartjs": "^5.x"
 }
 ```
 
@@ -1334,8 +1322,7 @@ uvicorn[standard]==0.32.*
 sqlalchemy[asyncio]==2.0.*
 asyncpg==0.30.*
 alembic==1.14.*
-python-jose[cryptography]==3.3.*
-auth0-python==4.*
+PyJWT==2.*
 pydantic==2.*
 pydantic-settings==2.*
 stripe==11.*
@@ -1364,7 +1351,7 @@ python-dotenv==1.*
 
 | Service | Purpose | Pricing Tier | Requirements |
 |---|---|---|---|
-| Auth0 | Authentication, SSO, role management | Free tier: 7K MAUs | `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_API_AUDIENCE` |
+| Custom JWT | Authentication, role management | Free (self-managed) | `SECRET_KEY`, `REFRESH_TOKEN_EXPIRE_DAYS` |
 | Stripe | Subscription billing, payment processing | Pay-as-you-go (2.9% + $0.30) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_MONTHLY` |
 | PostHog | Product analytics, session replay, feature flags | Free: 1M events/month | `POSTHOG_API_KEY`, `POSTHOG_HOST` |
 | Resend | Transactional email (welcome, receipts, notifications) | Free: 3,000 emails/month | `RESEND_API_KEY` |

@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('payments-title') }}</h2>
+        <h1 class="page-title">{{ t('payments-title') }}</h1>
         <p class="page-subtitle">{{ t('payments-sub') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -40,8 +40,8 @@
                 <span :class="statusBadge(item.status)">{{ item.status }}</span>
               </td>
               <td class="text-center">
-                <button class="btn-icon" @click="editItem(item)" :title="t('edit')"><span class="material-symbols-outlined">edit</span></button>
-                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')"><span class="material-symbols-outlined">delete</span></button>
+                <button class="btn-icon" @click="editItem(item)" :title="t('edit')" :aria-label="t('edit')"><span class="material-symbols-outlined">edit</span></button>
+                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')"><span class="material-symbols-outlined">delete</span></button>
               </td>
             </tr>
           </tbody>
@@ -52,7 +52,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-payment') : t('new-payment') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
@@ -111,7 +111,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ t('confirm-delete') }}</h3>
-          <button class="btn-icon" @click="showDelete = false"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="showDelete = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <p class="delete-text">{{ t('payment-delete-confirm') }} <strong>${{ deleteTarget?.amount?.toFixed(2) }}</strong>?</p>

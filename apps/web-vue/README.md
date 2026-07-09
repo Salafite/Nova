@@ -1,5 +1,49 @@
-# Vue 3 + Vite
+# Nova ERP — Frontend
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue 3 SPA built with Vite, Pinia, and Vue Router (hash mode).
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Quick Start
+
+```bash
+npm install
+npm run dev        # dev server on port 5173, proxies /api → localhost:8070
+npm run build      # production build to dist/
+npm test           # Vitest unit tests
+npx playwright test  # E2E tests
+```
+
+## Stack
+
+- **Vue 3** (Composition API, `<script setup>`)
+- **Vite** (build tool)
+- **Pinia** (state management)
+- **Vue Router** (hash history, auth guards)
+- **Axios** (API client, JWT interceptor)
+- **Playwright** (E2E tests)
+- **Vitest** (unit tests)
+
+## Project Structure
+
+```
+src/
+├── api/          # Axios client, interceptors
+├── assets/       # Static assets
+├── components/   # Shared components (AppSidebar, AppTopBar, etc.)
+├── composables/  # useI18n, useToast, etc.
+├── layouts/      # AppLayout (sidebar + grid modes)
+├── locales/      # en.json, ar.json — i18n dictionaries
+├── router/       # Route definitions, auth guard
+├── stores/       # Pinia stores (auth, nav, settings, etc.)
+├── utils/        # Utility functions
+├── views/        # Page components organized by domain
+├── __tests__/    # Unit tests
+└── style.css     # Global styles
+```
+
+## Environment
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_API_BASE` | `http://localhost:8070` | Backend API URL |
+
+See [../DEPLOYMENT.md](../DEPLOYMENT.md) for full deployment instructions.

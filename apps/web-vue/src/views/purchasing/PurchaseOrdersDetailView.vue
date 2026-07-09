@@ -6,7 +6,7 @@
       <div class="flex justify-between items-center mb-6">
         <div>
           <button class="btn-link" @click="$router.push('/purchasing')">&larr; {{ t('back-to-orders', 'Back to Orders') }}</button>
-          <h2 class="page-title">{{ t('purchase-order', 'Purchase Order') }} #{{ order.order_number }}</h2>
+          <h1 class="page-title">{{ t('purchase-order', 'Purchase Order') }} #{{ order.order_number }}</h1>
         </div>
         <div class="flex gap-2">
           <button v-if="order.status === 'Pending'" class="btn-primary" @click="approveOrder">{{ t('approve', 'Approve') }}</button>

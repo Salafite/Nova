@@ -6,6 +6,8 @@
 **Status:** 64/64 tasks complete
 **Current Phase:** All phases complete
 
+> **Note on file paths in completed tasks:** The tasks below were planned before implementation began. The actual codebase uses `apps/api/`, `modules/*/controllers/T*I.py`, and `packages/` — not the `backend/app/` paths shown in the original plan. Completed task file paths reflect the original spec and may not match the actual implementation.
+
 ## Build Philosophy
 
 1. **Each phase ships something usable.** No phase leaves the app broken. After any phase, you can demo what you've built.
@@ -30,9 +32,9 @@
 **Phase prompt — give this to your coding agent:**
 > "Read docs/product-roadmap.md and find Phase 0. Then read only the Reference sections listed above from docs/prd.md, docs/product-vision.md, and docs/VISION.md. Continue from the first unchecked task. After each task, mark it complete in the roadmap. When all tasks are done, create a branch `phase-0/foundation-and-setup`, commit, push, and open a PR for review."
 
-- [x] **TASK-001** — Initialize Nuxt 3 project with TypeScript, Tailwind CSS, and ESLint
-  Files: `frontend/package.json`, `frontend/nuxt.config.ts`, `frontend/tsconfig.json`
-  Notes: N/A — Using Vue 3 + Vite instead of Nuxt 3. Choice documented in Key Decisions.
+- [x] **TASK-001** — Initialize Vue 3 + Vite project
+  Files: `apps/web-vue/package.json`, `apps/web-vue/vite.config.js`, `apps/web-vue/tsconfig.json`
+  Notes: N/A — Using Vue 3 + Vite. Choice documented in Key Decisions.
 
 - [x] **TASK-002** — Initialize FastAPI project with project structure and config
   Files: `backend/app/main.py`, `backend/app/core/config.py`, `backend/app/core/database.py`, `backend/requirements.txt`
@@ -42,41 +44,41 @@
   Files: `backend/alembic.ini`, `backend/migrations/env.py`, `backend/migrations/versions/`
   Notes: N/A — Using raw SQL schema files + numbered migration .sql files instead of Alembic. Choice documented in Key Decisions.
 
-- [x] **TASK-004** — Configure Auth0 tenant and integrate with FastAPI
-  Files: `backend/app/core/security.py`, `backend/app/api/deps.py`, `.env.example`
-  Notes: N/A — Using custom JWT authentication (HS256, psycopg2-backed users/businesses) instead of Auth0. Choice documented in Key Decisions.
+- [x] **TASK-004** — Implement custom JWT authentication in FastAPI
+  Files: `packages/auth/jwt.py`, `apps/api/core/middleware.py`, `.env.example`
+  Notes: Using HS256 JWT with psycopg2-backed users/businesses. Access token 24h, refresh token 7d.
 
-- [x] **TASK-005** — Configure Auth0 on Nuxt frontend with login flow
-  Files: `frontend/pages/login.vue`, `frontend/middleware/auth.ts`, `frontend/nuxt.config.ts`
-  Notes: N/A — Using custom login with JWT (Vue 3 + Vite, not Nuxt 3). Login page at `LoginView.vue`. Choice documented in Key Decisions.
+- [x] **TASK-005** — Create login page with JWT auth flow
+  Files: `apps/web-vue/src/views/LoginView.vue`, `apps/web-vue/src/stores/auth.js`
+  Notes: Custom login with email/password. Calls POST /api/v1/auth/login. Stores JWT in localStorage. Axios interceptor attaches Bearer token.
 
 - [x] **TASK-006** — Create base app layout with sidebar navigation
-  Files: `frontend/layouts/default.vue`, `frontend/components/ui/Sidebar.vue`, `frontend/components/ui/Navbar.vue`
+  Files: `apps/web-vue/src/App.vue`, `apps/web-vue/src/components/layout/Sidebar.vue`, `apps/web-vue/src/components/layout/Navbar.vue`
   Notes: Responsive sidebar with role-based navigation items. Top navbar with Nova logo and user menu. Sidebar shows: Products, Orders, Warehouse, Accounting, Suppliers, Customers, Admin (role-dependent). Verify: navigation renders correctly for each role.
 
 - [x] **TASK-007** — Set up Docker Compose for local development
-  Files: `docker/docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`
-  Notes: Three services: PostgreSQL (official image), FastAPI (local build), Nuxt (local build). Volume for postgres data. Health checks on all services. Environment variables from `.env` file. Verify: `docker compose up` starts all services and they communicate.
+  Files: `docker-compose.yml`, `Dockerfile`
+  Notes: Three services: PostgreSQL (official image), FastAPI (local build), Vue 3 (local build). Volume for postgres data. Health checks on all services. Environment variables from `.env` file. Verify: `docker compose up` starts all services and they communicate.
 
 - [x] **TASK-008** — Set up Podman Compose for on-prem deployment
-  Files: `docker/podman-compose.yml`, `docker/.env.example`
-  Notes: Same structure as Docker Compose but using Podman-specific features (rootless, pod networking). Add restart policies and health checks. Include migration run on startup. Verify: `podman-compose up` starts all services.
+  Files: `docker-compose.yml`
+  Notes: Same structure as Docker Compose but using Podman-specific features (rootless, pod networking). The root `docker-compose.yml` works with Podman — no changes needed. Verify: `podman compose up` starts all services.
 
 - [x] **TASK-009** — Configure PostHog analytics on frontend and backend
-  Files: `frontend/plugins/posthog.ts`, `frontend/nuxt.config.ts`, `backend/app/core/analytics.py`
-  Notes: Install `nuxt-posthog` on frontend. Install `posthog` Python SDK on backend. Configure API keys from env vars. Verify: test event fires and appears in PostHog dashboard.
+  Files: `apps/web-vue/src/main.js`, `packages/analytics/posthog.py`
+  Notes: Install `posthog-js` on frontend. Install `posthog` Python SDK on backend. Configure API keys from env vars. Verify: test event fires and appears in PostHog dashboard.
 
 - [x] **TASK-010** — Configure Sentry error tracking on frontend and backend
-  Files: `frontend/nuxt.config.ts`, `backend/app/main.py`
-  Notes: Install `@nuxtjs/sentry` on frontend. Install `sentry-sdk[fastapi]` on backend. Configure DSN from env vars. Verify: test error appears in Sentry dashboard.
+  Files: `apps/web-vue/src/main.js`, `apps/api/main.py`
+  Notes: Install `@sentry/vue` on frontend. Install `sentry-sdk[fastapi]` on backend. Configure DSN from env vars. Verify: test error appears in Sentry dashboard.
 
 - [x] **TASK-011** — Configure Resend for transactional email
-  Files: `backend/app/core/email.py`, `.env.example`
+  Files: `packages/notifications/email.py`, `.env.example`
   Notes: Install `resend` Python SDK. Create email utility functions for: welcome email, password reset, notification. Configure domain verification in Resend dashboard. Verify: test email sends successfully.
 
 - [x] **TASK-012** — Create .env.example and README with setup instructions
   Files: `.env.example`, `README.md`
-  Notes: Document all environment variables with descriptions. Write setup instructions for dev (Docker Compose) and on-prem (Podman Compose). Include Auth0 setup steps, Stripe setup, and service configuration.
+  Notes: Document all environment variables with descriptions. Write setup instructions for dev (Docker Compose) and on-prem (Podman Compose). Include Stripe setup, and service configuration.
 
 ---
 
@@ -103,11 +105,11 @@
   Notes: Endpoint `POST /api/v1/products/scan-phantoms` flags products with no orders in 12+ months. Sets `is_phantom = True` and `last_transaction_date`. Scheduled task (via APScheduler or FastAPI background tasks) runs weekly. Verify: flagging works correctly on test data.
 
 - [x] **TASK-016** — Create products list page
-  Files: `frontend/pages/products/index.vue`, `frontend/components/features/ProductTable.vue`
+  Files: `apps/web-vue/pages/products/index.vue`, `apps/web-vue/components/features/ProductTable.vue`
   Notes: Table with columns: SKU, Name, Category, Available Stock, Price, Status. Search bar with debounce. Filter by category and phantom toggle. Inline stock indicator (green ≥ threshold, yellow = low, red = out). Phantom products hidden by default with toggle to show. Verify: search, filter, pagination work.
 
 - [x] **TASK-017** — Create product detail / edit page
-  Files: `frontend/pages/products/[id].vue`, `frontend/components/features/ProductForm.vue`
+  Files: `apps/web-vue/pages/products/[id].vue`, `apps/web-vue/components/features/ProductForm.vue`
   Notes: Two-column layout: editable fields on left, inventory info + stock movement on right. Edit in place with save. Deactivate with confirmation modal. Stock movement history table (date, type, qty change, reference). Verify: edit saves, deactivate soft-deletes, movement history shows.
 
 - [x] **TASK-018** — Create inventory API endpoints
@@ -115,15 +117,15 @@
   Notes: `GET /api/v1/inventory` with low_stock filter. `GET /api/v1/inventory/{product_id}` for single product. `GET /api/v1/inventory/{product_id}/movements` for history with date filtering. Verify: endpoints return correct stock levels.
 
 - [x] **TASK-019** — Create categories management page
-  Files: `frontend/pages/categories.vue`, `frontend/components/features/CategoryManager.vue`
+  Files: `apps/web-vue/pages/categories.vue`, `apps/web-vue/components/features/CategoryManager.vue`
   Notes: Simple list with inline create, edit, delete. Delete only allowed if no products linked. Verify: CRUD works.
 
 - [x] **TASK-020** — Implement WebSocket for real-time inventory updates
-  Files: `backend/app/ws/handlers.py`, `backend/app/main.py`
-  Notes: WebSocket endpoint `WS /ws/inventory/{business_id}`. On any inventory change, broadcast updated stock to all connected clients in the same business. Client-side composable for Nuxt with auto-reconnect. Verify: open two browser windows, change stock in one, see update in other.
+  Files: `packages/ws/handlers.py`, `apps/api/main.py`
+  Notes: WebSocket endpoint `WS /ws/inventory/{business_id}`. On any inventory change, broadcast updated stock to all connected clients in the same business. Client-side composable with auto-reconnect. Verify: open two browser windows, change stock in one, see update in other.
 
 - [x] **TASK-021** — Add real-time stock display to product list and detail
-  Files: `frontend/composables/useInventorySocket.ts`
+  Files: `apps/web-vue/composables/useInventorySocket.ts`
   Notes: Connect to inventory WebSocket on products pages. Update displayed stock levels in real time when inventory changes. Show "live" indicator. Verify: stock updates without page refresh.
 
 ---
@@ -155,19 +157,19 @@
   Notes: `POST /api/v1/orders/{id}/cancel` releases reserved inventory, creates inventory_movement records. Only allowed for draft/confirmed/picking statuses. If partially picked, flag warehouse for restocking. Verify: cancellation releases stock correctly.
 
 - [x] **TASK-026** — Create customers list and detail page
-  Files: `frontend/pages/customers/index.vue`, `frontend/pages/customers/[id].vue`
+  Files: `apps/web-vue/pages/customers/index.vue`, `apps/web-vue/pages/customers/[id].vue`
   Notes: Customer list with search. Customer detail with balance, aging breakdown, and order history. Verify: pages render with data.
 
 - [x] **TASK-027** — Create order creation page
-  Files: `frontend/pages/orders/new.vue`, `frontend/components/features/OrderForm.vue`
+  Files: `apps/web-vue/pages/orders/new.vue`, `apps/web-vue/components/features/OrderForm.vue`
   Notes: Step form: select customer (search), add line items (search products, see live stock, enter qty), review, confirm. Product search with autocomplete and stock display. Running total. "Save as Draft" and "Confirm" buttons. Phantom products hidden. Verify: full order creation flow works.
 
 - [x] **TASK-028** — Create order list page
-  Files: `frontend/pages/orders/index.vue`, `frontend/components/features/OrderTable.vue`
+  Files: `apps/web-vue/pages/orders/index.vue`, `apps/web-vue/components/features/OrderTable.vue`
   Notes: Table with filters (status, date range, customer, salesman). Click row to navigate to detail. Status badge with color coding. Verify: all filters work.
 
 - [x] **TASK-029** — Create order detail page
-  Files: `frontend/pages/orders/[id].vue`, `frontend/components/features/OrderTimeline.vue`
+  Files: `apps/web-vue/pages/orders/[id].vue`, `apps/web-vue/components/features/OrderTimeline.vue`
   Notes: Order info header. Vertical timeline showing status changes. Line items table. Cancel button (if status allows). Verify: detail view shows all order info with correct status.
 
 - [x] **TASK-030** — Create pick list API — auto-generate on order confirm
@@ -175,15 +177,15 @@
   Notes: On order confirmation, pick list auto-created with all items. Pick list API: list, get, start (set in_progress), pick-item (mark item as picked), complete (update inventory), backorder. Items grouped by warehouse location. Add Alembic migrations for pick_lists, pick_list_items tables. Verify: pick list created on order confirm.
 
 - [x] **TASK-031** — Create warehouse dashboard page
-  Files: `frontend/pages/warehouse/index.vue`, `frontend/components/features/PendingPicks.vue`
+  Files: `apps/web-vue/pages/warehouse/index.vue`, `apps/web-vue/components/features/PendingPicks.vue`
   Notes: Two sections: pending picks (cards with customer name, item count, time) + completed today (list). Click card → pick list detail. New pick counter in sidebar badge. Verify: pending picks show correctly.
 
 - [x] **TASK-032** — Create pick list detail page
-  Files: `frontend/pages/warehouse/pick-lists/[id].vue`, `frontend/components/features/PickListItems.vue`
+  Files: `apps/web-vue/pages/warehouse/pick-lists/[id].vue`, `apps/web-vue/components/features/PickListItems.vue`
   Notes: Order info header. Items table grouped by warehouse location header. Checkbox per item → mark picked. "Backorder" button per item. "Complete" button when all handled. Progress bar showing completion %. Verify: full pick flow works: mark items, handle backorders, complete.
 
 - [x] **TASK-033** — Create order confirmation and pick list event notifications
-  Files: `frontend/composables/useOrderSocket.ts`, `backend/app/ws/handlers.py`
+  Files: `apps/web-vue/composables/useOrderSocket.ts`, `packages/ws/handlers.py`
   Notes: WebSocket endpoint `WS /ws/orders/{business_id}`. On order confirm, push notification to warehouse. On pick complete, push to salesman and accountant. Frontend composable with badge counter for new picks. Verify: notifications fire correctly.
 
 ---
@@ -211,15 +213,15 @@
   Notes: `GET /api/v1/customers/{id}/balance` returns total balance, aging breakdown (current/30/60/90+), outstanding vs paid. `GET /api/v1/customers/{id}/payments` returns payment history. Verify: balance and aging are accurate.
 
 - [x] **TASK-037** — Create accounting dashboard page
-  Files: `frontend/pages/accounting/index.vue`, `frontend/components/features/ReceivableTable.vue`
+  Files: `apps/web-vue/pages/accounting/index.vue`, `apps/web-vue/components/features/ReceivableTable.vue`
   Notes: Summary cards (Total outstanding, Overdue, Paid this month). Receivables table with filters (status, customer, date). Click row → receivable detail. Verify: dashboard shows correct summary data.
 
 - [x] **TASK-038** — Create receivable detail page with payment recording
-  Files: `frontend/pages/accounting/receivables/[id].vue`, `frontend/components/features/PaymentForm.vue`
+  Files: `apps/web-vue/pages/accounting/receivables/[id].vue`, `apps/web-vue/components/features/PaymentForm.vue`
   Notes: Header with customer, amount, balance, status. Payment method tabs (Cash, Check, Installment). Selecting a tab shows the relevant form. Payment history table below. "Fully paid" badge when balance = 0. Verify: record payments, see balance update.
 
 - [x] **TASK-039** — Enhance customer detail with balance view
-  Files: `frontend/pages/customers/[id].vue`
+  Files: `apps/web-vue/pages/customers/[id].vue`
   Notes: Add balance aging breakdown section. Add payment history tab. Show open receivables list with status. Verify: customer view shows full financial picture.
 
 - [x] **TASK-040** — Configure Stripe subscription billing
@@ -227,7 +229,7 @@
   Notes: Create Stripe product and price for $5/user/month. Implement checkout session creation endpoint. Add webhook handler for `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`. Update business subscription_status on webhook events. Add subscription gating middleware (read-only for past_due/canceled). Verify: subscription flow works end-to-end in test mode.
 
 - [x] **TASK-041** — Create admin subscription management page
-  Files: `frontend/pages/admin/subscription.vue`
+  Files: `apps/web-vue/pages/admin/subscription.vue`
   Notes: Show current plan, user count, monthly cost. "Manage Subscription" button links to Stripe Customer Portal. Usage/metered billing display. Verify: subscription info is accurate.
 
 ---
@@ -247,7 +249,7 @@
   Notes: Full CRUD for suppliers. Business-scoped. Many-to-many relationship with products. Add Alembic migrations. Verify: CRUD works.
 
 - [x] **TASK-043** — Create suppliers list and detail page
-  Files: `frontend/pages/suppliers/index.vue`, `frontend/pages/suppliers/[id].vue`
+  Files: `apps/web-vue/pages/suppliers/index.vue`, `apps/web-vue/pages/suppliers/[id].vue`
   Notes: List with search. Detail with supplier info and linked products. Verify: pages render.
 
 - [x] **TASK-044** — Create migration API — CSV import with preview and commit
@@ -255,19 +257,19 @@
   Notes: `POST /api/v1/migration/upload-csv` accepts CSV upload with configurable column mapping. `GET /api/v1/migration/preview` returns row counts per entity and validation errors. `POST /api/v1/migration/commit` writes data. `POST /api/v1/migration/rollback` reverses commit. Phantom flagging runs on import. Verify: full import → preview → commit → rollback cycle works.
 
 - [x] **TASK-045** — Create migration page
-  Files: `frontend/pages/admin/migration.vue`, `frontend/components/features/MigrationWizard.vue`
+  Files: `apps/web-vue/pages/admin/migration.vue`, `apps/web-vue/components/features/MigrationWizard.vue`
   Notes: Step wizard: upload CSV → map columns → preview (counts + errors) → commit or rollback. Drag & drop upload. Column mapping dropdowns. Validation error display with line numbers. Progress bar for large imports. Verify: full migration wizard flow works.
 
 - [x] **TASK-046** — Create user management page
-  Files: `frontend/pages/admin/users.vue`
+  Files: `apps/web-vue/pages/admin/users.vue`
   Notes: List users with role, email, status. Invite new user (sends email via Resend). Edit role. Deactivate/reactivate user. Business-scoped. Verify: admin can manage users.
 
 - [x] **TASK-047** — Create admin settings page
-  Files: `frontend/pages/admin/settings.vue`
+  Files: `apps/web-vue/pages/admin/settings.vue`
   Notes: Business name, logo upload (basic), default payment terms, low stock threshold default, timezone, currency. Verify: settings save and apply.
 
 - [x] **TASK-048** — Add product-supplier linking
-  Files: `backend/app/api/v1/products.py`, `frontend/components/features/ProductSupplierManager.vue`
+  Files: `backend/app/api/v1/products.py`, `apps/web-vue/components/features/ProductSupplierManager.vue`
   Notes: On product detail, show linked suppliers with supplier SKU, unit cost, lead time. Add/remove suppliers. Verify: product-supplier links work.
 
 ---
@@ -283,56 +285,56 @@
 > "Read docs/product-roadmap.md and find Phase 5. Read the Reference sections listed above from docs/prd.md. Continue from the first unchecked task."
 
 - [x] **TASK-049** — Add comprehensive empty states to all list views
-  Files: `frontend/components/ui/EmptyState.vue`
+  Files: `apps/web-vue/components/ui/EmptyState.vue`
   Notes: Consistent empty state component with icon, message, and CTA. Apply to all list screens (products, orders, pick lists, receivables, customers, suppliers). Each empty state has role-specific messaging. Verify: every list screen handles empty data gracefully.
 
 - [x] **TASK-050** — Add loading skeletons to all pages
-  Files: `frontend/components/ui/SkeletonTable.vue`, `frontend/components/ui/SkeletonCard.vue`
+  Files: `apps/web-vue/components/ui/SkeletonTable.vue`, `apps/web-vue/components/ui/SkeletonCard.vue`
   Notes: Consistent skeleton components for table rows, cards, and forms. Apply to all pages. Verify: loading states show during data fetch.
 
 - [x] **TASK-051** — Add error states and retry logic to all data-fetching
-  Files: `frontend/composables/useApi.ts`
+  Files: `apps/web-vue/composables/useApi.ts`
   Notes: Error boundary component that catches fetch errors with "Retry" button. Toast notifications for success/error. Consistent error messaging across all pages. Verify: simulate network failure → error state with retry.
 
 - [x] **TASK-052** — Implement form validation on all create/edit forms
-  Files: `frontend/composables/useFormValidation.ts`
+  Files: `apps/web-vue/composables/useFormValidation.ts`
   Notes: Required field validation, format validation (email, phone), min/max on numeric fields. Inline error messages below fields. Form-level validation summary. Verify: all forms validate correctly on submit.
 
 - [x] **TASK-053** — Add keyboard navigation and accessibility pass
   Files: (across all components)
   Notes: Ensure all interactive elements are keyboard focusable. Add focus indicators. Test with NVDA screen reader on Windows. Add ARIA labels where needed. Verify: can navigate full app with keyboard only.
 
-- [x] **TASK-054** — Add PWA support to Nuxt app
-  Files: `frontend/nuxt.config.ts`, `frontend/public/manifest.json`
-  Notes: Install `@vite-pwa/nuxt`. Configure manifest with app name, icons, theme color. Enable offline fallback page. Verify: app can be installed as PWA on mobile.
+- [x] **TASK-054** — Add PWA support
+  Files: `apps/web-vue/vite.config.js`, `apps/web-vue/public/manifest.json`
+  Notes: Configure with app name, icons, theme color. Enable offline fallback page. Verify: app can be installed as PWA on mobile.
 
 - [x] **TASK-055** — Add responsive design pass
   Files: (across all components)
   Notes: Ensure all page layouts work on mobile (phone, tablet, desktop). Test sidebar collapses to hamburger on small screens. Tables horizontal scroll on small screens. Verify: app usable on phone-sized viewport.
 
 - [x] **TASK-056** — Set up PostHog instrumentation for key events
-  Files: `frontend/plugins/posthog.ts`, `backend/app/core/analytics.py`
+  Files: `apps/web-vue/src/main.js`, `packages/analytics/posthog.py`
   Notes: Instrument: sign-up, order created, order confirmed, pick completed, payment recorded, migration completed. Capture the magic moment event specifically. Verify: events appear in PostHog dashboard.
 
 - [x] **TASK-057** — Configure Sentry release tracking and error grouping
-  Files: `frontend/nuxt.config.ts`, `backend/app/main.py`
+  Files: `apps/web-vue/vite.config.js`, `apps/api/main.py`
   Notes: Configure release tracking via environment variable. Group errors by release. Add user context to errors (user_id, business_id, role — not PII). Verify: test error shows with correct context.
 
 - [x] **TASK-058** — Add Resend email templates for key notifications
-  Files: `backend/app/services/email.py`
+  Files: `packages/notifications/email.py`
   Notes: Email templates for: welcome (new user), order confirmed (to salesman + admin), pick completed (to accountant), payment received (to customer), invoice/receipt email. Verify: emails send correctly with proper formatting.
 
 - [x] **TASK-059** — Create landing/marketing page
-  Files: `frontend/pages/index.vue`
+  Files: `apps/web-vue/pages/index.vue`
   Notes: Public landing page (no auth required). Sections: hero with tagline, problem/solution, features, pricing ($5/user/month), open-source callout, CTA. SSR for SEO. Verify: landing page loads and looks good.
 
 - [x] **TASK-060** — Add rate limiting to API
-  Files: `backend/app/core/rate_limit.py`, `backend/app/main.py`
+  Files: `packages/rate_limit/middleware.py`, `apps/api/main.py`
   Notes: FastAPI middleware for rate limiting. 10 req/s per user on auth endpoints, 100 req/s on read endpoints, 50 req/s on write endpoints. 429 response with Retry-After header. Verify: rate limit triggers correctly.
 
 - [x] **TASK-061** — Run security audit
   Files: (config review)
-  Notes: Review CORS configuration, CSP headers, Auth0 token validation, input validation patterns, SQL injection prevention. Run OWASP ZAP scan if available. Verify: no critical security issues.
+  Notes: Review CORS configuration, CSP headers, JWT token validation, input validation patterns, SQL injection prevention. Run OWASP ZAP scan if available. Verify: no critical security issues.
 
 - [x] **TASK-062** — Performance optimization pass
   Files: (across frontend and backend)
@@ -340,7 +342,7 @@
 
 - [x] **TASK-063** — Write deployment guide for cloud and on-prem
   Files: `DEPLOYMENT.md`
-  Notes: Two sections: Cloud deployment (Railway/Render + Neon + Vercel) and On-prem deployment (Podman Compose). Include: prerequisites, environment variables, database setup, Auth0 setup, Stripe setup, SSL configuration, backup strategy. Verify: someone unfamiliar with the project can deploy from the guide.
+  Notes: Two sections: Cloud deployment and On-prem deployment (Podman Compose). Include: prerequisites, environment variables, database setup, Stripe setup, SSL configuration, backup strategy. Verify: someone unfamiliar with the project can deploy from the guide.
 
 - [x] **TASK-064** — Create open-source repo structure
   Files: `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md`
@@ -361,7 +363,7 @@
 
 ### Design System Note
 
-Before starting Phase 0 styling work, run the **Design System** skill with image references to generate `docs/design.md` — this defines the color palette, typography, spacing, and component design tokens that all phases reference. If `docs/design.md` does not exist, use Tailwind CSS defaults for now and update tokens when the design system is generated.
+Before starting Phase 0 styling work, run the **Design System** skill with image references to generate `docs/design.md` — this defines the color palette, typography, spacing, and component design tokens that all phases reference. If `docs/design.md` does not exist, use CSS custom properties for now and update tokens when the design system is generated.
 
 ### Session Tips
 

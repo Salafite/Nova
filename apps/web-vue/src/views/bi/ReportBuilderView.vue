@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('report-title', 'Report Builder') }}</h2>
+        <h1 class="page-title">{{ t('report-title', 'Report Builder') }}</h1>
         <p class="page-subtitle">{{ t('report-subtitle', 'Query entity data and build custom reports') }}</p>
       </div>
     </div>

@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header flex-wrap">
       <div>
-        <h2 class="page-title">Notifications</h2>
+        <h1 class="page-title">Notifications</h1>
         <p class="page-subtitle">View and manage system notifications</p>
       </div>
       <div class="header-actions">

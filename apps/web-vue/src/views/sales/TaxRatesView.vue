@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('tax-rates-title', 'Tax Rates') }}</h2>
+        <h1 class="page-title">{{ t('tax-rates-title', 'Tax Rates') }}</h1>
         <p class="page-subtitle">{{ t('tax-rates-sub', 'Configure sales tax rates and rules') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -40,8 +40,8 @@
               <td class="text-center"><span v-if="item.is_default" class="material-symbols-outlined" style="color: var(--color-primary);">star</span></td>
               <td class="text-center"><span class="badge" :class="item.is_active ? 'badge-active' : 'badge-inactive'">{{ item.is_active ? t('yes', 'Yes') : t('no', 'No') }}</span></td>
               <td class="text-center">
-                <button class="btn-icon" @click="editItem(item)" :title="t('edit')"><span class="material-symbols-outlined">edit</span></button>
-                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')"><span class="material-symbols-outlined">delete</span></button>
+                <button class="btn-icon" @click="editItem(item)" :title="t('edit')" :aria-label="t('edit')"><span class="material-symbols-outlined">edit</span></button>
+                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')"><span class="material-symbols-outlined">delete</span></button>
               </td>
             </tr>
           </tbody>
@@ -53,7 +53,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-tax-rate', 'Edit Tax Rate') : t('new-tax-rate', 'New Tax Rate') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-group">

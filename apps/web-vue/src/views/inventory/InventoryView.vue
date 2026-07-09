@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ locale === 'ar-EG' ? 'المخزون' : 'Inventory' }}</h2>
+        <h1 class="page-title">{{ locale === 'ar-EG' ? 'المخزون' : 'Inventory' }}</h1>
         <p class="page-subtitle">{{ locale === 'ar-EG' ? 'عرض مستويات المخزون لكل منتج ومستودع' : 'View stock levels by product and warehouse' }}</p>
       </div>
     </div>

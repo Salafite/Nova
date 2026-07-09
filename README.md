@@ -46,28 +46,52 @@ docker compose up -d
 
 ```
 ├── apps/
-│   ├── api/          # FastAPI backend (main.py, requirements.txt)
-│   └── web-vue/      # Vue 3 SPA frontend
-├── modules/          # Backend feature modules
-│   ├── accounting/   # Invoices, payments, chart of accounts
-│   ├── crm/          # Customers, suppliers
-│   ├── inventory/    # Products, stock levels, movements
-│   ├── migration/    # CSV import API
-│   ├── sales/        # Orders, order items
-│   └── warehouse/    # Pick lists, stock transfers
-├── packages/         # Shared backend utilities
-│   ├── auth/         # JWT auth, login/refresh
-│   ├── cache/        # Cache-Control headers middleware
-│   ├── database/     # Connection pool
-│   ├── rate_limit/   # Rate limiting middleware
-│   └── security/     # CSP + security headers middleware
+│   ├── api/             # FastAPI backend (main.py, requirements.txt)
+│   └── web-vue/         # Vue 3 SPA frontend
+├── modules/             # Backend feature modules
+│   ├── accounting/      # Invoices, payments, chart of accounts
+│   ├── administration/  # Users, roles, settings, notifications
+│   ├── bi/              # Dashboards, KPIs, reports
+│   ├── core/            # Base services, repositories, controllers
+│   ├── crm/             # Customers, suppliers
+│   ├── enterprise/      # Enterprise-level features
+│   ├── hr/              # Departments, employees, payroll, attendance
+│   ├── integrations/    # API keys, sync, external integrations
+│   ├── inventory/       # Products, stock levels, movements, UOM
+│   ├── maintenance/     # Equipment, work orders
+│   ├── manufacturing/   # BOM, production orders, QC
+│   ├── migration/       # CSV import API
+│   ├── planning/        # Planning module
+│   ├── projects/        # Projects, tasks
+│   ├── purchasing/      # Purchase orders, requisitions
+│   ├── quality/         # QC inspections
+│   ├── sales/           # Sales orders, quotations, returns
+│   ├── search/          # Global search
+│   └── warehouse/       # Pick lists, stock transfers, stock takes
+├── packages/            # Shared backend packages
+│   ├── analytics/       # Analytics engine
+│   ├── auth/            # JWT auth, login/refresh
+│   ├── billing/         # Stripe billing integration
+│   ├── cache/           # Cache-Control headers middleware
+│   ├── database/        # Connection pool, base models
+│   ├── integrations/    # Integration helpers
+│   ├── localization/    # Locale detection
+│   ├── notifications/   # Notification dispatch
+│   ├── permissions/     # RBAC permissions
+│   ├── rate_limit/      # Rate limiting middleware
+│   ├── reporting/       # Report generation
+│   ├── security/        # CSP + security headers middleware
+│   ├── shared/          # Shared DTOs, helpers
+│   ├── ui/              # UI component library
+│   ├── workflow/        # Workflow engine
+│   └── ws/              # WebSocket manager
 ├── database/
-│   ├── schema.sql    # Master schema
-│   └── migrations/   # Incremental SQL migrations
+│   ├── schema.sql       # Master schema
+│   └── migrations/      # Incremental SQL migrations
 ├── docs/
 │   ├── product-roadmap.md  # Task tracking
 │   └── prd.md              # Product requirements
-└── .github/          # CI, issue templates
+└── .github/             # CI, issue templates
 ```
 
 ## Key Features
@@ -83,7 +107,7 @@ docker compose up -d
 
 ## Roadmap
 
-See [docs/product-roadmap.md](docs/product-roadmap.md) for current status (39/64 tasks).
+See [docs/product-roadmap.md](docs/product-roadmap.md) for current status (64/64 tasks).
 
 ## License
 

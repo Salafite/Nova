@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ locale === 'ar-EG' ? 'المنتجات' : 'Products' }}</h2>
+        <h1 class="page-title">{{ locale === 'ar-EG' ? 'المنتجات' : 'Products' }}</h1>
         <p class="page-subtitle">{{ locale === 'ar-EG' ? 'إدارة كتالوج المنتجات' : 'Manage your product catalog' }}</p>
       </div>
       <div class="page-actions">

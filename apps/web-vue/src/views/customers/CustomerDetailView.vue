@@ -6,7 +6,7 @@
       <div class="flex justify-between items-center mb-6">
         <div>
           <button class="btn-link" @click="$router.push('/customers')">&larr; {{ t('back-to-customers') }}</button>
-          <h2 class="page-title">{{ customer.name }}</h2>
+          <h1 class="page-title">{{ customer.name }}</h1>
         </div>
       </div>
 

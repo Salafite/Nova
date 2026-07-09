@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('preturn-title', 'Purchase Returns') }}</h2>
+        <h1 class="page-title">{{ t('preturn-title', 'Purchase Returns') }}</h1>
         <p class="page-subtitle">{{ t('preturn-sub', 'Manage returns to suppliers') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -15,6 +15,7 @@
     <div v-else-if="!items.length" class="empty-state">
       <span class="material-symbols-outlined empty-icon">assignment_return</span>
       <p>{{ t('no-records', 'No records found') }}</p>
+      <button class="btn-primary" @click="openAdd">{{ t('new-preturn', 'New Return') }}</button>
     </div>
 
     <div v-else class="data-card">
@@ -40,10 +41,10 @@
               <td class="cell-mono">{{ item.return_date }}</td>
               <td class="cell-mono" style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ item.reason || '-' }}</td>
               <td class="text-center">
-                <button v-if="item.status === 'Draft'" class="btn-icon" @click="approveReturn(item)" :title="t('approve', 'Approve')"><span class="material-symbols-outlined">check_circle</span></button>
-                <button v-if="item.status === 'Approved'" class="btn-icon" @click="receiveReturn(item)" :title="t('receive', 'Receive')"><span class="material-symbols-outlined">inventory</span></button>
-                <button class="btn-icon" @click="editItem(item)" :title="t('edit')"><span class="material-symbols-outlined">edit</span></button>
-                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')"><span class="material-symbols-outlined">delete</span></button>
+                <button v-if="item.status === 'Draft'" class="btn-icon" @click="approveReturn(item)" :title="t('approve', 'Approve')" :aria-label="t('approve', 'Approve')"><span class="material-symbols-outlined">check_circle</span></button>
+                <button v-if="item.status === 'Approved'" class="btn-icon" @click="receiveReturn(item)" :title="t('receive', 'Receive')" :aria-label="t('receive', 'Receive')"><span class="material-symbols-outlined">inventory</span></button>
+                <button class="btn-icon" @click="editItem(item)" :title="t('edit')" :aria-label="t('edit')"><span class="material-symbols-outlined">edit</span></button>
+                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')"><span class="material-symbols-outlined">delete</span></button>
               </td>
             </tr>
           </tbody>
@@ -55,7 +56,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-preturn', 'Edit Return') : t('new-preturn', 'New Return') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">

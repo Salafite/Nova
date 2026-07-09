@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('kpi-title', 'KPI Management') }}</h2>
+        <h1 class="page-title">{{ t('kpi-title', 'KPI Management') }}</h1>
         <p class="page-subtitle">{{ t('kpi-subtitle', 'Define and track Key Performance Indicators') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -44,8 +44,8 @@
                 </span>
               </td>
               <td class="cell-actions" @click.stop>
-                <button class="btn-icon" @click="openEdit(kpi)" :title="t('edit', 'Edit')"><span class="material-symbols-outlined">edit</span></button>
-                <button class="btn-icon btn-icon-danger" @click="confirmDelete(kpi)" :title="t('delete', 'Delete')"><span class="material-symbols-outlined">delete</span></button>
+                <button class="btn-icon" @click="openEdit(kpi)" :title="t('edit', 'Edit')" :aria-label="t('edit', 'Edit')"><span class="material-symbols-outlined">edit</span></button>
+                <button class="btn-icon btn-icon-danger" @click="confirmDelete(kpi)" :title="t('delete', 'Delete')" :aria-label="t('delete', 'Delete')"><span class="material-symbols-outlined">delete</span></button>
               </td>
             </tr>
           </tbody>
@@ -56,7 +56,7 @@
     <div v-if="selectedKpi" class="kpi-detail">
       <div class="detail-header">
         <h3>{{ selectedKpi.kpi_name }} <span class="detail-code">{{ selectedKpi.kpi_code }}</span></h3>
-        <button class="btn-icon" @click="selectedKpi = null"><span class="material-symbols-outlined">close</span></button>
+        <button class="btn-icon" @click="selectedKpi = null" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
       </div>
       <div class="detail-body">
         <div class="detail-info">
@@ -105,7 +105,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ isEditing ? t('kpi-edit', 'Edit KPI') : t('kpi-new', 'New KPI') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <form @submit.prevent="save" class="modal-body">
           <div class="form-row">
@@ -158,7 +158,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ t('add-value', 'Add KPI Value') }}</h3>
-          <button class="btn-icon" @click="showValueModal = false"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="showValueModal = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <form @submit.prevent="saveValue" class="modal-body">
           <div class="form-group">

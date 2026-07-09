@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('bom-title') }}</h2>
+        <h1 class="page-title">{{ t('bom-title') }}</h1>
         <p class="page-subtitle">{{ t('bom-sub') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -39,13 +39,13 @@
               </td>
               <td class="col-num">${{ (item.total_cost || 0).toFixed(2) }}</td>
               <td class="text-center">
-                <button class="btn-icon" @click="toggleExpand(item)" :title="t('bom-lines')">
+                <button class="btn-icon" @click="toggleExpand(item)" :title="t('bom-lines')" :aria-label="t('bom-lines')">
                   <span class="material-symbols-outlined">{{ expandedId === item.id ? 'expand_less' : 'expand_more' }}</span>
                 </button>
-                <button class="btn-icon" @click="editItem(item)" :title="t('edit')">
+                <button class="btn-icon" @click="editItem(item)" :title="t('edit')" :aria-label="t('edit')">
                   <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')">
+                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </td>
@@ -95,7 +95,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-bom') : t('new-bom') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
@@ -140,7 +140,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ t('add-line') }}</h3>
-          <button class="btn-icon" @click="showLineModal = false"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="showLineModal = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -169,7 +169,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ t('confirm-delete') }}</h3>
-          <button class="btn-icon" @click="showDelete = false"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="showDelete = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <p class="delete-text">{{ t('bom-delete-confirm') }} <strong>{{ deleteTarget?.bom_name || deleteTarget?.name }}</strong>?</p>
@@ -327,8 +327,7 @@ onMounted(() => { loadProducts(); load() })
 <style scoped>
 .page-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin: 0; }
 .page-subtitle { font-size: 13px; color: #666; margin-top: 4px; }
-.loading-state, .error-state, .empty-state { text-align: center; padding: 48px; color: #999; font-size: 14px; }
-.error-state { color: #ba1a1a; }
+.empty-state { text-align: center; padding: 48px; color: #999; font-size: 14px; }
 .empty-icon { font-size: 48px; color: #ccc; margin-bottom: 16px; }
 .data-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }
 .table-wrap { overflow-x: auto; }

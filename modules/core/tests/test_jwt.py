@@ -56,7 +56,7 @@ def test_decode_expired_token_raises():
 
 def test_decode_wrong_secret_raises():
     import pytest
-    token = jwt.encode({'sub': '1', 'exp': 9999999999, 'type': 'access'}, 'wrong-secret', algorithm='HS256')
+    token = jwt.encode({'sub': '1', 'exp': 9999999999, 'type': 'access'}, 'wrong-secret-thats-long-enough-32chars', algorithm='HS256')
     with pytest.raises(jwt.PyJWTError):
         decode_token(token)
 

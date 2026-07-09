@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('categories') }}</h2>
+        <h1 class="page-title">{{ t('categories') }}</h1>
         <p class="page-subtitle">{{ t('categories-sub') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">{{ t('new-category') }}</button>

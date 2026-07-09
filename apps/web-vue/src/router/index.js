@@ -65,6 +65,8 @@ const routes = [
   { path: '/login', name: 'login', component: () => import('../views/auth/LoginView.vue') },
   { path: '/signup', name: 'signup', component: () => import('../views/auth/SignUpView.vue') },
   { path: '/landing', name: 'landing', component: () => import('../views/landing/LandingView.vue') },
+  { path: '/privacy', name: 'privacy', component: () => import('../views/legal/PrivacyView.vue') },
+  { path: '/terms', name: 'terms', component: () => import('../views/legal/TermsView.vue') },
   {
     path: '/',
     component: () => import('../layouts/AppLayout.vue'),

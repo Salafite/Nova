@@ -7,6 +7,7 @@ from starlette.responses import JSONResponse
 RATE_LIMITS = {
     'auth': (10, 1),
     'read': (100, 1),
+    'ai': (10, 1),
     'write': (50, 1),
 }
 
@@ -14,6 +15,8 @@ RATE_LIMITS = {
 def _classify(path, method):
     if path.startswith('/api/auth/'):
         return 'auth'
+    if path.startswith('/api/ai/'):
+        return 'ai'
     if method in ('GET',):
         return 'read'
     return 'write'

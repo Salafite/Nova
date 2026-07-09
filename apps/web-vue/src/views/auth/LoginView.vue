@@ -5,8 +5,10 @@
       <p class="subtitle">{{ t('login-title') }}</p>
       <div v-if="error" class="alert error">{{ error }}</div>
       <form @submit.prevent="handleLogin">
-        <input v-model="username" class="input" :placeholder="t('login-username')" required />
-        <input v-model="password" type="password" class="input" :placeholder="t('login-password')" required />
+        <label class="sr-only" for="login-username">{{ t('login-username') }}</label>
+        <input id="login-username" v-model="username" class="input" :placeholder="t('login-username')" required />
+        <label class="sr-only" for="login-password">{{ t('login-password') }}</label>
+        <input id="login-password" v-model="password" type="password" class="input" :placeholder="t('login-password')" required />
         <button type="submit" class="btn" :disabled="loading">{{ loading ? t('login-signing-in') : t('login-signin') }}</button>
       </form>
     </div>
@@ -42,7 +44,8 @@ async function handleLogin() {
 .logo { font-size: 24px; font-weight: 700; color: #5d3fd3; text-align: center; margin-bottom: 4px; }
 .subtitle { text-align: center; color: #666; margin-bottom: 24px; font-size: 14px; }
 .input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; font-size: 14px; box-sizing: border-box; }
-.input:focus { outline: none; border-color: #5d3fd3; }
+.input:focus { outline: 2px solid #5d3fd3; outline-offset: 1px; border-color: #5d3fd3; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 .btn { width: 100%; padding: 12px; background: #5d3fd3; color: #fff; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; }
 .btn:hover { background: #4a32b0; }
 .btn:disabled { opacity: 0.6; }

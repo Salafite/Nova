@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('warehouse-title', 'Warehouses') }}</h2>
+        <h1 class="page-title">{{ t('warehouse-title', 'Warehouses') }}</h1>
         <p class="page-subtitle">{{ t('warehouse-sub', 'Manage warehouse locations and storage facilities') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -15,9 +15,11 @@
     <div v-else-if="!items.length" class="empty-state">
       <span class="material-symbols-outlined empty-icon">factory</span>
       <p>{{ t('no-records') }}</p>
+      <button class="btn-primary" @click="openAdd">{{ t('new-warehouse', 'New Warehouse') }}</button>
     </div>
 
     <div v-else class="data-card">
+      <div class="table-wrap">
       <table class="data-table">
         <thead>
           <tr>
@@ -36,23 +38,24 @@
               <span v-else class="badge badge-disabled">{{ t('inactive') }}</span>
             </td>
             <td class="text-center">
-              <button class="btn-icon" @click="editItem(item)" :title="t('edit')">
+              <button class="btn-icon" @click="editItem(item)" :title="t('edit')" :aria-label="t('edit')">
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button class="btn-icon text-red-500" @click="deleteItem(item)" :title="t('delete')">
+              <button class="btn-icon text-red-500" @click="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')">
                 <span class="material-symbols-outlined">delete</span>
               </button>
             </td>
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-warehouse', 'Edit Warehouse') : t('new-warehouse', 'New Warehouse') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -172,8 +175,7 @@ onMounted(load)
 <style scoped>
 .page-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin: 0; }
 .page-subtitle { font-size: 13px; color: #666; margin-top: 4px; }
-.loading-state, .error-state, .empty-state { text-align: center; padding: 48px; color: #999; font-size: 14px; }
-.error-state { color: #ba1a1a; }
+.empty-state { text-align: center; padding: 48px; color: #999; font-size: 14px; }
 .empty-icon { font-size: 48px; color: #ccc; margin-bottom: 16px; }
 
 .data-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }

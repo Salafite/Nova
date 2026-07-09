@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" fill="none" viewBox="0 0 180 40">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7e14ff"/>
+      <stop offset="100%" stop-color="#5d3fd3"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#g)" d="M20 2L5 15l7 22h16l7-22L20 2zm0 5l4 11h-4v3h-3v-3h-4l4-11z"/>
+  <text x="44" y="26" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="700" fill="#1a1a2e">Nova</text>
+  <text x="96" y="26" font-family="Inter,-apple-system,sans-serif" font-size="20" font-weight="400" fill="#5d3fd3">ERP</text>
+</svg>

@@ -38,6 +38,8 @@
         {{ t.message }}
       </div>
     </div>
+
+    <AiAssistant />
   </div>
 </template>
 
@@ -49,6 +51,7 @@ import { useI18n } from '../composables/useI18n.js'
 import AppSidebar from '../components/AppSidebar.vue'
 import AppTopBar from '../components/AppTopBar.vue'
 import LocaleSwitcher from '../components/LocaleSwitcher.vue'
+import AiAssistant from '../components/AiAssistant.vue'
 import { useNavStore } from '../stores/nav.js'
 import { useAuthStore } from '../stores/auth.js'
 

@@ -148,7 +148,7 @@ The shortest path from sign-up to magic moment: upload inventory → define prod
 
 **In scope for v1 (4–8 week build):**
 
-1. **User authentication and role management** — Auth0 login with three roles: Salesman, Warehouse, Accountant. Admin role for setup.
+1. **User authentication and role management** — Custom JWT login with three roles: Salesman, Warehouse, Accountant. Admin role for setup.
 2. **Product catalog** — CRUD for products, categories, units of measure. Phantom product detection (flag products with no transactions in 12+ months).
 3. **Real-time inventory tracking** — Stock levels per product, movement history, low-stock alerts. Updates propagate to all users instantly.
 4. **Order management** — Salesman creates order, picks products, sets quantities. System checks and reserves inventory in real time. Order status tracking (draft → confirmed → picked → delivered → invoiced).

@@ -45,6 +45,11 @@
 
     <footer class="landing-footer">
       <p>Nova ERP — {{ t('open-source') }}</p>
+      <div class="legal-links">
+        <router-link to="/privacy">Privacy Policy</router-link>
+        <span class="sep">&middot;</span>
+        <router-link to="/terms">Terms of Service</router-link>
+      </div>
     </footer>
   </div>
 </template>
@@ -109,6 +114,10 @@ const features = [
 .pricing-card li { padding: 8px 0; font-size: 14px; color: #555; }
 .pricing-card li::before { content: '✓'; color: #16a34a; margin-right: 8px; font-weight: 700; }
 .landing-footer { text-align: center; padding: 32px; color: #999; font-size: 13px; border-top: 1px solid #eee; }
+.legal-links { margin-top: 8px; }
+.legal-links a { color: #999; text-decoration: none; }
+.legal-links a:hover { color: #5d3fd3; text-decoration: underline; }
+.sep { margin: 0 8px; color: #ccc; }
 
 @media (max-width: 767px) {
   .hero { padding: 60px 16px 40px; }

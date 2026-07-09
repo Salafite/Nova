@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('admin-title') }}</h2>
+        <h1 class="page-title">{{ t('admin-title') }}</h1>
         <p class="page-subtitle">{{ t('admin-sub') }}</p>
       </div>
       <div class="flex gap-2">
@@ -149,7 +149,7 @@
               <label>{{ t('invite-link') }}</label>
               <div class="invite-link-box">
                 <input type="text" :value="inviteResult.invite_link" readonly class="form-input" @click="$event.target.select()" />
-                <button class="btn-icon" @click="copyLink" :title="t('edit')">
+                <button class="btn-icon" @click="copyLink" :title="t('edit')" :aria-label="t('edit')">
                   <span class="material-symbols-outlined">content_copy</span>
                 </button>
               </div>

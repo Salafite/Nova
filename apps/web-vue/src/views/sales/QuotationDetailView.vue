@@ -8,7 +8,7 @@
       <div class="page-header">
         <div>
           <a class="back-link" @click="router.push('/sales/quotations')">&larr; {{ t('back', 'Back') }}</a>
-          <h2 class="page-title">{{ t('quotation', 'Quotation') }} #{{ item.quote_number }}</h2>
+          <h1 class="page-title">{{ t('quotation', 'Quotation') }} #{{ item.quote_number }}</h1>
         </div>
         <div class="header-actions">
           <button v-if="item.status === 'Draft'" class="btn-outline" @click="sendQuote">{{ t('send', 'Send') }}</button>

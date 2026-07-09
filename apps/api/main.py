@@ -23,6 +23,23 @@ from packages.rate_limit import RateLimitMiddleware
 from packages.analytics.sentry import init_sentry
 from packages.cache.middleware import CacheControlMiddleware
 from packages.security.middleware import SecurityHeadersMiddleware
+from packages.mcp.server import McpServer
+from packages.ai.router import router as ai_router
+from packages.mcp.router import create_mcp_router
+from packages.mcp.servers.database_mcp import register_tools as register_database_mcp
+from packages.mcp.servers.inventory_mcp import register_tools as register_inventory_mcp
+from packages.mcp.servers.sales_mcp import register_tools as register_sales_mcp
+from packages.mcp.servers.purchasing_mcp import register_tools as register_purchasing_mcp
+from packages.mcp.servers.accounting_mcp import register_tools as register_accounting_mcp
+from packages.mcp.servers.admin_mcp import register_tools as register_admin_mcp
+from packages.mcp.servers.warehouse_mcp import register_tools as register_warehouse_mcp
+from packages.mcp.servers.hr_mcp import register_tools as register_hr_mcp
+from packages.mcp.servers.bi_mcp import register_tools as register_bi_mcp
+from packages.mcp.servers.crm_mcp import register_tools as register_crm_mcp
+from packages.mcp.servers.projects_mcp import register_tools as register_projects_mcp
+from packages.mcp.servers.manufacturing_mcp import register_tools as register_manufacturing_mcp
+from packages.mcp.servers.maintenance_mcp import register_tools as register_maintenance_mcp
+from packages.mcp.servers.notifications_mcp import register_tools as register_notifications_mcp
 
 app = FastAPI(title="Nova ERP API", version="1.0")
 init_sentry()
@@ -49,6 +66,24 @@ for router in all_routers:
 app.include_router(ws_router)
 app.include_router(billing_router)
 app.include_router(bi_dashboard_router)
+app.include_router(ai_router)
+
+mcp_server = McpServer(name="NovaERP", version="1.0")
+register_database_mcp()
+register_inventory_mcp()
+register_sales_mcp()
+register_purchasing_mcp()
+register_accounting_mcp()
+register_admin_mcp()
+register_warehouse_mcp()
+register_hr_mcp()
+register_bi_mcp()
+register_crm_mcp()
+register_projects_mcp()
+register_manufacturing_mcp()
+register_maintenance_mcp()
+register_notifications_mcp()
+app.include_router(create_mcp_router(mcp_server))
 
 
 @app.get('/api')

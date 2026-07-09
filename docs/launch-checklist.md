@@ -2,6 +2,7 @@
 
 - **Product**: Nova ERP — a full-featured Enterprise Resource Planning (ERP) web application
 - **Tech stack**: Vue 3 + Vite frontend, Python FastAPI backend, PostgreSQL 16, hosted on Railway
+- **Custom domain**: `alsahili.com` (pointed to Railway)
 - **Current status**: App is live at `https://nova-production-2e9d.up.railway.app` (Railway, auto-deploys from GitHub master)
 - **Estimated monthly cost**: ~$50–120 (PostgreSQL hosting + VPS + optional services)
 

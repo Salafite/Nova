@@ -1,9 +1,5 @@
 # Vision — Nova
 
-> Captured by the Product Planner skill. This file is the source of truth for
-> generating product-vision.md, prd.md, and product-roadmap.md. Edit it directly
-> and re-run the Product Planner to regenerate downstream documents.
-
 **Created:** 2026-07-02
 **Updated:** 2026-07-02
 
@@ -66,10 +62,10 @@
 ## Tech Stack
 
 - **App type:** web
-- **Frontend:** Nuxt 3 — Vue framework with batteries-included conventions, SSR, module ecosystem
+- **Frontend:** Vue 3 + Vite — progressive SPA with composable-driven architecture, Pinia stores, hash-based routing
 - **Backend:** FastAPI — modern Python async framework, type-hint validation, auto OpenAPI docs
 - **Database:** PostgreSQL — the right choice for ERP with complex relational data
-- **Auth:** Auth0 — enterprise-ready, works with Python backend, social login and MFA out of the box
+- **Auth:** Custom JWT (HS256) — lightweight token-based auth with psycopg2-backed user/business storage, refresh token rotation
 - **Payments:** Stripe — flexible, handles subscription billing for $5/user/month model
 - **Analytics:** PostHog — free tier covers early volume, session replay and feature flags bundled
 - **Email:** Resend — transactional email for notifications, receipts, and account management

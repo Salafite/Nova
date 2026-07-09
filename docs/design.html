@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nova Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@600&family=Noto+Sans+Arabic:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #5d3fd3;
+  --primary-hover: #4a32b0;
+  --primary-faded: #e6deff;
+  --on-primary: #ffffff;
+  --surface: #ffffff;
+  --surface-low: #f9fafb;
+  --surface-hover: #f5f5f5;
+  --body: #f5f5f9;
+  --on-surface: #1a1a2e;
+  --on-surface-secondary: #333333;
+  --on-surface-muted: #666666;
+  --on-surface-subtle: #767676;
+  --on-surface-faint: #999999;
+  --border-default: #e0e0e0;
+  --border-light: #f0f0f0;
+  --border-input: #dddddd;
+  --sidebar-bg: #1a1a2e;
+  --sidebar-text: #cccccc;
+  --sidebar-active: #cabeff;
+  --error: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --info: #0284c7;
+  --error-bg: #fee2e2;
+  --success-bg: #dcfce7;
+  --warning-bg: #fef3c7;
+  --info-bg: #e0f2fe;
+  --disabled-bg: #f0f0f2;
+  --disabled-text: #b3b3bd;
+  --focus-ring: #5d3fd3;
+  --z-dropdown: 10;
+  --z-sticky-header: 20;
+  --z-overlay: 100;
+  --z-modal: 101;
+  --z-toast: 200;
+  --z-tooltip: 300;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.2);
+  --shadow-pricing: 0 4px 24px rgba(0,0,0,0.08);
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 14px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 48px;
+  --space-11: 80px;
+  --rounded-none: 0;
+  --rounded-sm: 4px;
+  --rounded-md: 6px;
+  --rounded-lg: 8px;
+  --rounded-xl: 12px;
+  --rounded-full: 9999px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans-ar: 'Noto Sans Arabic', 'Tahoma', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+html[lang="ar"] body, html[lang="ar"] .guide, html[lang="ar"] input, html[lang="ar"] select, html[lang="ar"] button, html[lang="ar"] th, html[lang="ar"] td { font-family: var(--font-sans-ar); }
+}
+html.dark {
+  --primary: #cabeff;
+  --primary-hover: #b8a0ff;
+  --primary-faded: #2a1a5e;
+  --on-primary: #1a1a2e;
+  --surface: #1a1a2e;
+  --surface-low: #222240;
+  --surface-hover: #2a2a4a;
+  --body: #0f0f1a;
+  --on-surface: #e8e8f0;
+  --on-surface-secondary: #ccccdd;
+  --on-surface-muted: #9999aa;
+  --on-surface-subtle: #8888a0;
+  --on-surface-faint: #666677;
+  --border-default: #2a2a4a;
+  --border-light: #222240;
+  --border-input: #3a3a5a;
+  --sidebar-bg: #0a0a18;
+  --sidebar-text: #9999aa;
+  --sidebar-active: #cabeff;
+  --disabled-bg: #22223a;
+  --disabled-text: #4a4a60;
+  --focus-ring: #cabeff;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-modal: 0 8px 32px rgba(0,0,0,0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font-sans); background: var(--body); color: var(--on-surface); line-height: 1.5; padding: 0; }
+.guide { max-width: 960px; margin: 0 auto; padding: 0 24px 80px; }
+header.guide-header { padding: 48px 0 32px; border-bottom: 1px solid var(--border-default); margin-bottom: 48px; }
+header.guide-header h1 { font-size: 32px; font-weight: 800; color: var(--primary); }
+header.guide-header p { font-size: 14px; color: var(--on-surface-muted); margin-top: 4px; }
+header.guide-header .note { font-size: 12px; color: var(--on-surface-faint); margin-top: 12px; }
+.theme-toggle { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; }
+.theme-toggle button { font-family: var(--font-sans); padding: 6px 16px; border: 1px solid var(--border-input); border-radius: var(--rounded-lg); background: var(--surface); color: var(--on-surface-secondary); cursor: pointer; font-size: 13px; font-weight: 600; }
+.theme-toggle button.active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.section { margin-bottom: 48px; }
+.section h2 { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: var(--on-surface); padding-bottom: 8px; border-bottom: 2px solid var(--primary); }
+.section h3 { font-size: 14px; font-weight: 700; margin-top: 20px; margin-bottom: 10px; color: var(--on-surface-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Color Swatches */
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.swatch { border-radius: var(--rounded-xl); overflow: hidden; border: 1px solid var(--border-default); }
+.swatch-color { height: 48px; display: flex; align-items: flex-end; padding: 6px 10px; font-size: 11px; font-weight: 600; font-family: var(--font-mono); }
+.swatch-meta { padding: 8px 10px; background: var(--surface); }
+.swatch-meta .token { font-family: var(--font-mono); font-size: 11px; color: var(--primary); }
+.swatch-meta .hex { font-size: 11px; color: var(--on-surface-faint); margin-top: 2px; }
+
+/* Typography Specimens */
+.type-specimen { margin-bottom: 16px; }
+.type-label { font-size: 11px; font-weight: 600; color: var(--on-surface-faint); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.type-props { font-family: var(--font-mono); font-size: 11px; color: var(--on-surface-subtle); margin-bottom: 4px; }
+
+/* Spacing */
+.spacing-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.spacing-box { background: var(--primary-faded); border-radius: var(--rounded-sm); }
+.spacing-label { font-family: var(--font-mono); font-size: 11px; color: var(--on-surface-subtle); min-width: 80px; }
+.spacing-value { font-size: 11px; color: var(--on-surface-faint); }
+
+/* Radius */
+.radius-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.radius-box { width: 64px; height: 64px; background: var(--primary-faded); border: 1px solid var(--border-default); }
+.radius-label { font-family: var(--font-mono); font-size: 11px; color: var(--on-surface-subtle); min-width: 90px; }
+
+/* Elevation */
+.elevation-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.elevation-card { width: 200px; padding: 20px; border-radius: var(--rounded-xl); font-size: 13px; background: var(--surface); }
+.elevation-card .el-label { font-weight: 600; margin-bottom: 4px; }
+.elevation-card .el-note { font-size: 11px; color: var(--on-surface-faint); }
+
+/* Components */
+.comp-section { margin-bottom: 32px; }
+.comp-section h3 { margin-top: 0; }
+.comp-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.comp-label { font-size: 11px; color: var(--on-surface-faint); font-family: var(--font-mono); min-width: 70px; }
+
+/* Button Previews */
+.btn { display: inline-flex; align-items: center; gap: 6px; border: none; cursor: default; transition: none; }
+.btn-primary { background: var(--primary); color: var(--on-primary); padding: 8px 20px; border-radius: var(--rounded-lg); font-size: 13px; font-weight: 600; min-height: 44px; }
+.btn-primary-hover { background: var(--primary-hover); color: var(--on-primary); padding: 8px 20px; border-radius: var(--rounded-lg); font-size: 13px; font-weight: 600; min-height: 44px; }
+.btn-outline { background: transparent; color: var(--on-surface-secondary); padding: 8px 20px; border-radius: var(--rounded-lg); font-size: 13px; font-weight: 600; border: 1px solid var(--border-input); min-height: 44px; }
+.btn-outline-hover { background: var(--surface-hover); color: var(--on-surface-secondary); padding: 8px 20px; border-radius: var(--rounded-lg); font-size: 13px; font-weight: 600; border: 1px solid var(--border-input); min-height: 44px; }
+.btn-secondary { background: var(--surface-hover); color: var(--on-surface-secondary); padding: 8px 20px; border-radius: var(--rounded-lg); font-size: 13px; font-weight: 600; min-height: 44px; }
+.btn-secondary-hover { background: var(--border-default); color: var(--on-surface-secondary); padding: 8px 20px; border-radius: var(--rounded-lg); font-size: 13px; font-weight: 600; min-height: 44px; }
+.btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rounded-md); background: none; color: var(--on-surface-subtle); font-size: 18px; cursor: default; }
+.btn-icon-hover { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rounded-md); background: var(--surface-hover); color: var(--primary); font-size: 18px; cursor: default; }
+.btn-icon-danger { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rounded-md); background: transparent; color: var(--on-surface-subtle); font-size: 18px; cursor: default; }
+.btn-icon-danger-hover { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--rounded-md); background: var(--error-bg); color: var(--error); font-size: 18px; cursor: default; }
+.btn-sm { padding: 6px 16px !important; font-size: 13px !important; }
+.btn-xs { padding: 4px 12px !important; font-size: 12px !important; }
+span.material-icons { font-size: 18px; line-height: 1; }
+
+/* Inputs */
+.form-input { padding: 8px 10px; border: 1px solid var(--border-input); border-radius: var(--rounded-md); font-size: 13px; font-family: var(--font-sans); background: var(--surface); color: var(--on-surface); width: 200px; outline: none; }
+.form-input:focus { border-color: var(--primary); }
+.form-input-sm { padding: 6px 8px; font-size: 12px; width: 160px; }
+.form-input-error { border-color: var(--error) !important; }
+.checkbox { width: 16px; height: 16px; accent-color: var(--primary); }
+
+/* Toggle Switch */
+.toggle { width: 44px; height: 24px; border-radius: var(--rounded-full); background: var(--border-default); position: relative; cursor: default; display: inline-block; }
+.toggle.active { background: var(--primary); }
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: none; }
+.toggle.active::after { left: 22px; }
+
+/* Card Previews */
+.preview-card { background: var(--surface); border: 1px solid var(--border-default); border-radius: var(--rounded-xl); overflow: hidden; max-width: 560px; }
+.preview-card-header { padding: 14px 20px; border-bottom: 1px solid var(--border-light); font-size: 14px; font-weight: 700; }
+.preview-card table { width: 100%; border-collapse: collapse; }
+.preview-card th { padding: 10px 20px; font-size: 11px; font-weight: 700; color: var(--on-surface-muted); text-transform: uppercase; letter-spacing: 0.5px; background: var(--surface-low); border-bottom: 1px solid var(--border-default); text-align: left; white-space: nowrap; }
+.preview-card td { padding: 12px 20px; border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--on-surface); }
+.preview-card tr:last-child td { border-bottom: none; }
+.preview-card tr:hover td { background: var(--surface-hover); }
+
+/* Badges */
+.badge { display: inline-block; padding: 3px 10px; border-radius: var(--rounded-full); font-size: 11px; font-weight: 600; }
+.badge-active { background: var(--success-bg); color: var(--success); }
+.badge-danger { background: var(--error-bg); color: var(--error); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.badge-inactive { background: var(--surface-low); color: var(--on-surface-subtle); }
+.badge-disabled { background: var(--surface-hover); color: var(--on-surface-faint); }
+
+/* Modal */
+.modal-demo { background: var(--surface); border-radius: var(--rounded-xl); width: 420px; box-shadow: var(--shadow-modal); overflow: hidden; }
+.modal-demo-head { padding: 18px 24px; border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center; }
+.modal-demo-head span { font-weight: 700; font-size: 14px; }
+.modal-demo-body { padding: 24px; font-size: 13px; color: var(--on-surface-secondary); }
+.modal-demo-foot { padding: 16px 20px; border-top: 1px solid var(--border-default); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Sidebar Demo */
+.sidebar-demo { display: flex; border-radius: var(--rounded-xl); overflow: hidden; border: 1px solid var(--border-default); }
+.sidebar-panel { width: 200px; background: var(--sidebar-bg); padding: 16px 0; color: var(--sidebar-text); font-size: 13px; }
+.sidebar-panel .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 8px 16px 4px; color: var(--on-surface-faint); }
+.sidebar-panel .nav-item { padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-left: 3px solid transparent; }
+.sidebar-panel .nav-item.active { border-left: 3px solid var(--primary); color: var(--sidebar-active); }
+.sidebar-content { flex: 1; padding: 20px; background: var(--body); font-size: 13px; color: var(--on-surface-muted); }
+
+/* Do/Don't */
+.dos-donts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.dos h3 { color: var(--success); }
+.donts h3 { color: var(--error); }
+.dos ul, .donts ul { list-style: none; padding: 0; margin-top: 8px; }
+.dos li, .donts li { padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border-light); }
+.dos li::before { content: '✓ '; color: var(--success); font-weight: 700; }
+.donts li::before { content: '✗ '; color: var(--error); font-weight: 700; }
+
+/* Focus ring — applies to real interactive elements across the app */
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Disabled states */
+.btn-disabled { background: var(--disabled-bg); color: var(--disabled-text); padding: 8px 20px; border-radius: var(--rounded-lg); font-size: 13px; font-weight: 600; min-height: 44px; border: none; cursor: not-allowed; }
+.form-input-disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; }
+
+/* Form help / error text */
+.form-help-text { font-size: 12px; color: var(--on-surface-subtle); margin-top: 4px; }
+.form-error-text { font-size: 12px; color: var(--error); font-weight: 600; margin-top: 4px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-default); }
+.tab-item { padding: 12px 16px; font-size: 13px; font-weight: 600; color: var(--on-surface-subtle); border-bottom: 2px solid transparent; cursor: default; }
+.tab-item.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+/* Breadcrumbs */
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--on-surface-subtle); }
+.breadcrumb .current { color: var(--on-surface); font-weight: 600; }
+
+/* Pagination */
+.pagination { display: flex; gap: 6px; }
+.page-item { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--rounded-md); font-size: 13px; color: var(--on-surface-secondary); cursor: default; }
+.page-item.active { background: var(--primary); color: var(--on-primary); }
+
+/* Top Bar navigation mode */
+.topbar-demo { border-radius: var(--rounded-xl); overflow: hidden; border: 1px solid var(--border-default); }
+.topbar { height: 56px; background: var(--sidebar-bg); display: flex; align-items: center; gap: 12px; padding: 0 16px; position: relative; }
+.topbar-switcher { width: 40px; height: 40px; border-radius: var(--rounded-md); display: flex; align-items: center; justify-content: center; color: var(--sidebar-text); font-size: 18px; cursor: default; flex-shrink: 0; }
+.topbar-switcher.open { background: rgba(255,255,255,0.1); color: var(--sidebar-active); }
+.topbar-module-name { color: #fff; font-weight: 700; font-size: 14px; white-space: nowrap; }
+.topbar-spacer { flex: 1; }
+.topbar-icons { display: flex; gap: 4px; }
+.topbar-icons .btn-icon { color: var(--sidebar-text); }
+.module-subnav { background: var(--surface); border-bottom: 1px solid var(--border-default); display: flex; }
+.module-switcher-panel { position: absolute; top: 64px; left: 16px; z-index: 10; background: var(--surface); border-radius: var(--rounded-xl); box-shadow: var(--shadow-modal); padding: 16px; width: 320px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.module-tile { border-radius: var(--rounded-lg); padding: 14px 8px; text-align: center; font-size: 12px; color: var(--on-surface-secondary); cursor: default; }
+.module-tile .icon { font-size: 20px; display: block; margin-bottom: 6px; }
+.module-tile.active { background: var(--primary-faded); color: var(--primary); font-weight: 600; }
+.topbar-content { padding: 20px; background: var(--body); font-size: 13px; color: var(--on-surface-muted); }
+
+hr { border: none; border-top: 1px solid var(--border-default); margin: 48px 0; }
+
+@media (max-width: 767px) {
+  .swatch-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .dos-donts { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="guide">
+<header class="guide-header">
+  <h1>Nova Design System</h1>
+  <p>Design system for Nova ERP — an open-source ERP for small F&amp;B distributors</p>
+  <p class="note">Human-readable mirror of <code>docs/design.md</code>. Same system, two formats: tokens + prose in the .md, live rendering here. Sections/swatches marked <span style="font-size:10px;font-weight:600;color:var(--primary);background:var(--primary-faded);padding:2px 8px;border-radius:var(--rounded-full);">new</span> were added in this pass — see the .md for full rationale.</p>
+  <div class="theme-toggle">
+    <span style="font-size:13px;color:var(--on-surface-muted);">Theme:</span>
+    <button id="themeLight" class="active" onclick="document.documentElement.classList.remove('dark');this.classList.add('active');document.getElementById('themeDark').classList.remove('active');">Light</button>
+    <button id="themeDark" onclick="document.documentElement.classList.add('dark');this.classList.add('active');document.getElementById('themeLight').classList.remove('active');">Dark</button>
+  </div>
+</header>
+
+<!-- Colors -->
+<div class="section">
+  <h2>Colors</h2>
+  <h3>Brand &amp; Surface</h3>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="swatch-color" style="background:#5d3fd3;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--primary</div><div class="hex">#5d3fd3</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#e6deff;color:#1a1a2e;">Aa</div><div class="swatch-meta"><div class="token-name">--primary-faded</div><div class="hex">#e6deff</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#ffffff;color:#1a1a2e;border-bottom:1px solid #e0e0e0;">Aa</div><div class="swatch-meta"><div class="token-name">--surface</div><div class="hex">#ffffff</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#f9fafb;color:#1a1a2e;">Aa</div><div class="swatch-meta"><div class="token-name">--surface-low</div><div class="hex">#f9fafb</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#f5f5f5;color:#1a1a2e;">Aa</div><div class="swatch-meta"><div class="token-name">--surface-hover</div><div class="hex">#f5f5f5</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#f5f5f9;color:#1a1a2e;">Aa</div><div class="swatch-meta"><div class="token-name">--body</div><div class="hex">#f5f5f9</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#1a1a2e;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--sidebar-bg</div><div class="hex">#1a1a2e</div></div></div>
+  </div>
+
+  <h3>Text</h3>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="swatch-color" style="background:#1a1a2e;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--on-surface</div><div class="hex">#1a1a2e</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#333333;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--on-surface-secondary</div><div class="hex">#333333</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#666666;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--on-surface-muted</div><div class="hex">#666666</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#767676;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--on-surface-subtle</div><div class="hex">#767676 (was #888888 — now AA-safe)</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#999999;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--on-surface-faint</div><div class="hex">#999999</div></div></div>
+  </div>
+
+  <h3>Borders</h3>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="swatch-color" style="background:#e0e0e0;color:#1a1a2e;">Aa</div><div class="swatch-meta"><div class="token-name">--border-default</div><div class="hex">#e0e0e0</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#f0f0f0;color:#1a1a2e;">Aa</div><div class="swatch-meta"><div class="token-name">--border-light</div><div class="hex">#f0f0f0</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#dddddd;color:#1a1a2e;">Aa</div><div class="swatch-meta"><div class="token-name">--border-input</div><div class="hex">#dddddd</div></div></div>
+  </div>
+
+  <h3>Semantic States</h3>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="swatch-color" style="background:#dc2626;color:#fff;">Error</div><div class="swatch-meta"><div class="token-name">--error</div><div class="hex">#dc2626</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#16a34a;color:#fff;">Success</div><div class="swatch-meta"><div class="token-name">--success</div><div class="hex">#16a34a</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#d97706;color:#fff;">Warning</div><div class="swatch-meta"><div class="token-name">--warning</div><div class="hex">#d97706</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#0284c7;color:#fff;">Info</div><div class="swatch-meta"><div class="token-name">--info</div><div class="hex">#0284c7</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#fee2e2;color:#dc2626;">Error BG</div><div class="swatch-meta"><div class="token-name">--error-bg</div><div class="hex">#fee2e2</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#dcfce7;color:#16a34a;">Success BG</div><div class="swatch-meta"><div class="token-name">--success-bg</div><div class="hex">#dcfce7</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#fef3c7;color:#d97706;">Warning BG</div><div class="swatch-meta"><div class="token-name">--warning-bg</div><div class="hex">#fef3c7</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#e0f2fe;color:#0284c7;">Info BG</div><div class="swatch-meta"><div class="token-name">--info-bg</div><div class="hex">#e0f2fe</div></div></div>
+  </div>
+
+  <h3>Interaction States <span style="font-size:10px;font-weight:600;color:var(--primary);text-transform:none;letter-spacing:0;background:var(--primary-faded);padding:2px 8px;border-radius:var(--rounded-full);">new</span></h3>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="swatch-color" style="background:#f0f0f2;color:#b3b3bd;">Aa</div><div class="swatch-meta"><div class="token-name">--disabled-bg</div><div class="hex">#f0f0f2</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#b3b3bd;color:#fff;">Aa</div><div class="swatch-meta"><div class="token-name">--disabled-text</div><div class="hex">#b3b3bd</div></div></div>
+    <div class="swatch"><div class="swatch-color" style="background:#5d3fd3;color:#fff;box-shadow:inset 0 0 0 2px white, inset 0 0 0 4px #5d3fd3;">Aa</div><div class="swatch-meta"><div class="token-name">--focus-ring</div><div class="hex">#5d3fd3 (2px outline, 2px offset)</div></div></div>
+  </div>
+</div>
+
+<!-- Typography -->
+<div class="section">
+  <h2>Typography</h2>
+  <p style="font-size:13px;color:var(--on-surface-muted);margin-bottom:8px;">Latin: <strong>Inter</strong> &middot; Arabic: <strong>Noto Sans Arabic</strong> &middot; Mono: <strong>JetBrains Mono</strong></p>
+  <p style="font-size:12px;color:var(--on-surface-faint);margin-bottom:20px;">Font switching via <code>html[lang=&quot;ar&quot;]</code>. Every token has a <code>fontFamilyAr</code> counterpart.</p>
+  <div class="type-spec">
+    <div class="type-label">Display (landing hero only)</div>
+    <div class="type-props">800 &middot; 40px &middot; 1.2 line-height</div>
+    <div style="font-size:40px;font-weight:800;line-height:1.2;font-family:var(--font-sans);">Modern ERP for Food &amp; Beverage Distribution</div>
+    <div style="font-size:40px;font-weight:800;line-height:1.4;font-family:var(--font-sans-ar);">نظام ERP حديث لإدارة التوزيع الغذائي</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">h1 — Page title</div>
+    <div class="type-props">700 &middot; 22px &middot; 1.3 line-height</div>
+    <div style="font-size:22px;font-weight:700;line-height:1.3;font-family:var(--font-sans);">Products</div>
+    <div style="font-size:22px;font-weight:700;line-height:1.5;font-family:var(--font-sans-ar);">المنتجات</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">h2 — Section heading</div>
+    <div class="type-props">700 &middot; 28px &middot; 1.3 line-height</div>
+    <div style="font-size:28px;font-weight:700;line-height:1.3;font-family:var(--font-sans);">Powerful Features</div>
+    <div style="font-size:28px;font-weight:700;line-height:1.5;font-family:var(--font-sans-ar);">مميزات قوية</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">h3 — Card / feature title</div>
+    <div class="type-props">700 &middot; 16px &middot; 1.4 line-height</div>
+    <div style="font-size:16px;font-weight:700;line-height:1.4;font-family:var(--font-sans);">Inventory Management</div>
+    <div style="font-size:16px;font-weight:700;line-height:1.6;font-family:var(--font-sans-ar);">إدارة المخزون</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Card Title</div>
+    <div class="type-props">700 &middot; 14px &middot; 1.4 line-height</div>
+    <div style="font-size:14px;font-weight:700;line-height:1.4;font-family:var(--font-sans);">Order #1024 — Ahmed Grocery</div>
+    <div style="font-size:14px;font-weight:700;line-height:1.6;font-family:var(--font-sans-ar);">طلب #١٠٢٤ — بقالة أحمد</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Body</div>
+    <div class="type-props">400 &middot; 13px &middot; 1.5 line-height</div>
+    <div style="font-size:13px;font-weight:400;line-height:1.5;font-family:var(--font-sans);">Track stock across warehouses with reorder alerts.</div>
+    <div style="font-size:13px;font-weight:400;line-height:1.7;font-family:var(--font-sans-ar);">تتبع المخزون في مستودعات متعددة مع تنبيهات إعادة الطلب.</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Subtitle</div>
+    <div class="type-props">400 &middot; 13px &middot; 1.5 line-height</div>
+    <div style="font-size:13px;font-weight:400;line-height:1.5;color:var(--on-surface-subtle);font-family:var(--font-sans);">Manage your product catalog and categories.</div>
+    <div style="font-size:13px;font-weight:400;line-height:1.7;color:var(--on-surface-subtle);font-family:var(--font-sans-ar);">إدارة كتالوج المنتجات والفئات.</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Button</div>
+    <div class="type-props">600 &middot; 13px &middot; 1 line-height</div>
+    <div style="font-size:13px;font-weight:600;line-height:1;font-family:var(--font-sans);">Create Order</div>
+    <div style="font-size:13px;font-weight:600;line-height:1;font-family:var(--font-sans-ar);">إنشاء طلب</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Table Header</div>
+    <div class="type-props">700 &middot; 11px &middot; uppercase &middot; 0.5px letter-spacing</div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-family:var(--font-sans);">Product Name &middot; SKU &middot; Qty &middot; Price</div>
+    <div style="font-size:11px;font-weight:700;font-family:var(--font-sans-ar);">اسم المنتج &middot; SKU &middot; الكمية &middot; السعر</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Badge</div>
+    <div class="type-props">600 &middot; 11px &middot; 1 line-height</div>
+    <div style="font-size:11px;font-weight:600;line-height:1;font-family:var(--font-sans);">Active</div>
+    <div style="font-size:11px;font-weight:600;line-height:1;font-family:var(--font-sans-ar);">نشط</div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Caption / Form Label</div>
+    <div class="type-props">600 &middot; 12px &middot; 1.4 line-height</div>
+    <div style="font-size:12px;font-weight:600;line-height:1.4;color:var(--on-surface-secondary);font-family:var(--font-sans);">Product Name <span style="color:var(--error);">*</span></div>
+    <div style="font-size:12px;font-weight:600;line-height:1.6;color:var(--on-surface-secondary);font-family:var(--font-sans-ar);">اسم المنتج <span style="color:var(--error);">*</span></div>
+  </div>
+  <div class="type-spec">
+    <div class="type-label">Mono (code / identifiers)</div>
+    <div class="type-props">JetBrains Mono &middot; 600 &middot; 12px</div>
+    <div style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--primary);">PRD-001024</div>
+  </div>
+  <p style="font-size:12px;color:var(--on-surface-faint);margin-top:12px;">Each specimen shows Latin (Inter) above and Arabic (Noto Sans Arabic) below. Arabic line-height is increased to <code>1.6&ndash;1.7</code> for ascender/descender clearance.</p>
+</div> <!-- /typography section -->
+
+<!-- Spacing -->
+<div class="section">
+  <h2>Spacing</h2>
+  <div class="spacing-row"><div class="spacing-box" style="width:4px;height:16px;"></div><span class="spacing-label">--space-1</span><span class="spacing-value">4px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:8px;height:16px;"></div><span class="spacing-label">--space-2</span><span class="spacing-value">8px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:12px;height:16px;"></div><span class="spacing-label">--space-3</span><span class="spacing-value">12px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:14px;height:16px;"></div><span class="spacing-label">--space-4</span><span class="spacing-value">14px (form row gap)</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:16px;height:16px;"></div><span class="spacing-label">--space-5</span><span class="spacing-value">16px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:20px;height:16px;"></div><span class="spacing-label">--space-6</span><span class="spacing-value">20px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:24px;height:16px;"></div><span class="spacing-label">--space-7</span><span class="spacing-value">24px (section gap)</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:32px;height:16px;"></div><span class="spacing-label">--space-8</span><span class="spacing-value">32px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:40px;height:16px;"></div><span class="spacing-label">--space-9</span><span class="spacing-value">40px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:48px;height:16px;"></div><span class="spacing-label">--space-10</span><span class="spacing-value">48px</span></div>
+  <div class="spacing-row"><div class="spacing-box" style="width:80px;height:16px;"></div><span class="spacing-label">--space-11</span><span class="spacing-value">80px (landing hero padding)</span></div>
+</div>
+
+<!-- Radius -->
+<div class="section">
+  <h2>Radius</h2>
+  <div class="radius-row"><div class="radius-box" style="border-radius:0;"></div><span class="radius-label">--rounded-none</span><span class="spacing-value">0</span></div>
+  <div class="radius-row"><div class="radius-box" style="border-radius:4px;"></div><span class="radius-label">--rounded-sm</span><span class="spacing-value">4px (skeleton)</span></div>
+  <div class="radius-row"><div class="radius-box" style="border-radius:6px;"></div><span class="radius-label">--rounded-md</span><span class="spacing-value">6px (inputs, icon buttons)</span></div>
+  <div class="radius-row"><div class="radius-box" style="border-radius:8px;"></div><span class="radius-label">--rounded-lg</span><span class="spacing-value">8px (buttons, selects)</span></div>
+  <div class="radius-row"><div class="radius-box" style="border-radius:12px;"></div><span class="radius-label">--rounded-xl</span><span class="spacing-value">12px (cards, modals)</span></div>
+  <div class="radius-row"><div class="radius-box" style="border-radius:9999px;width:64px;"></div><span class="radius-label">--rounded-full</span><span class="spacing-value">9999px (badges, toggle)</span></div>
+</div>
+
+<!-- Elevation & Depth -->
+<div class="section">
+  <h2>Elevation &amp; Depth</h2>
+  <div class="elevation-row">
+    <div class="elevation-card" style="box-shadow:var(--shadow-card);border:1px solid var(--border-default);"><div class="label">Card</div><div class="el-note">0 1px 3px rgba(0,0,0,0.05)</div></div>
+    <div class="elevation-card" style="box-shadow:var(--shadow-modal);border:1px solid var(--border-default);"><div class="label">Modal</div><div class="el-note">0 8px 32px rgba(0,0,0,0.2)</div></div>
+    <div class="elevation-card" style="box-shadow:var(--shadow-pricing);border:1px solid var(--border-default);"><div class="label">Pricing (landing)</div><div class="el-note">0 4px 24px rgba(0,0,0,0.08)</div></div>
+    <div class="elevation-card" style="box-shadow:none;border:1px solid var(--border-default);"><div class="label">Border only</div><div class="el-note">No shadow — flat components</div></div>
+  </div>
+  <h3>Z-Index Scale <span style="font-size:10px;font-weight:600;color:var(--primary);text-transform:none;letter-spacing:0;background:var(--primary-faded);padding:2px 8px;border-radius:var(--rounded-full);">new</span></h3>
+  <div class="spacing-row"><span class="spacing-label">--z-dropdown</span><span class="spacing-value">10</span></div>
+  <div class="spacing-row"><span class="spacing-label">--z-sticky-header</span><span class="spacing-value">20</span></div>
+  <div class="spacing-row"><span class="spacing-label">--z-overlay</span><span class="spacing-value">100</span></div>
+  <div class="spacing-row"><span class="spacing-label">--z-modal</span><span class="spacing-value">101</span></div>
+  <div class="spacing-row"><span class="spacing-label">--z-toast</span><span class="spacing-value">200 (always above modals)</span></div>
+  <div class="spacing-row"><span class="spacing-label">--z-tooltip</span><span class="spacing-value">300</span></div>
+</div>
+
+<!-- Components -->
+<div class="section">
+  <h2>Components</h2>
+
+  <div class="comp-section">
+    <h3>Buttons</h3>
+    <div class="comp-row"><span class="comp-label">Primary</span><span class="btn btn-primary">Create Order</span></div>
+    <div class="comp-row"><span class="comp-label">Primary :hover</span><span class="btn btn-primary-hover">Create Order</span></div>
+    <div class="comp-row"><span class="comp-label">Outline</span><span class="btn btn-outline">Cancel</span></div>
+    <div class="comp-row"><span class="comp-label">Outline :hover</span><span class="btn btn-outline-hover">Cancel</span></div>
+    <div class="comp-row"><span class="comp-label">Secondary</span><span class="btn btn-secondary">Save Draft</span></div>
+    <div class="comp-row"><span class="comp-label">Secondary :hover</span><span class="btn btn-secondary-hover">Save Draft</span></div>
+    <div class="comp-row"><span class="comp-label">Small</span><span class="btn btn-primary btn-sm">Small</span> <span class="btn btn-outline btn-sm">Small</span></div>
+    <div class="comp-row"><span class="comp-label">X-Small</span><span class="btn btn-primary btn-xs">XS</span> <span class="btn btn-outline btn-xs">XS</span></div>
+    <div class="comp-row"><span class="comp-label">Icon default</span><span class="btn-icon" style="background:transparent;">&#9998;</span><span class="btn-icon" style="background:transparent;">&#128465;</span></div>
+    <div class="comp-row"><span class="comp-label">Icon :hover</span><span class="btn-icon-hover">&#9998;</span><span class="btn-icon-hover">&#128465;</span></div>
+    <div class="comp-row"><span class="comp-label">Icon Danger</span><span class="btn-icon-danger">&#128465;</span></div>
+    <div class="comp-row"><span class="comp-label">Icon Danger :hover</span><span class="btn-icon-danger-hover">&#128465;</span></div>
+    <div class="comp-row"><span class="comp-label">Disabled</span><button class="btn-disabled" disabled>Save Changes</button></div>
+    <div class="comp-row"><span class="comp-label">Focus (tab to it)</span><button class="btn btn-outline" style="cursor:pointer;">Try tabbing here</button></div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Form Inputs</h3>
+    <div class="comp-row"><span class="comp-label">Text</span><input type="text" class="form-input" placeholder="Product name" value="Basmati Rice"></div>
+    <div class="comp-row"><span class="comp-label">Small</span><input type="text" class="form-input form-input-sm" placeholder="Filter..." value="Search"></div>
+    <div class="comp-row"><span class="comp-label">Error</span><input type="text" class="form-input form-input-error" placeholder="Required" value=""></div>
+    <div class="comp-row"><span class="comp-label">Select</span><select class="form-input" style="appearance:auto;"><option>Active</option><option>Inactive</option></select></div>
+    <div class="comp-row"><span class="comp-label">Checkbox</span><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:default;"><input type="checkbox" class="checkbox" checked> Active</label></div>
+    <div class="comp-row"><span class="comp-label">Toggle</span><span class="toggle active"></span> <span class="toggle"></span></div>
+    <div class="comp-row"><span class="comp-label">Label</span><div><div style="font-size:12px;font-weight:600;color:var(--on-surface-secondary);margin-bottom:4px;">Product Name <span style="color:var(--error);">*</span></div><input type="text" class="form-input" placeholder="Required" value="Basmati Rice"></div></div>
+    <div class="comp-row"><span class="comp-label">Disabled</span><input type="text" class="form-input form-input-disabled" value="Locked after posting" disabled></div>
+    <div class="comp-row"><span class="comp-label">Help text</span><div><input type="text" class="form-input" value="12/07/2026"><div class="form-help-text">Format: DD/MM/YYYY</div></div></div>
+    <div class="comp-row"><span class="comp-label">Error text</span><div><input type="text" class="form-input form-input-error" value=""><div class="form-error-text">This field is required</div></div></div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Badges</h3>
+    <div class="comp-row">
+      <span class="badge badge-active">Active</span>
+      <span class="badge badge-danger">Cancelled</span>
+      <span class="badge badge-warning">Draft</span>
+      <span class="badge badge-info">In Progress</span>
+      <span class="badge badge-inactive">Inactive</span>
+      <span class="badge badge-disabled">Disabled</span>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Tabs <span style="font-size:10px;font-weight:600;color:var(--primary);text-transform:none;letter-spacing:0;background:var(--primary-faded);padding:2px 8px;border-radius:var(--rounded-full);margin-left:6px;">new</span></h3>
+    <div class="tabs">
+      <span class="tab-item active">Details</span>
+      <span class="tab-item">Orders</span>
+      <span class="tab-item">Ledger</span>
+      <span class="tab-item">Documents</span>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Breadcrumbs <span style="font-size:10px;font-weight:600;color:var(--primary);text-transform:none;letter-spacing:0;background:var(--primary-faded);padding:2px 8px;border-radius:var(--rounded-full);margin-left:6px;">new</span></h3>
+    <div class="breadcrumb"><span>Warehouse</span><span>/</span><span>Pick Lists</span><span>/</span><span class="current">PL-2044</span></div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Pagination <span style="font-size:10px;font-weight:600;color:var(--primary);text-transform:none;letter-spacing:0;background:var(--primary-faded);padding:2px 8px;border-radius:var(--rounded-full);margin-left:6px;">new</span></h3>
+    <div class="pagination">
+      <span class="page-item">&#8249;</span>
+      <span class="page-item active">1</span>
+      <span class="page-item">2</span>
+      <span class="page-item">3</span>
+      <span class="page-item">&#8250;</span>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Cards</h3>
+    <h3 style="margin-top:0;font-size:13px;text-transform:none;letter-spacing:0;">Data Card with Table</h3>
+    <div class="preview-card">
+      <div class="preview-card-header">Products (6)</div>
+      <table>
+        <thead><tr><th>Product Name</th><th>SKU</th><th>Qty</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Basmati Rice</td><td>RICE-001</td><td>240</td><td><span class="badge badge-active">Active</span></td></tr>
+          <tr><td>Sunflower Oil</td><td>OIL-012</td><td>12</td><td><span class="badge badge-warning">Low Stock</span></td></tr>
+          <tr><td>Black Pepper</td><td>SPC-008</td><td>0</td><td><span class="badge badge-danger">Out of Stock</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Modals</h3>
+    <div class="modal-demo">
+      <div class="modal-demo-head"><span>Edit Product</span> <span style="cursor:default;color:var(--on-surface-faint);">&#10005;</span></div>
+      <div class="modal-demo-body">
+        <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:600;color:var(--on-surface-secondary);margin-bottom:4px;">Product Name <span style="color:var(--error);">*</span></div><input type="text" class="form-input" style="width:100%;" value="Basmati Rice"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;"><div><div style="font-size:12px;font-weight:600;color:var(--on-surface-secondary);margin-bottom:4px;">Price</div><input type="text" class="form-input" style="width:100%;" value="$12.50"></div><div><div style="font-size:12px;font-weight:600;color:var(--on-surface-secondary);margin-bottom:4px;">Category</div><select class="form-input" style="width:100%;appearance:auto;"><option>Grains</option><option>Oils</option></select></div></div>
+      </div>
+      <div class="modal-demo-foot"><span class="btn btn-outline">Cancel</span><span class="btn btn-primary">Save</span></div>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Sidebar</h3>
+    <div class="sidebar-demo">
+      <div class="sidebar-panel">
+        <div class="nav-section">Inventory</div>
+        <div class="nav-item active">&#9632; Products</div>
+        <div class="nav-item">&#9632; Categories</div>
+        <div class="nav-item">&#9632; Stock</div>
+        <div class="nav-section">Sales</div>
+        <div class="nav-item">&#9632; Orders</div>
+        <div class="nav-item">&#9632; Customers</div>
+        <div class="nav-section">Warehouse</div>
+        <div class="nav-item">&#9632; Pick Lists</div>
+      </div>
+      <div class="sidebar-content">
+        <div style="font-weight:700;font-size:22px;color:var(--on-surface);margin-bottom:4px;">Products</div>
+        <div style="font-size:13px;color:var(--on-surface-subtle);margin-bottom:20px;">Manage your product catalog</div>
+        <div style="display:flex;gap:8px;"><span class="btn btn-primary">Add Product</span><span class="btn btn-outline">Import</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Navigation Mode: Top Bar <span style="font-size:10px;font-weight:600;color:var(--primary);text-transform:none;letter-spacing:0;background:var(--primary-faded);padding:2px 8px;border-radius:var(--rounded-full);margin-left:6px;">new</span></h3>
+    <p style="font-size:12px;color:var(--on-surface-subtle);margin-bottom:12px;">Odoo-style alternative to the sidebar — module switcher + horizontal sub-nav. Same route tree, different chrome. See design.md for when to use which.</p>
+    <div class="topbar-demo">
+      <div class="topbar">
+        <span class="topbar-switcher open">&#8862;</span>
+        <span class="topbar-module-name">Inventory</span>
+        <div class="module-switcher-panel">
+          <div class="module-tile active"><span class="icon">&#128230;</span>Inventory</div>
+          <div class="module-tile"><span class="icon">&#128176;</span>Sales</div>
+          <div class="module-tile"><span class="icon">&#127981;</span>Warehouse</div>
+          <div class="module-tile"><span class="icon">&#128101;</span>HR</div>
+          <div class="module-tile"><span class="icon">&#128202;</span>Financial</div>
+          <div class="module-tile"><span class="icon">&#128717;</span>Manufacturing</div>
+        </div>
+        <span class="topbar-spacer"></span>
+        <span class="topbar-icons">
+          <span class="btn-icon">&#128269;</span>
+          <span class="btn-icon">&#128276;</span>
+          <span class="btn-icon">&#128100;</span>
+        </span>
+      </div>
+      <div class="module-subnav">
+        <span class="tab-item active">Products</span>
+        <span class="tab-item">Categories</span>
+        <span class="tab-item">Stock</span>
+        <span class="tab-item">Adjustments</span>
+      </div>
+      <div class="topbar-content">
+        <div style="font-weight:700;font-size:22px;color:var(--on-surface);margin-bottom:4px;">Products</div>
+        <div style="font-size:13px;color:var(--on-surface-subtle);">Manage your product catalog</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Page Header (pattern)</h3>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+      <div><div style="font-size:22px;font-weight:700;color:var(--on-surface);">Products</div><div style="font-size:13px;color:var(--on-surface-subtle);margin-top:4px;">Manage your product catalog, categories, and units of measure.</div></div>
+      <span class="btn btn-primary">Add Product</span>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Empty State</h3>
+    <div style="text-align:center;padding:48px 24px;color:var(--on-surface-faint);font-size:14px;border:1px dashed var(--border-default);border-radius:var(--rounded-xl);">
+      <div style="font-size:48px;color:var(--border-default);margin-bottom:16px;">&#128230;</div>
+      <p style="margin-bottom:16px;">No picks waiting. Once a salesman places an order, it'll show up here.</p>
+      <span class="btn btn-outline">Browse Products</span>
+    </div>
+  </div>
+
+  <div class="comp-section">
+    <h3>Toast Notifications</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:360px;">
+      <div style="padding:12px 20px;border-radius:var(--rounded-lg);font-size:14px;font-weight:500;color:#fff;background:#00897b;">Order placed. Inventory updated.</div>
+      <div style="padding:12px 20px;border-radius:var(--rounded-lg);font-size:14px;font-weight:500;color:#fff;background:#c62828;">Couldn't save. Your connection dropped.</div>
+      <div style="padding:12px 20px;border-radius:var(--rounded-lg);font-size:14px;font-weight:500;color:#fff;background:#1565c0;">3 new orders received.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Do's and Don'ts -->
+<div class="section">
+  <h2>Do's and Don'ts</h2>
+  <div class="dos-donts">
+    <div class="dos">
+      <h3>Do</h3>
+      <ul>
+        <li>Use direct, action-oriented copy: &ldquo;Order placed. Inventory updated. Warehouse has their pick list.&rdquo;</li>
+        <li>Show empty states that guide the user: &ldquo;No picks waiting. Once a salesman places an order, it'll show up here.&rdquo;</li>
+        <li>Maintain 44px minimum touch targets on all buttons and interactive controls.</li>
+        <li>Use font-weight and letter-spacing for hierarchy before reaching for color or size.</li>
+        <li>Support light and dark mode as equals — every color token has a dark counterpart.</li>
+        <li>Support RTL layout for Arabic localization via <code>[dir=&quot;rtl&quot;]</code> attribute.</li>
+        <li>Give every interactive element a visible <code>focus-ring</code> outline — not just inputs.</li>
+        <li>Reserve <code>on-surface-faint</code> for decorative use only; use <code>on-surface-subtle</code> or darker for real copy.</li>
+        <li>Treat sidebar vs. top bar as a display preference over the same route tree — never fork nav data per mode.</li>
+      </ul>
+    </div>
+    <div class="donts">
+      <h3>Don't</h3>
+      <ul>
+        <li>Use ERP jargon in UI copy. No &ldquo;Error code: ERR-8472,&rdquo; no &ldquo;streamlined onboarding experience.&rdquo;</li>
+        <li>Hide critical data (stock levels, order status, pricing) behind hover or expand interactions.</li>
+        <li>Add playful elements — Nova is a tool for daily work, not a consumer app.</li>
+        <li>Use fully sharp (0px) corners on any interactive element.</li>
+        <li>Add animation beyond 0.15–0.25s transitions — no bounce, no spring, no parallax.</li>
+        <li>Introduce a grid framework or CSS framework — the existing layout patterns are sufficient.</li>
+        <li>Mirror icons whose meaning isn't directional (refresh, play, checkmarks, logos) in RTL.</li>
+        <li>Use opacity alone to show "disabled" — use the explicit <code>disabled-bg</code>/<code>disabled-text</code> pair.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<hr>
+<p style="text-align:center;font-size:12px;color:var(--on-surface-faint);">Mirror of <code>docs/design.md</code> &middot; Same system, two formats &middot; Change the .md first, then regenerate this file.</p>
+</div>
+</body>
+</html>

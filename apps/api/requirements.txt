@@ -14,3 +14,4 @@ resend>=0.8
 posthog>=3.0
 sentry-sdk>=2.0
 python-multipart>=0.0.9
+openai>=1.0.0

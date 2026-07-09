@@ -9,7 +9,7 @@
     <template v-else>
       <div class="page-header">
         <div>
-          <h2 class="page-title">{{ dashboard.dashboard_name }}</h2>
+          <h1 class="page-title">{{ dashboard.dashboard_name }}</h1>
           <p class="page-subtitle">{{ t('dash-view-subtitle', 'Dashboard') }} · {{ dashboard.dashboard_code }}</p>
         </div>
         <button class="btn-outline" @click="goBack">

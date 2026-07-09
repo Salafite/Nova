@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('sales-title') }}</h2>
+        <h1 class="page-title">{{ t('sales-title') }}</h1>
         <p class="page-subtitle">{{ t('sales-sub') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">

@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('barcodes-title', 'Barcodes') }}</h2>
+        <h1 class="page-title">{{ t('barcodes-title', 'Barcodes') }}</h1>
         <p class="page-subtitle">{{ t('barcodes-sub', 'Manage product barcodes and scanning identifiers') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -18,6 +18,7 @@
     </div>
 
     <div v-else class="data-card">
+      <div class="table-wrap">
       <table class="data-table">
         <thead>
           <tr>
@@ -38,23 +39,24 @@
               <span v-else class="badge badge-disabled">{{ t('no') }}</span>
             </td>
             <td class="text-center">
-              <button class="btn-icon" @click="editItem(item)" :title="t('edit')">
+              <button class="btn-icon" @click="editItem(item)" :title="t('edit')" :aria-label="t('edit')">
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button class="btn-icon text-red-500" @click="deleteItem(item)" :title="t('delete')">
+              <button class="btn-icon text-red-500" @click="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')">
                 <span class="material-symbols-outlined">delete</span>
               </button>
             </td>
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-barcode', 'Edit Barcode') : t('new-barcode', 'New Barcode') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-group">

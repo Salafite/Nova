@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('pick-lists') }}</h2>
+        <h1 class="page-title">{{ t('pick-lists') }}</h1>
         <p class="page-subtitle">{{ t('pick-lists-sub') }}</p>
       </div>
     </div>

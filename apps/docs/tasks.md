@@ -242,7 +242,7 @@ These exist but are basic placeholders — need full CRUD + i18n.
 
 ## 5. i18n Translation Dictionary
 
-Keys currently in `composables/useI18n.js`:
+Keys currently in `locales/en.json`:
 
 ```
 loading, no-records, no-data, no-modules, scan-hint,

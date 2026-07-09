@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('module-manager', 'Module Manager') }}</h2>
+        <h1 class="page-title">{{ t('module-manager', 'Module Manager') }}</h1>
         <p class="page-subtitle">{{ t('module-sub', 'Install, enable, or disable Nova ERP modules') }}</p>
       </div>
       <button class="btn-primary" @click="scanModules">
@@ -57,13 +57,13 @@
                 <button v-if="!m.is_core"
                         :class="['btn-icon', m.is_active ? 'text-amber-600' : 'text-green-600']"
                         @click="toggleModule(m)"
-                        :title="m.is_active ? t('disable') : t('enable')">
+                        :title="m.is_active ? t('disable') : t('enable')" :aria-label="m.is_active ? t('disable') : t('enable')">
                   <span class="material-symbols-outlined">{{ m.is_active ? 'toggle_off' : 'toggle_on' }}</span>
                 </button>
                 <button v-if="!m.is_core"
                         class="btn-icon text-red-500"
                         @click="uninstallModule(m)"
-                        :title="t('uninstall')">
+                        :title="t('uninstall')" :aria-label="t('uninstall')">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </td>

@@ -59,16 +59,17 @@ Open `http://localhost:8070`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `POSTGRES_HOST` | `localhost` | Database host |
-| `POSTGRES_PORT` | `5432` | Database port |
-| `POSTGRES_DB` | `nova_erp` | Database name |
-| `POSTGRES_USER` | `nova` | Database user |
-| `POSTGRES_PASSWORD` | `nova_secret` | Database password |
-| `SECRET_KEY` | `change-me` | JWT signing key |
-| `JWT_ALGORITHM` | `HS256` | JWT algorithm |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Token expiry |
-| `ALLOWED_ORIGINS` | `*` | CORS origins |
+| `DB_HOST` | `localhost` | Database host |
+| `DB_PORT` | `5432` | Database port |
+| `DB_NAME` | `Stage` | Database name |
+| `DB_USER` | `postgres` | Database user |
+| `DB_PASSWORD` | `` | Database password |
 | `DB_SCHEMA` | `Nova` | Database schema |
+| `SECRET_KEY` | *(required)* | JWT signing key |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | JWT access token expiry |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | JWT refresh token expiry |
+| `ALLOWED_ORIGINS` | `*` | CORS origins |
+| `NOVA_ENV` | *(none)* | Set to `production` for prod mode |
 
 ## Production Checklist
 
@@ -77,7 +78,7 @@ Open `http://localhost:8070`.
 - [ ] Set up PostgreSQL backup (pg_dump cron job)
 - [ ] Configure SSL (reverse proxy with nginx/caddy + Let's Encrypt)
 - [ ] Build frontend and serve from the API static file mount
-- [ ] Set `POSTGRES_PASSWORD` to a strong value
+- [ ] Set `DB_PASSWORD` to a strong value
 
 ## On-Premise Deployment
 

@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ product.name || t('loading') }}</h2>
+        <h1 class="page-title">{{ product.name || t('loading') }}</h1>
         <p class="page-subtitle">{{ t('product-detail-sub') }}</p>
       </div>
       <div class="header-actions">

@@ -5,12 +5,18 @@
       <p class="subtitle">{{ t('signup-title') }}</p>
       <div v-if="error" class="alert error">{{ error }}</div>
       <form @submit.prevent="handleSignup">
-        <input v-model="business_name" class="input" :placeholder="t('signup-business-name')" required />
-        <input v-model="full_name" class="input" :placeholder="t('signup-full-name')" required />
-        <input v-model="email" type="email" class="input" :placeholder="t('signup-email')" required />
-        <input v-model="username" class="input" :placeholder="t('signup-username')" required />
-        <input v-model="password" type="password" class="input" :placeholder="t('signup-password')" required />
-        <input v-model="confirm_password" type="password" class="input" :placeholder="t('signup-confirm-password')" required />
+        <label class="sr-only" for="signup-business-name">{{ t('signup-business-name') }}</label>
+        <input id="signup-business-name" v-model="business_name" class="input" :placeholder="t('signup-business-name')" required />
+        <label class="sr-only" for="signup-full-name">{{ t('signup-full-name') }}</label>
+        <input id="signup-full-name" v-model="full_name" class="input" :placeholder="t('signup-full-name')" required />
+        <label class="sr-only" for="signup-email">{{ t('signup-email') }}</label>
+        <input id="signup-email" v-model="email" type="email" class="input" :placeholder="t('signup-email')" required />
+        <label class="sr-only" for="signup-username">{{ t('signup-username') }}</label>
+        <input id="signup-username" v-model="username" class="input" :placeholder="t('signup-username')" required />
+        <label class="sr-only" for="signup-password">{{ t('signup-password') }}</label>
+        <input id="signup-password" v-model="password" type="password" class="input" :placeholder="t('signup-password')" required />
+        <label class="sr-only" for="signup-confirm-password">{{ t('signup-confirm-password') }}</label>
+        <input id="signup-confirm-password" v-model="confirm_password" type="password" class="input" :placeholder="t('signup-confirm-password')" required />
         <button type="submit" class="btn" :disabled="loading">
           {{ loading ? t('signup-creating') : t('signup-submit') }}
         </button>
@@ -76,7 +82,8 @@ async function handleSignup() {
 .logo { font-size: 24px; font-weight: 700; color: #5d3fd3; text-align: center; margin-bottom: 4px; }
 .subtitle { text-align: center; color: #666; margin-bottom: 24px; font-size: 14px; }
 .input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; font-size: 14px; box-sizing: border-box; }
-.input:focus { outline: none; border-color: #5d3fd3; }
+.input:focus { outline: 2px solid #5d3fd3; outline-offset: 1px; border-color: #5d3fd3; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 .btn { width: 100%; padding: 12px; background: #5d3fd3; color: #fff; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; }
 .btn:hover { background: #4a32b0; }
 .btn:disabled { opacity: 0.6; }

@@ -6,7 +6,7 @@
       <div class="flex justify-between items-center mb-6">
         <div>
           <button class="btn-link" @click="$router.push('/warehouse/pick-lists')">&larr; {{ t('back-to-pick-lists') }}</button>
-          <h2 class="page-title">{{ t('pick-list') }} {{ pickList.pick_list_number }}</h2>
+          <h1 class="page-title">{{ t('pick-list') }} {{ pickList.pick_list_number }}</h1>
         </div>
         <div class="flex gap-2">
           <button v-if="pickList.status === 'Pending'" class="btn-primary" @click="startPicking">{{ t('start-picking') }}</button>

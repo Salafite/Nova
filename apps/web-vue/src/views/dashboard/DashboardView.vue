@@ -1,6 +1,6 @@
 <template>
   <div :dir="dir">
-    <h2 class="page-title mb-6">{{ t('dash-title', 'Dashboard') }}</h2>
+    <h1 class="page-title mb-6">{{ t('dash-title', 'Dashboard') }}</h1>
 
     <div v-if="globalLoading" class="text-center py-12 text-gray-400">{{ t('loading', 'Loading...') }}</div>
 

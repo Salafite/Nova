@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('dashbuilder-title', 'Dashboard Builder') }}</h2>
+        <h1 class="page-title">{{ t('dashbuilder-title', 'Dashboard Builder') }}</h1>
         <p class="page-subtitle">{{ t('dashbuilder-subtitle', 'Create and manage custom dashboards with widgets') }}</p>
       </div>
       <button class="btn-primary" @click="openAddDashboard">
@@ -25,9 +25,9 @@
               <span class="dash-item-code">{{ dash.dashboard_code }}</span>
             </div>
             <div class="dash-item-actions" @click.stop>
-              <button class="btn-icon btn-icon-sm" @click="viewDashboard(dash)" :title="t('view', 'View')"><span class="material-symbols-outlined">visibility</span></button>
-              <button class="btn-icon btn-icon-sm" @click="openEditDashboard(dash)" :title="t('edit', 'Edit')"><span class="material-symbols-outlined">edit</span></button>
-              <button class="btn-icon btn-icon-sm btn-icon-danger" @click="confirmDeleteDashboard(dash)" :title="t('delete', 'Delete')"><span class="material-symbols-outlined">delete</span></button>
+              <button class="btn-icon btn-icon-sm" @click="viewDashboard(dash)" :title="t('view', 'View')" :aria-label="t('view', 'View')"><span class="material-symbols-outlined">visibility</span></button>
+              <button class="btn-icon btn-icon-sm" @click="openEditDashboard(dash)" :title="t('edit', 'Edit')" :aria-label="t('edit', 'Edit')"><span class="material-symbols-outlined">edit</span></button>
+              <button class="btn-icon btn-icon-sm btn-icon-danger" @click="confirmDeleteDashboard(dash)" :title="t('delete', 'Delete')" :aria-label="t('delete', 'Delete')"><span class="material-symbols-outlined">delete</span></button>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ isEditingDash ? t('dash-edit', 'Edit Dashboard') : t('dash-new', 'New Dashboard') }}</h3>
-          <button class="btn-icon" @click="closeDashModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeDashModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <form @submit.prevent="saveDashboard" class="modal-body">
           <div class="form-group">
@@ -112,7 +112,7 @@
       <div class="modal-content modal-lg">
         <div class="modal-header">
           <h3>{{ isEditingWidget ? t('widget-edit', 'Edit Widget') : t('widget-new', 'New Widget') }}</h3>
-          <button class="btn-icon" @click="closeWidgetModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeWidgetModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <form @submit.prevent="saveWidget" class="modal-body">
           <div class="form-row">

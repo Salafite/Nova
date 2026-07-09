@@ -6,7 +6,7 @@
       <div class="flex justify-between items-center mb-6">
         <div>
           <button class="btn-link" @click="$router.push('/finance')">&larr; {{ t('back-to-invoices') }}</button>
-          <h2 class="page-title">{{ t('invoice') }} {{ invoice.invoice_number }}</h2>
+          <h1 class="page-title">{{ t('invoice') }} {{ invoice.invoice_number }}</h1>
         </div>
         <div class="flex gap-2">
           <button v-if="invoice.status === 'Unpaid'" class="btn-primary" @click="showPayForm = true">{{ t('record-payment') }}</button>

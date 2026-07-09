@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="page-title">{{ t('leave-title') }}</h2>
+        <h1 class="page-title">{{ t('leave-title') }}</h1>
         <p class="page-subtitle">{{ t('leave-sub') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -40,10 +40,10 @@
                 <span :class="statusBadge(item.status)">{{ statusLabel(item.status) }}</span>
               </td>
               <td class="text-center">
-                <button v-if="item.status === 'Pending'" class="btn-icon btn-icon-success" @click="approveLeave(item)" :title="t('leave-approve')"><span class="material-symbols-outlined">check_circle</span></button>
-                <button v-if="item.status === 'Pending'" class="btn-icon btn-icon-danger" @click="rejectLeave(item)" :title="t('leave-reject')"><span class="material-symbols-outlined">cancel</span></button>
-                <button class="btn-icon" @click="editItem(item)" :title="t('edit')"><span class="material-symbols-outlined">edit</span></button>
-                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')"><span class="material-symbols-outlined">delete</span></button>
+                <button v-if="item.status === 'Pending'" class="btn-icon btn-icon-success" @click="approveLeave(item)" :title="t('leave-approve')" :aria-label="t('leave-approve')"><span class="material-symbols-outlined">check_circle</span></button>
+                <button v-if="item.status === 'Pending'" class="btn-icon btn-icon-danger" @click="rejectLeave(item)" :title="t('leave-reject')" :aria-label="t('leave-reject')"><span class="material-symbols-outlined">cancel</span></button>
+                <button class="btn-icon" @click="editItem(item)" :title="t('edit')" :aria-label="t('edit')"><span class="material-symbols-outlined">edit</span></button>
+                <button class="btn-icon btn-icon-danger" @click="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')"><span class="material-symbols-outlined">delete</span></button>
               </td>
             </tr>
           </tbody>
@@ -54,7 +54,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-leave') : t('new-leave') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
@@ -98,7 +98,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ t('confirm-delete') }}</h3>
-          <button class="btn-icon" @click="showDelete = false"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="showDelete = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <p class="delete-text">{{ t('leave-delete-confirm') }}</p>

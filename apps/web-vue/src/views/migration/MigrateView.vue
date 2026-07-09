@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('migrate-title') }}</h2>
+        <h1 class="page-title">{{ t('migrate-title') }}</h1>
         <p class="page-subtitle">{{ t('migrate-sub') }}</p>
       </div>
     </div>

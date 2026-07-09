@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h2 class="page-title">{{ t('price-lists-title', 'Price Lists') }}</h2>
+        <h1 class="page-title">{{ t('price-lists-title', 'Price Lists') }}</h1>
         <p class="page-subtitle">{{ t('price-lists-sub', 'Manage pricing tiers and product prices') }}</p>
       </div>
       <button class="btn-primary" @click="openAdd">
@@ -40,8 +40,8 @@
               <td class="text-center"><span class="badge" :class="item.is_active ? 'badge-active' : 'badge-inactive'">{{ item.is_active ? t('yes', 'Yes') : t('no', 'No') }}</span></td>
               <td class="cell-mono" style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ item.description || '-' }}</td>
               <td class="text-center">
-                <button class="btn-icon" @click.stop="editItem(item)" :title="t('edit')"><span class="material-symbols-outlined">edit</span></button>
-                <button class="btn-icon btn-icon-danger" @click.stop="deleteItem(item)" :title="t('delete')"><span class="material-symbols-outlined">delete</span></button>
+                <button class="btn-icon" @click.stop="editItem(item)" :title="t('edit')" :aria-label="t('edit')"><span class="material-symbols-outlined">edit</span></button>
+                <button class="btn-icon btn-icon-danger" @click.stop="deleteItem(item)" :title="t('delete')" :aria-label="t('delete')"><span class="material-symbols-outlined">delete</span></button>
               </td>
             </tr>
           </tbody>
@@ -53,7 +53,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-price-list', 'Edit Price List') : t('new-price-list', 'New Price List') }}</h3>
-          <button class="btn-icon" @click="closeModal"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -103,7 +103,7 @@
               <td class="col-num">{{ line.min_qty || 1 }}</td>
               <td class="cell-mono">{{ line.effective_from || '-' }}</td>
               <td class="cell-mono">{{ line.effective_to || '-' }}</td>
-              <td class="text-center"><button class="btn-icon btn-icon-danger" @click="deleteItemLine(line)" :title="t('delete')"><span class="material-symbols-outlined">delete</span></button></td>
+              <td class="text-center"><button class="btn-icon btn-icon-danger" @click="deleteItemLine(line)" :title="t('delete')" :aria-label="t('delete')"><span class="material-symbols-outlined">delete</span></button></td>
             </tr>
             <tr v-if="!selectedItems.length"><td colspan="6" class="text-center" style="padding: 24px; color: var(--text-faint);">{{ t('no-items', 'No items') }}</td></tr>
           </tbody>
@@ -115,7 +115,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header">
           <h3>{{ t('add-item', 'Add Price Item') }}</h3>
-          <button class="btn-icon" @click="showItemModal = false"><span class="material-symbols-outlined">close</span></button>
+          <button class="btn-icon" @click="showItemModal = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-group">
