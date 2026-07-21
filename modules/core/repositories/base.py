@@ -106,5 +106,24 @@ class CrudRepository:
         finally:
             release_connection(conn)
 
+    def count(self, filters: dict = None):
+        conn = get_connection()
+        try:
+            clauses = ['TRUE']
+            params = []
+            if self._has_is_active():
+                clauses.append('is_active = TRUE')
+            if filters:
+                for k, v in filters.items():
+                    clauses.append(f'"{k}" = %s')
+                    params.append(v)
+            sql = f'SELECT COUNT(*) AS cnt FROM {self.qualified} WHERE {" AND ".join(clauses)}'
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, params)
+                row = cur.fetchone()
+                return row['cnt'] if row else 0
+        finally:
+            release_connection(conn)
+
     def _has_is_active(self):
         return 'is_active' in self.all_columns

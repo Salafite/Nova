@@ -17,6 +17,10 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
     def list_all():
         return service.list()
 
+    @router.get('/count')
+    def count_all():
+        return {'count': service.count()}
+
     @router.get('/{id}', response_model=response_model if response_model else None)
     def get_one(id: int):
         row = service.get(id)

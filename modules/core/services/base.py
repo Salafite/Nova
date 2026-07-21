@@ -17,5 +17,8 @@ class CrudService:
     def update(self, id_val, payload: dict):
         return self.repo.update(id_val, payload)
 
+    def count(self, filters: dict = None):
+        return self.repo.count(filters)
+
     def delete(self, id_val):
         return self.repo.delete(id_val)

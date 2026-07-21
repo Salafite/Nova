@@ -97,6 +97,9 @@ import { useToast } from '../../composables/useToast.js'
 import { api } from '../../api/client.js'
 import SkeletonTable from '../../components/SkeletonTable.vue'
 
+const CACHE_TTL = 30_000
+const cache = { data: null, ts: 0 }
+
 const router = useRouter()
 const auth = useAuthStore()
 const navStore = useNavStore()
@@ -228,22 +231,29 @@ function onKeydown(e) {
 
 onMounted(async () => {
   document.addEventListener('keydown', onKeydown)
+  if (cache.data && Date.now() - cache.ts < CACHE_TTL) {
+    Object.assign(stats, cache.data)
+    loading.value = false
+    return
+  }
   try {
-    await navStore.load()
     const [prods, sups, sos, pos, uoms] = await Promise.all([
+      navStore.load().then(() => []),
       api.get('/T0003I/').then(r => r.data || []).catch(() => []),
-      api.get('/T0011I/').then(r => r.data || []).catch(() => []),
-      api.get('/T0012I/').then(r => r.data || []).catch(() => []),
-      api.get('/T0014I/').then(r => r.data || []).catch(() => []),
-      api.get('/T0001I/').then(r => r.data || []).catch(() => []),
+      api.get('/T0011I/count').then(r => r.count || 0).catch(() => 0),
+      api.get('/T0012I/count').then(r => r.count || 0).catch(() => 0),
+      api.get('/T0014I/count').then(r => r.count || 0).catch(() => 0),
+      api.get('/T0001I/count').then(r => r.count || 0).catch(() => 0),
     ])
     stats.products = prods.length
-    stats.suppliers = sups.length
-    stats.salesOrders = sos.length
-    stats.purchaseOrders = pos.length
-    stats.uoms = uoms.length
+    stats.suppliers = sups
+    stats.salesOrders = sos
+    stats.purchaseOrders = pos
+    stats.uoms = uoms
     stats.invoices = 0
     stats.alertCount = prods.filter(p => (p.stock || 0) > 0 && (p.stock || 0) < (p.minStock || 5)).length
+    cache.data = { ...stats }
+    cache.ts = Date.now()
   } catch (e) {
     toast(t('failed-load'), 'error')
   } finally {
