@@ -1,99 +1,94 @@
 <template>
-  <section class="home" :dir="dir">
+  <section class="home">
     <SkeletonTable v-if="loading" />
-    <div v-else>
-      <div class="header">
-        <div>
-          <h2 class="greeting">{{ locale === 'ar-EG' ? 'مرحباً،' : 'Welcome,' }} {{ userName }}</h2>
-          <p class="subtitle">{{ locale === 'ar-EG' ? 'اختر تطبيقاً لبدء سير عملك.' : 'Select an application to start your workflow.' }}</p>
+    <template v-else>
+      <div class="greeting" :dir="dir">
+        <div class="greeting-bar"></div>
+        <div class="greeting-body">
+          <h1 class="greeting-title">{{ t('welcome') }} {{ userName }}</h1>
+          <p class="greeting-sub">{{ timeGreeting }}</p>
         </div>
       </div>
 
-      <div class="stats-row">
-        <div class="stat-item">
-          <span class="stat-num">{{ stats.products }}</span>
-          <span class="stat-lbl">{{ locale === 'ar-EG' ? 'المنتجات' : 'Products' }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ stats.suppliers }}</span>
-          <span class="stat-lbl">{{ locale === 'ar-EG' ? 'الموردون' : 'Suppliers' }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ stats.salesOrders }}</span>
-          <span class="stat-lbl">{{ locale === 'ar-EG' ? 'أوامر البيع' : 'Sales Orders' }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ stats.purchaseOrders }}</span>
-          <span class="stat-lbl">{{ locale === 'ar-EG' ? 'أوامر الشراء' : 'Purchase Orders' }}</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ stats.uoms }}</span>
-          <span class="stat-lbl">{{ locale === 'ar-EG' ? 'وحدات القياس' : 'UOMs' }}</span>
+      <div class="search-box">
+        <span class="material-symbols-outlined search-icon">search</span>
+        <input
+          ref="searchRef"
+          v-model="query"
+          class="search-input"
+          :placeholder="t('home.search-placeholder')"
+          @keydown.escape="query = ''; $event.target.blur()"
+        />
+        <kbd v-if="!query" class="search-hint">/</kbd>
+      </div>
+
+      <div class="stats">
+        <div v-for="s in statsList" :key="s.key" class="stat">
+          <span class="stat-val">{{ s.value }}</span>
+          <span class="stat-lbl">{{ s.label }}</span>
         </div>
       </div>
 
-      <div class="app-grid">
-        <div v-for="card in appCards" :key="card.id" class="app-card" @click="navigate(card.route)">
-          <div class="app-icon" :class="'icon-' + card.id" :style="{ backgroundColor: card.color }">
+      <div class="apps">
+        <div
+          v-for="card in filteredCards"
+          :key="card.id"
+          class="app-card"
+          @click="navigate(card.route)"
+        >
+          <div class="app-icon" :style="{ background: card.color }">
             <span class="material-symbols-outlined filled">{{ card.icon }}</span>
           </div>
-          <span class="app-label">{{ card.label }}</span>
+          <span class="app-name">{{ card.label }}</span>
+        </div>
+        <div v-if="query && !filteredCards.length" class="apps-empty">
+          <span class="material-symbols-outlined">search_off</span>
+          <p>{{ t('home.search-empty') }}</p>
         </div>
       </div>
 
-      <div class="bottom-grid">
+      <div class="bottom">
         <div class="chart-card">
           <div class="card-head">
-            <h3>{{ locale === 'ar-EG' ? 'أداء الشركة' : 'Company Performance' }}</h3>
-            <span class="badge">{{ locale === 'ar-EG' ? 'مباشر' : 'Live' }}</span>
+            <h3>{{ t('home.chart-title') }}</h3>
+            <span class="card-badge">● {{ t('home.chart-live') }}</span>
           </div>
-          <div class="chart-bars">
-            <div v-for="(bar, i) in chartData" :key="i" class="bar" :style="{ height: bar.pct + '%', background: bar.color }" :title="locale === 'ar-EG' ? bar.labelAr : bar.label"></div>
+          <div v-if="chartData.length" class="chart-bars">
+            <div v-for="(b, i) in chartData" :key="i" class="bar-wrap">
+              <div
+                class="bar"
+                :style="{ height: b.pct + '%', background: b.color }"
+                :title="b.label"
+              ></div>
+              <span class="bar-label">{{ b.short }}</span>
+            </div>
           </div>
-          <div v-if="!chartData.length" class="chart-empty">{{ locale === 'ar-EG' ? 'لا توجد بيانات' : 'No data available' }}</div>
+          <p v-else class="chart-empty">{{ t('home.chart-empty') }}</p>
         </div>
 
         <div class="insights-card">
-          <h3>{{ locale === 'ar-EG' ? 'نظرة سريعة' : 'Quick Insights' }}</h3>
+          <h3>{{ t('home.insights-title') }}</h3>
           <div class="insights-list">
-            <div class="insight-item">
-              <span class="material-symbols-outlined insight-icon trending">trending_up</span>
-              <div>
-                <p class="insight-label">{{ locale === 'ar-EG' ? 'هدف المبيعات' : 'Sales Target' }}</p>
-                <p class="insight-value trending">82% {{ locale === 'ar-EG' ? 'تم تحقيقه' : 'Reached' }}</p>
-              </div>
-            </div>
-            <div class="insight-item">
-              <span class="material-symbols-outlined insight-icon stock">inventory</span>
-              <div>
-                <p class="insight-label">{{ locale === 'ar-EG' ? 'المخزون النشط' : 'Active Stock' }}</p>
-                <p class="insight-value stock">{{ stats.products }} {{ locale === 'ar-EG' ? 'صنف' : 'Items' }}</p>
-              </div>
-            </div>
-            <div class="insight-item">
-              <span class="material-symbols-outlined insight-icon warning">warning</span>
-              <div>
-                <p class="insight-label">{{ locale === 'ar-EG' ? 'المنبهات المعلقة' : 'Pending Alerts' }}</p>
-                <p class="insight-value warning">{{ stats.alertCount }} {{ locale === 'ar-EG' ? 'حرجة' : 'Critical' }}</p>
-              </div>
-            </div>
-            <div class="insight-item">
-              <span class="material-symbols-outlined insight-icon invoice">receipt</span>
-              <div>
-                <p class="insight-label">{{ locale === 'ar-EG' ? 'الفواتير' : 'Invoices' }}</p>
-                <p class="insight-value invoice">{{ stats.invoices }}</p>
+            <div v-for="ins in insights" :key="ins.key" class="insight">
+              <span
+                class="material-symbols-outlined insight-icon"
+                :style="{ color: ins.color }"
+              >{{ ins.icon }}</span>
+              <div class="insight-body">
+                <span class="insight-lbl">{{ ins.label }}</span>
+                <span class="insight-val" :style="{ color: ins.color }">{{ ins.value }}</span>
               </div>
             </div>
           </div>
-          <button class="view-btn" @click="navigate('dashboard')">{{ locale === 'ar-EG' ? 'عرض التقارير التفصيلية' : 'View Detailed Reports' }}</button>
+          <button class="view-btn" @click="navigate('dashboard')">{{ t('home.view-reports') }}</button>
         </div>
       </div>
-    </div>
+    </template>
   </section>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { useNavStore } from '../../stores/nav.js'
@@ -105,10 +100,12 @@ import SkeletonTable from '../../components/SkeletonTable.vue'
 const router = useRouter()
 const auth = useAuthStore()
 const navStore = useNavStore()
-const { locale, dir, isRTL } = useI18n()
+const { dir, isRTL, t } = useI18n()
 const { show: toast } = useToast()
 
 const loading = ref(true)
+const query = ref('')
+const searchRef = ref(null)
 const userName = ref(auth.user?.fullName || auth.user?.username || 'User')
 
 const stats = reactive({
@@ -136,39 +133,101 @@ const labelArMap = {
   home: 'الرئيسية'
 }
 
-const chartColors = ['#cabeff', '#5d3fd3', '#cabeff', '#5d3fd3', '#cabeff', '#5d3fd3']
+const chartColors = ['#cabeff', '#5d3fd3', '#cabeff', '#5d3fd3', '#cabeff']
+
+const timeGreeting = computed(() => {
+  const h = new Date().getHours()
+  if (h < 12) return t('home.greeting.morning')
+  if (h < 17) return t('home.greeting.afternoon')
+  return t('home.greeting.evening')
+})
+
+const statsList = computed(() => [
+  { key: 'products', value: stats.products.toLocaleString(), label: t('home.stats.products') },
+  { key: 'suppliers', value: stats.suppliers.toLocaleString(), label: t('home.stats.suppliers') },
+  { key: 'salesOrders', value: stats.salesOrders.toLocaleString(), label: t('home.stats.sales-orders') },
+  { key: 'purchaseOrders', value: stats.purchaseOrders.toLocaleString(), label: t('home.stats.purchase-orders') },
+  { key: 'uoms', value: stats.uoms.toLocaleString(), label: t('home.stats.uoms') },
+])
 
 const appCards = computed(() =>
   navStore.items
     .filter(item => item.module && item.module !== 'home' && colorMap[item.module])
     .map(item => ({
-      id: item.id, icon: item.icon,
-      label: locale.value === 'ar-EG' && labelArMap[item.module] ? labelArMap[item.module] : item.label,
-      route: item.module, color: colorMap[item.module]
+      id: item.id,
+      icon: item.icon,
+      label: isRTL.value && labelArMap[item.module] ? labelArMap[item.module] : item.label,
+      route: item.module,
+      color: colorMap[item.module]
     }))
 )
+
+const filteredCards = computed(() => {
+  if (!query.value) return appCards.value
+  const q = query.value.toLowerCase()
+  return appCards.value.filter(c => c.label.toLowerCase().includes(q))
+})
 
 const chartData = computed(() => {
   const max = Math.max(stats.products, stats.suppliers, stats.salesOrders, stats.purchaseOrders, stats.uoms, 1)
   const labels = [
-    { key: 'Products', ar: 'المنتجات' },
-    { key: 'Suppliers', ar: 'الموردون' },
-    { key: 'Sales Orders', ar: 'أوامر البيع' },
-    { key: 'Purchase Orders', ar: 'أوامر الشراء' },
-    { key: 'UOMs', ar: 'وحدات القياس' },
+    { short: 'P', full: t('home.stats.products') },
+    { short: 'S', full: t('home.stats.suppliers') },
+    { short: 'SO', full: t('home.stats.sales-orders') },
+    { short: 'PO', full: t('home.stats.purchase-orders') },
+    { short: 'U', full: t('home.stats.uoms') },
   ]
   const values = [stats.products, stats.suppliers, stats.salesOrders, stats.purchaseOrders, stats.uoms]
   return values.map((v, i) => ({
-    label: labels[i].key,
-    labelAr: labels[i].ar,
+    label: labels[i].full,
+    short: labels[i].short,
     pct: Math.round((v / max) * 100) || 3,
     color: chartColors[i]
   }))
 })
 
+const insights = computed(() => [
+  {
+    key: 'sales',
+    icon: 'trending_up',
+    color: '#5d3fd3',
+    label: t('home.insights.sales-target'),
+    value: t('home.sales-target-reached', { count: 82 }),
+  },
+  {
+    key: 'stock',
+    icon: 'inventory',
+    color: '#0D9488',
+    label: t('home.insights.active-stock'),
+    value: t('home.items-count', { count: stats.products }),
+  },
+  {
+    key: 'alerts',
+    icon: 'warning',
+    color: '#D97706',
+    label: t('home.insights.pending-alerts'),
+    value: t('home.critical-count', { count: stats.alertCount }),
+  },
+  {
+    key: 'invoices',
+    icon: 'receipt',
+    color: '#5C6BC0',
+    label: t('home.insights.invoices'),
+    value: String(stats.invoices),
+  },
+])
+
 function navigate(name) { router.push({ name }) }
 
+function onKeydown(e) {
+  if (e.key === '/' && document.activeElement !== searchRef.value) {
+    e.preventDefault()
+    searchRef.value?.focus()
+  }
+}
+
 onMounted(async () => {
+  document.addEventListener('keydown', onKeydown)
   try {
     await navStore.load()
     const [prods, sups, sos, pos, uoms] = await Promise.all([
@@ -186,65 +245,288 @@ onMounted(async () => {
     stats.invoices = 0
     stats.alertCount = prods.filter(p => (p.stock || 0) > 0 && (p.stock || 0) < (p.minStock || 5)).length
   } catch (e) {
-    toast(locale.value === 'ar-EG' ? 'فشل تحميل بيانات الصفحة الرئيسية' : 'Failed to load homepage data', 'error')
+    toast(t('failed-load'), 'error')
   } finally {
     loading.value = false
   }
 })
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <style scoped>
-.home { max-width: 1200px; margin: 0 auto; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-.greeting { font-size: 24px; font-weight: 700; color: #1a1a2e; }
-.subtitle { font-size: 14px; color: #666; margin-top: 4px; }
+.home {
+  max-width: 1200px;
+  margin: 0 auto;
+}
 
-.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
-.stat-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; text-align: center; }
-.stat-num { display: block; font-size: 26px; font-weight: 700; color: #5d3fd3; }
-.stat-lbl { font-size: 12px; color: #666; margin-top: 4px; }
+/* ── Greeting ── */
+.greeting {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+.greeting-bar {
+  width: 4px;
+  background: var(--color-primary);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.greeting-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.greeting-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.greeting-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
 
-.app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
-.app-card { display: flex; flex-direction: column; align-items: center; padding: 16px 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
-.app-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
-.app-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; margin-bottom: 8px; transition: transform 0.2s; }
-.app-card:hover .app-icon { transform: translateY(-4px); }
-.app-icon .material-symbols-outlined { font-size: 28px; }
+/* ── Search ── */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 0 14px;
+  margin-bottom: 24px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.search-box:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--bg-primary-faded);
+}
+.search-icon {
+  font-size: 20px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.search-input {
+  flex: 1;
+  height: 48px;
+  border: none;
+  background: none;
+  font-size: 15px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+}
+.search-input::placeholder { color: var(--text-faint); }
+.search-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  background: var(--bg-body);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+/* ── Stats ── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.stat {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 14px 12px;
+  text-align: center;
+}
+.stat-val {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.1;
+}
+.stat-lbl {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── App Grid ── */
+.apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.app-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 8px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.app-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+}
+.app-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: transform 0.2s;
+}
+.app-card:hover .app-icon { transform: translateY(-3px); }
+.app-icon .material-symbols-outlined { font-size: 26px; }
 .app-icon .filled { font-variation-settings: 'FILL' 1; }
-.app-label { font-size: 13px; font-weight: 600; color: #333; text-align: center; }
-.app-card:hover .app-label { color: #5d3fd3; }
+.app-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+}
+.app-card:hover .app-name { color: var(--color-primary); }
 
-.bottom-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-.chart-card, .insights-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; }
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.card-head h3, .insights-card h3 { font-size: 16px; font-weight: 700; color: #1a1a2e; }
-.badge { font-size: 11px; color: #666; }
-.chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding: 0 8px; }
-.bar { flex: 1; border-radius: 6px 6px 0 0; transition: opacity 0.2s; min-height: 6px; }
+.apps-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 0;
+  color: var(--text-faint);
+}
+.apps-empty .material-symbols-outlined { font-size: 40px; }
+.apps-empty p { font-size: 13px; }
+
+/* ── Bottom Grid ── */
+.bottom {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+}
+.chart-card,
+.insights-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  padding: 20px;
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.card-head h3,
+.insights-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.card-badge {
+  font-size: 11px;
+  color: var(--color-success);
+  font-weight: 600;
+}
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 150px;
+  padding: 0 4px;
+}
+.bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+.bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: opacity 0.2s;
+  min-height: 4px;
+  align-self: flex-end;
+}
 .bar:hover { opacity: 0.7; }
-.chart-empty { text-align: center; padding: 60px 0; color: #999; font-size: 13px; }
+.bar-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.chart-empty {
+  text-align: center;
+  padding: 50px 0;
+  color: var(--text-faint);
+  font-size: 13px;
+}
 
-.insights-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.insight-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: #f5f5f9; border-radius: 8px; }
-.insight-label { font-size: 11px; color: #666; }
-.insight-value { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.insight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-body);
+  border-radius: 8px;
+}
 .insight-icon { font-size: 20px; }
-.insight-icon.trending { color: #5d3fd3; }
-.insight-icon.stock { color: #008080; }
-.insight-icon.warning { color: #ba1a1a; }
-.insight-icon.invoice { color: #26A69A; }
-.insight-value.trending { color: #5d3fd3; }
-.insight-value.stock { color: #008080; }
-.insight-value.warning { color: #ba1a1a; }
-.insight-value.invoice { color: #26A69A; }
+.insight-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.insight-lbl { font-size: 11px; color: var(--text-muted); }
+.insight-val { font-size: 14px; font-weight: 700; }
+.view-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 13px;
+  font-family: inherit;
+}
+.view-btn:hover { background: var(--bg-primary-faded); }
 
-.view-btn { width: 100%; margin-top: 12px; padding: 10px; border: 1px solid #5d3fd3; color: #5d3fd3; font-weight: 700; border-radius: 8px; background: none; cursor: pointer; transition: all 0.15s; }
-.view-btn:hover { background: #e6deff; }
-
-[dir="rtl"] .header { flex-direction: row-reverse; }
-[dir="rtl"] .insight-item { flex-direction: row-reverse; }
+/* ── RTL ── */
+[dir="rtl"] .greeting { flex-direction: row-reverse; }
+[dir="rtl"] .insight { flex-direction: row-reverse; }
 [dir="rtl"] .card-head { flex-direction: row-reverse; }
-[dir="rtl"] .greeting { text-align: right; }
-[dir="rtl"] .subtitle { text-align: right; }
-[dir="rtl"] .badge { text-align: left; }
 </style>

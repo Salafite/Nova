@@ -1,7 +1,20 @@
 <template>
   <div class="app-shell" :class="layoutClass">
-    <div v-if="!isGrid && mobileSidebarOpen" class="sidebar-overlay" @click="mobileSidebarOpen = false"></div>
-    <AppSidebar v-if="!isGrid" :collapsed="sidebarCollapsed" :mobile-open="mobileSidebarOpen" @toggle="toggleSidebar" />
+    <div
+      v-if="(sidebarOverlay && sidebarOpen) || mobileSidebarOpen"
+      class="sidebar-overlay"
+      @click="closeSidebar"
+    ></div>
+
+    <AppSidebar
+      v-if="!isGrid"
+      :collapsed="sidebarCollapsed"
+      :mobile-open="mobileSidebarOpen"
+      :overlay="sidebarOverlay"
+      :open="sidebarOpen"
+      @toggle="toggleSidebar"
+      @switch-mode="switchSidebarMode"
+    />
 
     <main class="main-area">
       <div v-if="isGrid" class="grid-topbar">
@@ -10,9 +23,11 @@
           <span class="grid-brand">Nova ERP</span>
         </div>
         <nav class="grid-nav">
-          <a v-for="item in navItems" :key="item.id"
-             :class="['grid-nav-item', { active: activeId === item.id }]"
-             href="#" @click.prevent="go(item)">
+          <a
+            v-for="item in navItems" :key="item.id"
+            :class="['grid-nav-item', { active: activeId === item.id }]"
+            href="#" @click.prevent="go(item)"
+          >
             <span class="material-symbols-outlined">{{ item.icon }}</span>
             <span class="grid-nav-label">{{ isRTL && item.label_ar ? item.label_ar : item.label }}</span>
           </a>
@@ -26,7 +41,12 @@
         </div>
       </div>
 
-      <AppTopBar v-else :title="pageTitle" @toggle="sidebarCollapsed = !sidebarCollapsed" />
+      <AppTopBar
+        v-else
+        :title="pageTitle"
+        :sidebar-overlay="sidebarOverlay"
+        @toggle="toggleSidebar"
+      />
 
       <div class="content" :class="{ 'content-wide': isGrid }">
         <router-view />
@@ -61,20 +81,43 @@ const navStore = useNavStore()
 const auth = useAuthStore()
 const { toasts } = useToast()
 const { isRTL } = useI18n()
+
 const sidebarCollapsed = ref(false)
+const sidebarOverlay = ref(false)
+const sidebarOpen = ref(true)
 const mobileSidebarOpen = ref(false)
 
 function toggleSidebar() {
   if (window.innerWidth < 768) {
     mobileSidebarOpen.value = !mobileSidebarOpen.value
+  } else if (sidebarOverlay.value) {
+    sidebarOpen.value = !sidebarOpen.value
   } else {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }
 }
 
+function closeSidebar() {
+  if (sidebarOverlay.value) sidebarOpen.value = false
+  mobileSidebarOpen.value = false
+}
+
+function switchSidebarMode() {
+  sidebarOverlay.value = !sidebarOverlay.value
+  if (sidebarOverlay.value) {
+    sidebarCollapsed.value = false
+    sidebarOpen.value = false
+  } else {
+    sidebarOpen.value = true
+  }
+}
+
 const isGrid = computed(() => navStore.navStyle === 'grid')
 const activeId = computed(() => route.name)
-const layoutClass = computed(() => isGrid.value ? 'layout-grid' : 'layout-sidebar')
+const layoutClass = computed(() => {
+  if (isGrid.value) return 'layout-grid'
+  return sidebarOverlay.value ? 'layout-overlay' : 'layout-sidebar'
+})
 
 const pageTitle = computed(() => {
   const name = route.name
@@ -104,7 +147,18 @@ onMounted(() => { navStore.load() })
 
 <style scoped>
 .app-shell { display: flex; height: 100vh; }
-.main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-body); }
+.layout-sidebar .main-area { margin-inline-start: 0; }
+.layout-overlay .main-area { margin-inline-start: 0; }
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-body);
+  min-width: 0;
+}
+
 .content { flex: 1; overflow-y: auto; padding: 24px; }
 .content-wide { padding: 0; }
 
@@ -154,29 +208,52 @@ onMounted(() => { navStore.load() })
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 8px;
-  background: none;
-  color: #aaa;
-  cursor: pointer;
-  transition: all 0.15s;
+  width: 32px; height: 32px;
+  border: none; border-radius: 8px;
+  background: none; color: #aaa;
+  cursor: pointer; transition: all 0.15s;
 }
 .grid-logout:hover { background: rgba(255,255,255,0.06); color: #fff; }
 .grid-logout .material-symbols-outlined { font-size: 18px; }
 
-.toast-container { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-.toast { padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.25s ease; }
+.toast-container {
+  position: fixed;
+  top: 16px;
+  inset-inline-end: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: slideIn 0.25s ease;
+}
 .toast-success { background: #00897b; }
 .toast-error { background: #c62828; }
 .toast-info { background: #1565c0; }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
 
 .sidebar-overlay { display: none; }
+
 @media (max-width: 767px) {
-  .sidebar-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 900; }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 900;
+  }
   .content { padding: 16px; }
-  .toast-container { right: 8px; left: 8px; top: 8px; }
+  .toast-container { inset-inline-end: 8px; inset-inline-start: 8px; top: 8px; }
 }
 </style>
