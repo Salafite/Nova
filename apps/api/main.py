@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from controllers import all_routers
+from modules.core.controllers import all_routers
 from packages.auth.controller import router as auth_router
 from packages.ws.handlers import router as ws_router
 from packages.billing.controller import router as billing_router
