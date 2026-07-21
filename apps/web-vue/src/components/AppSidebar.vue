@@ -88,7 +88,7 @@ const filteredNav = computed(() =>
 
 function navigate(item) {
   const name = item.module || item.id
-  router.push({ name })
+  router.push({ name, params: { sessionHash: route.params.sessionHash } })
   if (props.overlay || window.innerWidth < 768) {
     document.querySelector('.sidebar-overlay')?.click()
   }

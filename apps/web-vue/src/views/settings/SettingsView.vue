@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useSettingsStore } from '../../stores/settings.js'
 import { useNavStore } from '../../stores/nav.js'
 import { useToast } from '../../composables/useToast.js'
@@ -154,7 +154,7 @@ import ErrorState from '../../components/ErrorState.vue'
 const store = useSettingsStore()
 const navStore = useNavStore()
 const { show: toast } = useToast()
-const { t, dir, isRTL } = useI18n()
+const { t, dir } = useI18n()
 const { isToggle, isOption, getOptions, groupIcon } = useSettingsUI()
 
 const contentRef = ref(null)
@@ -162,13 +162,7 @@ const activeGroup = ref('')
 const sectionRefs = {}
 const viewReady = ref(false)
 
-const OPTION_LABELS = {
-  'en-US': 'English',
-  'ar-EG': 'العربية',
-}
-
 function optionLabel(opt) {
-  if (OPTION_LABELS[opt]) return OPTION_LABELS[opt]
   const key = `settings.option.${opt}`
   const label = t(key)
   if (label !== key) return label

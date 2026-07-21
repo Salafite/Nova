@@ -341,7 +341,7 @@ async function sendInvite() {
 async function copyLink() {
   if (!inviteResult.value) return
   try {
-    await navigator.clipboard.writeText(window.location.origin + '/#' + inviteResult.value.invite_link)
+    await navigator.clipboard.writeText(window.location.origin + inviteResult.value.invite_link)
     toast(t('invite-copied'), 'success')
   } catch {
     const input = document.querySelector('.invite-link-box input')

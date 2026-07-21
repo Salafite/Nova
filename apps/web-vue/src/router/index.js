@@ -1,8 +1,7 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
+import { getSessionHash } from '../utils/session.js'
 
-// Maps route names to permission keys. Routes with a permission entry
-// require that the authenticated user has that permission.
 const ROUTE_PERMISSIONS = {
   pos: 'pos',
   products: 'products',
@@ -69,7 +68,7 @@ const routes = [
   { path: '/privacy', name: 'privacy', component: () => import('../views/legal/PrivacyView.vue') },
   { path: '/terms', name: 'terms', component: () => import('../views/legal/TermsView.vue') },
   {
-    path: '/',
+    path: '/:sessionHash',
     component: () => import('../layouts/AppLayout.vue'),
     children: [
       { path: '', name: 'home', meta: { requiresAuth: true }, component: () => import('../views/home/HomeView.vue') },
@@ -135,22 +134,36 @@ const routes = [
       { path: 'hr/payroll', name: 'hr-payroll', meta: { requiresAuth: true }, component: () => import('../views/hr/PayrollView.vue') },
       { path: 'hr/jobs', name: 'hr-jobs', meta: { requiresAuth: true }, component: () => import('../views/hr/JobOpeningsView.vue') },
       { path: 'hr/candidates', name: 'hr-candidates', meta: { requiresAuth: true }, component: () => import('../views/hr/JobCandidatesView.vue') },
+      { path: ':pathMatch(.*)*', name: 'not-found', component: () => import('../views/errors/NotFoundView.vue') },
     ]
   },
-  { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/errors/NotFoundView.vue') },
+  { path: '/', redirect: '/login' },
+  { path: '/:pathMatch(.*)*', name: 'not-found-root', component: () => import('../views/errors/NotFoundView.vue') },
 ]
 
-const router = createRouter({ history: createWebHashHistory(), routes })
+const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('nova_token')
+  const auth = useAuthStore()
+
+  if (to.params.sessionHash) {
+    if (!token) return next('/login')
+    const expected = getSessionHash()
+    if (to.params.sessionHash !== expected) {
+      const rest = to.path.replace(/^\/[^\/]+/, '')
+      return next('/' + expected + rest)
+    }
+  }
+
   if (to.meta.requiresAuth && !token) return next('/login')
-  if (token && (to.name === 'login' || to.name === 'signup')) return next('/dashboard')
+  if (token && (to.name === 'login' || to.name === 'signup')) return next('/' + getSessionHash() + '/dashboard')
+
   const required = ROUTE_PERMISSIONS[to.name]
   if (required) {
-    const auth = useAuthStore()
-    if (!auth.hasPermission(required)) return next('/dashboard')
+    if (!auth.hasPermission(required)) return next('/' + getSessionHash() + '/dashboard')
   }
+
   next()
 })
 

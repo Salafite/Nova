@@ -16,7 +16,7 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem('nova_token')
       localStorage.removeItem('nova_user')
-      window.location.hash = '#/login'
+      window.location.href = '/login'
     }
     return Promise.reject(err)
   }

@@ -3,6 +3,10 @@ const OPTION_CONFIG = {
   NAV_STYLE: { options: ['grid', 'sidebar'] },
   DENSITY_LEVEL: { options: ['compact', 'standard', 'spacious'] },
   SYSTEM_LANGUAGE: { options: ['en-US', 'ar-EG'] },
+  THEME: { options: ['light', 'dark'] },
+  ACCENT_COLOR: { options: ['blue', 'purple', 'green', 'amber', 'red'] },
+  FONT_FAMILY: { options: ['inter', 'roboto', 'open-sans', 'system'] },
+  SIDEBAR_MODE: { options: ['expanded', 'overlay'] },
 }
 const GROUP_ICONS = {
   General: 'tune',
@@ -17,6 +21,7 @@ const GROUP_ICONS = {
   'Operational Controls': 'settings_applications',
   Security: 'security',
   'App Preferences': 'display_settings',
+  Layout: 'grid_view',
 }
 
 export function useSettingsUI() {
