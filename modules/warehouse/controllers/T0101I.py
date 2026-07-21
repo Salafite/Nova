@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import HTTPException
 from modules.warehouse.models import PickListCreate, PickListUpdate, PickListResponse
 from modules.warehouse.services.pick_list_service import PickListService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 from modules.core.services.base import CrudService
-from packages.auth.deps import get_current_user
 
 repo = CrudRepository('T0101', business_columns=['id', 'pick_list_number', 'sales_order_id', 'warehouse_id', 'status', 'notes'])
 service = CrudService(repo)

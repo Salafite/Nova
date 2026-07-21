@@ -1,4 +1,3 @@
-from fastapi import APIRouter, Query
 from modules.inventory.models.counts import CountItemCreate, CountItemUpdate, CountItemResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository

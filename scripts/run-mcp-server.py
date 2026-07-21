@@ -52,7 +52,7 @@ def main():
     mod_path = SERVERS.get(args.server)
     if not mod_path:
         print(f"Unknown server: {args.server}", file=sys.stderr)
-        print(f"Use --list to see available servers", file=sys.stderr)
+        print("Use --list to see available servers", file=sys.stderr)
         sys.exit(1)
 
     import importlib

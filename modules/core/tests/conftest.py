@@ -9,7 +9,7 @@ _mock_pool.getconn.return_value = _mock_conn
 _pool_patcher = patch('psycopg2.pool.SimpleConnectionPool', return_value=_mock_pool)
 _pool_patcher.start()
 
-from packages.auth.jwt import create_access_token, create_refresh_token, decode_token
+from packages.auth.jwt import create_access_token, create_refresh_token
 
 
 @pytest.fixture

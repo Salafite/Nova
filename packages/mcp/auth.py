@@ -1,9 +1,7 @@
 import json
-import os
 import time
 from pathlib import Path
 
-import jwt as pyjwt
 from packages.auth.jwt import decode_token
 from packages.auth.repository import get_user_by_id
 from packages.auth.service import refresh as refresh_service

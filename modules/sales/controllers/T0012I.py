@@ -1,11 +1,10 @@
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import HTTPException
 from modules.sales.services.sales_service import SalesOrderService
 from modules.sales.services.enhanced_sales_order_service import EnhancedSalesOrderService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 from modules.sales.models import SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse
-from packages.auth.deps import get_current_user
 from packages.ws.broadcast import order_status_changed
 
 repo = CrudRepository('T0012', business_columns=['id', 'order_number', 'customer_id', 'warehouse_id', 'subtotal', 'tax', 'grand_total', 'status', 'order_date', 'notes', 'price_list_id', 'tax_rate_id', 'payment_term_id'])

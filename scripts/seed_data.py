@@ -12,7 +12,6 @@ Requires env vars:
 import os
 import sys
 import json
-import time
 import argparse
 from urllib.request import Request, urlopen
 from urllib.parse import urljoin

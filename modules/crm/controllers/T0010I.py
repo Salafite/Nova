@@ -1,10 +1,9 @@
-from datetime import date, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import date
+from fastapi import HTTPException
 from modules.crm.services.customer_service import CustomerService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 from modules.crm.models import CustomerCreate, CustomerUpdate, CustomerResponse
-from packages.auth.deps import get_current_user
 
 repo = CrudRepository('T0010', business_columns=['id', 'name', 'group_name', 'phone', 'email', 'credit_limit', 'balance', 'default_price_list_id', 'default_tax_rate_id', 'payment_term_id', 'is_active'])
 service = CustomerService(repo)

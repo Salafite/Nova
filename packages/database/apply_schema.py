@@ -31,7 +31,7 @@ stmts = [s.strip() + ';' for s in sql.split(';') if s.strip()]
 for s in stmts:
     if s.upper().startswith('CREATE TYPE'):
         cur.execute(s)
-print(f'Types done')
+print('Types done')
 
 # Phase 2: CREATE TABLE - strip ALL FK refs, collect ALTERs
 def get_tn(s):
@@ -103,7 +103,7 @@ for s in stmts:
     try:
         cur.execute(s)
         other_ok += 1
-    except:
+    except Exception:
         pass
 print(f'Other: {other_ok}')
 

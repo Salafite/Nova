@@ -1,7 +1,5 @@
 import json
-import uuid
 import asyncio
-from fastapi import APIRouter, Request
 from starlette.responses import StreamingResponse
 
 from packages.mcp.server import McpServer

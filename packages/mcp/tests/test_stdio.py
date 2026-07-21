@@ -1,7 +1,6 @@
 import json
 import io
 import sys
-import pytest
 from packages.mcp.server import McpServer
 from packages.mcp.stdio import run_stdio
 from packages.mcp.types import Tool

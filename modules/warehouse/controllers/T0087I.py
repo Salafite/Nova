@@ -1,5 +1,4 @@
 from modules.warehouse.models.serial_batch import SerialNumberCreate, SerialNumberUpdate, SerialNumberResponse
-from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 from modules.warehouse.services.serial_number_service import SerialNumberService

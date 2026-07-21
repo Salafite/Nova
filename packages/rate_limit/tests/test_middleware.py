@@ -1,4 +1,3 @@
-import time
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 from packages.rate_limit.middleware import RateLimitMiddleware, _classify, RATE_LIMITS

@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
 from modules.crm.models.product_supplier import ProductSupplierCreate, ProductSupplierUpdate, ProductSupplierResponse
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 from modules.core.services.base import CrudService
-from packages.auth.deps import get_current_user
 
 repo = CrudRepository('T0103', business_columns=['id', 'product_id', 'supplier_id', 'supplier_sku', 'unit_cost', 'lead_time_days', 'is_preferred'])
 service = CrudService(repo)

@@ -1,5 +1,9 @@
 """Start uvicorn via subprocess, test the confirm endpoint, then clean up."""
-import os, sys, time, signal, subprocess, httpx
+import os
+import sys
+import time
+import subprocess
+import httpx
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASE = 'http://localhost:8070/api'

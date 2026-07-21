@@ -1,5 +1,8 @@
 """Quick test for confirm endpoint."""
-import os, sys, time, threading
+import os
+import sys
+import time
+import threading
 os.environ['SECRET_KEY'] = 'nova-dev-secret-key-change-in-production'
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

@@ -1,5 +1,4 @@
-from datetime import date
-from fastapi import APIRouter, HTTPException
+from fastapi import HTTPException
 from modules.inventory.models.counts import InventoryCountCreate, InventoryCountUpdate, InventoryCountResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository

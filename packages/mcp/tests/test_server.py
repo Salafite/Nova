@@ -1,4 +1,3 @@
-import pytest
 from packages.mcp.server import McpServer
 from packages.mcp.types import Tool, Resource, Prompt
 from packages.mcp.registry import register_tool, register_resource, register_prompt

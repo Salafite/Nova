@@ -10,7 +10,7 @@ Usage:
         return {'message': t('not_found')}
 """
 
-from fastapi import Request, Depends
+from fastapi import Request
 from packages.localization import Translator, get_translator
 
 

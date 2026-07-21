@@ -1,1 +1,1 @@
-from .middleware import RateLimitMiddleware
+from .middleware import RateLimitMiddleware as RateLimitMiddleware

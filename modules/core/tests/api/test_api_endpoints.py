@@ -19,8 +19,6 @@ os.environ.setdefault('ALLOWED_ORIGINS', '*')
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.testclient import TestClient
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from unittest.mock import patch
-import pytest
 
 security = HTTPBearer(auto_error=False)
 

@@ -1,7 +1,7 @@
 import json
 import os
 from openai import OpenAI
-from packages.mcp.registry import get_tools, call_tool, propose_action, confirm_action
+from packages.mcp.registry import get_tools, call_tool, propose_action
 
 
 _SYSTEM_PROMPT = """You are an AI assistant for Nova ERP, an enterprise resource planning system.

@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends
+from fastapi import Depends
 from modules.inventory.models import ProductCreate, ProductUpdate, ProductResponse
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository

@@ -1,6 +1,4 @@
-from unittest.mock import patch, MagicMock, PropertyMock
-import pytest
-import json
+from unittest.mock import patch, MagicMock
 
 
 def test_create_checkout_session_not_configured():

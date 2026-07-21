@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional
 from datetime import date
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin

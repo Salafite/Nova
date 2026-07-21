@@ -1,4 +1,3 @@
-import re
 import psycopg2
 import psycopg2.extras
 from packages.database.connection import get_connection, release_connection
@@ -87,7 +86,7 @@ def _execute_read_query(sql: str, limit: int = 100):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(f"SET LOCAL statement_timeout = '10s'")
+            cur.execute("SET LOCAL statement_timeout = '10s'")
             cur.execute(sql)
             rows = [dict(r) for r in cur.fetchmany(limit)]
             return rows

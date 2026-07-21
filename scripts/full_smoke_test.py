@@ -1,5 +1,9 @@
 """Start uvicorn, run full order-to-cash smoke test, clean up."""
-import os, sys, time, subprocess, httpx
+import os
+import sys
+import time
+import subprocess
+import httpx
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASE = 'http://localhost:8070/api'
@@ -22,7 +26,8 @@ for i in range(30):
         r = httpx.get(f'{BASE}/health', timeout=2)
         if r.status_code == 200:
             break
-    except: pass
+    except Exception:
+            pass
 else:
     print('Server failed to start'); proc.kill(); sys.exit(1)
 

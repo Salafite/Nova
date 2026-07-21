@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from packages.auth.service import login, refresh, authenticate_user
 
 

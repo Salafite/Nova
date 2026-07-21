@@ -3,7 +3,7 @@ import time
 import uuid
 import logging
 import contextvars
-from packages.mcp.types import Tool, Resource, Prompt, UserContext
+from packages.mcp.types import Tool, Resource, Prompt
 
 
 logger = logging.getLogger("mcp.audit")
