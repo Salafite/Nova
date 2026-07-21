@@ -1,201 +1,141 @@
 <template>
-  <div class="settings-layout" :dir="dir">
-    <div class="settings-sidebar">
-      <h3 class="sidebar-title">{{ t('settings', 'Settings') }}</h3>
-      <div class="search-box">
-        <span class="material-symbols-outlined search-icon">search</span>
-        <input type="text" v-model="store.searchQuery" :placeholder="t('search-settings', 'Search settings...')" class="search-input" />
+  <div class="sv-page" :dir="dir">
+    <header class="sv-header">
+      <div class="sv-header-left">
+        <h1 class="sv-title">{{ t('settings') }}</h1>
+        <p class="sv-subtitle">{{ t('settings-subtitle') }}</p>
       </div>
-      <nav class="settings-nav">
-        <a v-for="grp in store.filteredGroups" :key="grp.group"
-           :class="['nav-link', { active: viewMode === 'grid' ? gridGroup === grp.group : activeGroup === grp.group }]"
-           href="#"
-           @click.prevent="viewMode === 'grid' ? filterGrid(grp.group) : scrollToGroup(grp.group)">
-          <span class="nav-icon">
-            <span class="material-symbols-outlined">{{ groupIcon(grp.group) }}</span>
-          </span>
-          <span class="nav-label">{{ grp.group }}</span>
-          <span v-if="store.groupHasChanges(grp.group)" class="nav-dirty" title="Unsaved changes">*</span>
-        </a>
-      </nav>
-      <div class="sidebar-footer">
-        <div v-if="store.dirtyCount" class="dirty-summary">
-          {{ store.dirtyCount }} {{ t('unsaved-changes', 'unsaved change') }}{{ store.dirtyCount !== 1 ? 's' : '' }}
+      <div class="sv-header-right">
+        <div class="sv-search">
+          <span class="material-symbols-outlined sv-search-icon">search</span>
+          <input
+            v-model="store.searchQuery"
+            class="sv-search-input"
+            :placeholder="t('search-settings')"
+          />
+          <kbd v-if="!store.searchQuery" class="sv-search-hint">/</kbd>
         </div>
+        <button
+          class="btn-primary"
+          :disabled="!store.hasChanges || store.saving"
+          @click="saveAll"
+        >
+          <span class="material-symbols-outlined">{{ store.saving ? 'hourglass_top' : 'save' }}</span>
+          {{ store.saving ? t('saving') : t('save-all') }}
+        </button>
       </div>
+    </header>
+
+    <SkeletonCard v-if="store.loading" variant="form" />
+    <ErrorState v-else-if="store.error" :message="store.error" @retry="store.load" />
+
+    <div v-else-if="!store.filteredGroups.length" class="sv-empty">
+      <span class="material-symbols-outlined sv-empty-icon">search_off</span>
+      <p v-if="store.searchQuery">{{ t('settings-no-results') }} "{{ store.searchQuery }}"</p>
+      <p v-else>{{ t('settings-empty') }}</p>
     </div>
 
-    <div class="settings-content" ref="contentRef" @scroll="viewMode !== 'grid' ? onScroll() : null">
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">System Settings</h1>
-          <p class="page-subtitle">Manage global system preferences and configurations</p>
+    <div v-else-if="viewReady" class="sv-body">
+      <nav class="sv-nav">
+        <div class="sv-nav-inner">
+          <a
+            v-for="grp in store.filteredGroups"
+            :key="grp.group"
+            :class="['sv-nav-item', { active: activeGroup === grp.group }]"
+            href="#"
+            @click.prevent="scrollToGroup(grp.group)"
+          >
+            <span class="material-symbols-outlined sv-nav-icon">{{ groupIcon(grp.group) }}</span>
+            <span class="sv-nav-label">{{ grp.group }}</span>
+            <span v-if="store.groupHasChanges(grp.group)" class="sv-nav-dirty" />
+          </a>
         </div>
-        <div class="header-actions">
-          <div class="view-toggle">
-            <button :class="['toggle-btn', { active: viewMode === 'form' }]" @click="viewMode = 'form'" :title="t('form-view', 'Form View')">
-              <span class="material-symbols-outlined">view_day</span>
-            </button>
-            <button :class="['toggle-btn', { active: viewMode === 'grid' }]" @click="switchToGrid" :title="t('grid-view', 'Grid View')">
-              <span class="material-symbols-outlined">view_list</span>
-            </button>
-          </div>
-          <button class="btn-primary" :disabled="!store.hasChanges || store.saving" @click="saveAll">
-            <span class="material-symbols-outlined">{{ store.saving ? 'hourglass_top' : 'save' }}</span>
-            {{ store.saving ? t('saving') : t('save-all', 'Save All Changes') }}
-          </button>
+        <div v-if="store.dirtyCount" class="sv-nav-footer">
+          <span class="sv-dirty-summary">{{ store.dirtyCount }} {{ t('unsaved-changes') }}{{ store.dirtyCount !== 1 ? 's' : '' }}</span>
         </div>
-      </div>
+      </nav>
 
-      <SkeletonCard v-if="store.loading" variant="form" />
-      <ErrorState v-else-if="store.error" :message="store.error" @retry="store.load" />
-      <div v-else-if="store.filteredGroups.length === 0" class="empty-state">
-        <span class="material-symbols-outlined empty-icon">search_off</span>
-        <p>No settings match "{{ store.searchQuery }}"</p>
-      </div>
-
-      <!-- Form View (grouped sidebar view) -->
-      <div v-else-if="viewMode === 'form'" class="groups-container">
-        <section v-for="grp in store.filteredGroups" :key="grp.group"
-                 :ref="el => setSectionRef(grp.group, el)"
-                 class="settings-section"
-                 :class="{ 'section-dirty': store.groupHasChanges(grp.group) }">
-          <div class="section-header">
-            <span class="section-icon">
-              <span class="material-symbols-outlined">{{ groupIcon(grp.group) }}</span>
+      <div ref="contentRef" class="sv-content" @scroll="onScroll">
+        <section
+          v-for="grp in store.filteredGroups"
+          :key="grp.group"
+          :ref="el => setSectionRef(grp.group, el)"
+          class="sv-group"
+        >
+          <div class="sv-group-header">
+            <span class="material-symbols-outlined sv-group-icon">{{ groupIcon(grp.group) }}</span>
+            <h2 class="sv-group-title">{{ grp.group }}</h2>
+            <span class="sv-group-count">{{ grp.settings.length }}</span>
+            <span v-if="store.groupHasChanges(grp.group)" class="sv-group-dirty">
+              {{ store.groupDirtyCount(grp.group) }} {{ t('unsaved') }}
             </span>
-            <h3 class="section-title">{{ grp.group }}</h3>
-            <span v-if="store.groupHasChanges(grp.group)" class="section-dirty-badge">{{ store.groupDirtyCount(grp.group) }} unsaved</span>
-            <span class="section-count">{{ grp.settings.length }}</span>
-            <button v-if="store.groupHasChanges(grp.group)" class="btn-sm btn-save-group" @click="saveGroup(grp.group)">
-              <span class="material-symbols-outlined">save</span> {{ t('save-group', 'Save Group') }}
+            <button
+              v-if="store.groupHasChanges(grp.group)"
+              class="sv-save-group-btn"
+              @click="saveGroup(grp.group)"
+            >
+              <span class="material-symbols-outlined">save</span>
+              {{ t('save-group') }}
             </button>
           </div>
+          <div class="sv-group-body">
+            <div
+              v-for="setting in grp.settings"
+              :key="setting.id"
+              :class="['sv-row', { 'sv-row-dirty': store.dirtyKeys[setting.setting_key] }]"
+            >
+              <div class="sv-info">
+                <span class="sv-label">{{ setting.description || setting.setting_key }}</span>
+                <span class="sv-key">{{ setting.setting_key }}</span>
+              </div>
 
-          <div class="section-body">
-            <div v-for="setting in grp.settings" :key="setting.id"
-                 class="setting-row"
-                 :class="{ 'row-dirty': store.dirtyKeys[setting.setting_key] }">
-              <div v-if="isToggle(setting)" class="setting-toggle">
-                <div class="setting-info">
-                  <div class="setting-label">{{ setting.description || setting.setting_key }}</div>
-                  <div class="setting-key-wrapper">
-                    <span class="setting-key">{{ setting.setting_key }}</span>
-                    <span v-if="store.dirtyKeys[setting.setting_key]" class="dirty-dot" :title="t('unsaved', 'Unsaved')"></span>
-                  </div>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox"
-                         :checked="store.getValue(setting.setting_key) === 'true'"
-                         @change="toggleSetting(setting, $event.target.checked)" />
-                  <span class="toggle-slider"></span>
+              <div v-if="isToggle(setting)" class="sv-control">
+                <label class="sv-toggle">
+                  <input
+                    type="checkbox"
+                    :checked="store.getValue(setting.setting_key) === 'true'"
+                    @change="toggleSetting(setting, $event.target.checked)"
+                  />
+                  <span class="sv-toggle-track"><span class="sv-toggle-thumb"></span></span>
                 </label>
               </div>
 
-              <div v-else-if="isOption(setting)" class="setting-option">
-                <div class="setting-info">
-                  <div class="setting-label">{{ setting.description || setting.setting_key }}</div>
-                  <div class="setting-key-wrapper">
-                    <span class="setting-key">{{ setting.setting_key }}</span>
-                    <span v-if="store.dirtyKeys[setting.setting_key]" class="dirty-dot" :title="t('unsaved', 'Unsaved')"></span>
-                  </div>
-                </div>
-                <div class="option-group">
-                  <button v-for="opt in getOptions(setting)" :key="opt"
-                          :class="['option-btn', { active: store.getValue(setting.setting_key) === opt }]"
-                          @click="setOption(setting, opt)">
-                    {{ opt === 'en-US' ? 'English' : opt === 'ar-EG' ? 'العربية' : opt }}
+              <div v-else-if="isOption(setting)" class="sv-control">
+                <div class="sv-options">
+                  <button
+                    v-for="opt in getOptions(setting)"
+                    :key="opt"
+                    :class="['sv-opt-btn', { active: store.getValue(setting.setting_key) === opt }]"
+                    @click="setOption(setting, opt)"
+                  >
+                    {{ optionLabel(opt) }}
                   </button>
                 </div>
               </div>
 
-              <div v-else class="setting-input-row">
-                <div class="setting-info">
-                  <div class="setting-label">{{ setting.description || setting.setting_key }}</div>
-                  <div class="setting-key-wrapper">
-                    <span class="setting-key">{{ setting.setting_key }}</span>
-                    <span v-if="store.dirtyKeys[setting.setting_key]" class="dirty-dot" :title="t('unsaved', 'Unsaved')"></span>
-                  </div>
-                </div>
-                <div class="input-with-reset">
-                  <input type="text" class="setting-input"
-                         :value="store.getValue(setting.setting_key)"
-                         @input="setTextValue(setting, $event.target.value)" />
-                  <button v-if="store.dirtyKeys[setting.setting_key]"
-                          class="btn-reset"
-                          @click="resetSetting(setting)"
-                          :title="t('reset-value', 'Reset to saved value')" :aria-label="t('reset-value', 'Reset to saved value')">
+              <div v-else class="sv-control">
+                <div class="sv-input-wrap">
+                  <input
+                    type="text"
+                    class="sv-input"
+                    :value="store.getValue(setting.setting_key)"
+                    @input="setTextValue(setting, $event.target.value)"
+                  />
+                  <button
+                    v-if="store.dirtyKeys[setting.setting_key]"
+                    class="sv-reset-btn"
+                    @click="resetSetting(setting)"
+                    :aria-label="t('reset-value')"
+                  >
                     <span class="material-symbols-outlined">undo</span>
                   </button>
                 </div>
               </div>
+
+              <span v-if="store.dirtyKeys[setting.setting_key]" class="sv-dirty-dot" />
             </div>
           </div>
         </section>
-      </div>
-
-      <!-- Grid View (table of all settings) -->
-      <div v-else class="grid-view">
-        <div v-if="gridGroup" class="grid-breadcrumb">
-          <a href="#" @click.prevent="gridGroup = ''" class="grid-breadcrumb-link">All Settings</a>
-          <span class="grid-breadcrumb-sep">/</span>
-          <span class="grid-breadcrumb-current">{{ gridGroup }}</span>
-        </div>
-        <div class="data-card">
-          <div class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th class="col-key">Key</th>
-                  <th class="col-value">Value</th>
-                  <th class="col-desc">Description</th>
-                  <th class="col-group">Group</th>
-                  <th class="col-status">Status</th>
-                  <th class="col-actions">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="setting in gridSettings" :key="setting.id"
-                    :class="{ 'row-dirty': store.dirtyKeys[setting.setting_key] }">
-                  <td><span class="mono">{{ setting.setting_key }}</span></td>
-                  <td class="col-value-cell">
-                    <div v-if="isToggle(setting)" class="grid-toggle-wrap">
-                      <label class="toggle-switch toggle-sm">
-                        <input type="checkbox"
-                               :checked="store.getValue(setting.setting_key) === 'true'"
-                               @change="toggleSetting(setting, $event.target.checked)" />
-                        <span class="toggle-slider"></span>
-                      </label>
-                    </div>
-                    <div v-else-if="isOption(setting)" class="grid-option-group">
-                      <button v-for="opt in getOptions(setting)" :key="opt"
-                              :class="['option-btn-sm', { active: store.getValue(setting.setting_key) === opt }]"
-                              @click="setOption(setting, opt)">
-                        {{ opt }}
-                      </button>
-                    </div>
-                    <input v-else type="text" class="grid-input"
-                           :value="store.getValue(setting.setting_key)"
-                           @input="setTextValue(setting, $event.target.value)" />
-                  </td>
-                  <td class="col-desc-cell">{{ setting.description }}</td>
-                  <td><span class="badge badge-group">{{ setting.setting_group || 'General' }}</span></td>
-                  <td class="text-center">
-                    <span :class="setting.is_active ? 'badge badge-active' : 'badge badge-disabled'">
-                      {{ setting.is_active ? 'Active' : 'Inactive' }}
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <button v-if="store.dirtyKeys[setting.setting_key]" class="btn-icon btn-reset-icon"
-                            @click="resetSetting(setting)" :title="t('reset', 'Reset')">
-                      <span class="material-symbols-outlined">undo</span>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -214,27 +154,26 @@ import ErrorState from '../../components/ErrorState.vue'
 const store = useSettingsStore()
 const navStore = useNavStore()
 const { show: toast } = useToast()
-const { t, dir } = useI18n()
+const { t, dir, isRTL } = useI18n()
 const { isToggle, isOption, getOptions, groupIcon } = useSettingsUI()
 
 const contentRef = ref(null)
 const activeGroup = ref('')
 const sectionRefs = {}
-const viewMode = ref('form')
-const gridGroup = ref('')
+const viewReady = ref(false)
 
-const gridSettings = computed(() => {
-  const all = []
-  for (const grp of store.filteredGroups) {
-    for (const s of grp.settings) {
-      all.push(s)
-    }
-  }
-  if (gridGroup.value) {
-    return all.filter(s => (s.setting_group || 'General') === gridGroup.value)
-  }
-  return all
-})
+const OPTION_LABELS = {
+  'en-US': 'English',
+  'ar-EG': 'العربية',
+}
+
+function optionLabel(opt) {
+  if (OPTION_LABELS[opt]) return OPTION_LABELS[opt]
+  const key = `settings.option.${opt}`
+  const label = t(key)
+  if (label !== key) return label
+  return opt
+}
 
 function setSectionRef(groupName, el) {
   if (el) sectionRefs[groupName] = el
@@ -244,18 +183,9 @@ function scrollToGroup(groupName) {
   activeGroup.value = groupName
   const el = sectionRefs[groupName]
   if (el && contentRef.value) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    contentRef.value.scrollTop -= 24
+    const top = el.getBoundingClientRect().top + contentRef.value.scrollTop - contentRef.value.getBoundingClientRect().top - 16
+    contentRef.value.scrollTo({ top, behavior: 'smooth' })
   }
-}
-
-function switchToGrid() {
-  viewMode.value = 'grid'
-  gridGroup.value = ''
-}
-
-function filterGrid(groupName) {
-  gridGroup.value = groupName
 }
 
 let scrollRaf = null
@@ -269,7 +199,7 @@ function onScroll() {
     let current = ''
     for (const grp of store.filteredGroups) {
       const el = sectionRefs[grp.group]
-      if (el && el.offsetTop - container.offsetTop - 120 <= container.scrollTop) {
+      if (el && el.offsetTop - container.offsetTop - 100 <= container.scrollTop) {
         current = grp.group
       }
     }
@@ -318,750 +248,453 @@ function syncLanguage() {
 async function saveAll() {
   if (!store.hasChanges) return
   const ok = await store.saveAll()
-  toast(ok ? 'Settings saved' : 'Failed to save settings', ok ? 'success' : 'error')
+  toast(ok ? t('settings-saved') : t('settings-save-failed'), ok ? 'success' : 'error')
   if (ok) { syncNavStyle(); syncLanguage() }
 }
 
 async function saveGroup(groupName) {
   const ok = await store.saveGroup(groupName)
-  toast(ok ? `${groupName} settings saved` : `Failed to save ${groupName} settings`, ok ? 'success' : 'error')
+  toast(ok ? `${groupName} ${t('saved-ok')}` : `${t('failed-save')} ${groupName}`, ok ? 'success' : 'error')
   if (ok && groupName === 'App Preferences') { syncNavStyle(); syncLanguage() }
 }
 
+function onKeydown(e) {
+  if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+    e.preventDefault()
+    const input = document.querySelector('.sv-search-input')
+    input?.focus()
+  }
+}
+
 onMounted(async () => {
+  document.addEventListener('keydown', onKeydown)
   await store.load()
   if (store.groups.length) activeGroup.value = store.groups[0].group
+  viewReady.value = true
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', onKeydown)
   if (autoSaveTimer) clearTimeout(autoSaveTimer)
   if (scrollRaf) cancelAnimationFrame(scrollRaf)
 })
 </script>
 
 <style scoped>
-.settings-layout {
-  display: flex;
-  gap: 24px;
-  height: 100%;
+.sv-page {
   max-width: 1200px;
   margin: 0 auto;
-}
-
-.settings-sidebar {
-  width: 220px;
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  height: 100%;
 }
 
-.sidebar-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1a1a2e;
-  padding: 0 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* ── Header ── */
+.sv-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-shrink: 0;
 }
-
-.search-box {
-  position: relative;
-  margin: 0 12px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
-  color: #999;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 8px 8px 8px 32px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 12px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.15s;
-}
-
-.search-input:focus {
-  border-color: #5d3fd3;
-}
-
-.settings-nav {
+.sv-header-left {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
-  overflow-y: auto;
+}
+.sv-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.sv-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.sv-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.sv-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 0 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.sv-search:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--bg-primary-faded);
+}
+.sv-search-icon {
+  font-size: 18px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.sv-search-input {
+  height: 40px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  width: 200px;
+}
+.sv-search-input::placeholder { color: var(--text-faint); }
+.sv-search-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  background: var(--bg-body);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
 }
 
-.nav-link {
+/* ── Body ── */
+.sv-body {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Nav ── */
+.sv-nav {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+.sv-nav-inner {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sv-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
-  color: #555;
+  color: var(--text-muted);
   text-decoration: none;
-  transition: all 0.15s;
   cursor: pointer;
+  transition: all 0.12s;
+  position: relative;
 }
-
-.nav-link:hover {
-  background: #f0f0f4;
-  color: #1a1a2e;
+.sv-nav-item:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
 }
-
-.nav-link.active {
-  background: #e6deff;
-  color: #5d3fd3;
+.sv-nav-item.active {
+  background: var(--bg-primary-faded);
+  color: var(--color-primary);
   font-weight: 600;
 }
-
-.nav-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.sv-nav-icon { font-size: 18px; }
+.sv-nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-nav-dirty {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #F59E0B;
+  flex-shrink: 0;
 }
-
-.nav-dirty {
-  color: #e65100;
-  font-weight: 700;
-  font-size: 14px;
+.sv-nav-footer {
+  padding: 6px 0 0;
+  border-top: 1px solid var(--border-light);
 }
-
-.nav-icon .material-symbols-outlined {
-  font-size: 18px;
-}
-
-.sidebar-footer {
-  padding: 8px 12px;
-  border-top: 1px solid #eee;
-}
-
-.dirty-summary {
+.sv-dirty-summary {
   font-size: 11px;
-  color: #e65100;
+  color: #F59E0B;
   font-weight: 600;
   text-align: center;
+  display: block;
 }
 
-.settings-content {
+/* ── Content ── */
+.sv-content {
   flex: 1;
   overflow-y: auto;
-  padding-right: 8px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.page-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
-}
-
-.page-subtitle {
-  font-size: 13px;
-  color: #666;
-  margin-top: 4px;
-}
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  background: #5d3fd3;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #4a32b0;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary .material-symbols-outlined {
-  font-size: 18px;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.view-toggle {
-  display: flex;
-  background: #f0f0f4;
-  border-radius: 8px;
-  padding: 3px;
-}
-
-.toggle-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #888;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.toggle-btn:hover {
-  color: #333;
-}
-
-.toggle-btn.active {
-  background: #fff;
-  color: #5d3fd3;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-}
-
-.toggle-btn .material-symbols-outlined {
-  font-size: 18px;
-}
-
-/* Grid view */
-.grid-view {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  padding-inline-end: 4px;
 }
 
-.grid-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #999;
-}
-
-.grid-breadcrumb-link {
-  color: #5d3fd3;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.grid-breadcrumb-link:hover {
-  text-decoration: underline;
-}
-
-.grid-breadcrumb-sep {
-  color: #ccc;
-}
-
-.grid-breadcrumb-current {
-  color: #555;
-  font-weight: 600;
-}
-
-.data-card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table th {
-  padding: 10px 16px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: #fafafe;
-  border-bottom: 1px solid #eee;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.data-table td {
-  padding: 8px 16px;
-  border-bottom: 1px solid #f5f5f5;
-  font-size: 13px;
-  color: #333;
-  vertical-align: middle;
-}
-
-.data-table tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table tr:hover td {
-  background: #fafafe;
-}
-
-.data-table tr.row-dirty td {
-  background: #fffde7;
-}
-
-.col-key { min-width: 180px; }
-.col-value { min-width: 200px; }
-.col-desc { min-width: 220px; }
-.col-group { width: 100px; }
-.col-status { width: 80px; text-align: center; }
-.col-actions { width: 60px; text-align: center; }
-
-.mono {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: #5d3fd3;
-  font-weight: 600;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.grid-input {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #333;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.15s;
-  min-width: 160px;
-}
-
-.grid-input:focus {
-  border-color: #5d3fd3;
-}
-
-.grid-toggle-wrap {
-  display: flex;
-  align-items: center;
-}
-
-.toggle-sm {
-  width: 36px;
-  height: 20px;
-}
-
-.toggle-sm .toggle-slider::before {
-  width: 16px;
-  height: 16px;
-}
-
-.toggle-sm input:checked + .toggle-slider::before {
-  transform: translateX(16px);
-}
-
-.grid-option-group {
-  display: flex;
-  gap: 3px;
-  background: #f5f5f9;
-  padding: 2px;
-  border-radius: 6px;
-}
-
-.option-btn-sm {
-  padding: 4px 10px;
-  border: none;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #666;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.option-btn-sm:hover {
-  color: #333;
-}
-
-.option-btn-sm.active {
-  background: #fff;
-  color: #5d3fd3;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.badge-group {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 600;
-  background: #e8eaf6;
-  color: #3949ab;
-}
-
-.badge-active {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 600;
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.badge-disabled {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 10px;
-  font-weight: 600;
-  background: #f5f5f5;
-  color: #999;
-}
-
-.btn-reset-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  color: #999;
-  transition: all 0.15s;
-}
-
-.btn-reset-icon:hover {
-  border-color: #e65100;
-  color: #e65100;
-  background: #fff3e0;
-}
-
-.btn-reset-icon .material-symbols-outlined {
-  font-size: 16px;
-}
-
-.loading-state,
-.error-state,
-.empty-state {
-  text-align: center;
-  padding: 48px;
-  color: #999;
-  font-size: 14px;
-}
-
-.error-state {
-  color: #ba1a1a;
-}
-
-.empty-icon {
-  font-size: 48px;
-  color: #ccc;
-  margin-bottom: 16px;
-}
-
-.groups-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.settings-section {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
+/* ── Group Card ── */
+.sv-group {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
   overflow: hidden;
   transition: border-color 0.2s;
 }
-
-.settings-section.section-dirty {
-  border-color: #ff9800;
+.sv-group:has(.sv-row-dirty) {
+  border-color: #F59E0B;
 }
-
-.section-header {
+.sv-group-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  background: #fafafe;
-  border-bottom: 1px solid #eee;
-  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--bg-surface-low);
+  border-bottom: 1px solid var(--border-light);
 }
-
-.section-icon .material-symbols-outlined {
-  font-size: 20px;
-  color: #5d3fd3;
+.sv-group-icon {
+  font-size: 18px;
+  color: var(--color-primary);
+  flex-shrink: 0;
 }
-
-.section-title {
-  font-size: 15px;
+.sv-group-title {
+  font-size: 14px;
   font-weight: 700;
-  color: #1a1a2e;
-  flex: 1;
+  color: var(--text-primary);
   margin: 0;
+  flex: 1;
 }
-
-.section-dirty-badge {
+.sv-group-count {
   font-size: 11px;
-  color: #e65100;
-  background: #fff3e0;
+  color: var(--text-faint);
+  background: var(--bg-body);
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
 }
-
-.section-count {
+.sv-group-dirty {
   font-size: 11px;
-  color: #999;
-  background: #f0f0f4;
+  color: #B45309;
+  background: #FEF3C7;
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
 }
-
-.btn-sm {
+.sv-save-group-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border: none;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
-}
-
-.btn-save-group {
-  background: #5d3fd3;
+  background: var(--color-primary);
   color: #fff;
-}
-
-.btn-save-group:hover {
-  background: #4a32b0;
-}
-
-.btn-save-group .material-symbols-outlined {
-  font-size: 14px;
-}
-
-.section-body {
-  padding: 4px 0;
-}
-
-.setting-row {
-  padding: 12px 20px;
-  border-bottom: 1px solid #f5f5f5;
   transition: background 0.15s;
+  font-family: inherit;
 }
+.sv-save-group-btn:hover { background: var(--color-primary-hover); }
+.sv-save-group-btn .material-symbols-outlined { font-size: 14px; }
 
-.setting-row:last-child {
-  border-bottom: none;
+/* ── Setting Row ── */
+.sv-group-body {
+  padding: 2px 0;
 }
-
-.setting-row.row-dirty {
-  background: #fffde7;
+.sv-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.15s;
+  position: relative;
 }
-
-.setting-info {
+.sv-row:last-child { border-bottom: none; }
+.sv-row-dirty { background: rgba(245, 158, 11, 0.05); }
+.sv-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-
-.setting-label {
+.sv-label {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
-
-.setting-key-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.setting-key {
+.sv-key {
   font-size: 11px;
-  color: #999;
+  color: var(--text-faint);
   font-family: 'JetBrains Mono', monospace;
 }
-
-.dirty-dot {
-  width: 6px;
-  height: 6px;
+.sv-control { flex-shrink: 0; }
+.sv-dirty-dot {
+  width: 6px; height: 6px;
   border-radius: 50%;
-  background: #e65100;
+  background: #F59E0B;
   flex-shrink: 0;
+  position: absolute;
+  inset-inline-end: 10px;
+  top: 50%;
+  transform: translateY(-50%);
 }
+.sv-row-dirty .sv-dirty-dot { display: none; }
 
-.setting-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.toggle-switch {
+/* ── Toggle ── */
+.sv-toggle {
   position: relative;
-  width: 44px;
-  height: 24px;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
   flex-shrink: 0;
+  cursor: pointer;
 }
-
-.toggle-switch input {
+.sv-toggle input {
   opacity: 0;
   width: 0;
   height: 0;
+  position: absolute;
 }
-
-.toggle-slider {
+.sv-toggle-track {
   position: absolute;
   inset: 0;
-  background: #ccc;
-  border-radius: 12px;
-  cursor: pointer;
+  background: var(--border-input);
+  border-radius: 11px;
   transition: background 0.2s;
 }
-
-.toggle-slider::before {
-  content: '';
+.sv-toggle-thumb {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   left: 2px;
   top: 2px;
   background: #fff;
   border-radius: 50%;
   transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.sv-toggle input:checked + .sv-toggle-track {
+  background: var(--color-primary);
+}
+.sv-toggle input:checked + .sv-toggle-track .sv-toggle-thumb {
+  transform: translateX(18px);
+}
+.sv-toggle input:focus-visible + .sv-toggle-track {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
-.toggle-switch input:checked + .toggle-slider {
-  background: #5d3fd3;
-}
-
-.toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(20px);
-}
-
-.setting-option {
+/* ── Options ── */
+.sv-options {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.option-group {
-  display: flex;
-  gap: 4px;
-  background: #f5f5f9;
+  gap: 3px;
+  background: var(--bg-body);
   padding: 3px;
   border-radius: 8px;
-  flex-shrink: 0;
 }
-
-.option-btn {
-  padding: 6px 14px;
+.sv-opt-btn {
+  padding: 5px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 5px;
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: var(--text-muted);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
-  text-transform: capitalize;
+  font-family: inherit;
+}
+.sv-opt-btn:hover { color: var(--text-primary); }
+.sv-opt-btn.active {
+  background: var(--bg-surface);
+  color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-.option-btn:hover {
-  color: #333;
-}
-
-.option-btn.active {
-  background: #fff;
-  color: #5d3fd3;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-}
-
-.setting-input-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.input-with-reset {
+/* ── Input ── */
+.sv-input-wrap {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
 }
-
-.setting-input {
-  width: 260px;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
+.sv-input {
+  width: 240px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
+  background: var(--bg-surface);
   outline: none;
+  font-family: inherit;
   transition: border-color 0.15s;
 }
-
-.setting-input:focus {
-  border-color: #5d3fd3;
+.sv-input:focus {
+  border-color: var(--color-primary);
 }
-
-.btn-reset {
+.sv-reset-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #ddd;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
-  background: #fff;
+  background: var(--bg-surface);
   cursor: pointer;
-  color: #999;
+  color: var(--text-faint);
   transition: all 0.15s;
 }
-
-.btn-reset:hover {
-  border-color: #e65100;
-  color: #e65100;
-  background: #fff3e0;
+.sv-reset-btn:hover {
+  border-color: #F59E0B;
+  color: #F59E0B;
+  background: #FEF3C7;
 }
+.sv-reset-btn .material-symbols-outlined { font-size: 15px; }
 
-.btn-reset .material-symbols-outlined {
-  font-size: 16px;
+/* ── Empty ── */
+.sv-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text-faint);
+}
+.sv-empty-icon {
+  font-size: 48px;
+  color: var(--border-default);
+  margin-bottom: 12px;
+  display: block;
+}
+.sv-empty p { font-size: 14px; }
+
+/* ── RTL ── */
+[dir="rtl"] .sv-nav { order: 1; }
+[dir="rtl"] .sv-content { order: 0; }
+[dir="rtl"] .sv-group-header { flex-direction: row-reverse; }
+[dir="rtl"] .sv-row { flex-direction: row-reverse; }
+[dir="rtl"] .sv-options { flex-direction: row-reverse; }
+[dir="rtl"] .sv-header { flex-direction: row-reverse; }
+[dir="rtl"] .sv-search-hint { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .sv-header { flex-direction: column; gap: 12px; }
+  .sv-header-right { width: 100%; flex-wrap: wrap; }
+  .sv-search { flex: 1; min-width: 0; }
+  .sv-search-input { width: 100%; }
+  .sv-body { flex-direction: column; }
+  .sv-nav { width: 100%; flex-direction: row; overflow-x: auto; padding-bottom: 8px; }
+  .sv-nav-inner { flex-direction: row; gap: 4px; overflow-y: visible; }
+  .sv-nav-item { white-space: nowrap; flex-shrink: 0; }
+  .sv-nav-footer { display: none; }
+  .sv-input { width: 100%; min-width: 120px; }
+  .sv-row { flex-wrap: wrap; gap: 8px; }
+  .sv-info { flex-basis: 100%; }
 }
 </style>

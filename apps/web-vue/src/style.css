@@ -73,19 +73,9 @@ html.dark .btn-primary { color: #1a1a2e; }
 .btn-icon:hover { background: var(--bg-surface-hover); color: var(--color-primary); }
 .btn-icon .material-symbols-outlined { font-size: 18px; }
 
-[dir="rtl"] .settings-sidebar { order: 1; }
-[dir="rtl"] .settings-content { order: 0; }
-[dir="rtl"] .sidebar-title { text-align: right; }
 [dir="rtl"] .search-box { flex-direction: row-reverse; }
 [dir="rtl"] .nav-link { flex-direction: row-reverse; }
-[dir="rtl"] .option-group { flex-direction: row-reverse; }
-[dir="rtl"] .setting-input-row { flex-direction: row-reverse; }
-[dir="rtl"] .input-with-reset { flex-direction: row-reverse; }
-[dir="rtl"] .setting-info { text-align: right; }
 [dir="rtl"] .page-header { flex-direction: row-reverse; }
-[dir="rtl"] .setting-row { flex-direction: row-reverse; }
-
-[dir="rtl"] .section-title { text-align: right; }
 
 [dir="rtl"] .toast-container { right: auto; left: 16px; }
 [dir="rtl"] .data-table th,
