@@ -43,7 +43,7 @@
             :key="grp.group"
             :class="['sv-nav-item', { active: activeGroup === grp.group }]"
             href="#"
-            @click.prevent="scrollToGroup(grp.group)"
+            @click.prevent="selectGroup(grp.group)"
           >
             <span class="material-symbols-outlined sv-nav-icon">{{ groupIcon(grp.group) }}</span>
             <span class="sv-nav-label">{{ grp.group }}</span>
@@ -55,94 +55,99 @@
         </div>
       </nav>
 
-      <div ref="contentRef" class="sv-content" @scroll="onScroll">
-        <section
-          v-for="grp in store.filteredGroups"
-          :key="grp.group"
-          :ref="el => setSectionRef(grp.group, el)"
-          class="sv-group"
-        >
-          <div class="sv-group-header">
-            <span class="material-symbols-outlined sv-group-icon">{{ groupIcon(grp.group) }}</span>
-            <h2 class="sv-group-title">{{ grp.group }}</h2>
-            <span class="sv-group-count">{{ grp.settings.length }}</span>
-            <span v-if="store.groupHasChanges(grp.group)" class="sv-group-dirty">
-              {{ store.groupDirtyCount(grp.group) }} {{ t('unsaved') }}
-            </span>
-            <button
-              v-if="store.groupHasChanges(grp.group)"
-              class="sv-save-group-btn"
-              @click="saveGroup(grp.group)"
-            >
-              <span class="material-symbols-outlined">save</span>
-              {{ t('save-group') }}
-            </button>
-          </div>
-          <div class="sv-group-body">
-            <div
-              v-for="setting in grp.settings"
-              :key="setting.id"
-              :class="['sv-row', { 'sv-row-dirty': store.dirtyKeys[setting.setting_key] }]"
-            >
-              <div class="sv-info">
-                <span class="sv-label">{{ setting.description || setting.setting_key }}</span>
-                <span class="sv-key">{{ setting.setting_key }}</span>
-              </div>
-
-              <div v-if="isToggle(setting)" class="sv-control">
-                <label class="sv-toggle">
-                  <input
-                    type="checkbox"
-                    :checked="store.getValue(setting.setting_key) === 'true'"
-                    @change="toggleSetting(setting, $event.target.checked)"
-                  />
-                  <span class="sv-toggle-track"><span class="sv-toggle-thumb"></span></span>
-                </label>
-              </div>
-
-              <div v-else-if="isOption(setting)" class="sv-control">
-                <div class="sv-options">
-                  <button
-                    v-for="opt in getOptions(setting)"
-                    :key="opt"
-                    :class="['sv-opt-btn', { active: store.getValue(setting.setting_key) === opt }]"
-                    @click="setOption(setting, opt)"
-                  >
-                    {{ optionLabel(opt) }}
-                  </button>
-                </div>
-              </div>
-
-              <div v-else class="sv-control">
-                <div class="sv-input-wrap">
-                  <input
-                    type="text"
-                    class="sv-input"
-                    :value="store.getValue(setting.setting_key)"
-                    @input="setTextValue(setting, $event.target.value)"
-                  />
-                  <button
-                    v-if="store.dirtyKeys[setting.setting_key]"
-                    class="sv-reset-btn"
-                    @click="resetSetting(setting)"
-                    :aria-label="t('reset-value')"
-                  >
-                    <span class="material-symbols-outlined">undo</span>
-                  </button>
-                </div>
-              </div>
-
-              <span v-if="store.dirtyKeys[setting.setting_key]" class="sv-dirty-dot" />
+      <div class="sv-content">
+        <template v-if="activeGroupData">
+          <section class="sv-group">
+            <div class="sv-group-header">
+              <span class="material-symbols-outlined sv-group-icon">{{ groupIcon(activeGroupData.group) }}</span>
+              <h2 class="sv-group-title">{{ activeGroupData.group }}</h2>
+              <span class="sv-group-count">{{ activeGroupData.settings.length }}</span>
+              <span v-if="store.groupHasChanges(activeGroupData.group)" class="sv-group-dirty">
+                {{ store.groupDirtyCount(activeGroupData.group) }} {{ t('unsaved') }}
+              </span>
+              <button
+                v-if="store.groupHasChanges(activeGroupData.group)"
+                class="sv-save-group-btn"
+                @click="saveGroup(activeGroupData.group)"
+              >
+                <span class="material-symbols-outlined">save</span>
+                {{ t('save-group') }}
+              </button>
             </div>
-          </div>
-        </section>
+            <div v-if="activeGroupData.settings.length" class="sv-group-body">
+              <div
+                v-for="setting in activeGroupData.settings"
+                :key="setting.id"
+                :class="['sv-row', { 'sv-row-dirty': store.dirtyKeys[setting.setting_key] }]"
+              >
+                <div class="sv-info">
+                  <span class="sv-label">{{ setting.description || setting.setting_key }}</span>
+                  <span class="sv-key">{{ setting.setting_key }}</span>
+                </div>
+
+                <div v-if="isToggle(setting)" class="sv-control">
+                  <label class="sv-toggle">
+                    <input
+                      type="checkbox"
+                      :checked="store.getValue(setting.setting_key) === 'true'"
+                      @change="toggleSetting(setting, $event.target.checked)"
+                    />
+                    <span class="sv-toggle-track"><span class="sv-toggle-thumb"></span></span>
+                  </label>
+                </div>
+
+                <div v-else-if="isOption(setting)" class="sv-control">
+                  <div class="sv-options">
+                    <button
+                      v-for="opt in getOptions(setting)"
+                      :key="opt"
+                      :class="['sv-opt-btn', { active: store.getValue(setting.setting_key) === opt }]"
+                      @click="setOption(setting, opt)"
+                    >
+                      {{ optionLabel(opt) }}
+                    </button>
+                  </div>
+                </div>
+
+                <div v-else class="sv-control">
+                  <div class="sv-input-wrap">
+                    <input
+                      type="text"
+                      class="sv-input"
+                      :value="store.getValue(setting.setting_key)"
+                      @input="setTextValue(setting, $event.target.value)"
+                    />
+                    <button
+                      v-if="store.dirtyKeys[setting.setting_key]"
+                      class="sv-reset-btn"
+                      @click="resetSetting(setting)"
+                      :aria-label="t('reset-value')"
+                    >
+                      <span class="material-symbols-outlined">undo</span>
+                    </button>
+                  </div>
+                </div>
+
+                <span v-if="store.dirtyKeys[setting.setting_key]" class="sv-dirty-dot" />
+              </div>
+            </div>
+            <div v-else-if="store.searchQuery" class="sv-section-empty">
+              <span class="material-symbols-outlined sv-empty-icon">search_off</span>
+              <p>{{ t('settings-no-results') }} "{{ store.searchQuery }}"</p>
+            </div>
+          </section>
+        </template>
+        <div v-else class="sv-empty">
+          <span class="material-symbols-outlined sv-empty-icon">search_off</span>
+          <p>{{ t('settings-no-results') }} "{{ store.searchQuery }}"</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useSettingsStore } from '../../stores/settings.js'
 import { useNavStore } from '../../stores/nav.js'
 import { useToast } from '../../composables/useToast.js'
@@ -157,10 +162,20 @@ const { show: toast } = useToast()
 const { t, dir } = useI18n()
 const { isToggle, isOption, getOptions, groupIcon } = useSettingsUI()
 
-const contentRef = ref(null)
 const activeGroup = ref('')
-const sectionRefs = {}
 const viewReady = ref(false)
+
+const activeGroupData = computed(() => {
+  return store.filteredGroups.find(g => g.group === activeGroup.value) || null
+})
+
+watch(() => store.searchQuery, () => {
+  if (activeGroup.value && !store.filteredGroups.find(g => g.group === activeGroup.value)) {
+    if (store.filteredGroups.length) {
+      activeGroup.value = store.filteredGroups[0].group
+    }
+  }
+})
 
 function optionLabel(opt) {
   const key = `settings.option.${opt}`
@@ -169,36 +184,8 @@ function optionLabel(opt) {
   return opt
 }
 
-function setSectionRef(groupName, el) {
-  if (el) sectionRefs[groupName] = el
-}
-
-function scrollToGroup(groupName) {
+function selectGroup(groupName) {
   activeGroup.value = groupName
-  const el = sectionRefs[groupName]
-  if (el && contentRef.value) {
-    const top = el.getBoundingClientRect().top + contentRef.value.scrollTop - contentRef.value.getBoundingClientRect().top - 16
-    contentRef.value.scrollTo({ top, behavior: 'smooth' })
-  }
-}
-
-let scrollRaf = null
-
-function onScroll() {
-  if (scrollRaf) return
-  scrollRaf = requestAnimationFrame(() => {
-    scrollRaf = null
-    if (!contentRef.value) return
-    const container = contentRef.value
-    let current = ''
-    for (const grp of store.filteredGroups) {
-      const el = sectionRefs[grp.group]
-      if (el && el.offsetTop - container.offsetTop - 100 <= container.scrollTop) {
-        current = grp.group
-      }
-    }
-    if (current) activeGroup.value = current
-  })
 }
 
 function toggleSetting(setting, checked) {
@@ -270,7 +257,6 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
   if (autoSaveTimer) clearTimeout(autoSaveTimer)
-  if (scrollRaf) cancelAnimationFrame(scrollRaf)
 })
 </script>
 
@@ -360,6 +346,7 @@ onUnmounted(() => {
   gap: 24px;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Nav ── */
@@ -653,6 +640,19 @@ onUnmounted(() => {
 }
 .sv-reset-btn .material-symbols-outlined { font-size: 15px; }
 
+/* ── Section Empty ── */
+.sv-section-empty {
+  text-align: center;
+  padding: 32px 18px;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+.sv-section-empty .sv-empty-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  display: block;
+}
+
 /* ── Empty ── */
 .sv-empty {
   text-align: center;
@@ -677,18 +677,55 @@ onUnmounted(() => {
 [dir="rtl"] .sv-search-hint { font-family: 'JetBrains Mono', monospace; }
 
 /* ── Responsive ── */
+@media (max-width: 1023px) {
+  .sv-title { font-size: 18px; }
+  .sv-subtitle { font-size: 12px; }
+}
+
 @media (max-width: 767px) {
+  .sv-page { height: auto; min-height: 100%; }
   .sv-header { flex-direction: column; gap: 12px; }
+  .sv-header-left { width: 100%; }
   .sv-header-right { width: 100%; flex-wrap: wrap; }
   .sv-search { flex: 1; min-width: 0; }
   .sv-search-input { width: 100%; }
-  .sv-body { flex-direction: column; }
-  .sv-nav { width: 100%; flex-direction: row; overflow-x: auto; padding-bottom: 8px; }
-  .sv-nav-inner { flex-direction: row; gap: 4px; overflow-y: visible; }
-  .sv-nav-item { white-space: nowrap; flex-shrink: 0; }
+  .sv-body { flex-direction: column; overflow: visible; }
+  .sv-nav {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    gap: 0;
+    scrollbar-width: none;
+  }
+  .sv-nav::-webkit-scrollbar { display: none; }
+  .sv-nav-inner {
+    flex-direction: row;
+    gap: 4px;
+    overflow-y: visible;
+    flex: none;
+    width: auto;
+  }
+  .sv-nav-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
   .sv-nav-footer { display: none; }
-  .sv-input { width: 100%; min-width: 120px; }
-  .sv-row { flex-wrap: wrap; gap: 8px; }
+  .sv-content {
+    overflow: visible;
+    padding: 0;
+    gap: 0;
+  }
+  .sv-group { border-radius: 8px; }
+  .sv-group-header { padding: 12px 14px; flex-wrap: wrap; }
+  .sv-group-title { font-size: 13px; }
+  .sv-input { width: 100%; min-width: 0; }
+  .sv-row { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
   .sv-info { flex-basis: 100%; }
+  .sv-control { width: 100%; }
+  .sv-options { flex-wrap: wrap; }
+  .btn-primary { width: 100%; justify-content: center; }
 }
 </style>
