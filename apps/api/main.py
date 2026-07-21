@@ -40,6 +40,7 @@ from packages.mcp.servers.projects_mcp import register_tools as register_project
 from packages.mcp.servers.manufacturing_mcp import register_tools as register_manufacturing_mcp
 from packages.mcp.servers.maintenance_mcp import register_tools as register_maintenance_mcp
 from packages.mcp.servers.notifications_mcp import register_tools as register_notifications_mcp
+from packages.mcp.servers.pos_mcp import register_tools as register_pos_mcp
 
 app = FastAPI(title="Nova ERP API", version="1.0")
 init_sentry()
@@ -83,6 +84,7 @@ register_projects_mcp()
 register_manufacturing_mcp()
 register_maintenance_mcp()
 register_notifications_mcp()
+register_pos_mcp()
 app.include_router(create_mcp_router(mcp_server))
 
 

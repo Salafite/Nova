@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth.js'
 // Maps route names to permission keys. Routes with a permission entry
 // require that the authenticated user has that permission.
 const ROUTE_PERMISSIONS = {
+  pos: 'pos',
   products: 'products',
   'product-detail': 'products',
   categories: 'products',
@@ -73,6 +74,7 @@ const routes = [
     children: [
       { path: '', name: 'home', meta: { requiresAuth: true }, component: () => import('../views/home/HomeView.vue') },
       { path: 'dashboard', name: 'dashboard', meta: { requiresAuth: true }, component: () => import('../views/dashboard/DashboardView.vue') },
+      { path: 'pos', name: 'pos', meta: { requiresAuth: true }, component: () => import('../views/pos/POSView.vue') },
       { path: 'products', name: 'products', meta: { requiresAuth: true }, component: () => import('../views/products/ProductsView.vue') },
       { path: 'products/:id', name: 'product-detail', meta: { requiresAuth: true }, component: () => import('../views/products/ProductDetailView.vue') },
       { path: 'categories', name: 'categories', meta: { requiresAuth: true }, component: () => import('../views/categories/CategoriesView.vue') },

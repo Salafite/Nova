@@ -24,6 +24,7 @@ export const useNavStore = defineStore('nav', {
           { section: 'Foundation', section_ar: 'أساسيات' },
           { id: 'home', icon: 'home', label: 'Home', label_ar: 'الرئيسية', module: 'home' },
           { id: 'dashboard', icon: 'analytics', label: 'Dashboard', label_ar: 'لوحة البيانات', module: 'dashboard' },
+          { id: 'pos', icon: 'point_of_sale', label: 'POS', label_ar: 'نقطة البيع', module: 'pos' },
           { id: 'uom', icon: 'straighten', label: 'UOM', label_ar: 'وحدات القياس', module: 'uom' },
           { id: 'uom-conversions', icon: 'swap_horiz', label: 'UOM Conversions', label_ar: 'تحويلات الوحدات', module: 'uom-conversions' },
           { id: 'products', icon: 'inventory_2', label: 'Products', label_ar: 'المنتجات', module: 'products' },
