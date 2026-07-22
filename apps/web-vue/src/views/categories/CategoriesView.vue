@@ -2,17 +2,17 @@
   <div :dir="dir">
     <div class="page-header">
       <div>
-        <h1 class="page-title">{{ t('categories') }}</h1>
-        <p class="page-subtitle">{{ t('categories-sub') }}</p>
+        <h1 class="page-title">{{ t('categories', 'Categories') }}</h1>
+        <p class="page-subtitle">{{ t('categories-sub', 'Manage product categories') }}</p>
       </div>
-      <button class="btn-primary" @click="openAdd">{{ t('new-category') }}</button>
+      <button class="btn-primary" @click="openAdd">{{ t('new-category', 'New Category') }}</button>
     </div>
 
     <SkeletonTable v-if="loading" :rows="5" :columns="3" />
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <div v-else-if="!items.length" class="empty-state">
       <span class="material-symbols-outlined empty-icon">category</span>
-      <p>{{ t('no-categories') }}</p>
+      <p>{{ t('no-categories', 'No categories found') }}</p>
     </div>
 
     <div v-else class="data-card">
@@ -21,7 +21,7 @@
           <thead>
             <tr>
               <th>{{ t('name') }}</th>
-              <th class="text-center">{{ t('products') }}</th>
+              <th class="text-center">{{ t('products', 'Products') }}</th>
               <th class="text-center">{{ t('actions') }}</th>
             </tr>
           </thead>
@@ -42,7 +42,7 @@
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal-content modal-sm">
         <div class="modal-header">
-          <h3>{{ editing ? t('rename-category') : t('new-category') }}</h3>
+          <h3>{{ editing ? t('rename-category', 'Rename Category') : t('new-category', 'New Category') }}</h3>
           <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
@@ -66,7 +66,7 @@
           <button class="btn-icon" @click="showDelete = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
-          <p>{{ t('delete-warning') }} <strong>{{ deletingItem?.name }}</strong>?</p>
+          <p>{{ t('delete-warning', 'Are you sure you want to delete') }} <strong>{{ deletingItem?.name }}</strong>?</p>
           <div class="modal-actions">
             <button class="btn-outline" @click="showDelete = false">{{ t('cancel') }}</button>
             <button class="btn-danger" @click="doDelete">{{ t('delete') }}</button>
@@ -172,26 +172,20 @@ onMounted(load)
 
 <style scoped>
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-.page-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin: 0; }
-.page-subtitle { font-size: 13px; color: #666; margin-top: 4px; }
-.text-center { text-align: center; }
-.cell-name { font-weight: 600; color: #1a1a2e; }
-.btn-icon { background: none; border: none; padding: 6px; cursor: pointer; border-radius: 6px; color: #888; }
-.btn-icon:hover { background: #f0f0f0; color: #5d3fd3; }
-.btn-icon-danger:hover { background: #fee2e2; color: #dc2626; }
+.cell-name { font-weight: 600; color: var(--text-primary); }
+
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-.modal-content { background: #fff; border-radius: 12px; width: 580px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
+.modal-content { background: var(--bg-surface); border-radius: 12px; width: 580px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
 .modal-sm { width: 420px; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #eee; }
-.modal-header h3 { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border-light); }
+.modal-header h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
 .modal-body { padding: 24px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
 .form-group { margin-bottom: 14px; }
-.form-group label { display: block; font-size: 12px; font-weight: 600; color: #444; margin-bottom: 4px; }
-.form-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; outline: none; transition: border 0.15s; }
-.form-input:focus { border-color: #5d3fd3; }
-.input-error { border-color: #dc2626 !important; }
-.required { color: #dc2626; }
-.empty-state { text-align: center; padding: 80px 0; color: #999; }
-.empty-icon { font-size: 48px; color: #ccc; margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+.form-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border-input); border-radius: 6px; font-size: 13px; outline: none; transition: border 0.15s; background: var(--bg-surface); color: var(--text-primary); }
+.form-input:focus { border-color: var(--color-primary); }
+.input-error { border-color: var(--color-error) !important; }
+.required { color: var(--color-error); }
 </style>
