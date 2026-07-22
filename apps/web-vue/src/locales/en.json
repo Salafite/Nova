@@ -584,5 +584,20 @@
   "amount": "Amount",
   "invoice-number": "Invoice #",
   "issue-date": "Issue Date",
-  "due-date": "Due Date"
+  "due-date": "Due Date",
+  "admin-preferences": "Preferences",
+  "admin-load-prefs": "Load preferences",
+  "pref-saved": "Preferences saved",
+  "pref-save-failed": "Failed to save preferences",
+  "pref-load-failed": "Failed to load preferences",
+  "search-users": "Search users...",
+  "admin-count.one": "{count} user",
+  "admin-count.other": "{count} users",
+  "admin-preferences-title": "Personal Preferences",
+  "admin-pref-theme": "Theme",
+  "admin-pref-accent": "Accent",
+  "admin-pref-font": "Font",
+  "admin-pref-sidebar": "Sidebar",
+  "admin-pref-loading": "Loading...",
+  "admin-save-prefs": "Save Preferences"
 }
