@@ -1,11 +1,14 @@
 <template>
-  <div :dir="dir">
+  <div class="page" :dir="dir">
     <SkeletonCard v-if="loading" variant="detail" />
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <template v-else-if="customer">
-      <div class="flex justify-between items-center mb-6">
+      <div class="page-head">
         <div>
-          <button class="btn-link" @click="$router.push('/customers')">&larr; {{ t('back-to-customers') }}</button>
+          <button class="back-link" @click="$router.push('/customers')">
+            <span class="material-symbols-outlined">arrow_back</span>
+            {{ t('back-to-customers') }}
+          </button>
           <h1 class="page-title">{{ customer.name }}</h1>
         </div>
       </div>
@@ -13,31 +16,64 @@
       <div class="detail-grid">
         <div class="detail-card">
           <h3 class="card-title">{{ t('customer-info') }}</h3>
-          <div class="info-row"><span class="info-label">{{ t('phone') }}:</span><span>{{ customer.phone || '-' }}</span></div>
-          <div class="info-row"><span class="info-label">{{ t('email') }}:</span><span>{{ customer.email || '-' }}</span></div>
-          <div class="info-row"><span class="info-label">{{ t('group') }}:</span><span>{{ customer.group_name || '-' }}</span></div>
-          <div class="info-row"><span class="info-label">{{ t('credit-limit') }}:</span><span>${{ (customer.credit_limit || 0).toFixed(2) }}</span></div>
-          <div class="info-row"><span class="info-label">{{ t('balance') }}:</span><span class="col-num" :class="balanceClass">${{ (customer.balance || 0).toFixed(2) }}</span></div>
+          <div class="info-rows">
+            <div class="info-row">
+              <span class="info-label">{{ t('phone') }}</span>
+              <span class="info-value">{{ customer.phone || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ t('email') }}</span>
+              <span class="info-value">{{ customer.email || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ t('group') }}</span>
+              <span class="info-value">{{ customer.group_name || '-' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ t('credit-limit') }}</span>
+              <span class="info-value mono">${{ (customer.credit_limit || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">{{ t('balance') }}</span>
+              <span class="info-value mono" :class="balanceClass">${{ (customer.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+          </div>
         </div>
+
         <div class="detail-card">
           <h3 class="card-title">{{ t('aging-breakdown') }}</h3>
           <div v-if="aging" class="aging-list">
-            <div class="aging-row"><span>{{ t('current') }}</span><span class="col-num">${{ aging.current.toFixed(2) }}</span></div>
-            <div class="aging-row"><span>1-30 {{ t('days') }}</span><span class="col-num">${{ aging['30'].toFixed(2) }}</span></div>
-            <div class="aging-row"><span>31-60 {{ t('days') }}</span><span class="col-num">${{ aging['60'].toFixed(2) }}</span></div>
-            <div class="aging-row"><span>61-90+ {{ t('days') }}</span><span class="col-num">${{ aging['90_plus'].toFixed(2) }}</span></div>
-            <div class="aging-row total-row"><span>{{ t('total-outstanding') }}</span><span class="col-num">${{ aging.total_outstanding.toFixed(2) }}</span></div>
+            <div class="aging-row">
+              <span class="aging-label">{{ t('current') }}</span>
+              <span class="mono">${{ aging.current.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div class="aging-row">
+              <span class="aging-label">1–30 {{ t('days') }}</span>
+              <span class="mono">${{ aging['30'].toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div class="aging-row">
+              <span class="aging-label">31–60 {{ t('days') }}</span>
+              <span class="mono">${{ aging['60'].toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div class="aging-row">
+              <span class="aging-label">61–90+ {{ t('days') }}</span>
+              <span class="mono">${{ aging['90_plus'].toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+            </div>
+            <div class="aging-row total-row">
+              <span class="aging-label">{{ t('total-outstanding') }}</span>
+              <span class="mono">${{ aging.total_outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+            </div>
           </div>
-          <div v-else class="empty-state-sm">{{ t('loading') }}...</div>
+          <div v-else class="empty-sm">{{ t('loading') }}</div>
         </div>
       </div>
 
-      <div class="tabs mt-4">
+      <div class="tabs">
         <button class="tab" :class="{ active: activeTab === 'invoices' }" @click="activeTab = 'invoices'">{{ t('invoices') }} ({{ invoices.length }})</button>
         <button class="tab" :class="{ active: activeTab === 'payments' }" @click="activeTab = 'payments'">{{ t('payments') }} ({{ payments.length }})</button>
       </div>
 
-      <div v-if="activeTab === 'invoices'" class="data-card mt-2">
+      <div v-if="activeTab === 'invoices'" class="data-card">
         <div class="table-wrap">
           <table class="data-table">
             <thead>
@@ -52,7 +88,7 @@
             <tbody>
               <tr v-for="inv in invoices" :key="inv.id">
                 <td class="cell-mono">{{ inv.invoice_number }}</td>
-                <td class="col-num">${{ (inv.total_amount || 0).toFixed(2) }}</td>
+                <td class="col-num cell-mono">${{ (inv.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</td>
                 <td>{{ inv.issue_date }}</td>
                 <td>{{ inv.due_date }}</td>
                 <td class="text-center">
@@ -65,7 +101,7 @@
         </div>
       </div>
 
-      <div v-if="activeTab === 'payments'" class="data-card mt-2">
+      <div v-if="activeTab === 'payments'" class="data-card">
         <div class="table-wrap">
           <table class="data-table">
             <thead>
@@ -80,7 +116,7 @@
             <tbody>
               <tr v-for="pay in payments" :key="pay.id">
                 <td>{{ pay.payment_date }}</td>
-                <td class="col-num">${{ (pay.amount || 0).toFixed(2) }}</td>
+                <td class="col-num cell-mono">${{ (pay.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</td>
                 <td>{{ pay.payment_method }}</td>
                 <td class="cell-mono">{{ pay.reference || '-' }}</td>
                 <td class="text-center">
@@ -154,55 +190,66 @@ onMounted(load)
 </script>
 
 <style scoped>
-.page-title { font-size: 22px; font-weight: 700; color: #1a1a2e; margin: 0; }
-.loading-state, .error-state, .empty-state { text-align: center; padding: 48px; color: #999; font-size: 14px; }
-.error-state { color: #ba1a1a; }
-.error-state p { margin-bottom: 16px; }
-.empty-state-sm { text-align: center; padding: 24px; color: #999; font-size: 13px; }
-.empty-cell { text-align: center; color: #999; padding: 24px !important; }
-.mb-6 { margin-bottom: 24px; }
-.mt-4 { margin-top: 16px; }
-.mt-2 { margin-top: 8px; }
-.flex { display: flex; }
-.justify-between { justify-content: space-between; }
-.items-center { align-items: center; }
-
-.btn-link { background: none; border: none; color: #5d3fd3; font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 8px; }
-.btn-link:hover { text-decoration: underline; }
+.page { }
+.page-head { margin-bottom: 20px; }
+.back-link { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: var(--color-primary); font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 8px; }
+.back-link:hover { text-decoration: underline; }
+.back-link .material-symbols-outlined { font-size: 16px; }
 
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-.detail-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; }
-.card-title { font-size: 14px; font-weight: 700; color: #1a1a2e; margin: 0 0 12px; }
-.info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
-.info-label { color: #888; font-weight: 500; }
-.col-num { font-family: monospace; font-weight: 600; text-align: right; }
-.text-danger { color: #dc2626; }
-.text-warning { color: #d97706; }
+.detail-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 12px; padding: 20px; }
+.card-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin: 0 0 12px; }
 
-.aging-list { display: flex; flex-direction: column; gap: 4px; }
-.aging-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
-.total-row { border-top: 1px solid #eee; margin-top: 4px; padding-top: 8px; font-weight: 700; }
+.info-rows { display: flex; flex-direction: column; }
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--border-light); }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--text-muted); font-weight: 500; }
+.info-value { color: var(--text-primary); font-weight: 600; }
 
-.tabs { display: flex; gap: 0; border-bottom: 1px solid #e0e0e0; }
-.tab { padding: 10px 20px; border: none; background: none; font-size: 13px; font-weight: 600; color: #888; cursor: pointer; border-bottom: 2px solid transparent; }
-.tab.active { color: #5d3fd3; border-bottom-color: #5d3fd3; }
-.tab:hover { color: #333; }
-
-.data-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }
-.table-wrap { overflow-x: auto; }
-.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.data-table th { background: #f9fafb; padding: 10px 14px; text-align: left; font-weight: 600; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
-.data-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
-.data-table tbody tr:hover { background: #fafaff; }
-.cell-mono { font-family: monospace; font-size: 12px; color: #888; }
+.mono { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+.col-num { text-align: right; }
+.text-danger { color: var(--color-error); }
+.text-warning { color: var(--color-warning, #d97706); }
 .text-center { text-align: center; }
 
-.badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.badge-active { background: #dcfce7; color: #16a34a; }
-.badge-warning { background: #fef3c7; color: #d97706; }
+.empty-sm { text-align: center; padding: 24px; color: var(--text-faint); font-size: 13px; }
+.empty-cell { text-align: center; color: var(--text-faint); padding: 24px !important; }
+
+.aging-list { display: flex; flex-direction: column; }
+.aging-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border-light); }
+.aging-row:last-child { border-bottom: none; }
+.total-row { border-top: 1px solid var(--border-default); margin-top: 4px; padding-top: 10px; font-weight: 700; }
+.aging-label { color: var(--text-muted); }
+
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-default); margin-bottom: 8px; }
+.tab { padding: 10px 20px; border: none; background: none; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s; }
+.tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.tab:hover { color: var(--text-primary); }
+
+.data-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 12px; overflow: hidden; }
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { background: var(--bg-surface-low); padding: 10px 14px; text-align: left; font-weight: 700; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-default); white-space: nowrap; }
+.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); }
+.data-table tbody tr:hover td { background: var(--bg-surface-hover); }
+.data-table tr:last-child td { border-bottom: none; }
+.cell-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.col-num { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.badge-active { background: #dcfce7; color: var(--color-success); }
+.badge-warning { background: #fef3c7; color: var(--color-warning, #d97706); }
 .badge-info { background: #e0f2fe; color: #0284c7; }
-.badge-inactive { background: #f3f4f6; color: #888; }
-.badge-danger { background: #fee2e2; color: #dc2626; }
+.badge-inactive { background: var(--bg-surface-low); color: var(--text-faint); }
+.badge-danger { background: #fee2e2; color: var(--color-error); }
+
+@media (max-width: 767px) {
+  .detail-grid { grid-template-columns: 1fr; }
+  .data-card { border-radius: 0; margin: 0 -16px; border-left: none; border-right: none; }
+}
 
 [dir="rtl"] .data-table th { text-align: right; }
+[dir="rtl"] .data-table td { text-align: right; }
+[dir="rtl"] .col-num { text-align: left; }
+[dir="rtl"] .back-link .material-symbols-outlined { transform: scaleX(-1); }
 </style>
