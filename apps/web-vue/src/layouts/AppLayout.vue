@@ -62,7 +62,7 @@
         </nav>
       </div>
 
-      <div class="content" :class="{ 'content-wide': isGrid }">
+      <div class="content" :class="contentClasses">
         <router-view />
       </div>
     </main>
@@ -73,7 +73,7 @@
       </div>
     </div>
 
-    <AiAssistant />
+    <AiAssistant v-if="route.name !== 'pos'" />
   </div>
 </template>
 
@@ -130,6 +130,10 @@ function switchSidebarMode() {
 }
 
 const isGrid = computed(() => navStore.navStyle === 'grid')
+const contentClasses = computed(() => ({
+  'content-wide': isGrid.value,
+  'content-pos': route.name === 'pos',
+}))
 const activeId = computed(() => route.name)
 const layoutClass = computed(() => {
   if (isGrid.value) return 'layout-grid'
@@ -191,6 +195,7 @@ watch(sidebarMode, (mode) => {
 
 .content { flex: 1; overflow-y: auto; padding: 24px; }
 .content-wide { padding: 0; }
+.content-pos { overflow: hidden; padding: 0; }
 
 .auto-navbar {
   display: flex;

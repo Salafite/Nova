@@ -288,8 +288,28 @@ onMounted(() => {
   margin: -24px;
   min-height: calc(100vh - 64px);
 }
+@media (max-width: 1200px) {
+  .pos-cart { width: 320px; }
+  .search-box, .barcode-row { max-width: 340px; }
+}
+@media (max-width: 1000px) {
+  .product-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); padding: 10px 16px 16px; }
+  .pos-toolbar { padding: 12px 16px 6px; }
+}
 @media (max-width: 900px) {
-  .pos-shell { flex-direction: column; }
+  .pos-shell { flex-direction: column; min-height: auto; }
+  .pos-cart { width: 100%; border-inline-start: none; border-top: 1px solid var(--border-default); }
+  .pos-grid { max-height: 55vh; }
+  .search-box, .barcode-row { max-width: 100%; }
+}
+@media (max-width: 600px) {
+  .pos-toolbar { padding: 10px 12px 4px; }
+  .product-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; padding: 8px 12px 12px; }
+  .product-card { padding: 10px; }
+  .product-price { font-size: 14px; }
+  .cart-footer { padding: 12px 14px 14px; }
+  .cart-header, .cart-customer, .cart-items { padding-inline: 14px; }
+  .action-hold, .action-pay { padding: 12px 0; font-size: 13px; }
 }
 
 /* ── Grid Panel ── */
