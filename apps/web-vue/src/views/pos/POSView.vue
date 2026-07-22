@@ -138,32 +138,31 @@ function onDocumentKeydown(e) {
     }
     barcodeBuffer = ''
     scanning = false
+    lastKeyTime = 0
     return
   }
 
   if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) {
     barcodeBuffer = ''
     scanning = false
+    lastKeyTime = 0
     return
   }
 
-  if (!lastKeyTime || elapsed >= SCANNER_THRESHOLD) {
+  if (!lastKeyTime) {
     barcodeBuffer = e.key
     lastKeyTime = now
-    scanning = false
     return
   }
 
-  if (!scanning) {
-    scanning = true
+  barcodeBuffer += e.key
+  lastKeyTime = now
+
+  if (elapsed < SCANNER_THRESHOLD) {
+    if (!scanning) scanning = true
     e.preventDefault()
-    barcodeBuffer += e.key
-  } else {
-    e.preventDefault()
-    barcodeBuffer += e.key
   }
 
-  lastKeyTime = now
   clearTimeout(scannerClearTimer)
   scannerClearTimer = setTimeout(() => {
     barcodeBuffer = ''
