@@ -284,7 +284,6 @@ function exportCsv() {
 @media (max-width: 767px) {
   .report-layout { grid-template-columns: 1fr; }
 }
-[dir="rtl"] .page-header { flex-direction: row-reverse; }
 [dir="rtl"] .result-toolbar { flex-direction: row-reverse; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .section-block h4 { text-align: right; }

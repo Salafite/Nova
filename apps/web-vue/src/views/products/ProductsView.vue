@@ -461,14 +461,13 @@ onMounted(load)
 .badge-sm { font-size: 10px !important; padding: 1px 6px !important; }
 .empty-section { font-size: 12px; color: var(--text-faint); padding: 8px 0; }
 
-[dir="rtl"] .page-header { flex-direction: row-reverse; }
+[dir="rtl"] .page-actions { flex-direction: row-reverse; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }
 [dir="rtl"] .cell-price,
 [dir="rtl"] .col-price,
 [dir="rtl"] .cell-actions,
 [dir="rtl"] .col-actions { text-align: left; }
-[dir="rtl"] .modal-header { flex-direction: row-reverse; }
 [dir="rtl"] .modal-actions { flex-direction: row-reverse; }
 [dir="rtl"] .form-row { direction: rtl; }
 [dir="rtl"] .checkbox-label { flex-direction: row-reverse; }

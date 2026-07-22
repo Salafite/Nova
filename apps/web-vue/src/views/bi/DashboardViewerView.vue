@@ -105,5 +105,5 @@ onMounted(async () => {
 @media (max-width: 480px) {
   .widget-grid { grid-template-columns: 1fr; }
 }
-[dir="rtl"] .page-header { flex-direction: row-reverse; }
+
 </style>

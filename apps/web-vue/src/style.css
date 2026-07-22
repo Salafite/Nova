@@ -75,7 +75,6 @@ html.dark .btn-primary { color: #1a1a2e; }
 
 [dir="rtl"] .search-box { flex-direction: row-reverse; }
 [dir="rtl"] .nav-link { flex-direction: row-reverse; }
-[dir="rtl"] .page-header { flex-direction: row-reverse; }
 
 [dir="rtl"] .toast-container { right: auto; left: 16px; }
 [dir="rtl"] .data-table th,

@@ -223,7 +223,6 @@ onMounted(load)
 .btn-icon-danger:hover { background: #fce4ec; color: #c62828; }
 .btn-icon .material-symbols-outlined { font-size: 18px; }
 
-[dir="rtl"] .page-header { flex-direction: row-reverse; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }
 [dir="rtl"] .col-actions { text-align: left; }

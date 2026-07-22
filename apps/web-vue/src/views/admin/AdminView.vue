@@ -981,7 +981,6 @@ select.form-input { appearance: auto; }
 [dir="rtl"] .au-header-actions { flex-direction: row-reverse; }
 [dir="rtl"] .au-prefs-header { flex-direction: row-reverse; }
 [dir="rtl"] .au-prefs-footer { justify-content: flex-start; }
-[dir="rtl"] .modal-header { flex-direction: row-reverse; }
 
 /* ── Responsive ── */
 @media (max-width: 1023px) {

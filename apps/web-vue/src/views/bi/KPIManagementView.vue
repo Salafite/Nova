@@ -387,11 +387,9 @@ onMounted(async () => {
 .mini-table td, .mini-table th { padding: 6px 10px; font-size: 12px; }
 .cell-mono { font-family: monospace; }
 
-[dir="rtl"] .page-header { flex-direction: row-reverse; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }
 [dir="rtl"] .col-actions, [dir="rtl"] .cell-actions { text-align: left; }
-[dir="rtl"] .modal-header { flex-direction: row-reverse; }
 [dir="rtl"] .modal-actions { flex-direction: row-reverse; }
 [dir="rtl"] .form-row { direction: rtl; }
 [dir="rtl"] .detail-header { flex-direction: row-reverse; }
