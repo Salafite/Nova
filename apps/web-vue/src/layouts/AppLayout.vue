@@ -136,7 +136,7 @@ const userLabel = computed(() => {
 })
 
 function go(item) {
-  router.push({ name: item.module || item.id, params: { sessionHash: route.params.sessionHash } })
+  router.push({ name: item.module || item.id })
 }
 
 function logout() {

@@ -1,15 +1,5 @@
 import { test, expect } from '@playwright/test'
 
-function sessionHash(token) {
-  let hash = 0
-  for (let i = 0; i < token.length; i++) {
-    const ch = token.charCodeAt(i)
-    hash = ((hash << 5) - hash) + ch
-    hash |= 0
-  }
-  return Math.abs(hash).toString(36).substring(0, 8)
-}
-
 test.describe('Warehouse & Inventory', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -24,8 +14,7 @@ test.describe('Warehouse & Inventory', () => {
   })
 
   test('inventory page renders', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/inventory')
+    await page.goto('/inventory')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -36,8 +25,7 @@ test.describe('Warehouse & Inventory', () => {
   })
 
   test('warehouses page renders', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/warehouses')
+    await page.goto('/warehouses')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -48,14 +36,12 @@ test.describe('Warehouse & Inventory', () => {
   })
 
   test('warehouses has add button', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/warehouses')
+    await page.goto('/warehouses')
     await expect(page.getByRole('button', { name: /new warehouse/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('stock movements page renders', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/stock-movements')
+    await page.goto('/stock-movements')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -66,14 +52,12 @@ test.describe('Warehouse & Inventory', () => {
   })
 
   test('stock movements has add button', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/stock-movements')
+    await page.goto('/stock-movements')
     await expect(page.getByRole('button', { name: /new movement/i })).toBeVisible({ timeout: 15000 })
   })
 
   test('categories page renders', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/categories')
+    await page.goto('/categories')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const table = page.locator('.data-table')
@@ -84,8 +68,7 @@ test.describe('Warehouse & Inventory', () => {
   })
 
   test('pick lists page renders', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/warehouse/pick-lists')
+    await page.goto('/warehouse/pick-lists')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const card = page.locator('.pick-card')
@@ -96,8 +79,7 @@ test.describe('Warehouse & Inventory', () => {
   })
 
   test('home dashboard renders', async ({ page }) => {
-    const token = await page.evaluate(() => localStorage.getItem('nova_token'))
-    await page.goto('/' + sessionHash(token) + '/dashboard')
+    await page.goto('/dashboard')
     await expect(page.locator('.page-title').first()).toBeVisible({ timeout: 15000 })
     const skeleton = page.locator('.skeleton-table')
     const content = page.locator('.dashboard-grid, .dashboard-cards, .stat-card')

@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
-import { getSessionHash } from '../utils/session.js'
 
 const ROUTE_PERMISSIONS = {
   pos: 'pos',
@@ -68,7 +67,7 @@ const routes = [
   { path: '/privacy', name: 'privacy', component: () => import('../views/legal/PrivacyView.vue') },
   { path: '/terms', name: 'terms', component: () => import('../views/legal/TermsView.vue') },
   {
-    path: '/:sessionHash',
+    path: '/',
     component: () => import('../layouts/AppLayout.vue'),
     children: [
       { path: '', name: 'home', meta: { requiresAuth: true }, component: () => import('../views/home/HomeView.vue') },
@@ -137,7 +136,6 @@ const routes = [
       { path: ':pathMatch(.*)*', name: 'not-found', component: () => import('../views/errors/NotFoundView.vue') },
     ]
   },
-  { path: '/', redirect: '/login' },
   { path: '/:pathMatch(.*)*', name: 'not-found-root', component: () => import('../views/errors/NotFoundView.vue') },
 ]
 
@@ -147,21 +145,12 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('nova_token')
   const auth = useAuthStore()
 
-  if (to.params.sessionHash) {
-    if (!token) return next('/login')
-    const expected = getSessionHash()
-    if (to.params.sessionHash !== expected) {
-      const rest = to.path.replace(/^\/[^\/]+/, '')
-      return next('/' + expected + rest)
-    }
-  }
-
   if (to.meta.requiresAuth && !token) return next('/login')
-  if (token && (to.name === 'login' || to.name === 'signup')) return next('/' + getSessionHash() + '/dashboard')
+  if (token && (to.name === 'login' || to.name === 'signup')) return next('/dashboard')
 
   const required = ROUTE_PERMISSIONS[to.name]
   if (required) {
-    if (!auth.hasPermission(required)) return next('/' + getSessionHash() + '/dashboard')
+    if (!auth.hasPermission(required)) return next('/dashboard')
   }
 
   next()
