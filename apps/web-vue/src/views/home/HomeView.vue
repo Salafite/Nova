@@ -142,7 +142,7 @@ const CHART_COLORS = ['#cabeff', '#5d3fd3', '#cabeff', '#5d3fd3', '#cabeff']
  * Normalizes wildly-shaped "count" responses:
  * a bare number, { count }, { total }, an array, or a nested { data }.
  */
-export function extractCount(payload) {
+function extractCount(payload) {
   if (payload == null) return 0
   if (typeof payload === 'number') return payload
   if (Array.isArray(payload)) return payload.length
@@ -157,7 +157,7 @@ export function extractCount(payload) {
 /**
  * Normalizes wildly-shaped "list" responses into a plain array.
  */
-export function extractArray(payload) {
+function extractArray(payload) {
   if (Array.isArray(payload)) return payload
   if (payload && Array.isArray(payload.data)) return payload.data
   if (payload && payload.data && Array.isArray(payload.data.items)) return payload.data.items
@@ -166,7 +166,7 @@ export function extractArray(payload) {
   return []
 }
 
-export function computeAlertCount(products) {
+function computeAlertCount(products) {
   return products.filter((p) => {
     const stock = p.stock ?? 0
     const minStock = p.minStock ?? p.min_stock ?? 0
