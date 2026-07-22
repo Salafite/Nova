@@ -9,7 +9,27 @@ Nova ERP serves two protocols side by side:
 | **REST API** (`/api/*`) | Vue 3 SPA | UI rendering, CRUD, auth |
 | **MCP** (stdio/SSE) | AI agents | Natural language tool calling |
 
-All 14 MCP server modules live under `packages/mcp/servers/`. Each module corresponds to an ERP domain and registers tools via the global registry (`packages/mcp/registry.py`).
+All 15 MCP server modules live under `packages/mcp/servers/`. Each module corresponds to an ERP domain and registers tools via the global registry (`packages/mcp/registry.py`).
+
+## Full Module Map (63 sub-modules)
+
+| Module | Sub-modules | Frontend | Backend (T-code) | MCP |
+|--------|-------------|----------|-----------------|-----|
+| **Foundation** (7) | Home, Dashboard, Products, Inventory, Warehouse, Batch Numbers, Serial Numbers | 16 views | T0001I–T0009I, T0024I, T0064I, T0105I, T0106I | inventory, warehouse |
+| **Accounting** (7) | Chart of Accounts, Journal Entries, Invoices, Payments, Payment Terms, Payment Methods, Finance | 6 views | T0026I, T0027I, T0089I–T0091I, T0096I, T0097I | accounting |
+| **CRM** (3) | Customers, Leads, Opportunities | 4 views | T0010I, T0011I, T0092I–T0095I, T0103I | crm |
+| **Sales** (8) | Sales, Sales Orders, Quotations, Delivery, Sales Returns, Price Lists, Tax Rates, POS | 8 views | T0012I, T0013I, T0016I, T0017I, T0067I, T0068I, T0077I–T0080I, T0083I–T0086I | sales, pos |
+| **Procurement** (6) | Suppliers, Purchasing, Purchase Requisitions, RFQs, Goods Receipt, Purchase Returns | 6 views | T0014I, T0015I, T0069I–T0082I, T0103I | purchasing, warehouse |
+| **Administration** (10) | Admin, Module Manager, Settings, Notifications, Audit Log, Scheduled Tasks, Multi-Tenant, Workflow, Governance, Platform | 10 views | T0021I–T0023I, T0025I, T0059I–T0063I, T0098I–T0100I | admin, notifications |
+| **HR** (6) | HRMS, Attendance, Leave, Payroll, Recruitment, Timesheets | 9 views | T0028I–T0040I | hr |
+| **BI** (5) | BI Foundation, Executive Dashboards, Operational Analytics, Forecasting, AI & Insights | 5 views | T0052I–T0055I | bi |
+| **Manufacturing** (3) | Manufacturing, Quality, Shopfloor | 4 views | T0018I–T0020I, T0065I, T0066I | manufacturing |
+| **Planning** (2) | Planning, Resource Planning | 2 views | T0024I | — |
+| **Mobile** (2) | Mobile Foundation, Mobile POS | — | — | — |
+| **Integrations** (3) | E-commerce, Third-Party, API Platform | 3 views | T0056I–T0058I | — |
+| **Service & Projects** (5) | Service, Projects, Maintenance, Contracts & SLAs, Documents | 8 views | T0041I–T0050I, T0063I | projects, maintenance |
+
+**Total: 13 modules, 63 sub-modules, ~80 view files, ~90 T-code controllers, 15 MCP servers**
 
 ## MCP Server List
 
