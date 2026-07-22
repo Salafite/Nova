@@ -126,6 +126,7 @@ onMounted(load)
 .plan-features { list-style: none; padding: 0; margin: 0 0 24px; }
 .plan-features li { padding: 8px 0; font-size: 14px; color: #555; border-bottom: 1px solid #f0f0f0; }
 .plan-features li::before { content: '✓'; color: #16a34a; margin-right: 8px; font-weight: 700; }
+[dir="rtl"] .plan-features li::before { margin-right: 0; margin-left: 8px; }
 .plan-features li:last-child { border-bottom: none; }
 .plan-actions { text-align: center; }
 .btn-lg { padding: 12px 32px !important; font-size: 15px !important; width: 100%; justify-content: center; }

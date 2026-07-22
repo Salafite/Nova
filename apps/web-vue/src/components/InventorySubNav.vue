@@ -218,6 +218,7 @@ function go(item) {
 .inv-dropdown-item:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
 .inv-dropdown-item.active { background: var(--bg-primary-faded); color: var(--color-primary); font-weight: 600; }
 .inv-dropdown-item .material-symbols-outlined { font-size: 18px; }
+[dir="rtl"] .inv-dropdown-item { text-align: right; }
 
 .subnav-dropdown-enter-active, .subnav-dropdown-leave-active { transition: opacity 0.12s, transform 0.12s; }
 .subnav-dropdown-enter-from, .subnav-dropdown-leave-to { opacity: 0; transform: translateY(-4px); }

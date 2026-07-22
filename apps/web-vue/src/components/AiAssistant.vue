@@ -222,6 +222,8 @@ watch(() => store.streamContent, async () => {
   cursor: pointer; flex-shrink: 0;
 }
 .ai-send-btn:disabled { opacity: 0.4; cursor: default; }
+[dir="rtl"] .ai-wrapper { right: auto; left: 24px; }
+[dir="rtl"] .ai-panel { right: auto; left: 0; }
 
 .panel-enter-active, .panel-leave-active { transition: all 0.25s ease; }
 .panel-enter-from, .panel-leave-to { opacity: 0; transform: translateY(12px) scale(0.96); }

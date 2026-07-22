@@ -83,6 +83,19 @@ html.dark .btn-primary { color: #1a1a2e; }
 [dir="rtl"] .nav-item { border-left: none; border-right: 3px solid transparent; }
 [dir="rtl"] .nav-item.active { border-left-color: transparent; border-right-color: var(--color-primary); }
 
+[dir="rtl"] .modal-actions { flex-direction: row-reverse; }
+[dir="rtl"] .dialog-actions { flex-direction: row-reverse; }
+[dir="rtl"] .header-actions { flex-direction: row-reverse; }
+[dir="rtl"] .panel-footer { flex-direction: row-reverse; }
+
+[dir="rtl"] .form-row { direction: rtl; }
+
+[dir="rtl"] .checkbox-label { flex-direction: row-reverse; }
+
+[dir="rtl"] .form-group label,
+[dir="rtl"] .field-label,
+[dir="rtl"] .info-label { text-align: right; }
+
 .page-title { font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0; }
 .page-subtitle { font-size: 13px; color: var(--text-subtle); margin-top: 4px; }
 

@@ -113,6 +113,8 @@ const features = [
 .pricing-card ul { list-style: none; padding: 0; margin-bottom: 32px; text-align: left; }
 .pricing-card li { padding: 8px 0; font-size: 14px; color: #555; }
 .pricing-card li::before { content: '✓'; color: #16a34a; margin-right: 8px; font-weight: 700; }
+[dir="rtl"] .pricing-card ul { text-align: right; }
+[dir="rtl"] .pricing-card li::before { margin-right: 0; margin-left: 8px; }
 .landing-footer { text-align: center; padding: 32px; color: #999; font-size: 13px; border-top: 1px solid #eee; }
 .legal-links { margin-top: 8px; }
 .legal-links a { color: #999; text-decoration: none; }
