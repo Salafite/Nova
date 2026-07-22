@@ -125,7 +125,7 @@ let scanning = false
 
 function onDocumentKeydown(e) {
   if (checkingOut.value) return
-  if (e.target === barcodeInputRef.value) return
+  if (e.target === barcodeInputRef.value && !scanning) return
 
   const now = Date.now()
   const elapsed = now - lastKeyTime
@@ -156,7 +156,6 @@ function onDocumentKeydown(e) {
 
   if (!scanning) {
     scanning = true
-    barcodeInputRef.value?.focus()
     e.preventDefault()
     barcodeBuffer += e.key
   } else {

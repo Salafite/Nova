@@ -1,21 +1,39 @@
 <template>
-  <div class="inv-subnav" :dir="dir">
+  <div class="inv-subnav" :dir="dir" @mouseleave="openTab = null">
     <nav class="inv-tabs">
-      <button
+      <div
         v-for="tab in tabs"
         :key="tab.id"
-        :class="['inv-tab', { active: activeTab === tab.id }]"
-        @click="navigate(tab)"
+        class="inv-tab-wrap"
+        @mouseenter="openTab = tab.id"
       >
-        <span class="material-symbols-outlined inv-tab-icon">{{ tab.icon }}</span>
-        <span class="inv-tab-label">{{ isRTL && tab.label_ar ? tab.label_ar : tab.label }}</span>
-      </button>
+        <button
+          :class="['inv-tab', { active: activeTab === tab.id, open: openTab === tab.id }]"
+        >
+          <span class="material-symbols-outlined inv-tab-icon">{{ tab.icon }}</span>
+          <span class="inv-tab-label">{{ isRTL && tab.label_ar ? tab.label_ar : tab.label }}</span>
+          <span class="material-symbols-outlined inv-tab-arrow" v-if="tab.items.length">expand_more</span>
+        </button>
+        <Transition name="subnav-dropdown">
+          <div v-if="openTab === tab.id && tab.items.length" class="inv-dropdown">
+            <button
+              v-for="item in tab.items"
+              :key="item.route"
+              :class="['inv-dropdown-item', { active: route.name === item.route }]"
+              @click="go(item)"
+            >
+              <span class="material-symbols-outlined">{{ item.icon }}</span>
+              <span>{{ isRTL && item.label_ar ? item.label_ar : item.label }}</span>
+            </button>
+          </div>
+        </Transition>
+      </div>
     </nav>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n.js'
 
@@ -23,6 +41,8 @@ const route = useRoute()
 const router = useRouter()
 const { isRTL } = useI18n()
 const { dir } = useI18n()
+
+const openTab = ref(null)
 
 const INVENTORY_ROUTES = {
   'inventory-overview': 'overview',
@@ -48,18 +68,66 @@ const INVENTORY_ROUTES = {
 }
 
 const tabs = [
-  { id: 'overview', icon: 'grid_view', label: 'Overview', label_ar: 'نظرة عامة', route: 'inventory-overview' },
-  { id: 'products', icon: 'inventory_2', label: 'Products', label_ar: 'المنتجات', route: 'products' },
-  { id: 'stock', icon: 'warehouse', label: 'Stock', label_ar: 'المخزون', route: 'inventory' },
-  { id: 'warehouse', icon: 'factory', label: 'Warehouse', label_ar: 'المستودعات', route: 'warehouses' },
-  { id: 'reports', icon: 'bar_chart', label: 'Reports', label_ar: 'التقارير', route: 'inventory-reports' },
-  { id: 'configurations', icon: 'settings', label: 'Configurations', label_ar: 'الإعدادات', route: 'inventory-config' },
+  {
+    id: 'overview', icon: 'grid_view',
+    label: 'Overview', label_ar: 'نظرة عامة',
+    items: [
+      { label: 'Inventory Overview', label_ar: 'نظرة عامة على المخزون', icon: 'grid_view', route: 'inventory-overview' },
+    ],
+  },
+  {
+    id: 'products', icon: 'inventory_2',
+    label: 'Products', label_ar: 'المنتجات',
+    items: [
+      { label: 'Products', label_ar: 'المنتجات', icon: 'inventory_2', route: 'products' },
+      { label: 'Barcodes', label_ar: 'الباركود', icon: 'qr_code_scanner', route: 'barcodes' },
+      { label: 'Attributes', label_ar: 'الخصائص', icon: 'list_alt', route: 'attributes' },
+      { label: 'UOM', label_ar: 'وحدات القياس', icon: 'straighten', route: 'uom' },
+      { label: 'UOM Conversions', label_ar: 'تحويلات الوحدات', icon: 'swap_horiz', route: 'uom-conversions' },
+      { label: 'Categories', label_ar: 'التصنيفات', icon: 'category', route: 'categories' },
+    ],
+  },
+  {
+    id: 'stock', icon: 'warehouse',
+    label: 'Stock', label_ar: 'المخزون',
+    items: [
+      { label: 'Stock Levels', label_ar: 'مستويات المخزون', icon: 'warehouse', route: 'inventory' },
+      { label: 'Stock Movements', label_ar: 'حركات المخزون', icon: 'swap_vert', route: 'stock-movements' },
+      { label: 'Stock Adjustments', label_ar: 'تسوية المخزون', icon: 'swipe_up_alt', route: 'stock-adjustments' },
+      { label: 'Inventory Counts', label_ar: 'جرد المخزون', icon: 'fact_check', route: 'inventory-counts' },
+      { label: 'Batch Numbers', label_ar: 'أرقام الدفعات', icon: 'inventory_2', route: 'batch-numbers' },
+      { label: 'Serial Numbers', label_ar: 'الأرقام التسلسلية', icon: 'qr_code', route: 'serial-numbers' },
+    ],
+  },
+  {
+    id: 'warehouse', icon: 'factory',
+    label: 'Warehouse', label_ar: 'المستودعات',
+    items: [
+      { label: 'Warehouses', label_ar: 'المستودعات', icon: 'factory', route: 'warehouses' },
+      { label: 'Pick Lists', label_ar: 'قوائم التجهيز', icon: 'assignment', route: 'pick-lists' },
+    ],
+  },
+  {
+    id: 'reports', icon: 'bar_chart',
+    label: 'Reports', label_ar: 'التقارير',
+    items: [
+      { label: 'Inventory Reports', label_ar: 'تقارير المخزون', icon: 'bar_chart', route: 'inventory-reports' },
+    ],
+  },
+  {
+    id: 'configurations', icon: 'settings',
+    label: 'Configurations', label_ar: 'الإعدادات',
+    items: [
+      { label: 'Inventory Config', label_ar: 'إعدادات المخزون', icon: 'settings', route: 'inventory-config' },
+    ],
+  },
 ]
 
 const activeTab = computed(() => INVENTORY_ROUTES[route.name] || null)
 
-function navigate(tab) {
-  router.push({ name: tab.route })
+function go(item) {
+  openTab.value = null
+  router.push({ name: item.route })
 }
 </script>
 
@@ -72,18 +140,20 @@ function navigate(tab) {
   border-bottom: 1px solid var(--border-default);
   padding: 0 24px;
   flex-shrink: 0;
-  overflow: hidden;
+  position: relative;
+  z-index: 200;
 }
 .inv-tabs {
   display: flex;
   align-items: center;
   gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overflow: visible;
   width: 100%;
 }
-.inv-tabs::-webkit-scrollbar { display: none; }
+.inv-tab-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
 .inv-tab {
   display: inline-flex;
   align-items: center;
@@ -106,7 +176,51 @@ function navigate(tab) {
   color: var(--color-primary);
   font-weight: 600;
 }
+.inv-tab.open {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
 .inv-tab-icon { font-size: 18px; }
+.inv-tab-arrow { font-size: 16px; transition: transform 0.2s; }
+.inv-tab.open .inv-tab-arrow { transform: rotate(180deg); }
+
+.inv-dropdown {
+  position: absolute;
+  top: 100%;
+  inset-inline-start: 0;
+  min-width: 200px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 300;
+  margin-top: 4px;
+}
+.inv-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  font-family: inherit;
+  text-align: left;
+}
+.inv-dropdown-item:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
+.inv-dropdown-item.active { background: var(--bg-primary-faded); color: var(--color-primary); font-weight: 600; }
+.inv-dropdown-item .material-symbols-outlined { font-size: 18px; }
+
+.subnav-dropdown-enter-active, .subnav-dropdown-leave-active { transition: opacity 0.12s, transform 0.12s; }
+.subnav-dropdown-enter-from, .subnav-dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 
 @media (max-width: 767px) {
   .inv-subnav { padding: 0 12px; }
