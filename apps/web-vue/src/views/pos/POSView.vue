@@ -284,9 +284,6 @@ onMounted(() => {
   height: 100%;
   overflow: hidden;
   background: var(--bg-body);
-  border-radius: 0;
-  margin: -24px;
-  min-height: calc(100vh - 64px);
 }
 @media (max-width: 1200px) {
   .pos-cart { width: 320px; }
@@ -430,12 +427,18 @@ onMounted(() => {
 .product-grid {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 12px 20px 20px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 10px;
   align-content: start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
 }
+.product-grid::-webkit-scrollbar { width: 6px; }
+.product-grid::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+.product-grid::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
 .product-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
@@ -607,8 +610,14 @@ onMounted(() => {
 .cart-items {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
 }
+.cart-items::-webkit-scrollbar { width: 6px; }
+.cart-items::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+.cart-items::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
 .cart-items.checking-out { opacity: 0.5; pointer-events: none; }
 .cart-empty {
   text-align: center;
