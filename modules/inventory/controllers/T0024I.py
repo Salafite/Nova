@@ -26,14 +26,14 @@ def category_product_counts():
         release_connection(conn)
 
 @router.put('/rename')
-def rename_category(old_name: str, new_name: str):
-    if not old_name or not new_name:
-        raise HTTPException(400, 'Both old_name and new_name are required')
+def rename_category(old_name: str = '', new_name: str = ''):
+    if not old_name and not new_name:
+        raise HTTPException(400, 'Either old_name or new_name must be provided')
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute('UPDATE "Nova".t0003 SET category = %s WHERE category = %s', (new_name, old_name))
             conn.commit()
-            return {'renamed': cur.rowcount, 'from': old_name, 'to': new_name}
+            return {'renamed': cur.rowcount, 'from': old_name or '(empty)', 'to': new_name or '(empty)'}
     finally:
         release_connection(conn)
