@@ -595,5 +595,8 @@
   "pos-pay": "دفع",
   "pos-processing": "جاري المعالجة...",
   "pos-sale-completed": "تمت عملية البيع!",
-  "pos-checkout-failed": "فشلت عملية الدفع"
+  "pos-checkout-failed": "فشلت عملية الدفع",
+  "pos-barcode-placeholder": "مسح أو إدخال الباركود...",
+  "pos-barcode-not-found": "المنتج غير موجود",
+  "pos-scan-fallback": "إدخال الباركود"
 }

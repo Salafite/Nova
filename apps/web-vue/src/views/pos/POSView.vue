@@ -2,6 +2,13 @@
   <div class="pos-shell" :dir="dir">
     <div class="pos-grid">
       <div class="pos-toolbar">
+        <div class="barcode-row">
+          <span class="material-symbols-outlined">qr_code_scanner</span>
+          <input ref="barcodeInputRef" v-model="barcodeQuery" @keydown.enter.prevent="handleBarcodeSubmit" :placeholder="t('pos-barcode-placeholder', 'Scan or enter barcode...')" class="barcode-input" />
+          <button class="barcode-go" @click="handleBarcodeSubmit" :title="t('pos-scan-fallback', 'Enter barcode')">
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
         <div class="search-box">
           <span class="material-symbols-outlined">search</span>
           <input v-model="searchQuery" :placeholder="t('pos-search', 'Search products...')" />
@@ -98,8 +105,11 @@ const { show: toast } = useToast()
 const { dir, t } = useI18n()
 
 const products = ref([])
+const barcodeEntries = ref([])
 const cart = ref([])
 const searchQuery = ref('')
+const barcodeQuery = ref('')
+const barcodeInputRef = ref(null)
 const activeCategory = ref('')
 const customerName = ref('')
 const loading = ref(true)
@@ -141,8 +151,43 @@ const productMap = computed(() => {
   return map
 })
 
+const productMapBySku = computed(() => {
+  const map = {}
+  for (const p of products.value) {
+    if (p.sku) map[p.sku.toLowerCase()] = p
+  }
+  return map
+})
+
 function findProduct(id) {
   return productMap.value[id]
+}
+
+function lookupByBarcode(barcode) {
+  const normalized = barcode.trim().toLowerCase()
+  if (!normalized) return null
+  for (const b of barcodeEntries.value) {
+    if (b.barcode && b.barcode.toLowerCase() === normalized) {
+      const product = productMap.value[b.product_id]
+      if (product) return product
+    }
+  }
+  return productMapBySku.value[normalized] || null
+}
+
+function handleBarcodeSubmit() {
+  const q = barcodeQuery.value.trim()
+  if (!q) return
+  const product = lookupByBarcode(q)
+  if (product) {
+    addToCart(product)
+    barcodeQuery.value = ''
+    barcodeInputRef.value?.focus()
+    toast(`\u2713 ${product.name}`, 'success')
+  } else {
+    toast(t('pos-barcode-not-found', 'Product not found') + ': ' + q, 'error')
+    barcodeInputRef.value?.select()
+  }
 }
 
 function formatMoney(n) {
@@ -214,8 +259,12 @@ async function loadProducts() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/T0003I/')
-    products.value = res.data || []
+    const [prodRes, barcodeRes] = await Promise.all([
+      api.get('/T0003I/'),
+      api.get('/T0004I/'),
+    ])
+    products.value = prodRes.data || []
+    barcodeEntries.value = barcodeRes.data || []
   } catch (e) {
     error.value = e.response?.data?.detail || e.message || 'Failed to load products'
   } finally {
@@ -223,7 +272,10 @@ async function loadProducts() {
   }
 }
 
-onMounted(loadProducts)
+onMounted(() => {
+  loadProducts()
+  setTimeout(() => barcodeInputRef.value?.focus(), 300)
+})
 </script>
 
 <style scoped>
@@ -255,6 +307,58 @@ onMounted(loadProducts)
   gap: 10px;
   flex-shrink: 0;
 }
+.barcode-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 2px solid var(--color-primary);
+  border-radius: 10px;
+  padding: 0 6px 0 14px;
+  max-width: 400px;
+  transition: box-shadow 0.15s;
+}
+.barcode-row:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+.barcode-row .material-symbols-outlined {
+  font-size: 20px;
+  color: var(--color-primary);
+}
+.barcode-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  padding: 11px 0;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  background: transparent;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+.barcode-input::placeholder {
+  color: var(--text-subtle);
+  font-weight: 400;
+  letter-spacing: 0;
+  font-family: inherit;
+}
+.barcode-go {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.barcode-go:hover { background: var(--color-primary-hover); }
+.barcode-go .material-symbols-outlined { font-size: 18px; color: #fff; }
+[dir="rtl"] .barcode-row { padding: 0 14px 0 6px; }
 .search-box {
   display: flex;
   align-items: center;

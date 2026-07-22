@@ -555,5 +555,8 @@
   "pos-pay": "Pay",
   "pos-processing": "Processing...",
   "pos-sale-completed": "Sale completed!",
-  "pos-checkout-failed": "Checkout failed"
+  "pos-checkout-failed": "Checkout failed",
+  "pos-barcode-placeholder": "Scan or enter barcode...",
+  "pos-barcode-not-found": "Product not found",
+  "pos-scan-fallback": "Enter barcode"
 }
