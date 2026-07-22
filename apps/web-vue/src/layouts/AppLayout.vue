@@ -51,14 +51,34 @@
 
       <div v-if="sidebarMode === 'auto-hide' && !isGrid" class="auto-navbar">
         <nav class="auto-nav">
-          <a
-            v-for="item in navItems" :key="item.id"
-            :class="['auto-nav-item', { active: activeId === (item.module || item.id) }]"
-            href="#" @click.prevent="go(item)"
+          <div
+            v-for="section in navSections" :key="section.label"
+            class="auto-nav-section"
+            @mouseleave="activeSection = null"
           >
-            <span class="material-symbols-outlined">{{ item.icon }}</span>
-            <span class="auto-nav-label">{{ isRTL && item.label_ar ? item.label_ar : item.label }}</span>
-          </a>
+            <a
+              class="auto-nav-section-btn"
+              :class="{ active: activeSection === section.label }"
+              href="#"
+              @click.prevent="activeSection = activeSection === section.label ? null : section.label"
+            >
+              <span class="auto-nav-section-label">{{ isRTL && section.label_ar ? section.label_ar : section.label }}</span>
+              <span class="material-symbols-outlined auto-nav-arrow">expand_more</span>
+            </a>
+            <Transition name="dropdown">
+              <div v-if="activeSection === section.label" class="auto-nav-dropdown">
+                  <a
+                    v-for="item in section.items" :key="item.id"
+                    :class="['auto-nav-dropdown-item', { active: activeId === (item.module || item.id) }]"
+                    href="#"
+                    @click.prevent="activeSection = null; go(item)"
+                  >
+                  <span class="material-symbols-outlined">{{ item.icon }}</span>
+                  <span>{{ isRTL && item.label_ar ? item.label_ar : item.label }}</span>
+                </a>
+              </div>
+            </Transition>
+          </div>
         </nav>
       </div>
 
@@ -103,6 +123,21 @@ const sidebarCollapsed = ref(false)
 const sidebarOverlay = ref(false)
 const sidebarOpen = ref(true)
 const mobileSidebarOpen = ref(false)
+const activeSection = ref(null)
+
+const navSections = computed(() => {
+  const sections = []
+  let current = null
+  for (const item of navStore.items) {
+    if (item.section) {
+      current = { label: item.section, label_ar: item.section_ar || null, items: [] }
+      sections.push(current)
+    } else if (current && auth.hasPermission(item.permission)) {
+      current.items.push(item)
+    }
+  }
+  return sections
+})
 
 function toggleSidebar() {
   if (window.innerWidth < 768) {
@@ -205,7 +240,9 @@ watch(sidebarMode, (mode) => {
   border-bottom: 1px solid var(--border-default, rgba(255,255,255,0.08));
   padding: 0 16px;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 100;
 }
 .auto-nav {
   display: flex;
@@ -217,23 +254,64 @@ watch(sidebarMode, (mode) => {
   width: 100%;
 }
 .auto-nav::-webkit-scrollbar { display: none; }
-.auto-nav-item {
+.auto-nav-section {
+  position: relative;
+  flex-shrink: 0;
+}
+.auto-nav-section-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 6px 12px;
   border-radius: 6px;
   color: #aaa;
   text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+  white-space: nowrap;
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+.auto-nav-section-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.auto-nav-section-btn.active { background: rgba(93,63,211,0.2); color: #cabeff; }
+.auto-nav-arrow { font-size: 14px; transition: transform 0.2s; }
+.auto-nav-section-btn.active .auto-nav-arrow { transform: rotate(180deg); }
+
+.auto-nav-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: var(--color-sidebar-bg, #1a1a2e);
+  border: 1px solid var(--border-default, rgba(255,255,255,0.08));
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 200;
+}
+.auto-nav-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #bbb;
+  text-decoration: none;
   font-size: 13px;
   transition: all 0.15s;
   white-space: nowrap;
-  flex-shrink: 0;
 }
-.auto-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
-.auto-nav-item.active { background: rgba(93,63,211,0.2); color: #cabeff; }
-.auto-nav-item .material-symbols-outlined { font-size: 16px; }
-.auto-nav-label { font-size: 12px; font-weight: 500; }
+.auto-nav-dropdown-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.auto-nav-dropdown-item.active { background: rgba(93,63,211,0.2); color: #cabeff; }
+.auto-nav-dropdown-item .material-symbols-outlined { font-size: 16px; }
+
+.dropdown-enter-active, .dropdown-leave-active { transition: opacity 0.15s, transform 0.15s; }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
 
 .grid-topbar {
   display: flex;
