@@ -139,6 +139,7 @@ function onDocumentKeydown(e) {
     barcodeBuffer = ''
     scanning = false
     lastKeyTime = 0
+    clearTimeout(scannerClearTimer)
     return
   }
 
@@ -146,22 +147,22 @@ function onDocumentKeydown(e) {
     barcodeBuffer = ''
     scanning = false
     lastKeyTime = 0
+    clearTimeout(scannerClearTimer)
     return
   }
 
   if (!lastKeyTime) {
     barcodeBuffer = e.key
-    lastKeyTime = now
-    return
+  } else {
+    barcodeBuffer += e.key
   }
-
-  barcodeBuffer += e.key
-  lastKeyTime = now
 
   if (elapsed < SCANNER_THRESHOLD) {
     if (!scanning) scanning = true
     e.preventDefault()
   }
+
+  lastKeyTime = now
 
   clearTimeout(scannerClearTimer)
   scannerClearTimer = setTimeout(() => {
