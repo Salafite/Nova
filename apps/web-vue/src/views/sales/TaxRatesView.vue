@@ -205,5 +205,4 @@ textarea.form-input { resize: vertical; }
 .checkbox-label input { width: 16px; height: 16px; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }
-[dir="rtl"] .modal-header { flex-direction: row-reverse; }
 </style>

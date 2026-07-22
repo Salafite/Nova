@@ -278,5 +278,4 @@ onMounted(load)
 
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }
-[dir="rtl"] .modal-header { flex-direction: row-reverse; }
 </style>

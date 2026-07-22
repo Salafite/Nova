@@ -385,6 +385,5 @@ select.form-input { appearance: auto; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }
 [dir="rtl"] .col-num { text-align: left; }
-[dir="rtl"] .modal-header { flex-direction: row-reverse; }
 [dir="rtl"] .bom-lines-header { flex-direction: row-reverse; }
 </style>

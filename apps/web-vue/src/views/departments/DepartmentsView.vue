@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6">
       <div>
@@ -212,5 +212,4 @@ select.form-input { appearance: auto; }
 .checkbox-label input { width: 16px; height: 16px; accent-color: #5d3fd3; }
 [dir="rtl"] .data-table th { text-align: right; }
 [dir="rtl"] .data-table td { text-align: right; }
-[dir="rtl"] .modal-header { flex-direction: row-reverse; }
 </style>
