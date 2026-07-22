@@ -51,8 +51,6 @@ const INVENTORY_ROUTES = {
   categories: 'products',
   barcodes: 'products',
   attributes: 'products',
-  uom: 'products',
-  'uom-conversions': 'products',
   inventory: 'stock',
   'inventory-counts': 'stock',
   'stock-movements': 'stock',
@@ -65,6 +63,8 @@ const INVENTORY_ROUTES = {
   'goods-receipt': 'warehouse',
   'inventory-reports': 'reports',
   'inventory-config': 'configurations',
+  uom: 'configurations',
+  'uom-conversions': 'configurations',
 }
 
 const tabs = [
@@ -82,8 +82,6 @@ const tabs = [
       { label: 'Products', label_ar: 'المنتجات', icon: 'inventory_2', route: 'products' },
       { label: 'Barcodes', label_ar: 'الباركود', icon: 'qr_code_scanner', route: 'barcodes' },
       { label: 'Attributes', label_ar: 'الخصائص', icon: 'list_alt', route: 'attributes' },
-      { label: 'UOM', label_ar: 'وحدات القياس', icon: 'straighten', route: 'uom' },
-      { label: 'UOM Conversions', label_ar: 'تحويلات الوحدات', icon: 'swap_horiz', route: 'uom-conversions' },
       { label: 'Categories', label_ar: 'التصنيفات', icon: 'category', route: 'categories' },
     ],
   },
@@ -119,6 +117,8 @@ const tabs = [
     label: 'Configurations', label_ar: 'الإعدادات',
     items: [
       { label: 'Inventory Config', label_ar: 'إعدادات المخزون', icon: 'settings', route: 'inventory-config' },
+      { label: 'UOM', label_ar: 'وحدات القياس', icon: 'straighten', route: 'uom' },
+      { label: 'UOM Conversions', label_ar: 'تحويلات الوحدات', icon: 'swap_horiz', route: 'uom-conversions' },
     ],
   },
 ]
