@@ -1,6 +1,6 @@
 <template>
   <header class="topbar">
-    <button class="menu-btn" @click="handleMenuClick" aria-label="Toggle sidebar">
+    <button v-if="sidebarMode !== 'auto-hide'" class="menu-btn" @click="handleMenuClick" aria-label="Toggle sidebar">
       <span class="material-symbols-outlined">{{ sidebarOverlay ? 'menu' : 'menu_open' }}</span>
     </button>
     <button v-if="sidebarMode === 'auto-hide'" class="brand-btn" @click="openAppSwitcher" aria-label="Open apps">
