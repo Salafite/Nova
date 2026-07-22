@@ -1,12 +1,11 @@
 <template>
   <header class="topbar">
-    <button v-if="sidebarMode === 'auto-hide'" class="brand-btn" @click="menuOpen = !menuOpen" aria-label="Open menu">
+    <button class="menu-btn" @click="handleMenuClick" aria-label="Toggle sidebar">
+      <span class="material-symbols-outlined">{{ sidebarOverlay ? 'menu' : 'menu_open' }}</span>
+    </button>
+    <button v-if="sidebarMode === 'auto-hide'" class="brand-btn" @click="openAppSwitcher" aria-label="Open apps">
       <span class="material-symbols-outlined">diamond</span>
       <span class="brand-text">Nova ERP</span>
-      <span class="material-symbols-outlined brand-chevron">{{ menuOpen ? 'expand_less' : 'expand_more' }}</span>
-    </button>
-    <button v-else class="menu-btn" @click="$emit('toggle')" aria-label="Toggle sidebar">
-      <span class="material-symbols-outlined">{{ sidebarOverlay ? 'menu' : 'menu_open' }}</span>
     </button>
     <h2 class="page-title">{{ title }}</h2>
     <div class="spacer"></div>
@@ -21,28 +20,33 @@
     </button>
     <span class="user-role">{{ auth.role }}</span>
     <button class="logout-btn" @click="logout" aria-label="Log out">{{ t('logout') }}</button>
-
-    <Transition name="dropdown">
-      <div v-if="sidebarMode === 'auto-hide' && menuOpen" class="menu-dropdown" @click.self="menuOpen = false">
-        <div class="menu-dropdown-inner">
-          <template v-for="item in navStore.items" :key="item.id || item.section">
-            <div v-if="item.section" class="menu-section">
-              {{ isRTL && item.section_ar ? item.section_ar : item.section }}
-            </div>
-            <a
-              v-else-if="auth.hasPermission(item.permission)"
-              :class="['menu-item', { active: activeId === (item.module || item.id) }]"
-              href="#"
-              @click.prevent="navigate(item)"
-            >
-              <span class="material-symbols-outlined menu-item-icon">{{ item.icon }}</span>
-              <span class="menu-item-label">{{ isRTL && item.label_ar ? item.label_ar : item.label }}</span>
-            </a>
-          </template>
-        </div>
-      </div>
-    </Transition>
   </header>
+
+  <Transition name="switcher">
+    <div v-if="switcherOpen" class="switcher-overlay" @click.self="switcherOpen = false">
+      <div class="switcher-header">
+        <span class="material-symbols-outlined switcher-logo">diamond</span>
+        <span class="switcher-title">Nova ERP</span>
+        <button class="switcher-close" @click="switcherOpen = false">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="switcher-grid">
+        <template v-for="item in navStore.items" :key="item.id || item.section">
+          <div v-if="item.section" class="switcher-section">{{ isRTL && item.section_ar ? item.section_ar : item.section }}</div>
+          <a
+            v-else-if="auth.hasPermission(item.permission)"
+            :class="['switcher-card', { active: activeId === (item.module || item.id) }]"
+            href="#"
+            @click.prevent="go(item)"
+          >
+            <span class="switcher-card-icon material-symbols-outlined">{{ item.icon }}</span>
+            <span class="switcher-card-label">{{ isRTL && item.label_ar ? item.label_ar : item.label }}</span>
+          </a>
+        </template>
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <script setup>
@@ -55,12 +59,12 @@ import { useTheme } from '../composables/useTheme.js'
 import { usePreferences } from '../composables/usePreferences.js'
 import LocaleSwitcher from './LocaleSwitcher.vue'
 
-defineProps({
+const props = defineProps({
   title: { type: String, default: '' },
   sidebarOverlay: { type: Boolean, default: false },
   sidebarMode: { type: String, default: 'expanded' }
 })
-defineEmits(['toggle'])
+const emit = defineEmits(['toggle'])
 
 const { t, isRTL } = useI18n()
 const theme = useTheme()
@@ -70,9 +74,20 @@ const auth = useAuthStore()
 const navStore = useNavStore()
 const prefs = usePreferences()
 
-const menuOpen = ref(false)
-
+const switcherOpen = ref(false)
 const activeId = computed(() => route.name)
+
+function handleMenuClick() {
+  if (props.sidebarMode === 'auto-hide') {
+    switcherOpen.value = !switcherOpen.value
+  } else {
+    emit('toggle')
+  }
+}
+
+function openAppSwitcher() {
+  switcherOpen.value = true
+}
 
 function toggleTheme() {
   theme.toggle()
@@ -81,8 +96,8 @@ function toggleTheme() {
   prefs.save()
 }
 
-function navigate(item) {
-  menuOpen.value = false
+function go(item) {
+  switcherOpen.value = false
   router.push({ name: item.module || item.id })
 }
 
@@ -135,7 +150,6 @@ function logout() {
 .brand-btn:hover { background: var(--bg-surface-hover); }
 .brand-btn .material-symbols-outlined { font-size: 22px; color: var(--color-primary); }
 .brand-text { white-space: nowrap; }
-.brand-chevron { font-size: 16px !important; color: var(--text-faint) !important; }
 
 .page-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
 .spacer { flex: 1; }
@@ -169,57 +183,80 @@ function logout() {
 }
 .logout-btn:hover { background: #ba1a1a; color: #fff; }
 
-.menu-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 280px;
-  max-height: calc(100vh - 56px);
+.switcher-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px;
   overflow-y: auto;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  z-index: 2000;
+  backdrop-filter: blur(4px);
 }
-.menu-dropdown-inner { padding: 8px; }
-.menu-section {
-  padding: 10px 12px 4px;
+.switcher-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  color: #fff;
+}
+.switcher-logo { font-size: 32px; color: var(--color-primary); }
+.switcher-title { font-size: 22px; font-weight: 700; }
+.switcher-close {
+  margin-inline-start: 24px;
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 24px;
+  border-radius: 8px;
+  padding: 4px;
+}
+.switcher-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.switcher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  max-width: 720px;
+  width: 100%;
+}
+.switcher-section {
+  grid-column: 1 / -1;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--text-faint);
+  color: rgba(255,255,255,0.35);
+  padding: 16px 0 4px;
 }
-.menu-item {
+.switcher-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  color: var(--text-primary);
+  gap: 8px;
+  padding: 20px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  color: #ddd;
   text-decoration: none;
-  font-size: 13px;
   cursor: pointer;
-  transition: background 0.12s;
-  border-inline-start: 3px solid transparent;
+  transition: all 0.15s;
 }
-.menu-item:hover { background: var(--bg-surface-hover); }
-.menu-item.active {
-  background: var(--bg-primary-faded);
-  color: var(--color-primary);
-  border-inline-start-color: var(--color-primary);
-  font-weight: 600;
-}
-.menu-item-icon { font-size: 18px; flex-shrink: 0; }
-.menu-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.switcher-card:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.switcher-card.active { background: rgba(93,63,211,0.3); color: #cabeff; }
+.switcher-card-icon { font-size: 32px; }
+.switcher-card-label { font-size: 12px; font-weight: 500; text-align: center; }
 
-.dropdown-enter-active, .dropdown-leave-active { transition: opacity 0.15s, transform 0.15s; }
-.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-4px); }
+.switcher-enter-active, .switcher-leave-active { transition: opacity 0.2s; }
+.switcher-enter-from, .switcher-leave-to { opacity: 0; }
 
 @media (max-width: 767px) {
   .topbar { padding: 0 12px; gap: 10px; }
   .brand-text { display: none; }
-  .menu-dropdown { width: 100%; }
+  .switcher-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .switcher-card { padding: 16px 8px; }
+  .switcher-card-icon { font-size: 28px; }
 }
 </style>
