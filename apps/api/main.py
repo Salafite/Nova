@@ -41,6 +41,7 @@ from packages.mcp.servers.manufacturing_mcp import register_tools as register_ma
 from packages.mcp.servers.maintenance_mcp import register_tools as register_maintenance_mcp
 from packages.mcp.servers.notifications_mcp import register_tools as register_notifications_mcp
 from packages.mcp.servers.pos_mcp import register_tools as register_pos_mcp
+from modules.administration.controllers.user_preferences import router as user_preferences_router
 
 app = FastAPI(title="Nova ERP API", version="1.0")
 init_sentry()
@@ -68,6 +69,7 @@ app.include_router(ws_router)
 app.include_router(billing_router)
 app.include_router(bi_dashboard_router)
 app.include_router(ai_router)
+app.include_router(user_preferences_router)
 
 mcp_server = McpServer(name="NovaERP", version="1.0")
 register_database_mcp()

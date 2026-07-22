@@ -74,6 +74,8 @@ import LocaleSwitcher from '../components/LocaleSwitcher.vue'
 import AiAssistant from '../components/AiAssistant.vue'
 import { useNavStore } from '../stores/nav.js'
 import { useAuthStore } from '../stores/auth.js'
+import { usePreferences } from '../composables/usePreferences.js'
+import { useTheme } from '../composables/useTheme.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -142,7 +144,17 @@ function logout() {
   router.push('/login')
 }
 
-onMounted(() => { navStore.load() })
+onMounted(() => {
+  navStore.load()
+  const p = usePreferences()
+  p.initialize().then(() => {
+    const mode = p.get('SIDEBAR_MODE')
+    if (mode === 'overlay') {
+      sidebarOverlay.value = true
+      sidebarOpen.value = false
+    }
+  })
+})
 </script>
 
 <style scoped>

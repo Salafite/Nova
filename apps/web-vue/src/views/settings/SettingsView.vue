@@ -26,8 +26,37 @@
       </div>
     </header>
 
-    <SkeletonCard v-if="store.loading" variant="form" />
+    <SkeletonCard v-if="store.loading && !prefs.loaded.value" variant="form" />
     <ErrorState v-else-if="store.error" :message="store.error" @retry="store.load" />
+
+    <!-- Layout Preferences (per-user, persisted to backend) -->
+    <section v-if="prefs.loaded.value" class="pref-group">
+      <div class="pref-group-header">
+        <span class="material-symbols-outlined sv-group-icon">grid_view</span>
+        <h2 class="sv-group-title">Layout</h2>
+        <span class="sv-group-count">4</span>
+      </div>
+      <div class="sv-group-body pref-group-body">
+        <div v-for="ctrl in layoutControls" :key="ctrl.key" class="pref-row">
+          <div class="sv-info">
+            <span class="sv-label">{{ ctrl.label }}</span>
+            <span class="sv-key">{{ ctrl.key }}</span>
+          </div>
+          <div class="sv-control">
+            <div class="sv-options">
+              <button
+                v-for="opt in ctrl.options"
+                :key="opt"
+                :class="['sv-opt-btn', { active: prefs.preferences[ctrl.key] === opt }]"
+                @click="setLayoutPref(ctrl.key, opt)"
+              >
+                {{ optionLabel(opt) }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div v-else-if="!store.filteredGroups.length" class="sv-empty">
       <span class="material-symbols-outlined sv-empty-icon">search_off</span>
@@ -153,6 +182,7 @@ import { useNavStore } from '../../stores/nav.js'
 import { useToast } from '../../composables/useToast.js'
 import { useSettingsUI } from '../../composables/useSettingsUI.js'
 import { useI18n } from '../../composables/useI18n.js'
+import { usePreferences } from '../../composables/usePreferences.js'
 import SkeletonCard from '../../components/SkeletonCard.vue'
 import ErrorState from '../../components/ErrorState.vue'
 
@@ -161,9 +191,33 @@ const navStore = useNavStore()
 const { show: toast } = useToast()
 const { t, dir } = useI18n()
 const { isToggle, isOption, getOptions, groupIcon } = useSettingsUI()
+const prefs = usePreferences()
 
 const activeGroup = ref('')
 const viewReady = ref(false)
+
+const layoutControls = computed(() => [
+  { key: 'THEME', label: 'Theme', options: ['light', 'dark'] },
+  { key: 'ACCENT_COLOR', label: 'Accent Color', options: ['blue', 'purple', 'green', 'amber', 'red'] },
+  { key: 'FONT_FAMILY', label: 'Font', options: ['inter', 'roboto', 'open-sans', 'system'] },
+  { key: 'SIDEBAR_MODE', label: 'Sidebar Mode', options: ['expanded', 'overlay'] },
+])
+
+function setLayoutPref(key, value) {
+  prefs.set(key, value)
+  scheduleAutoSaveLayout()
+}
+
+let layoutAutoSaveTimer = null
+
+function scheduleAutoSaveLayout() {
+  if (layoutAutoSaveTimer) clearTimeout(layoutAutoSaveTimer)
+  layoutAutoSaveTimer = setTimeout(() => {
+    layoutAutoSaveTimer = null
+    prefs.save()
+    toast(t('settings-saved'), 'success')
+  }, 1500)
+}
 
 const activeGroupData = computed(() => {
   return store.filteredGroups.find(g => g.group === activeGroup.value) || null
@@ -257,6 +311,7 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
   if (autoSaveTimer) clearTimeout(autoSaveTimer)
+  if (layoutAutoSaveTimer) clearTimeout(layoutAutoSaveTimer)
 })
 </script>
 
@@ -666,6 +721,34 @@ onUnmounted(() => {
   display: block;
 }
 .sv-empty p { font-size: 14px; }
+
+/* ── Layout Preferences ── */
+.pref-group {
+  background: var(--bg-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.pref-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--bg-primary-faded);
+  border-bottom: 1px solid var(--border-light);
+}
+.pref-group-body {
+  padding: 2px 0;
+}
+.pref-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-light);
+}
+.pref-row:last-child { border-bottom: none; }
 
 /* ── RTL ── */
 [dir="rtl"] .sv-nav { order: 1; }

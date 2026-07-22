@@ -8,7 +8,7 @@
     <LocaleSwitcher />
     <button
       class="theme-btn"
-      @click="theme.toggle"
+      @click="toggleTheme"
       :aria-label="theme.dark ? 'Light mode' : 'Dark mode'"
       :title="theme.dark ? 'Light mode' : 'Dark mode'"
     >
@@ -24,6 +24,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { useI18n } from '../composables/useI18n.js'
 import { useTheme } from '../composables/useTheme.js'
+import { usePreferences } from '../composables/usePreferences.js'
 import LocaleSwitcher from './LocaleSwitcher.vue'
 
 defineProps({
@@ -36,6 +37,14 @@ const { t } = useI18n()
 const theme = useTheme()
 const router = useRouter()
 const auth = useAuthStore()
+const prefs = usePreferences()
+
+function toggleTheme() {
+  theme.toggle()
+  const newVal = theme.dark.value ? 'dark' : 'light'
+  prefs.set('THEME', newVal)
+  prefs.save()
+}
 
 function logout() {
   auth.logout()
