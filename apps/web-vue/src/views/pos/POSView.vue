@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { api } from '../../api/client.js'
 import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
@@ -116,6 +116,77 @@ const loading = ref(true)
 const error = ref('')
 const checkingOut = ref(false)
 const totalPop = ref(false)
+
+const SCANNER_THRESHOLD = 50
+let barcodeBuffer = ''
+let lastKeyTime = 0
+let scannerClearTimer = null
+let scanning = false
+
+function onDocumentKeydown(e) {
+  if (checkingOut.value) return
+  if (e.target === barcodeInputRef.value) return
+
+  const now = Date.now()
+  const elapsed = now - lastKeyTime
+
+  if (e.key === 'Enter') {
+    if (barcodeBuffer.length >= 3) {
+      e.preventDefault()
+      processBarcodeBuffer()
+      return
+    }
+    barcodeBuffer = ''
+    scanning = false
+    return
+  }
+
+  if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) {
+    barcodeBuffer = ''
+    scanning = false
+    return
+  }
+
+  if (!lastKeyTime || elapsed >= SCANNER_THRESHOLD) {
+    barcodeBuffer = e.key
+    lastKeyTime = now
+    scanning = false
+    return
+  }
+
+  if (!scanning) {
+    scanning = true
+    barcodeInputRef.value?.focus()
+    e.preventDefault()
+    barcodeBuffer += e.key
+  } else {
+    e.preventDefault()
+    barcodeBuffer += e.key
+  }
+
+  lastKeyTime = now
+  clearTimeout(scannerClearTimer)
+  scannerClearTimer = setTimeout(() => {
+    barcodeBuffer = ''
+    lastKeyTime = 0
+    scanning = false
+  }, 300)
+}
+
+function processBarcodeBuffer() {
+  const code = barcodeBuffer
+  barcodeBuffer = ''
+  lastKeyTime = 0
+  scanning = false
+  if (!code || code.length < 3) return
+  const product = lookupByBarcode(code)
+  if (product) {
+    addToCart(product)
+    toast(`\u2713 ${product.name}`, 'success')
+  } else {
+    toast(t('pos-barcode-not-found', 'Product not found') + ': ' + code, 'error')
+  }
+}
 
 const categories = computed(() => {
   const cats = new Set(products.value.map(p => p.category).filter(Boolean))
@@ -275,6 +346,11 @@ async function loadProducts() {
 onMounted(() => {
   loadProducts()
   setTimeout(() => barcodeInputRef.value?.focus(), 300)
+  document.addEventListener('keydown', onDocumentKeydown)
+})
+onUnmounted(() => {
+  document.removeEventListener('keydown', onDocumentKeydown)
+  clearTimeout(scannerClearTimer)
 })
 </script>
 
