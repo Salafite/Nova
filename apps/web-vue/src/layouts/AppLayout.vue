@@ -82,6 +82,8 @@
         </nav>
       </div>
 
+      <InventorySubNav v-if="isInventoryRoute" />
+
       <div class="content" :class="contentClasses">
         <router-view />
       </div>
@@ -104,6 +106,7 @@ import { useToast } from '../composables/useToast.js'
 import { useI18n } from '../composables/useI18n.js'
 import AppSidebar from '../components/AppSidebar.vue'
 import AppTopBar from '../components/AppTopBar.vue'
+import InventorySubNav from '../components/InventorySubNav.vue'
 import LocaleSwitcher from '../components/LocaleSwitcher.vue'
 import AiAssistant from '../components/AiAssistant.vue'
 import { useNavStore } from '../stores/nav.js'
@@ -164,7 +167,15 @@ function switchSidebarMode() {
   }
 }
 
+const inventoryRouteNames = new Set([
+  'inventory-overview', 'products', 'product-detail', 'categories', 'barcodes', 'attributes',
+  'uom', 'uom-conversions', 'inventory', 'inventory-counts', 'stock-movements',
+  'stock-adjustments', 'batch-numbers', 'serial-numbers', 'warehouses', 'pick-lists',
+  'pick-list-detail', 'goods-receipt', 'inventory-reports', 'inventory-config',
+])
+
 const isGrid = computed(() => navStore.navStyle === 'grid')
+const isInventoryRoute = computed(() => inventoryRouteNames.has(route.name))
 const contentClasses = computed(() => ({
   'content-wide': isGrid.value,
   'content-pos': route.name === 'pos',
