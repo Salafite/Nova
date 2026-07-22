@@ -135,7 +135,7 @@
                               :key="opt"
                               :class="['au-opt-btn', { active: expandedPrefs.THEME === opt }]"
                               @click="expandedPrefs.THEME = opt"
-                            >{{ opt }}</button>
+                            >{{ optionLabel(opt) }}</button>
                           </div>
                         </div>
                       </div>
@@ -148,7 +148,7 @@
                               :key="opt"
                               :class="['au-opt-btn', { active: expandedPrefs.ACCENT_COLOR === opt }]"
                               @click="expandedPrefs.ACCENT_COLOR = opt"
-                            >{{ opt }}</button>
+                            >{{ optionLabel(opt) }}</button>
                           </div>
                         </div>
                       </div>
@@ -161,7 +161,7 @@
                               :key="opt"
                               :class="['au-opt-btn', { active: expandedPrefs.FONT_FAMILY === opt }]"
                               @click="expandedPrefs.FONT_FAMILY = opt"
-                            >{{ opt }}</button>
+                            >{{ optionLabel(opt) }}</button>
                           </div>
                         </div>
                       </div>
@@ -174,7 +174,7 @@
                               :key="opt"
                               :class="['au-opt-btn', { active: expandedPrefs.SIDEBAR_MODE === opt }]"
                               @click="expandedPrefs.SIDEBAR_MODE = opt"
-                            >{{ opt }}</button>
+                            >{{ optionLabel(opt) }}</button>
                           </div>
                         </div>
                       </div>
@@ -421,6 +421,13 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString()
 }
 
+function optionLabel(opt) {
+  const key = `settings.option.${opt}`
+  const label = t(key)
+  if (label !== key) return label
+  return opt.split(/[-_\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -473,9 +480,13 @@ async function toggleExpand(item) {
 async function savePrefs() {
   if (!expandedId.value) return
   prefSaving.value = true
+  const lowerPrefs = {}
+  for (const [k, v] of Object.entries(expandedPrefs.value)) {
+    lowerPrefs[k] = String(v).toLowerCase()
+  }
   try {
     await api.put(`/admin/users/${expandedId.value}/preferences`, {
-      preferences: { ...expandedPrefs.value },
+      preferences: lowerPrefs,
     })
     prefOriginal.value = { ...expandedPrefs.value }
     toast(t('pref-saved'), 'success')

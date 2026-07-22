@@ -104,7 +104,7 @@ export function usePreferences() {
   }
 
   function set(key, value) {
-    preferences[key] = value
+    preferences[key] = String(value).toLowerCase()
     if (key === 'THEME') applyTheme()
     if (key === 'ACCENT_COLOR') applyAccent()
     if (key === 'FONT_FAMILY') applyFont()

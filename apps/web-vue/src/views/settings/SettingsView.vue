@@ -231,11 +231,15 @@ watch(() => store.searchQuery, () => {
   }
 })
 
+function capitalizeLabel(str) {
+  return str.split(/[-_\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 function optionLabel(opt) {
   const key = `settings.option.${opt}`
   const label = t(key)
   if (label !== key) return label
-  return opt
+  return capitalizeLabel(opt)
 }
 
 function selectGroup(groupName) {
