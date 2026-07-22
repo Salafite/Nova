@@ -4,15 +4,19 @@
       <div class="pos-toolbar">
         <div class="search-box">
           <span class="material-symbols-outlined">search</span>
-          <input v-model="searchQuery" placeholder="Search products, SKUs..." />
+          <input v-model="searchQuery" :placeholder="t('pos-search', 'Search products...')" />
         </div>
         <div class="category-pills" v-if="categories.length">
-          <button :class="['pill', { active: !activeCategory }]" @click="activeCategory = ''">All</button>
-          <button v-for="cat in categories" :key="cat" :class="['pill', { active: activeCategory === cat }]" @click="activeCategory = cat">{{ cat }}</button>
+          <button :class="['pill', { active: !activeCategory }]" @click="activeCategory = ''">
+            {{ t('pos-all', 'All') }}
+          </button>
+          <button v-for="cat in categories" :key="cat" :class="['pill', { active: activeCategory === cat }]" @click="activeCategory = cat">
+            {{ cat }}
+          </button>
         </div>
       </div>
       <div class="product-grid">
-        <div v-if="loading" class="grid-feedback">Loading products…</div>
+        <div v-if="loading" class="grid-feedback">{{ t('pos-loading', 'Loading products...') }}</div>
         <div v-else-if="error" class="grid-feedback error">{{ error }}</div>
         <template v-else>
           <div v-for="p in filteredProducts" :key="p.id" class="product-card" @click="addToCart(p)">
@@ -28,28 +32,25 @@
               <span class="material-symbols-outlined">add</span>
             </button>
           </div>
-          <div v-if="!filteredProducts.length" class="grid-feedback empty">No products found</div>
+          <div v-if="!filteredProducts.length" class="grid-feedback empty">{{ t('pos-no-products', 'No products found') }}</div>
         </template>
       </div>
     </div>
-
     <div class="pos-cart">
       <div class="cart-header">
         <div class="cart-header-left">
           <span class="material-symbols-outlined">shopping_basket</span>
-          <span class="cart-header-title">Cart</span>
+          <span class="cart-header-title">{{ t('pos-cart', 'Cart') }}</span>
           <span class="cart-badge">{{ cart.length }}</span>
         </div>
-        <button class="cart-clear" @click="clearCart">Clear</button>
+        <button class="cart-clear" @click="clearCart">{{ t('pos-clear', 'Clear') }}</button>
       </div>
-
       <div class="cart-customer" v-if="!checkingOut">
         <span class="material-symbols-outlined">person</span>
-        <input v-model="customerName" placeholder="Walk-in Customer" class="customer-input" />
+        <input v-model="customerName" :placeholder="t('pos-walkin', 'Walk-in Customer')" class="customer-input" />
       </div>
-
       <div class="cart-items" :class="{ 'checking-out': checkingOut }">
-        <div v-if="!cart.length" class="cart-empty">Cart is empty</div>
+        <div v-if="!cart.length" class="cart-empty">{{ t('pos-empty', 'Cart is empty') }}</div>
         <div v-for="(item, idx) in cart" :key="item.productId" class="cart-item">
           <div class="cart-item-row">
             <span class="item-qty">{{ pad(item.qty, 2) }} ×</span>
@@ -63,24 +64,23 @@
           </div>
         </div>
       </div>
-
       <div class="cart-footer">
         <div class="total-line">
-          <span class="total-label">Subtotal</span>
+          <span class="total-label">{{ t('pos-subtotal', 'Subtotal') }}</span>
           <span class="mono-amount">{{ formatMoney(subtotal) }}</span>
         </div>
         <div class="total-line">
-          <span class="total-label">Tax (5%)</span>
+          <span class="total-label">{{ t('pos-tax', 'Tax') }} (5%)</span>
           <span class="mono-amount">{{ formatMoney(tax) }}</span>
         </div>
         <div class="total-line grand">
-          <span class="total-label">Total</span>
+          <span class="total-label">{{ t('pos-total', 'Total') }}</span>
           <span class="grand-amount" :class="{ pop: totalPop }">{{ formatMoney(grandTotal) }}</span>
         </div>
         <div class="cart-actions">
-          <button class="action-hold" :disabled="checkingOut">Hold</button>
+          <button class="action-hold" :disabled="checkingOut">{{ t('pos-hold', 'Hold') }}</button>
           <button class="action-pay" :disabled="!cart.length || checkingOut" @click="checkout">
-            {{ checkingOut ? 'Processing…' : 'Pay ' + formatMoney(grandTotal) }}
+            {{ checkingOut ? t('pos-processing', 'Processing...') : t('pos-pay', 'Pay') + ' ' + formatMoney(grandTotal) }}
           </button>
         </div>
       </div>
@@ -95,7 +95,7 @@ import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
 
 const { show: toast } = useToast()
-const { dir } = useI18n()
+const { dir, t } = useI18n()
 
 const products = ref([])
 const cart = ref([])
@@ -195,15 +195,15 @@ async function checkout() {
         qty: i.qty,
         unit_price: i.price,
       })),
-      customer_name: customerName.value || 'Walk-in Customer',
+      customer_name: customerName.value || t('pos-walkin', 'Walk-in Customer'),
     }
     const res = await api.post('/pos/checkout', payload)
     const data = res.data
-    toast(data.message || 'Sale completed!', 'success')
+    toast(data.message || t('pos-sale-completed', 'Sale completed!'), 'success')
     cart.value = []
     customerName.value = ''
   } catch (e) {
-    const detail = e.response?.data?.detail || e.message || 'Checkout failed'
+    const detail = e.response?.data?.detail || e.message || t('pos-checkout-failed', 'Checkout failed')
     toast(detail, 'error')
   } finally {
     checkingOut.value = false
@@ -226,17 +226,12 @@ async function loadProducts() {
 onMounted(loadProducts)
 </script>
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-</style>
-
 <style scoped>
 .pos-shell {
   display: flex;
   height: 100%;
   overflow: hidden;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  background: #fff;
+  background: var(--bg-body);
   border-radius: 0;
   margin: -24px;
   min-height: calc(100vh - 64px);
@@ -250,7 +245,7 @@ onMounted(loadProducts)
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f7f6f3;
+  background: var(--bg-body);
   overflow: hidden;
 }
 .pos-toolbar {
@@ -264,15 +259,15 @@ onMounted(loadProducts)
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 10px;
   padding: 0 14px;
   max-width: 400px;
 }
 .search-box .material-symbols-outlined {
   font-size: 20px;
-  color: #9ca3af;
+  color: var(--text-subtle);
 }
 .search-box input {
   border: none;
@@ -282,9 +277,9 @@ onMounted(loadProducts)
   font-size: 14px;
   font-family: inherit;
   background: transparent;
-  color: #111827;
+  color: var(--text-primary);
 }
-.search-box input::placeholder { color: #9ca3af; }
+.search-box input::placeholder { color: var(--text-subtle); }
 
 .category-pills {
   display: flex;
@@ -295,18 +290,18 @@ onMounted(loadProducts)
 .pill {
   padding: 5px 14px;
   border-radius: 20px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-muted);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
   font-family: inherit;
 }
-.pill:hover { border-color: #059669; color: #059669; }
-.pill.active { background: #059669; color: #fff; border-color: #059669; }
+.pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.pill.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
 .product-grid {
   flex: 1;
@@ -318,8 +313,8 @@ onMounted(loadProducts)
   align-content: start;
 }
 .product-card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
   border-radius: 12px;
   padding: 14px;
   cursor: pointer;
@@ -329,12 +324,12 @@ onMounted(loadProducts)
   position: relative;
 }
 .product-card:hover {
-  border-color: #059669;
-  box-shadow: 0 0 0 1px #05966933;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 .product-icon {
   aspect-ratio: 1;
-  background: #f3f4f6;
+  background: var(--bg-surface-hover);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -343,7 +338,7 @@ onMounted(loadProducts)
 }
 .product-icon .material-symbols-outlined {
   font-size: 32px;
-  color: #9ca3af;
+  color: var(--text-subtle);
 }
 .product-body {
   flex: 1;
@@ -354,7 +349,7 @@ onMounted(loadProducts)
 .product-name {
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -362,28 +357,28 @@ onMounted(loadProducts)
   overflow: hidden;
 }
 .product-sku {
-  font-family: 'DM Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: #9ca3af;
+  color: var(--text-subtle);
   letter-spacing: 0.3px;
 }
 .product-price {
-  font-family: 'DM Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 16px;
   font-weight: 500;
-  color: #059669;
+  color: var(--color-primary);
   margin-top: 6px;
 }
 .product-add {
   position: absolute;
   bottom: 14px;
-  right: 14px;
+  inset-inline-end: 14px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-surface-hover);
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -392,30 +387,30 @@ onMounted(loadProducts)
   opacity: 0;
 }
 .product-card:hover .product-add { opacity: 1; }
-.product-add:hover { background: #059669; color: #fff; }
+.product-add:hover { background: var(--color-primary); color: #fff; }
 .product-add .material-symbols-outlined { font-size: 18px; }
 
 .grid-feedback {
   grid-column: 1 / -1;
   text-align: center;
   padding: 48px 20px;
-  color: #9ca3af;
+  color: var(--text-subtle);
   font-size: 14px;
 }
-.grid-feedback.error { color: #dc2626; }
+.grid-feedback.error { color: var(--color-error); }
 
 /* ── Cart Panel ── */
 .pos-cart {
   width: 380px;
   flex-shrink: 0;
-  background: #fff;
-  border-left: 1px solid #e5e7eb;
+  background: var(--bg-surface);
+  border-inline-start: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 @media (max-width: 900px) {
-  .pos-cart { width: 100%; border-left: none; border-top: 1px solid #e5e7eb; }
+  .pos-cart { width: 100%; border-inline-start: none; border-top: 1px solid var(--border-default); }
 }
 
 .cart-header {
@@ -423,8 +418,8 @@ onMounted(loadProducts)
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #fafafa;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface-low);
   flex-shrink: 0;
 }
 .cart-header-left {
@@ -432,10 +427,10 @@ onMounted(loadProducts)
   align-items: center;
   gap: 8px;
 }
-.cart-header-left .material-symbols-outlined { color: #059669; font-size: 20px; }
-.cart-header-title { font-size: 15px; font-weight: 600; color: #111827; }
+.cart-header-left .material-symbols-outlined { color: var(--color-primary); font-size: 20px; }
+.cart-header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .cart-badge {
-  background: #059669;
+  background: var(--color-primary);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -446,12 +441,12 @@ onMounted(loadProducts)
   align-items: center;
   justify-content: center;
   padding: 0 6px;
-  font-family: 'DM Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
 }
 .cart-clear {
   border: none;
   background: none;
-  color: #dc2626;
+  color: var(--color-error);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -460,30 +455,30 @@ onMounted(loadProducts)
   border-radius: 6px;
   transition: background 0.15s;
 }
-.cart-clear:hover { background: #fef2f2; }
+.cart-clear:hover { background: color-mix(in srgb, var(--color-error) 10%, transparent); }
 
 .cart-customer {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
-  border-bottom: 1px solid #f3f4f6;
-  background: #fafafa;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-surface-low);
   flex-shrink: 0;
 }
-.cart-customer .material-symbols-outlined { color: #9ca3af; font-size: 18px; }
+.cart-customer .material-symbols-outlined { color: var(--text-subtle); font-size: 18px; }
 .customer-input {
   border: none;
   outline: none;
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   font-family: inherit;
   background: transparent;
   padding: 2px 0;
 }
-.customer-input::placeholder { color: #9ca3af; font-weight: 400; }
+.customer-input::placeholder { color: var(--text-subtle); font-weight: 400; }
 
 .cart-items {
   flex: 1;
@@ -494,24 +489,24 @@ onMounted(loadProducts)
 .cart-empty {
   text-align: center;
   padding: 48px 0;
-  color: #9ca3af;
+  color: var(--text-subtle);
   font-size: 13px;
-  font-family: 'DM Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
 }
 .cart-item {
   padding: 10px 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-light);
 }
 .cart-item:last-child { border-bottom: none; }
 .cart-item-row {
   display: flex;
   gap: 6px;
-  font-family: 'DM Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
-  color: #111827;
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
-.item-qty { color: #059669; font-weight: 500; flex-shrink: 0; }
+.item-qty { color: var(--color-primary); font-weight: 500; flex-shrink: 0; }
 .item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item-amount { flex-shrink: 0; font-weight: 500; }
 
@@ -524,8 +519,8 @@ onMounted(loadProducts)
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
   color: #d97706;
   font-size: 14px;
   font-weight: 700;
@@ -539,19 +534,19 @@ onMounted(loadProducts)
 }
 .step-btn:hover { background: #d97706; color: #fff; border-color: #d97706; }
 .step-value {
-  font-family: 'DM Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   font-weight: 500;
-  color: #111827;
+  color: var(--text-primary);
   min-width: 24px;
   text-align: center;
 }
 
 .cart-footer {
-  border-top: 2px solid #e5e7eb;
+  border-top: 2px solid var(--border-default);
   padding: 14px 18px 18px;
   flex-shrink: 0;
-  background: #fafafa;
+  background: var(--bg-surface-low);
 }
 .total-line {
   display: flex;
@@ -559,28 +554,31 @@ onMounted(loadProducts)
   align-items: center;
   padding: 3px 0;
 }
-.total-label { font-size: 13px; color: #6b7280; }
+.total-label { font-size: 13px; color: var(--text-muted); }
 .mono-amount {
-  font-family: 'DM Mono', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
-  color: #111827;
+  color: var(--text-primary);
 }
 .total-line.grand {
   padding: 8px 0 12px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-default);
   margin-top: 6px;
 }
-.total-line.grand .total-label { font-size: 15px; font-weight: 700; color: #111827; }
+.total-line.grand .total-label { font-size: 15px; font-weight: 700; color: var(--text-primary); }
 .grand-amount {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 28px;
   font-weight: 700;
-  color: #059669;
+  color: var(--color-primary);
   line-height: 1;
   transition: transform 0.2s ease;
 }
 .grand-amount.pop {
   animation: pop 0.25s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .grand-amount.pop { animation: none; }
 }
 @keyframes pop {
   0% { transform: scale(1); }
@@ -604,15 +602,15 @@ onMounted(loadProducts)
   transition: all 0.15s;
 }
 .action-hold {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-surface-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border-default);
 }
-.action-hold:hover:not(:disabled) { background: #e5e7eb; }
+.action-hold:hover:not(:disabled) { background: var(--border-default); }
 .action-pay {
-  background: #059669;
+  background: var(--color-primary);
   color: #fff;
 }
-.action-pay:hover:not(:disabled) { background: #047857; }
+.action-pay:hover:not(:disabled) { background: var(--color-primary-hover); }
 .action-pay:disabled { opacity: 0.4; cursor: default; }
 </style>

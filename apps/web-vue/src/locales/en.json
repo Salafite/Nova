@@ -539,5 +539,21 @@
   "home.items-count": "{count} Items",
   "home.critical-count": "{count} Critical",
   "home.sidebar-mode-expanded": "Pinned",
-  "home.sidebar-mode-overlay": "Auto-hide"
+  "home.sidebar-mode-overlay": "Auto-hide",
+  "pos-search": "Search products...",
+  "pos-all": "All",
+  "pos-loading": "Loading products...",
+  "pos-no-products": "No products found",
+  "pos-cart": "Cart",
+  "pos-clear": "Clear",
+  "pos-walkin": "Walk-in Customer",
+  "pos-empty": "Cart is empty",
+  "pos-subtotal": "Subtotal",
+  "pos-tax": "Tax",
+  "pos-total": "Total",
+  "pos-hold": "Hold",
+  "pos-pay": "Pay",
+  "pos-processing": "Processing...",
+  "pos-sale-completed": "Sale completed!",
+  "pos-checkout-failed": "Checkout failed"
 }

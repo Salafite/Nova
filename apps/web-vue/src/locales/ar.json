@@ -579,5 +579,21 @@
   "home.items-count": "{count} صنف",
   "home.critical-count": "{count} حرجة",
   "home.sidebar-mode-expanded": "مثبت",
-  "home.sidebar-mode-overlay": "إخفاء تلقائي"
+  "home.sidebar-mode-overlay": "إخفاء تلقائي",
+  "pos-search": "البحث عن المنتجات...",
+  "pos-all": "الكل",
+  "pos-loading": "جاري تحميل المنتجات...",
+  "pos-no-products": "لا توجد منتجات",
+  "pos-cart": "السلة",
+  "pos-clear": "مسح",
+  "pos-walkin": "زبون عادي",
+  "pos-empty": "السلة فارغة",
+  "pos-subtotal": "المجموع الفرعي",
+  "pos-tax": "الضريبة",
+  "pos-total": "المجموع",
+  "pos-hold": "تعليق",
+  "pos-pay": "دفع",
+  "pos-processing": "جاري المعالجة...",
+  "pos-sale-completed": "تمت عملية البيع!",
+  "pos-checkout-failed": "فشلت عملية الدفع"
 }
