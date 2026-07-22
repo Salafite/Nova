@@ -200,7 +200,7 @@ const layoutControls = computed(() => [
   { key: 'THEME', label: 'Theme', options: ['light', 'dark'] },
   { key: 'ACCENT_COLOR', label: 'Accent Color', options: ['blue', 'purple', 'green', 'amber', 'red'] },
   { key: 'FONT_FAMILY', label: 'Font', options: ['inter', 'roboto', 'open-sans', 'system'] },
-  { key: 'SIDEBAR_MODE', label: 'Sidebar Mode', options: ['expanded', 'overlay'] },
+  { key: 'SIDEBAR_MODE', label: 'Sidebar Mode', options: ['expanded', 'overlay', 'auto-hide'] },
 ])
 
 function setLayoutPref(key, value) {

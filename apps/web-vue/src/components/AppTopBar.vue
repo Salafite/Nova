@@ -1,6 +1,6 @@
 <template>
   <header class="topbar">
-    <button class="menu-btn" @click="$emit('toggle')" aria-label="Toggle sidebar">
+    <button v-if="sidebarMode !== 'auto-hide'" class="menu-btn" @click="$emit('toggle')" aria-label="Toggle sidebar">
       <span class="material-symbols-outlined">{{ sidebarOverlay ? 'menu' : 'menu_open' }}</span>
     </button>
     <h2 class="page-title">{{ title }}</h2>
@@ -29,7 +29,8 @@ import LocaleSwitcher from './LocaleSwitcher.vue'
 
 defineProps({
   title: { type: String, default: '' },
-  sidebarOverlay: { type: Boolean, default: false }
+  sidebarOverlay: { type: Boolean, default: false },
+  sidebarMode: { type: String, default: 'expanded' }
 })
 defineEmits(['toggle'])
 

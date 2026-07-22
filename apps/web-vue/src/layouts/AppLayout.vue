@@ -7,7 +7,7 @@
     ></div>
 
     <AppSidebar
-      v-if="!isGrid"
+      v-if="!isGrid && sidebarMode !== 'auto-hide'"
       :collapsed="sidebarCollapsed"
       :mobile-open="mobileSidebarOpen"
       :overlay="sidebarOverlay"
@@ -45,8 +45,22 @@
         v-else
         :title="pageTitle"
         :sidebar-overlay="sidebarOverlay"
+        :sidebar-mode="sidebarMode"
         @toggle="toggleSidebar"
       />
+
+      <div v-if="sidebarMode === 'auto-hide' && !isGrid" class="auto-navbar">
+        <nav class="auto-nav">
+          <a
+            v-for="item in navItems" :key="item.id"
+            :class="['auto-nav-item', { active: activeId === (item.module || item.id) }]"
+            href="#" @click.prevent="go(item)"
+          >
+            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            <span class="auto-nav-label">{{ isRTL && item.label_ar ? item.label_ar : item.label }}</span>
+          </a>
+        </nav>
+      </div>
 
       <div class="content" :class="{ 'content-wide': isGrid }">
         <router-view />
@@ -64,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '../composables/useToast.js'
 import { useI18n } from '../composables/useI18n.js'
@@ -75,7 +89,6 @@ import AiAssistant from '../components/AiAssistant.vue'
 import { useNavStore } from '../stores/nav.js'
 import { useAuthStore } from '../stores/auth.js'
 import { usePreferences } from '../composables/usePreferences.js'
-import { useTheme } from '../composables/useTheme.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -83,6 +96,8 @@ const navStore = useNavStore()
 const auth = useAuthStore()
 const { toasts } = useToast()
 const { isRTL } = useI18n()
+const prefs = usePreferences()
+const sidebarMode = computed(() => prefs.preferences.SIDEBAR_MODE)
 
 const sidebarCollapsed = ref(false)
 const sidebarOverlay = ref(false)
@@ -146,15 +161,18 @@ function logout() {
 
 onMounted(() => {
   navStore.load()
-  const p = usePreferences()
-  p.initialize().then(() => {
-    const mode = p.get('SIDEBAR_MODE')
-    if (mode === 'overlay') {
-      sidebarOverlay.value = true
-      sidebarOpen.value = false
-    }
-  })
+  prefs.initialize()
 })
+
+watch(sidebarMode, (mode) => {
+  if (mode === 'overlay') {
+    sidebarOverlay.value = true
+    sidebarOpen.value = false
+  } else if (mode === 'expanded') {
+    sidebarOverlay.value = false
+    sidebarOpen.value = true
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -173,6 +191,44 @@ onMounted(() => {
 
 .content { flex: 1; overflow-y: auto; padding: 24px; }
 .content-wide { padding: 0; }
+
+.auto-navbar {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  background: var(--color-sidebar-bg, #1a1a2e);
+  border-bottom: 1px solid var(--border-default, rgba(255,255,255,0.08));
+  padding: 0 16px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.auto-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  width: 100%;
+}
+.auto-nav::-webkit-scrollbar { display: none; }
+.auto-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: #aaa;
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.auto-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.auto-nav-item.active { background: rgba(93,63,211,0.2); color: #cabeff; }
+.auto-nav-item .material-symbols-outlined { font-size: 16px; }
+.auto-nav-label { font-size: 12px; font-weight: 500; }
 
 .grid-topbar {
   display: flex;
