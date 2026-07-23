@@ -56,8 +56,11 @@ class TestCreateProduct:
         inventory_mcp._products_svc.create.return_value = MOCK_PRODUCT
         result = inventory_mcp._create_product(name="Test", sku="TST-001", price=10.0)
         inventory_mcp._products_svc.create.assert_called_with({
-            "name": "Test", "sku": "TST-001", "price": 10.0, "cost_price": 0,
+            "name": "Test", "sku": "TST-001", "barcode": None, "description": None,
+            "type": "stockable", "price": 10.0, "cost_price": 0,
             "category": None, "brand": None, "tax_rate": 0.05,
+            "weight": 0, "volume": 0, "image_url": None,
+            "is_purchasable": True, "is_saleable": True, "is_active": True,
         })
         assert result == MOCK_PRODUCT
 
