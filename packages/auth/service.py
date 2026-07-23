@@ -20,7 +20,8 @@ def authenticate_user(username: str, password: str) -> dict | None:
 
 
 def _build_user_dict(user: dict) -> dict:
-    perms = user['permissions'] or []
+    raw = user['permissions'] or []
+    perms = raw if isinstance(raw, list) else ([raw] if raw else [])
     if user['role'] == 'Admin' and '*' not in perms:
         perms = ['*']
     return {

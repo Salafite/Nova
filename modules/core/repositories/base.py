@@ -1,3 +1,4 @@
+import os
 import psycopg2.extras
 from packages.database.connection import get_connection, release_connection
 
@@ -6,7 +7,8 @@ AUDIT_COLUMNS = {'created_at', 'created_by', 'updated_at', 'updated_by', 'update
 
 class CrudRepository:
     def __init__(self, table: str, pk: str = 'id', business_columns: list[str] = None):
-        self.qualified = f'"Nova".{table.lower()}'
+        schema = os.getenv('DB_SCHEMA', 'Nova')
+        self.qualified = f'"{schema}".{table.lower()}'
         self.pk = pk
         self.business_columns = business_columns or []
         self.all_columns = business_columns + list(AUDIT_COLUMNS) if business_columns else []
