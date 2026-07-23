@@ -6,6 +6,7 @@ from modules.inventory.models.product import (
     AttrDefCreate, AttrDefUpdate, AttrDefResponse,
     AttrValueCreate, AttrValueUpdate, AttrValueResponse,
     ProductUOMCreate, ProductUOMUpdate, ProductUOMResponse,
+    ProductTypeCreate, ProductTypeUpdate, ProductTypeResponse,
 )
 from modules.inventory.models.stock_movement import (
     StockMovementCreate, StockMovementResponse,

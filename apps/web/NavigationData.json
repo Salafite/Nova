@@ -11,6 +11,7 @@
     { "id": "barcodes", "icon": "qr_code_scanner", "label": "Barcodes", "label_ar": "الباركود", "module": "barcodes", "permission": "PRODUCTS_VIEW" },
     { "id": "categories", "icon": "category", "label": "Categories", "label_ar": "التصنيفات", "module": "categories", "permission": "PRODUCTS_VIEW" },
     { "id": "attributes", "icon": "list_alt", "label": "Attributes", "label_ar": "الخصائص", "module": "attributes", "permission": "PRODUCTS_VIEW" },
+    { "id": "product-types", "icon": "schema", "label": "Product Types", "label_ar": "أنواع المنتجات", "module": "product-types", "permission": "PRODUCTS_VIEW" },
     { "id": "batch-numbers", "icon": "inventory_2", "label": "Batch Numbers", "label_ar": "أرقام الدفعات", "module": "batch-numbers", "permission": "INVENTORY_VIEW" },
     { "id": "serial-numbers", "icon": "qr_code", "label": "Serial Numbers", "label_ar": "الأرقام التسلسلية", "module": "serial-numbers", "permission": "INVENTORY_VIEW" },
     { "id": "inventory", "icon": "warehouse", "label": "Stock Levels", "label_ar": "مستويات المخزون", "module": "inventory", "permission": "INVENTORY_VIEW" },

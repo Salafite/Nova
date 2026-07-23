@@ -205,3 +205,26 @@ class ProductUOMResponse(AuditMixin):
     sales_uom_id: Optional[int]
     purchase_factor: float
     sales_factor: float
+
+
+class ProductTypeCreate(BaseModel):
+    name: str = Field(..., max_length=100)
+    code: Optional[str] = Field(None, max_length=20)
+    description: Optional[str] = None
+    color: str = '#6b7280'
+    is_active: bool = True
+
+class ProductTypeUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    code: Optional[str] = Field(None, max_length=20)
+    description: Optional[str] = None
+    color: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class ProductTypeResponse(AuditMixin):
+    id: int
+    name: str
+    code: Optional[str]
+    description: Optional[str]
+    color: str
+    is_active: bool

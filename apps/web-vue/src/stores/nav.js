@@ -32,6 +32,7 @@ export const useNavStore = defineStore('nav', {
           { id: 'barcodes', icon: 'qr_code_scanner', label: 'Barcodes', label_ar: 'الباركود', permission: 'PRODUCTS_VIEW', module: 'barcodes' },
           { id: 'categories', icon: 'category', label: 'Categories', label_ar: 'التصنيفات', permission: 'PRODUCTS_VIEW', module: 'categories' },
           { id: 'attributes', icon: 'list_alt', label: 'Attributes', label_ar: 'الخصائص', permission: 'PRODUCTS_VIEW', module: 'attributes' },
+          { id: 'product-types', icon: 'schema', label: 'Product Types', label_ar: 'أنواع المنتجات', permission: 'PRODUCTS_VIEW', module: 'product-types' },
           { id: 'batch-numbers', icon: 'inventory_2', label: 'Batch Numbers', label_ar: 'أرقام الدفعات', permission: 'INVENTORY_VIEW', module: 'batch-numbers' },
           { id: 'serial-numbers', icon: 'qr_code', label: 'Serial Numbers', label_ar: 'الأرقام التسلسلية', permission: 'INVENTORY_VIEW', module: 'serial-numbers' },
           { id: 'inventory', icon: 'warehouse', label: 'Stock Levels', label_ar: 'مستويات المخزون', permission: 'INVENTORY_VIEW', module: 'inventory' },
