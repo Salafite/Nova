@@ -8,7 +8,7 @@ from packages.auth.deps import get_current_user
 from packages.database.connection import get_connection, release_connection
 import psycopg2.extras
 
-repo = CrudRepository('T0003', business_columns=['id', 'name', 'sku', 'price', 'cost_price', 'category', 'brand', 'tax_rate', 'image_url', 'is_phantom', 'last_transaction_date', 'is_active'])
+repo = CrudRepository('T0003', business_columns=['id', 'name', 'sku', 'barcode', 'description', 'type', 'price', 'cost_price', 'category', 'brand', 'tax_rate', 'weight', 'volume', 'image_url', 'is_purchasable', 'is_saleable', 'is_phantom', 'last_transaction_date', 'is_active'])
 service = CrudService(repo)
 router = create_crud_router('/api/T0003I', 'T0003 - Products', service,
                             ProductCreate, ProductUpdate, ProductResponse)

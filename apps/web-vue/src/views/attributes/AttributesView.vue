@@ -24,7 +24,10 @@
           <tr>
             <th>{{ t('name') }}</th>
             <th>{{ t('attr-type', 'Type') }}</th>
+            <th class="text-center">{{ t('attr-display-type', 'Display') }}</th>
+            <th class="text-center">{{ t('attr-variant', 'Variant') }}</th>
             <th class="text-center">{{ t('attr-required', 'Required') }}</th>
+            <th class="text-center">{{ t('attr-group', 'Group') }}</th>
             <th class="text-center">{{ t('attr-sort', 'Sort') }}</th>
             <th class="text-center">{{ t('status') }}</th>
             <th class="text-center">{{ t('actions') }}</th>
@@ -34,10 +37,16 @@
           <tr v-for="item in items" :key="item.id">
             <td class="fw-600">{{ item.attribute_name }}</td>
             <td><span class="mono">{{ item.attribute_type }}</span></td>
+            <td class="text-center"><span class="mono">{{ item.display_type || 'select' }}</span></td>
+            <td class="text-center">
+              <span v-if="item.create_variant" class="badge badge-active">{{ t('yes') }}</span>
+              <span v-else class="badge badge-disabled">{{ t('no') }}</span>
+            </td>
             <td class="text-center">
               <span v-if="item.is_required" class="badge badge-active">{{ t('yes') }}</span>
               <span v-else class="badge badge-disabled">{{ t('no') }}</span>
             </td>
+            <td class="text-center"><span class="mono">{{ item.attribute_group || '-' }}</span></td>
             <td class="text-center mono">{{ item.sort_order }}</td>
             <td class="text-center">
               <span v-if="item.is_active" class="badge badge-active">{{ t('active') }}</span>
@@ -58,41 +67,72 @@
     </div>
 
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal">
+      <div class="modal modal-wide">
         <div class="modal-header">
           <h3>{{ editing ? t('edit-attr', 'Edit Attribute') : t('new-attr', 'New Attribute') }}</h3>
           <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label>{{ t('name') }} <span class="text-red-500">*</span></label>
-            <input type="text" v-model="form.attribute_name" class="form-input" maxlength="50" />
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('name') }} <span class="text-red-500">*</span></label>
+              <input type="text" v-model="form.attribute_name" class="form-input" maxlength="50" />
+            </div>
+            <div class="form-group">
+              <label>{{ t('attr-group', 'Group') }}</label>
+              <input type="text" v-model="form.attribute_group" class="form-input" maxlength="100" :placeholder="t('attr-group-placeholder', 'e.g. Hardware, Software')" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('attr-type', 'Value Type') }}</label>
+              <select v-model="form.attribute_type" class="form-input">
+                <option value="Text">Text</option>
+                <option value="Number">Number</option>
+                <option value="Date">Date</option>
+                <option value="Boolean">Boolean</option>
+                <option value="Select">Select</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ t('attr-display-type', 'Display Type') }}</label>
+              <select v-model="form.display_type" class="form-input">
+                <option value="select">{{ t('disp-select', 'Dropdown Select') }}</option>
+                <option value="radio">{{ t('disp-radio', 'Radio Buttons') }}</option>
+                <option value="color">{{ t('disp-color', 'Color Picker') }}</option>
+                <option value="multi">{{ t('disp-multi', 'Multi Select') }}</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
-            <label>{{ t('attr-type', 'Type') }}</label>
-            <select v-model="form.attribute_type" class="form-input">
-              <option value="Text">Text</option>
-              <option value="Number">Number</option>
-              <option value="Date">Date</option>
-              <option value="Boolean">Boolean</option>
-              <option value="Select">Select</option>
-            </select>
+            <label>{{ t('description', 'Description') }}</label>
+            <textarea v-model="form.description" class="form-input form-textarea" rows="2" :placeholder="t('attr-desc-placeholder', 'Displayed as help text on product form')"></textarea>
           </div>
-          <div class="form-group">
-            <label>{{ t('attr-sort', 'Sort Order') }}</label>
-            <input type="number" min="0" v-model.number="form.sort_order" class="form-input" />
-          </div>
-          <div class="form-group checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="form.is_required" />
-              <span>{{ t('attr-required', 'Required') }}</span>
-            </label>
-          </div>
-          <div class="form-group checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="form.is_active" />
-              <span>{{ t('active') }}</span>
-            </label>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('attr-sort', 'Sort Order') }}</label>
+              <input type="number" min="0" v-model.number="form.sort_order" class="form-input" />
+            </div>
+            <div class="form-group flex-row">
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="form.is_required" />
+                  <span>{{ t('attr-required', 'Required') }}</span>
+                </label>
+              </div>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="form.create_variant" />
+                  <span>{{ t('attr-variant', 'Create Variant') }}</span>
+                </label>
+              </div>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="form.is_active" />
+                  <span>{{ t('active') }}</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -124,7 +164,7 @@ const items = ref([])
 const showModal = ref(false)
 const editing = ref(false)
 const saving = ref(false)
-const form = ref({ attribute_name: '', attribute_type: 'Text', is_required: false, sort_order: 0, is_active: true })
+const form = ref({ attribute_name: '', attribute_type: 'Text', display_type: 'select', description: '', is_required: false, create_variant: true, attribute_group: '', sort_order: 0, is_active: true })
 const editId = ref(null)
 const confirmTarget = ref(null)
 
@@ -144,7 +184,7 @@ async function load() {
 function openAdd() {
   editing.value = false
   editId.value = null
-  form.value = { attribute_name: '', attribute_type: 'Text', is_required: false, sort_order: 0, is_active: true }
+  form.value = { attribute_name: '', attribute_type: 'Text', display_type: 'select', description: '', is_required: false, create_variant: true, attribute_group: '', sort_order: 0, is_active: true }
   showModal.value = true
 }
 
@@ -154,7 +194,11 @@ function editItem(item) {
   form.value = {
     attribute_name: item.attribute_name,
     attribute_type: item.attribute_type,
+    display_type: item.display_type || 'select',
+    description: item.description || '',
     is_required: item.is_required,
+    create_variant: item.create_variant ?? true,
+    attribute_group: item.attribute_group || '',
     sort_order: item.sort_order,
     is_active: item.is_active,
   }
@@ -204,17 +248,22 @@ onMounted(load)
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .modal { background: var(--bg-surface); border-radius: 12px; width: 480px; max-width: 90vw; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.modal-wide { width: 620px; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-light); }
 .modal-header h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-primary); }
 .modal-body { padding: 20px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px; border-top: 1px solid var(--border-light); }
 
-.form-group { margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
 .form-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-input); border-radius: 8px; font-size: 13px; outline: none; box-sizing: border-box; transition: border-color 0.15s; background: var(--bg-surface); color: var(--text-primary); }
 .form-input:focus { border-color: var(--color-primary); }
+.form-textarea { resize: vertical; font-family: inherit; }
 select.form-input { appearance: auto; }
+.flex-row { display: flex; align-items: flex-end; gap: 16px; padding-bottom: 4px; }
 .checkbox-group { display: flex; }
 .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-primary); text-transform: none; letter-spacing: 0px; }
 .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-primary); }
+.text-red-500 { color: #ef4444; }
 </style>

@@ -52,11 +52,20 @@ def register_tools():
             "properties": {
                 "name": {"type": "string", "description": "Product name"},
                 "sku": {"type": "string", "description": "SKU code"},
+                "barcode": {"type": "string", "description": "Product barcode / EAN / UPC"},
+                "description": {"type": "string", "description": "Product description"},
+                "type": {"type": "string", "description": "Product type: stockable, consumable, service (default stockable)"},
                 "price": {"type": "number", "description": "Selling price"},
                 "cost_price": {"type": "number", "description": "Cost price"},
                 "category": {"type": "string", "description": "Category name"},
                 "brand": {"type": "string", "description": "Brand name"},
                 "tax_rate": {"type": "number", "description": "Tax rate (default 0.05)"},
+                "weight": {"type": "number", "description": "Weight in kg"},
+                "volume": {"type": "number", "description": "Volume in m3"},
+                "image_url": {"type": "string", "description": "Product image URL"},
+                "is_purchasable": {"type": "boolean", "description": "Can be purchased (default true)"},
+                "is_saleable": {"type": "boolean", "description": "Can be sold (default true)"},
+                "is_active": {"type": "boolean", "description": "Active status (default true)"},
             },
             "required": ["name", "sku"],
         }),
@@ -69,11 +78,19 @@ def register_tools():
                 "id": {"type": "integer", "description": "Product ID"},
                 "name": {"type": "string"},
                 "sku": {"type": "string"},
+                "barcode": {"type": "string"},
+                "description": {"type": "string"},
+                "type": {"type": "string"},
                 "price": {"type": "number"},
                 "cost_price": {"type": "number"},
                 "category": {"type": "string"},
                 "brand": {"type": "string"},
                 "tax_rate": {"type": "number"},
+                "weight": {"type": "number"},
+                "volume": {"type": "number"},
+                "image_url": {"type": "string"},
+                "is_purchasable": {"type": "boolean"},
+                "is_saleable": {"type": "boolean"},
                 "is_active": {"type": "boolean"},
             },
             "required": ["id"],
@@ -153,10 +170,14 @@ def _get_product(id: int):
     return _products_svc.get(id)
 
 
-def _create_product(name: str, sku: str, price: float = 0, cost_price: float = 0, category: str = None, brand: str = None, tax_rate: float = 0.05):
+def _create_product(name: str, sku: str, barcode: str = None, description: str = None, type: str = "stockable", price: float = 0, cost_price: float = 0, category: str = None, brand: str = None, tax_rate: float = 0.05, weight: float = 0, volume: float = 0, image_url: str = None, is_purchasable: bool = True, is_saleable: bool = True, is_active: bool = True):
     return _products_svc.create({
-        "name": name, "sku": sku, "price": price, "cost_price": cost_price,
+        "name": name, "sku": sku, "barcode": barcode, "description": description,
+        "type": type, "price": price, "cost_price": cost_price,
         "category": category, "brand": brand, "tax_rate": tax_rate,
+        "weight": weight, "volume": volume, "image_url": image_url,
+        "is_purchasable": is_purchasable, "is_saleable": is_saleable,
+        "is_active": is_active,
     })
 
 
@@ -172,7 +193,7 @@ def _delete_product(id: int):
 def _search_products(query: str, limit: int = 20):
     conn = get_connection()
     try:
-        sql = 'SELECT * FROM "Nova".t0005 WHERE is_active = TRUE AND (name ILIKE %s OR sku ILIKE %s) ORDER BY name LIMIT %s'
+        sql = 'SELECT * FROM "Nova".t0003 WHERE is_active = TRUE AND (name ILIKE %s OR sku ILIKE %s) ORDER BY name LIMIT %s'
         pattern = f'%{query}%'
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(sql, (pattern, pattern, limit))
