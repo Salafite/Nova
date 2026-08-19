@@ -41,6 +41,10 @@ from modules.warehouse.models.serial_batch import (
     SerialNumberCreate, SerialNumberUpdate, SerialNumberResponse,
     BatchNumberCreate, BatchNumberUpdate, BatchNumberResponse,
 )
+from modules.warehouse.models.pick_list import (
+    PickListCreate, PickListUpdate, PickListResponse,
+    PickListItemCreate, PickListItemUpdate, PickListItemResponse,
+)
 
 # CRM
 from modules.crm.models.crm import (
