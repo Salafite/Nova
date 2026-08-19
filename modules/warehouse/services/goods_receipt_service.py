@@ -7,22 +7,32 @@ class GoodsReceiptService(CrudService):
     def __init__(self, repo):
         super().__init__(repo)
         self.stock_service = StockMovementService()
-        self.line_repo = CrudRepository('T0076', business_columns=['id', 'receipt_id', 'purchase_order_line_id', 'product_id', 'product_name', 'qty_received', 'qty_ordered', 'uom_id', 'line_number'])
+        self.line_repo = CrudRepository('T0076', business_columns=[
+            'id', 'receipt_id', 'purchase_order_line_id', 'product_id', 'product_name',
+            'qty_received', 'qty_ordered', 'uom_id', 'line_number',
+            'batch_number', 'manufacturing_date', 'expiry_date'
+        ])
         self.po_repo = CrudRepository('T0014', business_columns=['id', 'order_number', 'supplier_id', 'total', 'status'])
+        self.batch_repo = CrudRepository('T0088', business_columns=[
+            'id', 'product_id', 'batch_number', 'expiry_date', 'manufacturing_date',
+            'quantity', 'warehouse_id', 'status', 'notes'
+        ])
 
     def create(self, payload: dict):
         result = super().create(payload)
-        if result and payload.get('status') == 'Completed':
+        if result and str(payload.get('status', '')).capitalize() == 'Completed':
             self._record_stock_movements(result['id'])
             self._advance_po_status(result['id'])
+            self._register_batches(result['id'])
         return result
 
     def update(self, id_val, payload: dict):
         old = self.repo.get(id_val)
         result = super().update(id_val, payload)
-        if old and payload.get('status') == 'Completed' and old.get('status') != 'Completed':
+        if old and str(payload.get('status', '')).capitalize() == 'Completed' and str(old.get('status', '')).capitalize() != 'Completed':
             self._record_stock_movements(id_val)
             self._advance_po_status(id_val)
+            self._register_batches(id_val)
         return result
 
     def _record_stock_movements(self, receipt_id):
@@ -81,3 +91,50 @@ class GoodsReceiptService(CrudService):
             self.po_repo.update(po_id, {'status': 'Received'})
         elif any_received:
             self.po_repo.update(po_id, {'status': 'Partially Received'})
+
+    def _register_batches(self, receipt_id):
+        receipt = self.repo.get(receipt_id)
+        warehouse_id = (receipt.get('warehouse_id') if receipt else None) or 1
+        lines = self.line_repo.list(filters={'receipt_id': receipt_id})
+        for line in lines:
+            batch_number = line.get('batch_number')
+            product_id = line.get('product_id')
+            if not product_id or not batch_number or not str(batch_number).strip():
+                continue
+
+            batch_num_clean = str(batch_number).strip()
+            qty = float(abs(line.get('qty_received', 0) or 0))
+            mfg_date = line.get('manufacturing_date')
+            exp_date = line.get('expiry_date')
+
+            existing = self.batch_repo.list(filters={
+                'product_id': product_id,
+                'batch_number': batch_num_clean
+            })
+
+            if existing:
+                batch = existing[0]
+                current_qty = float(batch.get('quantity') or 0)
+                update_payload = {
+                    'quantity': current_qty + qty,
+                    'status': 'Available'
+                }
+                if mfg_date:
+                    update_payload['manufacturing_date'] = mfg_date
+                if exp_date:
+                    update_payload['expiry_date'] = exp_date
+                if warehouse_id:
+                    update_payload['warehouse_id'] = warehouse_id
+                self.batch_repo.update(batch['id'], update_payload)
+            else:
+                batch_payload = {
+                    'product_id': product_id,
+                    'batch_number': batch_num_clean,
+                    'manufacturing_date': mfg_date,
+                    'expiry_date': exp_date,
+                    'quantity': qty,
+                    'warehouse_id': warehouse_id,
+                    'status': 'Available'
+                }
+                self.batch_repo.create(batch_payload)
+

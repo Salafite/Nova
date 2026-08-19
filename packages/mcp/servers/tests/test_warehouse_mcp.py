@@ -28,6 +28,26 @@ class TestWarehouseMcp:
     def test_list_pick(self):
         self._test("_list_pick", "_pick_svc", {"id": 1, "pick_list_number": "PL-001"})
 
+    def test_get_batch_recall_report(self):
+        mod = warehouse_mcp
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.get_recall_report.return_value = {
+                "batch": {"batch_number": "LOT-RECALL-99"},
+                "affected_customers": [{"customer_name": "Acme Supermarket"}]
+            }
+            result = mod._get_batch_recall_report(batch_number="LOT-RECALL-99")
+            assert result["batch"]["batch_number"] == "LOT-RECALL-99"
+            assert len(result["affected_customers"]) == 1
+            mock.get_recall_report.assert_called_once_with(
+                batch_number="LOT-RECALL-99",
+                batch_id=None,
+                product_id=None
+            )
+
+    def test_get_batch_recall_report_missing_args(self):
+        result = warehouse_mcp._get_batch_recall_report()
+        assert "error" in result
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools
@@ -36,3 +56,5 @@ class TestWarehouseMcp:
         assert "list_serial_numbers" in names
         assert "list_batch_numbers" in names
         assert "list_pick_lists" in names
+        assert "get_batch_recall_report" in names
+

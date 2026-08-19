@@ -1,5 +1,6 @@
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
+from modules.warehouse.services.batch_number_service import BatchNumberService
 from packages.mcp.registry import register_tool
 from packages.mcp.types import Tool
 
@@ -11,7 +12,7 @@ _serial_repo = CrudRepository('T0087', business_columns=['id', 'product_id', 'se
 _serial_svc = CrudService(_serial_repo)
 
 _batch_repo = CrudRepository('T0088', business_columns=['id', 'product_id', 'batch_number', 'expiry_date', 'manufacturing_date', 'quantity', 'warehouse_id', 'status', 'notes'])
-_batch_svc = CrudService(_batch_repo)
+_batch_svc = BatchNumberService(_batch_repo)
 
 _pick_repo = CrudRepository('T0101', business_columns=['id', 'pick_list_number', 'sales_order_id', 'warehouse_id', 'status', 'notes'])
 _pick_svc = CrudService(_pick_repo)
@@ -42,6 +43,13 @@ def register_tools():
             "limit": {"type": "integer"},
         },
     }), _list_pick)
+    register_tool(Tool(name="get_batch_recall_report", description="Generate a food safety recall and lot traceability report for a batch/lot number, identifying inbound suppliers, warehouse stock, and outbound customer shipments.", input_schema={
+        "type": "object", "properties": {
+            "batch_number": {"type": "string", "description": "Batch / lot number to trace"},
+            "batch_id": {"type": "integer", "description": "Optional batch record ID"},
+            "product_id": {"type": "integer", "description": "Optional product ID filter"},
+        },
+    }), _get_batch_recall_report)
 
 
 def _list_gr(status: str = None, purchase_order_id: int = None, limit: int = 50):
@@ -70,6 +78,14 @@ def _list_pick(status: str = None, sales_order_id: int = None, limit: int = 50):
     if sales_order_id: filters["sales_order_id"] = sales_order_id
     return _pick_svc.list(filters=filters or None, limit=limit)
 
+def _get_batch_recall_report(batch_number: str = None, batch_id: int = None, product_id: int = None):
+    if not batch_number and not batch_id:
+        return {"error": "Either batch_number or batch_id must be provided"}
+    try:
+        return _batch_svc.get_recall_report(batch_number=batch_number, batch_id=batch_id, product_id=product_id)
+    except Exception as e:
+        return {"error": str(e)}
+
 
 def main():
     register_tools()
@@ -79,3 +95,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

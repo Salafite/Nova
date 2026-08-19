@@ -35,7 +35,7 @@ class SerialNumberResponse(AuditMixin):
 
 class BatchNumberCreate(BaseModel):
     product_id: int
-    batch_number: str = Field(..., max_length=100)
+    batch_number: str = Field(..., max_length=255)
     expiry_date: Optional[date] = None
     manufacturing_date: Optional[date] = None
     quantity: float = 0
@@ -45,7 +45,7 @@ class BatchNumberCreate(BaseModel):
 
 class BatchNumberUpdate(BaseModel):
     product_id: Optional[int] = None
-    batch_number: Optional[str] = Field(None, max_length=100)
+    batch_number: Optional[str] = Field(None, max_length=255)
     expiry_date: Optional[date] = None
     manufacturing_date: Optional[date] = None
     quantity: Optional[float] = Field(None, ge=0)

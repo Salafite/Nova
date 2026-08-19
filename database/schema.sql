@@ -1939,6 +1939,9 @@ CREATE TABLE IF NOT EXISTS "Nova".t0076 (
     qty_ordered NUMERIC(12,2),
     uom_id INT,
     line_number INT,
+    batch_number VARCHAR(255),
+    manufacturing_date DATE,
+    expiry_date DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
@@ -1952,11 +1955,16 @@ COMMENT ON COLUMN "Nova".t0076.receipt_id IS 'Reference to Receipt';
 COMMENT ON COLUMN "Nova".t0076.purchase_order_line_id IS 'Reference to Purchase_Order_Line';
 COMMENT ON COLUMN "Nova".t0076.product_id IS 'Reference to Product';
 COMMENT ON COLUMN "Nova".t0076.uom_id IS 'Reference to Uom';
+COMMENT ON COLUMN "Nova".t0076.batch_number IS 'Batch or lot number captured at goods receipt';
+COMMENT ON COLUMN "Nova".t0076.manufacturing_date IS 'Manufacturing / production date';
+COMMENT ON COLUMN "Nova".t0076.expiry_date IS 'Expiration date';
 COMMENT ON COLUMN "Nova".t0076.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0076_receipt_id ON "Nova".t0076(receipt_id);
 CREATE INDEX IF NOT EXISTS idx_t0076_purchase_order_line_id ON "Nova".t0076(purchase_order_line_id);
 CREATE INDEX IF NOT EXISTS idx_t0076_product_id ON "Nova".t0076(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0076_uom_id ON "Nova".t0076(uom_id);
+CREATE INDEX IF NOT EXISTS idx_t0076_batch_number ON "Nova".t0076(batch_number);
+CREATE INDEX IF NOT EXISTS idx_t0076_expiry_date ON "Nova".t0076(expiry_date);
 CREATE INDEX IF NOT EXISTS idx_t0076_active ON "Nova".t0076(is_active);
 
 -- Sales Deliveries
@@ -2426,6 +2434,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0102 (
     qty_ordered       NUMERIC(12,2) NOT NULL DEFAULT 0,
     qty_picked        NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_number       INT NOT NULL DEFAULT 1,
+    batch_id          INT REFERENCES "Nova".t0088(id),
+    batch_number      VARCHAR(255),
+    expiry_date       DATE,
+    picked_batch_id   INT REFERENCES "Nova".t0088(id),
+    picked_batch_number VARCHAR(255),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by        INT,
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2435,8 +2448,16 @@ CREATE TABLE IF NOT EXISTS "Nova".t0102 (
 COMMENT ON TABLE "Nova".t0102 IS 'Pick List Items';
 COMMENT ON COLUMN "Nova".t0102.qty_ordered IS 'Quantity ordered (target to pick)';
 COMMENT ON COLUMN "Nova".t0102.qty_picked IS 'Quantity actually picked so far';
+COMMENT ON COLUMN "Nova".t0102.batch_id IS 'Suggested lot ID allocated by FEFO engine';
+COMMENT ON COLUMN "Nova".t0102.batch_number IS 'Suggested lot number';
+COMMENT ON COLUMN "Nova".t0102.expiry_date IS 'Expiration date of suggested lot';
+COMMENT ON COLUMN "Nova".t0102.picked_batch_id IS 'Actual picked lot ID (if different from suggested)';
+COMMENT ON COLUMN "Nova".t0102.picked_batch_number IS 'Actual picked lot number';
 CREATE INDEX IF NOT EXISTS idx_t0102_pick_list_id ON "Nova".t0102(pick_list_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_product_id ON "Nova".t0102(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_batch_id ON "Nova".t0102(batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_picked_batch_id ON "Nova".t0102(picked_batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_batch_number ON "Nova".t0102(batch_number);
 
 -- ============================================================
 -- PRODUCT-SUPPLIER LINKING
