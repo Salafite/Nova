@@ -1,5 +1,5 @@
 from modules.administration.models.system import (
-    UserCreate, UserUpdate, UserResponse,
+    UserCreate, UserUpdate, UserRoleUpdate, UserResponse,
     NavPermissionCreate, NavPermissionUpdate, NavPermissionResponse,
     AuditLogCreate, AuditLogResponse,
     SettingCreate, SettingUpdate, SettingResponse,

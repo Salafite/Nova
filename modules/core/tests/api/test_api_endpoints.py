@@ -81,3 +81,49 @@ class TestAuthProtection:
         assert resp.status_code == 200
         data = resp.json()
         assert data['user_id'] == 42
+
+
+from packages.auth.deps import require_permission
+from unittest.mock import patch
+
+@test_app.get('/api/test-admin-only', dependencies=[Depends(require_permission('ADMIN_VIEW'))])
+def admin_only_endpoint():
+    return {'status': 'admin_ok'}
+
+@test_app.get('/api/test-sales-only', dependencies=[Depends(require_permission('SALES_VIEW'))])
+def sales_only_endpoint():
+    return {'status': 'sales_ok'}
+
+
+class TestRBACRouteProtection:
+    def test_unauthorized_role_returns_403(self):
+        from packages.auth.jwt import create_access_token
+        token = create_access_token(99)
+        user = {'id': 99, 'username': 'rep', 'role': 'Sales Rep', 'permissions': ['SALES_VIEW']}
+        with patch('packages.auth.deps.get_user_by_id', return_value=user):
+            resp = client.get('/api/test-admin-only', headers={'Authorization': f'Bearer {token}'})
+            assert resp.status_code == 403
+            assert 'Permission denied: ADMIN_VIEW required' in resp.json()['detail']
+
+    def test_authorized_role_returns_200(self):
+        from packages.auth.jwt import create_access_token
+        token = create_access_token(99)
+        user = {'id': 99, 'username': 'rep', 'role': 'Sales Rep', 'permissions': ['SALES_VIEW']}
+        with patch('packages.auth.deps.get_user_by_id', return_value=user):
+            resp = client.get('/api/test-sales-only', headers={'Authorization': f'Bearer {token}'})
+            assert resp.status_code == 200
+            assert resp.json()['status'] == 'sales_ok'
+
+    def test_admin_wildcard_returns_200(self):
+        from packages.auth.jwt import create_access_token
+        token = create_access_token(1)
+        admin_user = {'id': 1, 'username': 'admin', 'role': 'Admin', 'permissions': ['*']}
+        with patch('packages.auth.deps.get_user_by_id', return_value=admin_user):
+            resp1 = client.get('/api/test-admin-only', headers={'Authorization': f'Bearer {token}'})
+            assert resp1.status_code == 200
+            assert resp1.json()['status'] == 'admin_ok'
+
+            resp2 = client.get('/api/test-sales-only', headers={'Authorization': f'Bearer {token}'})
+            assert resp2.status_code == 200
+            assert resp2.json()['status'] == 'sales_ok'
+

@@ -2,11 +2,11 @@ from datetime import datetime
 import psycopg2.extras
 from fastapi import APIRouter, Depends, HTTPException
 
-from packages.auth.deps import get_current_user
+from packages.auth.deps import require_permission
 from packages.database.connection import get_connection, release_connection
 from modules.pos.models.pos import PosCheckoutRequest, PosCheckoutResponse
 
-router = APIRouter(prefix='/api/pos', tags=['POS'], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix='/api/pos', tags=['POS'], dependencies=[Depends(require_permission('POS_VIEW'))])
 
 
 def process_pos_checkout(request: PosCheckoutRequest) -> PosCheckoutResponse:

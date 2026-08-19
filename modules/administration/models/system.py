@@ -1,26 +1,30 @@
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from modules.core.models.base import AuditMixin
 
 
 class UserCreate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
     username: str = Field(..., max_length=50)
-    password_hash: str = Field(..., max_length=255)
     full_name: Optional[str] = Field(None, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
-    role: str = 'Viewer'
-    permissions: list[str] = []
     status: str = 'Active'
 
 class UserUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
     username: Optional[str] = Field(None, max_length=50)
-    password_hash: Optional[str] = Field(None, max_length=255)
     full_name: Optional[str] = Field(None, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
-    role: Optional[str] = None
-    permissions: Optional[list[str]] = None
     status: Optional[str] = None
+
+class UserRoleUpdate(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    role: str = Field(..., max_length=30)
+    permissions: Optional[list[str]] = None
 
 class UserResponse(AuditMixin):
     id: int

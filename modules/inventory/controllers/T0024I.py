@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from packages.database.connection import get_connection, release_connection
-from packages.auth.deps import get_current_user
+from packages.auth.deps import require_permission
 
 router = APIRouter(prefix='/api/categories', tags=['Categories'],
-                   dependencies=[Depends(get_current_user)])
+                   dependencies=[Depends(require_permission('PRODUCTS_VIEW'))])
 
 @router.get('/')
 def list_categories():

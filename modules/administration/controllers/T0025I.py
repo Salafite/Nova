@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from modules.administration.models.system import SettingCreate, SettingUpdate, SettingResponse
 from modules.administration.services.setting_service import SettingService
 from modules.core.repositories.base import CrudRepository
-from packages.auth.deps import get_current_user
+from packages.auth.deps import require_permission
 
 repo = CrudRepository('T0025', business_columns=['id', 'setting_key', 'setting_value', 'description', 'setting_group', 'is_active'])
 service = SettingService(repo)
 
 router = APIRouter(prefix='/api/T0025I', tags=['T0025 - Global Settings'],
-                   dependencies=[Depends(get_current_user)])
+                   dependencies=[Depends(require_permission('ADMIN_VIEW'))])
 
 @router.get('/by-group/summary')
 def get_settings_by_group():

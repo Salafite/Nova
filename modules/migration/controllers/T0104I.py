@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from modules.migration.services import migration_service
-from packages.auth.deps import get_current_user
+from packages.auth.deps import require_permission
 
 router = APIRouter(prefix='/api/v1/migration', tags=['Migration'],
-                   dependencies=[Depends(get_current_user)])
+                   dependencies=[Depends(require_permission('ADMIN_VIEW'))])
 
 @router.post('/upload')
 def upload_csv(
