@@ -5,6 +5,7 @@ from packages.auth.schemas import (
 )
 from packages.auth.service import login, refresh, signup, invite_user
 from packages.auth.deps import get_current_user
+from modules.core.services.permission_service import derive_permissions
 
 router = APIRouter(tags=['auth'])
 
@@ -27,9 +28,20 @@ def refresh_endpoint(body: RefreshRequest):
 
 @router.get('/me', response_model=CurrentUserResponse)
 def me_endpoint(user: dict = Depends(get_current_user)):
-    perms = user['permissions'] or []
-    if user['role'] == 'Admin' and '*' not in perms:
+    raw_perms = user.get('permissions')
+    if raw_perms is None or (isinstance(raw_perms, (list, tuple)) and len(raw_perms) == 0):
+        role = user.get('role', '')
+        perms = derive_permissions(role)
+    elif isinstance(raw_perms, list):
+        perms = list(raw_perms)
+    elif isinstance(raw_perms, str):
+        perms = [raw_perms]
+    else:
+        perms = list(raw_perms)
+
+    if user.get('role') == 'Admin' and '*' not in perms:
         perms = ['*']
+
     return {
         'id': user['id'],
         'username': user['username'],

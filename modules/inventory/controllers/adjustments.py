@@ -3,9 +3,9 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from modules.inventory.services.stock_movement import StockMovementService
 from modules.core.repositories.base import CrudRepository
-from packages.auth.deps import get_current_user
+from packages.auth.deps import require_permission
 
-router = APIRouter(prefix='/api/adjustments', tags=['Stock Adjustments'], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix='/api/adjustments', tags=['Stock Adjustments'], dependencies=[Depends(require_permission('INVENTORY_VIEW'))])
 
 movement_svc = StockMovementService()
 STOCK_REPO = CrudRepository('T0009', business_columns=['id', 'product_id', 'warehouse_id', 'qty', 'reserved_qty', 'reorder_level'])

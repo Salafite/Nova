@@ -1,14 +1,16 @@
 import json
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
-from packages.auth.deps import get_current_user
+from packages.auth.deps import get_current_user, require_permission
+from modules.core.services.permission_service import get_required_permission
 
 
 def create_crud_router(prefix: str, tag: str, service: CrudService, create_schema=None, update_schema=None, response_model=None):
-    router = APIRouter(prefix=prefix, tags=[tag], dependencies=[Depends(get_current_user)])
+    perm = get_required_permission(prefix=prefix, tag=tag)
+    router = APIRouter(prefix=prefix, tags=[tag], dependencies=[Depends(require_permission(perm))])
 
     table_name = tag.split(' - ')[0] if ' - ' in tag else tag
     audit_repo = CrudRepository('T0023', pk='id', business_columns=['id', 'table_name', 'record_id', 'action', 'changed_data', 'changed_by', 'changed_at'])
@@ -38,7 +40,7 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
                 'action': 'INSERT',
                 'changed_data': None,
                 'changed_by': user.get('id'),
-                'changed_at': datetime.utcnow().isoformat()
+                'changed_at': datetime.now(timezone.utc).isoformat()
             })
         return result
 
@@ -55,7 +57,7 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
                 'action': 'UPDATE',
                 'changed_data': json.dumps({'before': existing, 'after': result}, default=_json_safe),
                 'changed_by': user.get('id'),
-                'changed_at': datetime.utcnow().isoformat()
+                'changed_at': datetime.now(timezone.utc).isoformat()
             })
         return result
 
@@ -78,7 +80,7 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
             'action': 'DELETE',
             'changed_data': json.dumps(existing, default=_json_safe),
             'changed_by': user.get('id'),
-            'changed_at': datetime.utcnow().isoformat()
+            'changed_at': datetime.now(timezone.utc).isoformat()
         })
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 

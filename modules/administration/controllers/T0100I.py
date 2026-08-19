@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from modules.administration.models.module_registry import ModuleRegistryCreate, ModuleRegistryUpdate, ModuleRegistryResponse
 from modules.administration.services.module_service import ModuleService
 from modules.core.repositories.base import CrudRepository
-from packages.auth.deps import get_current_user
+from packages.auth.deps import get_current_user, require_permission
 
 repo = CrudRepository('T0100', business_columns=['id', 'module_key', 'name', 'name_ar', 'description', 'description_ar', 'version', 'author', 'icon', 'category', 'is_core', 'is_active', 'installed_at', 'dependencies'])
 service = ModuleService(repo)
 
 router = APIRouter(prefix='/api/T0100I', tags=['T0100 - Module Registry'],
-                   dependencies=[Depends(get_current_user)])
+                   dependencies=[Depends(require_permission('ADMIN_VIEW'))])
 
 @router.get('/', response_model=list[ModuleRegistryResponse])
 def list_modules():

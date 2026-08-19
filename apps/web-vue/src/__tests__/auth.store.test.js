@@ -107,6 +107,23 @@ describe('auth store', () => {
       expect(store.user.username).toBe('test')
     })
 
+    it('fetches dynamic permissions from /auth/me after login', async () => {
+      localStorageMock.getItem.mockReturnValue(null)
+      const store = useAuthStore()
+      api.post.mockResolvedValue({
+        data: { access_token: 'new-token', user: { id: 2, username: 'test', role: 'Sales Rep' } },
+      })
+      api.get.mockResolvedValue({
+        data: { id: 2, username: 'test', role: 'Sales Rep', permissions: ['sales', 'crm', 'pos'] },
+      })
+      const result = await store.login('test', 'pass')
+      expect(result).toBe(true)
+      expect(api.get).toHaveBeenCalledWith('/auth/me')
+      expect(store.permissions).toEqual(['sales', 'crm', 'pos'])
+      expect(store.hasPermission('sales')).toBe(true)
+      expect(store.hasPermission('finance')).toBe(false)
+    })
+
     it('returns false on API error', async () => {
       localStorageMock.getItem.mockReturnValue(null)
       const store = useAuthStore()
@@ -114,6 +131,50 @@ describe('auth store', () => {
       const result = await store.login('test', 'wrong')
       expect(result).toBe(false)
       expect(store.token).toBeNull()
+    })
+  })
+
+  describe('fetchUser', () => {
+    it('returns null if no token', async () => {
+      localStorageMock.getItem.mockReturnValue(null)
+      const store = useAuthStore()
+      const result = await store.fetchUser()
+      expect(result).toBeNull()
+      expect(api.get).not.toHaveBeenCalled()
+    })
+
+    it('fetches user from /auth/me and updates state', async () => {
+      localStorageMock.getItem.mockImplementation(key => key === 'nova_token' ? 'token-123' : null)
+      const store = useAuthStore()
+      api.get.mockResolvedValue({
+        data: { id: 5, username: 'manager1', role: 'Manager', permissions: ['sales', 'purchasing', 'inventory'] },
+      })
+      const result = await store.fetchUser()
+      expect(result).toEqual({ id: 5, username: 'manager1', role: 'Manager', permissions: ['sales', 'purchasing', 'inventory'] })
+      expect(store.user.username).toBe('manager1')
+      expect(store.permissions).toEqual(['sales', 'purchasing', 'inventory'])
+    })
+  })
+
+  describe('restoreAuth', () => {
+    it('restores dynamic permissions when token exists', async () => {
+      localStorageMock.getItem.mockImplementation(key => key === 'nova_token' ? 'token-123' : null)
+      const store = useAuthStore()
+      api.get.mockResolvedValue({
+        data: { id: 1, username: 'admin', role: 'Admin', permissions: ['*'] },
+      })
+      await store.restoreAuth()
+      expect(api.get).toHaveBeenCalledWith('/auth/me')
+      expect(store.permissions).toEqual(['*'])
+      expect(store.hasPermission('anything')).toBe(true)
+    })
+
+    it('does nothing when no token exists', async () => {
+      localStorageMock.getItem.mockReturnValue(null)
+      const store = useAuthStore()
+      await store.restoreAuth()
+      expect(api.get).not.toHaveBeenCalled()
+      expect(store.user).toBeNull()
     })
   })
 })

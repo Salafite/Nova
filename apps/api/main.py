@@ -62,6 +62,7 @@ app.add_middleware(CacheControlMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
 
 for router in all_routers:
     app.include_router(router)

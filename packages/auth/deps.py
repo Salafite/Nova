@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from packages.auth.jwt import decode_token
 from packages.auth.repository import get_user_by_id
+from modules.core.services.permission_service import has_permission, derive_permissions
 
 _bearer = HTTPBearer()
 
@@ -20,3 +21,31 @@ def get_current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> 
         raise
     except jwt.PyJWTError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'Invalid or expired token')
+
+
+def require_permission(key: str):
+    """FastAPI dependency factory that verifies the authenticated user has the required permission key."""
+    def _permission_checker(user: dict = Depends(get_current_user)) -> dict:
+        raw_perms = user.get('permissions')
+        if raw_perms is None or (isinstance(raw_perms, (list, tuple)) and len(raw_perms) == 0):
+            role = user.get('role', '')
+            perms = derive_permissions(role)
+        elif isinstance(raw_perms, list):
+            perms = list(raw_perms)
+        elif isinstance(raw_perms, str):
+            perms = [raw_perms]
+        else:
+            perms = list(raw_perms)
+
+        if user.get('role') == 'Admin' and '*' not in perms:
+            perms.append('*')
+
+        if not has_permission(perms, key):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f'Permission denied: {key} required'
+            )
+        return user
+
+    return _permission_checker
+

@@ -5,6 +5,7 @@ from packages.auth.repository import (
     get_user_by_username, get_user_by_email, get_user_by_id,
     update_last_login, create_business, create_user, create_invited_user
 )
+from modules.core.services.permission_service import derive_permissions
 
 
 def authenticate_user(username: str, password: str) -> dict | None:
@@ -20,10 +21,20 @@ def authenticate_user(username: str, password: str) -> dict | None:
 
 
 def _build_user_dict(user: dict) -> dict:
-    raw = user['permissions'] or []
-    perms = raw if isinstance(raw, list) else ([raw] if raw else [])
-    if user['role'] == 'Admin' and '*' not in perms:
+    raw_perms = user.get('permissions')
+    if raw_perms is None or (isinstance(raw_perms, (list, tuple)) and len(raw_perms) == 0):
+        role = user.get('role', '')
+        perms = derive_permissions(role)
+    elif isinstance(raw_perms, list):
+        perms = list(raw_perms)
+    elif isinstance(raw_perms, str):
+        perms = [raw_perms]
+    else:
+        perms = list(raw_perms)
+
+    if user.get('role') == 'Admin' and '*' not in perms:
         perms = ['*']
+
     return {
         'id': user['id'],
         'username': user['username'],

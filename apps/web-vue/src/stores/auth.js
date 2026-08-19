@@ -13,6 +13,19 @@ export const useAuthStore = defineStore('auth', {
     businessId: state => state.user?.business_id || null,
   },
   actions: {
+    async fetchUser() {
+      if (!this.token) return null
+      try {
+        const res = await api.get('/auth/me')
+        if (res && res.data) {
+          this.user = res.data
+          localStorage.setItem('nova_user', JSON.stringify(this.user))
+        }
+        return this.user
+      } catch {
+        return null
+      }
+    },
     async login(username, password) {
       try {
         const res = await api.post('/auth/login', { username, password })
@@ -20,6 +33,15 @@ export const useAuthStore = defineStore('auth', {
         this.user = res.data.user
         localStorage.setItem('nova_token', this.token)
         localStorage.setItem('nova_user', JSON.stringify(this.user))
+        try {
+          const meRes = await api.get('/auth/me')
+          if (meRes && meRes.data) {
+            this.user = meRes.data
+            localStorage.setItem('nova_user', JSON.stringify(this.user))
+          }
+        } catch {
+          // Keep user from login response if /auth/me fails
+        }
         return true
       } catch { return false }
     },
@@ -29,6 +51,21 @@ export const useAuthStore = defineStore('auth', {
       this.user = res.data.user
       localStorage.setItem('nova_token', this.token)
       localStorage.setItem('nova_user', JSON.stringify(this.user))
+      try {
+        const meRes = await api.get('/auth/me')
+        if (meRes && meRes.data) {
+          this.user = meRes.data
+          localStorage.setItem('nova_user', JSON.stringify(this.user))
+        }
+      } catch {
+        // Keep user from signup response if /auth/me fails
+      }
+    },
+    async restoreAuth() {
+      if (this.token) {
+        return await this.fetchUser()
+      }
+      return null
     },
     async invite(payload) {
       const res = await api.post('/auth/invite', payload)
