@@ -822,7 +822,6 @@ class TestConcurrentFastAPIHttpEndpoints:
     def test_50_concurrent_http_order_confirmations(self):
         """Simulate 50 concurrent HTTP POST requests to /api/T0012I/{id}/confirm."""
         app = create_test_fastapi_app()
-        client = TestClient(app)
 
         order_repo = CrudRepository('T0012')
         line_repo = CrudRepository('T0013')
@@ -855,7 +854,8 @@ class TestConcurrentFastAPIHttpEndpoints:
         def worker(order_id):
             try:
                 barrier.wait()
-                resp = client.post(f"/api/T0012I/{order_id}/confirm")
+                with TestClient(app) as client:
+                    resp = client.post(f"/api/T0012I/{order_id}/confirm")
                 responses.append(resp)
             except Exception as e:
                 errors.append(f"HTTP request error: {e}")
@@ -883,7 +883,6 @@ class TestConcurrentFastAPIHttpEndpoints:
     def test_50_concurrent_http_order_deliveries(self):
         """Simulate 50 concurrent HTTP POST requests to /api/T0012I/{id}/deliver."""
         app = create_test_fastapi_app()
-        client = TestClient(app)
 
         order_repo = CrudRepository('T0012')
 
@@ -907,7 +906,8 @@ class TestConcurrentFastAPIHttpEndpoints:
         def worker(order_id):
             try:
                 barrier.wait()
-                resp = client.post(f"/api/T0012I/{order_id}/deliver")
+                with TestClient(app) as client:
+                    resp = client.post(f"/api/T0012I/{order_id}/deliver")
                 responses.append(resp)
             except Exception as e:
                 errors.append(f"HTTP request error: {e}")
@@ -938,7 +938,6 @@ class TestConcurrentFastAPIHttpEndpoints:
         without passing document numbers.
         """
         app = create_test_fastapi_app()
-        client = TestClient(app)
 
         barrier = threading.Barrier(50)
         inv_responses = []
@@ -948,12 +947,13 @@ class TestConcurrentFastAPIHttpEndpoints:
         def inv_worker(idx):
             try:
                 barrier.wait()
-                resp = client.post("/api/T0090I/", json={
-                    'partner_id': 1,
-                    'issue_date': '2026-08-20',
-                    'due_date': '2026-09-20',
-                    'total_amount': 50.0 + idx,
-                })
+                with TestClient(app) as client:
+                    resp = client.post("/api/T0090I/", json={
+                        'partner_id': 1,
+                        'issue_date': '2026-08-20',
+                        'due_date': '2026-09-20',
+                        'total_amount': 50.0 + idx,
+                    })
                 inv_responses.append(resp)
             except Exception as e:
                 errors.append(e)
@@ -961,11 +961,12 @@ class TestConcurrentFastAPIHttpEndpoints:
         def pkl_worker(idx):
             try:
                 barrier.wait()
-                resp = client.post("/api/T0101I/", json={
-                    'sales_order_id': idx,
-                    'warehouse_id': 1,
-                    'status': 'Pending',
-                })
+                with TestClient(app) as client:
+                    resp = client.post("/api/T0101I/", json={
+                        'sales_order_id': idx,
+                        'warehouse_id': 1,
+                        'status': 'Pending',
+                    })
                 pkl_responses.append(resp)
             except Exception as e:
                 errors.append(e)
