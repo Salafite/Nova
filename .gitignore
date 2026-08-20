@@ -39,3 +39,6 @@ apps/web/dist/
 
 # Database
 *.sqlite
+
+# Agent data directory
+.auto-claude/

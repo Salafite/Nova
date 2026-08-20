@@ -3,13 +3,14 @@ from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
 
 class PickListCreate(BaseModel):
-    pick_list_number: str = Field(..., max_length=50)
+    pick_list_number: Optional[str] = Field(None, max_length=50)
     sales_order_id: int
     warehouse_id: Optional[int] = None
     status: str = 'Pending'
     notes: Optional[str] = None
 
 class PickListUpdate(BaseModel):
+    pick_list_number: Optional[str] = Field(None, max_length=50)
     status: Optional[str] = None
     notes: Optional[str] = None
 

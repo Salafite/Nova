@@ -3,15 +3,13 @@ from modules.warehouse.models import PickListCreate, PickListUpdate, PickListRes
 from modules.warehouse.services.pick_list_service import PickListService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
-from modules.core.services.base import CrudService
-
 repo = CrudRepository('T0101', business_columns=['id', 'pick_list_number', 'sales_order_id', 'warehouse_id', 'status', 'notes'])
-service = CrudService(repo)
+service = PickListService(repo)
 
 router = create_crud_router('/api/T0101I', 'T0101 - Pick Lists', service,
                             PickListCreate, PickListUpdate, PickListResponse)
 
-pl_service = PickListService()
+pl_service = service
 pli_repo = CrudRepository('T0102', business_columns=['id', 'pick_list_id', 'sales_order_line_id', 'product_id', 'product_name', 'qty_ordered', 'qty_picked', 'line_number'])
 
 @router.get('/{id}/detail')

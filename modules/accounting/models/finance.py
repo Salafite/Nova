@@ -74,7 +74,7 @@ class JournalLineResponse(AuditMixin):
 
 # Invoice (Accounts Receivable / Payable)
 class InvoiceCreate(BaseModel):
-    invoice_number: str = Field(..., max_length=50)
+    invoice_number: Optional[str] = Field(None, max_length=50)
     invoice_type: str = 'Sales'
     partner_id: int
     sales_order_id: Optional[int] = None
