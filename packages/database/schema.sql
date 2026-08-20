@@ -1878,6 +1878,9 @@ CREATE TABLE IF NOT EXISTS "Nova".t0076 (
     qty_ordered NUMERIC(12,2),
     uom_id INT,
     line_number INT,
+    batch_number VARCHAR(255),
+    manufacturing_date DATE,
+    expiry_date DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
@@ -1891,11 +1894,16 @@ COMMENT ON COLUMN "Nova".t0076.receipt_id IS 'Reference to Receipt';
 COMMENT ON COLUMN "Nova".t0076.purchase_order_line_id IS 'Reference to Purchase_Order_Line';
 COMMENT ON COLUMN "Nova".t0076.product_id IS 'Reference to Product';
 COMMENT ON COLUMN "Nova".t0076.uom_id IS 'Reference to Uom';
+COMMENT ON COLUMN "Nova".t0076.batch_number IS 'Batch or lot number captured at goods receipt';
+COMMENT ON COLUMN "Nova".t0076.manufacturing_date IS 'Manufacturing / production date';
+COMMENT ON COLUMN "Nova".t0076.expiry_date IS 'Expiration date';
 COMMENT ON COLUMN "Nova".t0076.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0076_receipt_id ON "Nova".t0076(receipt_id);
 CREATE INDEX IF NOT EXISTS idx_t0076_purchase_order_line_id ON "Nova".t0076(purchase_order_line_id);
 CREATE INDEX IF NOT EXISTS idx_t0076_product_id ON "Nova".t0076(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0076_uom_id ON "Nova".t0076(uom_id);
+CREATE INDEX IF NOT EXISTS idx_t0076_batch_number ON "Nova".t0076(batch_number);
+CREATE INDEX IF NOT EXISTS idx_t0076_expiry_date ON "Nova".t0076(expiry_date);
 CREATE INDEX IF NOT EXISTS idx_t0076_active ON "Nova".t0076(is_active);
 
 -- Sales Deliveries
@@ -2347,5 +2355,110 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_t0021_business_id ON "Nova".t0021(business_id);
+
+-- ============================================================
+-- PICK LISTS (Order Fulfillment)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS "Nova".t0101 (
+    id              SERIAL PRIMARY KEY,
+    pick_list_number VARCHAR(50) NOT NULL UNIQUE,
+    sales_order_id  INT NOT NULL REFERENCES "Nova".t0012(id),
+    warehouse_id    INT REFERENCES "Nova".t0008(id),
+    status          VARCHAR(30) NOT NULL DEFAULT 'Pending',
+    notes           TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by      INT,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by      INT,
+    update_number   INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0101 IS 'Pick Lists — generated from confirmed sales orders';
+COMMENT ON COLUMN "Nova".t0101.status IS 'Pending | In Progress | Completed | Cancelled';
+CREATE INDEX IF NOT EXISTS idx_t0101_sales_order_id ON "Nova".t0101(sales_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0101_status ON "Nova".t0101(status);
+
+CREATE TABLE IF NOT EXISTS "Nova".t0102 (
+    id                SERIAL PRIMARY KEY,
+    pick_list_id      INT NOT NULL REFERENCES "Nova".t0101(id) ON DELETE CASCADE,
+    sales_order_line_id INT REFERENCES "Nova".t0013(id),
+    product_id        INT NOT NULL,
+    product_name      VARCHAR(200),
+    qty_ordered       NUMERIC(12,2) NOT NULL DEFAULT 0,
+    qty_picked        NUMERIC(12,2) NOT NULL DEFAULT 0,
+    line_number       INT NOT NULL DEFAULT 1,
+    batch_id          INT REFERENCES "Nova".t0088(id),
+    batch_number      VARCHAR(255),
+    expiry_date       DATE,
+    picked_batch_id   INT REFERENCES "Nova".t0088(id),
+    picked_batch_number VARCHAR(255),
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by        INT,
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by        INT,
+    update_number     INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0102 IS 'Pick List Items';
+COMMENT ON COLUMN "Nova".t0102.qty_ordered IS 'Quantity ordered (target to pick)';
+COMMENT ON COLUMN "Nova".t0102.qty_picked IS 'Quantity actually picked so far';
+COMMENT ON COLUMN "Nova".t0102.batch_id IS 'Suggested lot ID allocated by FEFO engine';
+COMMENT ON COLUMN "Nova".t0102.batch_number IS 'Suggested lot number';
+COMMENT ON COLUMN "Nova".t0102.expiry_date IS 'Expiration date of suggested lot';
+COMMENT ON COLUMN "Nova".t0102.picked_batch_id IS 'Actual picked lot ID (if different from suggested)';
+COMMENT ON COLUMN "Nova".t0102.picked_batch_number IS 'Actual picked lot number';
+CREATE INDEX IF NOT EXISTS idx_t0102_pick_list_id ON "Nova".t0102(pick_list_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_product_id ON "Nova".t0102(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_batch_id ON "Nova".t0102(batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_picked_batch_id ON "Nova".t0102(picked_batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_batch_number ON "Nova".t0102(batch_number);
+
+-- ============================================================
+-- PRODUCT-SUPPLIER LINKING
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS "Nova".t0103 (
+    id              SERIAL PRIMARY KEY,
+    product_id      INT NOT NULL REFERENCES "Nova".t0003(id) ON DELETE CASCADE,
+    supplier_id     INT NOT NULL REFERENCES "Nova".t0011(id) ON DELETE CASCADE,
+    supplier_sku    VARCHAR(100),
+    unit_cost       NUMERIC(12,2) DEFAULT 0,
+    lead_time_days  INT DEFAULT 0,
+    is_preferred    BOOLEAN NOT NULL DEFAULT false,
+    is_active       BOOLEAN NOT NULL DEFAULT true,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by      INT,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by      INT,
+    update_number   INT NOT NULL DEFAULT 1,
+    UNIQUE(product_id, supplier_id)
+);
+COMMENT ON TABLE "Nova".t0103 IS 'Product-Supplier linking with supplier SKU and cost';
+COMMENT ON COLUMN "Nova".t0103.supplier_sku IS 'Supplier''s SKU for this product';
+COMMENT ON COLUMN "Nova".t0103.unit_cost IS 'Cost from this supplier';
+COMMENT ON COLUMN "Nova".t0103.lead_time_days IS 'Typical lead time in days';
+COMMENT ON COLUMN "Nova".t0103.is_preferred IS 'Marked as preferred supplier';
+CREATE INDEX IF NOT EXISTS idx_t0103_product_id ON "Nova".t0103(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0103_supplier_id ON "Nova".t0103(supplier_id);
+
+-- ============================================================
+-- MIGRATION BATCH TRACKING
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS "Nova".t0104 (
+    id              SERIAL PRIMARY KEY,
+    batch_key       VARCHAR(64) NOT NULL UNIQUE,
+    entity_type     VARCHAR(30) NOT NULL,
+    total_rows      INT NOT NULL DEFAULT 0,
+    inserted_rows   INT NOT NULL DEFAULT 0,
+    status          VARCHAR(20) NOT NULL DEFAULT 'Preview',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by      INT,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by      INT,
+    update_number   INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0104 IS 'Migration batches for tracking CSV imports';
+COMMENT ON COLUMN "Nova".t0104.status IS 'Preview | Committed | RolledBack';
+CREATE INDEX IF NOT EXISTS idx_t0104_batch_key ON "Nova".t0104(batch_key);
 
 COMMIT;

@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import date
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
 
@@ -30,9 +31,19 @@ class PickListItemCreate(BaseModel):
     qty_ordered: float = Field(default=0, ge=0)
     qty_picked: float = Field(default=0, ge=0)
     line_number: int = 1
+    batch_id: Optional[int] = None
+    batch_number: Optional[str] = Field(None, max_length=255)
+    expiry_date: Optional[date] = None
+    picked_batch_id: Optional[int] = None
+    picked_batch_number: Optional[str] = Field(None, max_length=255)
 
 class PickListItemUpdate(BaseModel):
     qty_picked: Optional[float] = Field(None, ge=0)
+    batch_id: Optional[int] = None
+    batch_number: Optional[str] = Field(None, max_length=255)
+    expiry_date: Optional[date] = None
+    picked_batch_id: Optional[int] = None
+    picked_batch_number: Optional[str] = Field(None, max_length=255)
 
 class PickListItemResponse(AuditMixin):
     id: int
@@ -43,3 +54,8 @@ class PickListItemResponse(AuditMixin):
     qty_ordered: float
     qty_picked: float
     line_number: int
+    batch_id: Optional[int] = None
+    batch_number: Optional[str] = None
+    expiry_date: Optional[date] = None
+    picked_batch_id: Optional[int] = None
+    picked_batch_number: Optional[str] = None

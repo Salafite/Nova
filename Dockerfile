@@ -11,9 +11,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
+# Create non-root system user and group
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+
 COPY apps/api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    adduser --disabled-password --gecos '' appuser
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY apps/api/ apps/api/
 COPY controllers/ controllers/
@@ -21,8 +23,13 @@ COPY database/ database/
 COPY modules/ modules/
 COPY packages/ packages/
 COPY scripts/docker-entrypoint.sh scripts/run_migration.py scripts/
-RUN chmod +x /app/scripts/docker-entrypoint.sh
 COPY --from=frontend /build/dist/ apps/web-vue/dist/
+
+# Set executable permissions and recursive ownership for appuser
+RUN chmod +x /app/scripts/docker-entrypoint.sh && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8070
 

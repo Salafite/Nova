@@ -18,12 +18,15 @@ def get_connection():
     import time
     last_err = None
     for attempt in range(3):
+        conn = None
         try:
             conn = _pool.getconn()
             with conn.cursor() as cur:
                 cur.execute(f'SET search_path TO {os.getenv("DB_SCHEMA", "Nova")}')
             return conn
         except Exception as e:
+            if conn is not None:
+                _pool.putconn(conn)
             last_err = e
             if 'closed unexpectedly' in str(e) or 'timeout' in str(e).lower():
                 time.sleep(1 * (attempt + 1))
@@ -33,7 +36,8 @@ def get_connection():
 
 
 def release_connection(conn):
-    _pool.putconn(conn)
+    if conn is not None:
+        _pool.putconn(conn)
 
 
 @contextmanager

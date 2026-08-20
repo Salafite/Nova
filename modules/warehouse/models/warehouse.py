@@ -76,6 +76,9 @@ class GoodsReceiptLineCreate(BaseModel):
     qty_ordered: float = 0
     uom_id: Optional[int] = None
     line_number: int = 0
+    batch_number: Optional[str] = Field(None, max_length=255)
+    manufacturing_date: Optional[date] = None
+    expiry_date: Optional[date] = None
 
 class GoodsReceiptLineUpdate(BaseModel):
     receipt_id: Optional[int] = None
@@ -86,6 +89,9 @@ class GoodsReceiptLineUpdate(BaseModel):
     qty_ordered: Optional[float] = None
     uom_id: Optional[int] = None
     line_number: Optional[int] = None
+    batch_number: Optional[str] = Field(None, max_length=255)
+    manufacturing_date: Optional[date] = None
+    expiry_date: Optional[date] = None
 
 class GoodsReceiptLineResponse(AuditMixin):
     id: int
@@ -97,3 +103,6 @@ class GoodsReceiptLineResponse(AuditMixin):
     qty_ordered: float
     uom_id: Optional[int]
     line_number: int
+    batch_number: Optional[str] = None
+    manufacturing_date: Optional[date] = None
+    expiry_date: Optional[date] = None

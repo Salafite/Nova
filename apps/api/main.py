@@ -9,6 +9,11 @@ sys.path.append(str(ROOT_DIR))
 env_path = Path(__file__).resolve().parent / ".env"
 load_dotenv(dotenv_path=env_path, override=True)
 
+from packages.auth.jwt import validate_secret_key
+
+# Validate SECRET_KEY immediately upon startup / module load
+validate_secret_key()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -44,8 +49,18 @@ from packages.mcp.servers.pos_mcp import register_tools as register_pos_mcp
 from modules.administration.controllers.user_preferences import router as user_preferences_router
 from modules.administration.controllers.admin_preferences import router as admin_preferences_router
 
-app = FastAPI(title="Nova ERP API", version="1.0")
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    validate_secret_key()
+    yield
+
+
+app = FastAPI(title="Nova ERP API", version="1.0", lifespan=lifespan)
 init_sentry()
+
+
 
 origins = os.getenv('ALLOWED_ORIGINS', '*').split(',')
 
