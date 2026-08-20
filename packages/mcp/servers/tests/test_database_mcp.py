@@ -66,6 +66,17 @@ class TestExecuteReadQuery:
         result = _execute_read_query("SELECT * FROM products", limit=100)
         assert result == [{"id": 1, "name": "test"}]
 
+    def test_sandboxed_transaction_setup(self, mock_db):
+        conn, cur = mock_db
+        cur.fetchmany.return_value = [{"id": 1}]
+        _execute_read_query("SELECT 1")
+        executed_calls = [call[0][0] for call in cur.execute.call_args_list]
+        assert "SET TRANSACTION READ ONLY" in executed_calls
+        assert "SET LOCAL ROLE nova_readonly" in executed_calls
+        assert "SET LOCAL statement_timeout = '5s'" in executed_calls
+        assert "SELECT 1" in executed_calls
+        conn.commit.assert_called_once()
+
     def test_rejects_non_select(self, mock_db):
         conn, cur = mock_db
         with pytest.raises(ValueError, match="Only SELECT"):
@@ -101,12 +112,70 @@ class TestExecuteReadQuery:
         with pytest.raises(ValueError, match="Only SELECT"):
             _execute_read_query("TRUNCATE products")
 
-    def test_sets_statement_timeout(self, mock_db):
+    def test_allows_queries_with_update_and_write_keywords_in_columns(self, mock_db):
         conn, cur = mock_db
-        cur.fetchmany.return_value = [{"id": 1}]
-        _execute_read_query("SELECT 1")
-        timeout_call = cur.execute.call_args_list[0]
-        assert "statement_timeout" in timeout_call[0][0]
+        cur.fetchmany.return_value = [{"id": 1, "update_number": 2, "updated_at": "2026-01-01"}]
+        result = _execute_read_query("SELECT id, update_number, updated_at FROM t0021 WHERE updated_by = 1")
+        assert result == [{"id": 1, "update_number": 2, "updated_at": "2026-01-01"}]
+
+    def test_allows_queries_with_keywords_in_string_literals(self, mock_db):
+        conn, cur = mock_db
+        cur.fetchmany.return_value = [{"id": 5, "description": "Need to update stock and create new order"}]
+        result = _execute_read_query("SELECT id, description FROM products WHERE description LIKE '%update%'")
+        assert result == [{"id": 5, "description": "Need to update stock and create new order"}]
+
+    def test_allows_with_cte_and_explain_queries(self, mock_db):
+        conn, cur = mock_db
+        cur.fetchmany.return_value = [{"total": 42}]
+        result = _execute_read_query("WITH cte AS (SELECT count(*) as total FROM t0001) SELECT total FROM cte")
+        assert result == [{"total": 42}]
+
+        explain_result = _execute_read_query("EXPLAIN SELECT * FROM t0001")
+        assert explain_result == [{"total": 42}]
+
+    def test_insufficient_privilege_error_handling(self, mock_db):
+        conn, cur = mock_db
+        from psycopg2 import errors
+        cur.execute.side_effect = [None, None, None, errors.InsufficientPrivilege("permission denied for column password_hash")]
+        with patch("packages.mcp.servers.database_mcp.release_connection") as release:
+            result = _execute_read_query("SELECT password_hash FROM t0021")
+            assert "error" in result
+            assert "Permission denied" in result["error"]
+            conn.rollback.assert_called()
+            release.assert_called_once_with(conn)
+
+    def test_readonly_transaction_error_handling(self, mock_db):
+        conn, cur = mock_db
+        from psycopg2 import errors
+        cur.execute.side_effect = [None, None, None, errors.ReadOnlySqlTransaction("cannot execute INSERT in a read-only transaction")]
+        with patch("packages.mcp.servers.database_mcp.release_connection") as release:
+            result = _execute_read_query("SELECT * FROM products")
+            assert "error" in result
+            assert "Read-only transaction violation" in result["error"]
+            conn.rollback.assert_called()
+            release.assert_called_once_with(conn)
+
+    def test_query_canceled_timeout_error_handling(self, mock_db):
+        conn, cur = mock_db
+        from psycopg2 import errors
+        cur.execute.side_effect = [None, None, None, errors.QueryCanceled("canceling statement due to statement timeout")]
+        with patch("packages.mcp.servers.database_mcp.release_connection") as release:
+            result = _execute_read_query("SELECT pg_sleep(10)")
+            assert "error" in result
+            assert "Query canceled" in result["error"]
+            conn.rollback.assert_called()
+            release.assert_called_once_with(conn)
+
+    def test_generic_database_error_handling(self, mock_db):
+        conn, cur = mock_db
+        import psycopg2
+        cur.execute.side_effect = [None, None, None, psycopg2.DatabaseError("syntax error at or near 'FORM'")]
+        with patch("packages.mcp.servers.database_mcp.release_connection") as release:
+            result = _execute_read_query("SELECT * FORM products")
+            assert "error" in result
+            assert "Database error" in result["error"]
+            conn.rollback.assert_called()
+            release.assert_called_once_with(conn)
 
     def test_releases_connection(self, mock_db):
         conn, cur = mock_db

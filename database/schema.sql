@@ -2516,6 +2516,30 @@ CREATE TABLE IF NOT EXISTS "Nova".t0104 (
 );
 COMMENT ON TABLE "Nova".t0104 IS 'Migration batches for tracking CSV imports';
 COMMENT ON COLUMN "Nova".t0104.status IS 'Preview | Committed | RolledBack';
-CREATE INDEX IF NOT EXISTS idx_t0104_batch_key ON "Nova".t0104(batch_key);
+-- ============================================================
+-- ROLES & PERMISSIONS
+-- ============================================================
+
+-- Create nova_readonly role for secure MCP AI agent queries
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'nova_readonly') THEN
+        CREATE ROLE nova_readonly NOLOGIN;
+    END IF;
+END $$;
+
+GRANT USAGE ON SCHEMA "Nova" TO nova_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA "Nova" TO nova_readonly;
+ALTER DEFAULT PRIVILEGES IN SCHEMA "Nova" GRANT SELECT ON TABLES TO nova_readonly;
+
+-- Column-level restrictions on sensitive credential columns
+REVOKE SELECT ON "Nova".t0021 FROM nova_readonly;
+GRANT SELECT (id, username, full_name, email, role, permissions, business_id, status, last_login, created_at, created_by, updated_at, updated_by, update_number) ON "Nova".t0021 TO nova_readonly;
+REVOKE SELECT (password_hash) ON "Nova".t0021 FROM nova_readonly;
+
+REVOKE SELECT ON "Nova".t0056 FROM nova_readonly;
+GRANT SELECT (id, key_name, client_id, permissions, expires_at, is_active, created_at, created_by, updated_at, updated_by, update_number) ON "Nova".t0056 TO nova_readonly;
+REVOKE SELECT (api_key) ON "Nova".t0056 FROM nova_readonly;
+
+GRANT nova_readonly TO CURRENT_USER;
 
 COMMIT;

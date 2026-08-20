@@ -1,5 +1,6 @@
 import psycopg2
 import psycopg2.extras
+from psycopg2 import errors
 from packages.database.connection import get_connection, release_connection
 from packages.mcp.registry import register_tool, register_resource
 from packages.mcp.types import Tool, Resource
@@ -81,15 +82,45 @@ def _describe_table(table_name: str):
 
 def _execute_read_query(sql: str, limit: int = 100):
     sanitized = sql.strip().lower()
-    if not sanitized.startswith("select") or "insert" in sanitized or "update" in sanitized or "delete" in sanitized or "drop" in sanitized or "alter" in sanitized or "create" in sanitized or "truncate" in sanitized or "grant" in sanitized:
+    if not (sanitized.startswith("select") or sanitized.startswith("with") or sanitized.startswith("explain")):
         raise ValueError("Only SELECT queries are allowed")
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SET LOCAL statement_timeout = '10s'")
+            cur.execute("SET TRANSACTION READ ONLY")
+            cur.execute("SET LOCAL ROLE nova_readonly")
+            cur.execute("SET LOCAL statement_timeout = '5s'")
             cur.execute(sql)
             rows = [dict(r) for r in cur.fetchmany(limit)]
+            try:
+                conn.commit()
+            except Exception:
+                pass
             return rows
+    except errors.InsufficientPrivilege as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return {"error": f"Permission denied: {str(e).strip()}"}
+    except errors.ReadOnlySqlTransaction as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return {"error": f"Read-only transaction violation: {str(e).strip()}"}
+    except errors.QueryCanceled as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return {"error": f"Query canceled (statement timeout exceeded): {str(e).strip()}"}
+    except psycopg2.Error as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return {"error": f"Database error: {str(e).strip()}"}
     finally:
         release_connection(conn)
 
