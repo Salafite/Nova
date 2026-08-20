@@ -7,8 +7,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from unittest.mock import MagicMock, patch
 import pytest
 
+import httpx
 from fastapi import FastAPI, Depends
-from fastapi.testclient import TestClient
 
 from packages.database.sequence import (
     get_next_sequence_value,
@@ -809,7 +809,7 @@ class TestConcurrentSalesOrderLifecycle:
 class TestConcurrentFastAPIHttpEndpoints:
     """Stress tests verifying zero HTTP 500 errors under concurrent HTTP requests."""
 
-    def test_50_concurrent_http_order_confirmations(self):
+    async def test_50_concurrent_http_order_confirmations(self):
         """Simulate 50 concurrent HTTP POST requests to /api/T0012I/{id}/confirm."""
         app = create_test_fastapi_app()
 
@@ -837,26 +837,15 @@ class TestConcurrentFastAPIHttpEndpoints:
                 'line_number': 1,
             })
 
-        barrier = threading.Barrier(50)
-        responses = []
-        errors = []
+        async def confirm_order(order_id, client):
+            return await client.post(f"/api/T0012I/{order_id}/confirm")
 
-        def worker(order_id):
-            try:
-                barrier.wait()
-                with TestClient(app) as client:
-                    resp = client.post(f"/api/T0012I/{order_id}/confirm")
-                responses.append(resp)
-            except Exception as e:
-                errors.append(f"HTTP request error: {e}")
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            responses = await asyncio.gather(
+                *(confirm_order(i, client) for i in range(1, 51))
+            )
 
-        threads = [threading.Thread(target=worker, args=(i,)) for i in range(1, 51)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0
         assert len(responses) == 50
 
         # Verify zero HTTP 500 internal server errors
@@ -870,7 +859,7 @@ class TestConcurrentFastAPIHttpEndpoints:
         nums = [p['pick_list_number'] for p in pls]
         assert len(set(nums)) == 50
 
-    def test_50_concurrent_http_order_deliveries(self):
+    async def test_50_concurrent_http_order_deliveries(self):
         """Simulate 50 concurrent HTTP POST requests to /api/T0012I/{id}/deliver."""
         app = create_test_fastapi_app()
 
@@ -889,26 +878,15 @@ class TestConcurrentFastAPIHttpEndpoints:
                 'order_date': '2026-08-20',
             })
 
-        barrier = threading.Barrier(50)
-        responses = []
-        errors = []
+        async def deliver_order(order_id, client):
+            return await client.post(f"/api/T0012I/{order_id}/deliver")
 
-        def worker(order_id):
-            try:
-                barrier.wait()
-                with TestClient(app) as client:
-                    resp = client.post(f"/api/T0012I/{order_id}/deliver")
-                responses.append(resp)
-            except Exception as e:
-                errors.append(f"HTTP request error: {e}")
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            responses = await asyncio.gather(
+                *(deliver_order(i, client) for i in range(1, 51))
+            )
 
-        threads = [threading.Thread(target=worker, args=(i,)) for i in range(1, 51)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0
         assert len(responses) == 50
 
         # Verify zero HTTP 500 errors
@@ -922,56 +900,37 @@ class TestConcurrentFastAPIHttpEndpoints:
         nums = [inv['invoice_number'] for inv in invoices]
         assert len(set(nums)) == 50
 
-    def test_50_concurrent_http_direct_document_creations(self):
+    async def test_50_concurrent_http_direct_document_creations(self):
         """
         Simulate 25 concurrent POST requests to /api/T0090I/ and 25 to /api/T0101I/
         without passing document numbers.
         """
         app = create_test_fastapi_app()
 
-        barrier = threading.Barrier(50)
-        inv_responses = []
-        pkl_responses = []
-        errors = []
+        async def create_invoice(idx, client):
+            return await client.post("/api/T0090I/", json={
+                'partner_id': 1,
+                'issue_date': '2026-08-20',
+                'due_date': '2026-09-20',
+                'total_amount': 50.0 + idx,
+            })
 
-        def inv_worker(idx):
-            try:
-                barrier.wait()
-                with TestClient(app) as client:
-                    resp = client.post("/api/T0090I/", json={
-                        'partner_id': 1,
-                        'issue_date': '2026-08-20',
-                        'due_date': '2026-09-20',
-                        'total_amount': 50.0 + idx,
-                    })
-                inv_responses.append(resp)
-            except Exception as e:
-                errors.append(e)
+        async def create_pick_list(idx, client):
+            return await client.post("/api/T0101I/", json={
+                'sales_order_id': idx,
+                'warehouse_id': 1,
+                'status': 'Pending',
+            })
 
-        def pkl_worker(idx):
-            try:
-                barrier.wait()
-                with TestClient(app) as client:
-                    resp = client.post("/api/T0101I/", json={
-                        'sales_order_id': idx,
-                        'warehouse_id': 1,
-                        'status': 'Pending',
-                    })
-                pkl_responses.append(resp)
-            except Exception as e:
-                errors.append(e)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            inv_responses = await asyncio.gather(
+                *(create_invoice(i, client) for i in range(25))
+            )
+            pkl_responses = await asyncio.gather(
+                *(create_pick_list(i, client) for i in range(25))
+            )
 
-        threads = []
-        for i in range(25):
-            threads.append(threading.Thread(target=inv_worker, args=(i,)))
-            threads.append(threading.Thread(target=pkl_worker, args=(i,)))
-
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0
         assert len(inv_responses) == 25
         assert len(pkl_responses) == 25
 
