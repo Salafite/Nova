@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import modules.core.controllers
 from modules.warehouse.services.batch_number_service import BatchNumberService
 from modules.warehouse.services.goods_receipt_service import GoodsReceiptService
@@ -226,7 +226,8 @@ class TestPickListFEFOGeneration:
         self.mock_pli_repo.create.side_effect = mock_pli_create
         self.mock_pli_repo.list.return_value = created_items
 
-        result = self.service.create_from_order(10, warehouse_id=1)
+        with patch('modules.warehouse.services.pick_list_service.generate_pick_list_number', return_value='PKL-00001'):
+            result = self.service.create_from_order(10, warehouse_id=1)
 
         self.mock_batch_service.allocate_fefo_lots.assert_called_once_with(
             product_id=201,
@@ -257,7 +258,8 @@ class TestPickListFEFOGeneration:
         self.mock_pli_repo.create.side_effect = mock_pli_create
         self.mock_pli_repo.list.return_value = created_items
 
-        result = self.service.create_from_order(10, warehouse_id=1)
+        with patch('modules.warehouse.services.pick_list_service.generate_pick_list_number', return_value='PKL-00001'):
+            result = self.service.create_from_order(10, warehouse_id=1)
 
         assert len(created_items) == 2
         # First lot item
@@ -290,7 +292,8 @@ class TestPickListFEFOGeneration:
         self.mock_pli_repo.create.side_effect = mock_pli_create
         self.mock_pli_repo.list.return_value = created_items
 
-        result = self.service.create_from_order(10, warehouse_id=1)
+        with patch('modules.warehouse.services.pick_list_service.generate_pick_list_number', return_value='PKL-00001'):
+            result = self.service.create_from_order(10, warehouse_id=1)
 
         assert len(created_items) == 2
         # Allocated lot portion
@@ -319,7 +322,8 @@ class TestPickListFEFOGeneration:
         self.mock_pli_repo.create.side_effect = mock_pli_create
         self.mock_pli_repo.list.return_value = created_items
 
-        result = self.service.create_from_order(10, warehouse_id=1)
+        with patch('modules.warehouse.services.pick_list_service.generate_pick_list_number', return_value='PKL-00001'):
+            result = self.service.create_from_order(10, warehouse_id=1)
 
         assert len(created_items) == 1
         assert created_items[0]['batch_id'] is None
@@ -414,6 +418,28 @@ class TestPickerLotSelectionAndDepletion:
             'picked_batch_id': 99
         })
 
+    def test_pick_item_rejects_item_from_another_pick_list(self):
+        self.mock_pli_repo.get.return_value = {
+            'id': 5,
+            'pick_list_id': 100,
+            'product_id': 201,
+            'qty_ordered': 10.0
+        }
+        with pytest.raises(ValueError) as exc_info:
+            self.service.pick_item(item_id=5, qty_picked=10.0, pick_list_id=999)
+        assert 'not found in pick list 999' in str(exc_info.value)
+
+    def test_pick_item_rejects_qty_above_ordered(self):
+        self.mock_pli_repo.get.return_value = {
+            'id': 5,
+            'pick_list_id': 100,
+            'product_id': 201,
+            'qty_ordered': 10.0
+        }
+        with pytest.raises(ValueError) as exc_info:
+            self.service.pick_item(item_id=5, qty_picked=12.0)
+        assert 'exceeds ordered quantity' in str(exc_info.value)
+
     def test_complete_picking_deducts_stock(self):
         self.mock_pl_repo.get.return_value = {
             'id': 100,
@@ -487,6 +513,7 @@ class TestPickListControllerEndpoints:
         mock_svc.pick_item.assert_called_once_with(
             item_id=5,
             qty_picked=8.0,
+            pick_list_id=100,
             picked_batch_id=2,
             picked_batch_number='LOT-B'
         )

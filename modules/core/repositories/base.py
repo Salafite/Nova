@@ -13,8 +13,11 @@ class CrudRepository:
         self.business_columns = business_columns or []
         self.all_columns = business_columns + list(AUDIT_COLUMNS) if business_columns else []
 
-    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None):
-        conn = get_connection()
+    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             clauses = ['TRUE']
             params = []
@@ -36,10 +39,14 @@ class CrudRepository:
                 cur.execute(sql, params)
                 return [dict(r) for r in cur.fetchall()]
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def get(self, id_val):
-        conn = get_connection()
+    def get(self, id_val, conn=None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" = %s'
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -47,10 +54,14 @@ class CrudRepository:
                 row = cur.fetchone()
                 return dict(row) if row else None
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def create(self, payload: dict):
-        conn = get_connection()
+    def create(self, payload: dict, conn=None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             cols = [c for c in payload.keys() if c != self.pk and c not in AUDIT_COLUMNS]
             vals = [payload[c] for c in cols]
@@ -59,21 +70,27 @@ class CrudRepository:
             sql = f'INSERT INTO {self.qualified} ({cols_str}) VALUES ({placeholders}) RETURNING *'
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, vals)
-                conn.commit()
+                if should_release:
+                    conn.commit()
                 row = cur.fetchone()
                 return dict(row) if row else None
         except psycopg2.Error:
-            conn.rollback()
+            if should_release:
+                conn.rollback()
             raise
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def update(self, id_val, payload: dict):
-        conn = get_connection()
+    def update(self, id_val, payload: dict, conn=None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             cols = [c for c in payload.keys() if c != self.pk and c not in AUDIT_COLUMNS]
             if not cols:
-                return self.get(id_val)
+                return self.get(id_val, conn=conn)
             set_clauses = [f'"{c}" = %s' for c in cols]
             set_clauses.append('"updated_at" = NOW()')
             set_clauses.append('"update_number" = "update_number" + 1')
@@ -82,17 +99,23 @@ class CrudRepository:
             sql = f'UPDATE {self.qualified} SET {", ".join(set_clauses)} WHERE "{self.pk}" = %s RETURNING *'
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, vals)
-                conn.commit()
+                if should_release:
+                    conn.commit()
                 row = cur.fetchone()
                 return dict(row) if row else None
         except psycopg2.Error:
-            conn.rollback()
+            if should_release:
+                conn.rollback()
             raise
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def delete(self, id_val):
-        conn = get_connection()
+    def delete(self, id_val, conn=None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             if self._has_is_active():
                 sql = f'UPDATE {self.qualified} SET is_active = FALSE, updated_at = NOW(), update_number = update_number + 1 WHERE "{self.pk}" = %s'
@@ -100,16 +123,22 @@ class CrudRepository:
                 sql = f'DELETE FROM {self.qualified} WHERE "{self.pk}" = %s'
             with conn.cursor() as cur:
                 cur.execute(sql, (id_val,))
-                conn.commit()
+                if should_release:
+                    conn.commit()
                 return cur.rowcount > 0
         except psycopg2.Error:
-            conn.rollback()
+            if should_release:
+                conn.rollback()
             raise
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def count(self, filters: dict = None):
-        conn = get_connection()
+    def count(self, filters: dict = None, conn=None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             clauses = ['TRUE']
             params = []
@@ -125,7 +154,8 @@ class CrudRepository:
                 row = cur.fetchone()
                 return row['cnt'] if row else 0
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
     def _has_is_active(self):
         return 'is_active' in self.all_columns
