@@ -1,6 +1,15 @@
+from decimal import Decimal
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.connection import get_connection, release_connection
+
+
+def _to_decimal(value) -> Decimal:
+    """Coerce a numeric input to Decimal without raising on mixed operand types."""
+    try:
+        return Decimal(str(value))
+    except (TypeError, ValueError, ArithmeticError):
+        return Decimal(0)
 
 
 class EnhancedSalesOrderService(CrudService):
@@ -18,13 +27,13 @@ class EnhancedSalesOrderService(CrudService):
 
         try:
             order = super().create(order_data, conn=conn)
-            subtotal = 0
-            tax_rate_pct = self._lookup_tax_rate(order_data.get('tax_rate_id'), conn=conn)
+            subtotal = Decimal(0)
+            tax_rate_pct = _to_decimal(self._lookup_tax_rate(order_data.get('tax_rate_id'), conn=conn))
             price_list_id = order_data.get('price_list_id')
 
             for line_data in lines:
-                unit_price = self._resolve_unit_price(line_data, price_list_id, conn=conn)
-                qty = line_data.get('qty', 1)
+                unit_price = _to_decimal(self._resolve_unit_price(line_data, price_list_id, conn=conn))
+                qty = _to_decimal(line_data.get('qty', 1))
                 line_total = qty * unit_price
                 subtotal += line_total
                 self.line_repo.create({
@@ -37,7 +46,7 @@ class EnhancedSalesOrderService(CrudService):
                     'line_number': line_data.get('line_number', 1),
                 }, conn=conn)
 
-            tax_amount = subtotal * tax_rate_pct / 100
+            tax_amount = subtotal * tax_rate_pct / Decimal(100)
             result = super().update(order['id'], {
                 'subtotal': subtotal,
                 'tax': tax_amount,

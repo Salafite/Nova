@@ -328,9 +328,9 @@ class TestModelSequenceDefaults:
         pl = PickListCreate(**data)
         assert pl.pick_list_number == 'PKL-CUSTOM-99'
 
-    def test_pick_list_update_optional_pick_list_number(self):
+    def test_pick_list_update_excludes_pick_list_number(self):
         update = PickListUpdate(status='In Progress')
-        assert update.pick_list_number is None
+        assert 'pick_list_number' not in PickListUpdate.model_fields
         assert update.status == 'In Progress'
 
 

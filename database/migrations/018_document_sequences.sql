@@ -1,5 +1,7 @@
 -- Nova ERP — Concurrency-Safe Document Numbering Sequences
 -- Migration 018: Add dedicated PostgreSQL sequences for invoices (T0090) and pick lists (T0101)
+-- NOTE: Sequences live in the "Nova" schema. packages/database/sequence.py qualifies names with
+-- DB_SCHEMA (default 'Nova'), so keep the DDL here consistent with that helper.
 BEGIN;
 
 -- 1. Create dedicated sequences in the "Nova" schema
@@ -9,7 +11,7 @@ CREATE SEQUENCE IF NOT EXISTS "Nova".seq_pick_list_number START WITH 1 INCREMENT
 -- 2. Synchronize seq_invoice_number with existing maximum invoice number in T0090 (if table exists and has rows)
 DO $$
 DECLARE
-    max_inv_num INT := 0;
+    max_inv_num BIGINT := 0;
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.tables 
@@ -18,9 +20,13 @@ BEGIN
         SELECT COALESCE(MAX(
             CASE
                 WHEN invoice_number ~ '^.*-(\d+)$' THEN
-                    (regexp_match(invoice_number, '^.*-(\d+)$'))[1]::INT
+                    CASE WHEN LENGTH((regexp_match(invoice_number, '^.*-(\d+)$'))[1]) <= 18
+                         THEN (regexp_match(invoice_number, '^.*-(\d+)$'))[1]::BIGINT
+                         ELSE 0 END
                 WHEN invoice_number ~ '^\d+$' THEN
-                    invoice_number::INT
+                    CASE WHEN LENGTH(invoice_number) <= 18
+                         THEN invoice_number::BIGINT
+                         ELSE 0 END
                 ELSE 0
             END
         ), 0)
@@ -38,7 +44,7 @@ END $$;
 -- 3. Synchronize seq_pick_list_number with existing maximum pick list number in T0101 (if table exists and has rows)
 DO $$
 DECLARE
-    max_pkl_num INT := 0;
+    max_pkl_num BIGINT := 0;
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.tables 
@@ -47,9 +53,13 @@ BEGIN
         SELECT COALESCE(MAX(
             CASE
                 WHEN pick_list_number ~ '^.*-(\d+)$' THEN
-                    (regexp_match(pick_list_number, '^.*-(\d+)$'))[1]::INT
+                    CASE WHEN LENGTH((regexp_match(pick_list_number, '^.*-(\d+)$'))[1]) <= 18
+                         THEN (regexp_match(pick_list_number, '^.*-(\d+)$'))[1]::BIGINT
+                         ELSE 0 END
                 WHEN pick_list_number ~ '^\d+$' THEN
-                    pick_list_number::INT
+                    CASE WHEN LENGTH(pick_list_number) <= 18
+                         THEN pick_list_number::BIGINT
+                         ELSE 0 END
                 ELSE 0
             END
         ), 0)

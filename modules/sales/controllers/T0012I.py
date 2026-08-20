@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from fastapi import HTTPException
 from modules.sales.services.sales_service import SalesOrderService
 from modules.sales.services.enhanced_sales_order_service import EnhancedSalesOrderService
@@ -6,6 +7,8 @@ from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 from modules.sales.models import SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse
 from packages.ws.broadcast import order_status_changed
+
+logger = logging.getLogger(__name__)
 
 repo = CrudRepository('T0012', business_columns=['id', 'order_number', 'customer_id', 'warehouse_id', 'subtotal', 'tax', 'grand_total', 'status', 'order_date', 'notes', 'price_list_id', 'tax_rate_id', 'payment_term_id'])
 service = SalesOrderService(repo)
@@ -15,14 +18,28 @@ router = create_crud_router('/api/T0012I', 'T0012 - Sales Orders', service,
 
 enhanced_service = EnhancedSalesOrderService(repo)
 
+_broadcast_tasks = set()
+
+
 def _safe_broadcast(coro):
+    """Schedule an async broadcast, honoring both async and sync (threadpool) contexts."""
     try:
-        asyncio.create_task(coro)
+        loop = asyncio.get_running_loop()
     except RuntimeError:
+        # Sync endpoint running in a threadpool thread: run the broadcast on its own loop.
         try:
-            coro.close()
-        except Exception:
-            pass
+            asyncio.run(coro)
+        except Exception as e:
+            logger.warning(f"Failed to run status broadcast: {e}")
+        return
+    task = loop.create_task(coro)
+    _broadcast_tasks.add(task)
+    task.add_done_callback(_broadcast_tasks.discard)
+
+
+def _server_error(e: Exception, action: str):
+    logger.error(f"Failed to {action}: {e}", exc_info=True)
+    raise HTTPException(500, 'Internal server error') from e
 
 
 @router.post('/with-lines', status_code=201)
@@ -36,7 +53,7 @@ def create_order_with_lines(body: dict):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(400, str(e))
+        _server_error(e, 'create order with lines')
 
 @router.post('/{id}/confirm')
 def confirm_order(id: int):
@@ -53,7 +70,7 @@ def confirm_order(id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(400, str(e))
+        _server_error(e, 'confirm order')
 
 @router.post('/{id}/deliver')
 def deliver_order(id: int):
@@ -70,7 +87,7 @@ def deliver_order(id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(400, str(e))
+        _server_error(e, 'deliver order')
 
 @router.post('/{id}/cancel')
 def cancel_order(id: int):
@@ -87,4 +104,4 @@ def cancel_order(id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(400, str(e))
+        _server_error(e, 'cancel order')

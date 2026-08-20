@@ -177,6 +177,7 @@ class SalesOrderService(CrudService):
             warehouse_id = warehouses[0]['id']
         lines = LINE_REPO.list(filters={'sales_order_id': order_id}, conn=conn)
         svc = StockMovementService()
+        errors = []
         for line in lines:
             product_id = line.get('product_id')
             qty = line.get('qty', 0)
@@ -185,6 +186,11 @@ class SalesOrderService(CrudService):
             try:
                 svc.release_stock(product_id, warehouse_id, qty, 'sales_order', order_id, conn=conn)
             except Exception as e:
-                logger.warning(f"Failed to release stock for product {product_id} on sales order {order_id}: {e}")
+                logger.warning(f"Failed to release stock for product {product_id} (qty {qty}) on order {order_id}: {e}")
+                errors.append(f'Product {product_id}: {str(e)}')
+        if errors:
+            error_msg = f'Stock release partial failure: {"; ".join(errors)}'
+            logger.error(f"Sales order {order_id} stock release failed: {error_msg}")
+            raise RuntimeError(error_msg)
 
 

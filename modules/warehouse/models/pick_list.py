@@ -11,7 +11,6 @@ class PickListCreate(BaseModel):
     notes: Optional[str] = None
 
 class PickListUpdate(BaseModel):
-    pick_list_number: Optional[str] = Field(None, max_length=50)
     status: Optional[str] = None
     notes: Optional[str] = None
 

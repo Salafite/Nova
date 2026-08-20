@@ -23,7 +23,7 @@ class InvoiceService(CrudService):
     def __init__(self, repo: CrudRepository = None):
         super().__init__(repo or INVOICE_REPO)
 
-    def create(self, payload: dict):
+    def create(self, payload: dict, conn=None):
         if not payload.get('invoice_number') or not str(payload.get('invoice_number')).strip():
-            payload['invoice_number'] = generate_invoice_number()
-        return super().create(payload)
+            payload['invoice_number'] = generate_invoice_number(conn=conn)
+        return super().create(payload, conn=conn)

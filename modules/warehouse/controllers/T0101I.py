@@ -47,6 +47,7 @@ def pick_item(id: int, item_id: int, body: dict):
         return pl_service.pick_item(
             item_id=item_id,
             qty_picked=qty_picked,
+            pick_list_id=id,
             picked_batch_id=picked_batch_id,
             picked_batch_number=picked_batch_number
         )

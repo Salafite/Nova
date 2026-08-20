@@ -418,6 +418,28 @@ class TestPickerLotSelectionAndDepletion:
             'picked_batch_id': 99
         })
 
+    def test_pick_item_rejects_item_from_another_pick_list(self):
+        self.mock_pli_repo.get.return_value = {
+            'id': 5,
+            'pick_list_id': 100,
+            'product_id': 201,
+            'qty_ordered': 10.0
+        }
+        with pytest.raises(ValueError) as exc_info:
+            self.service.pick_item(item_id=5, qty_picked=10.0, pick_list_id=999)
+        assert 'not found in pick list 999' in str(exc_info.value)
+
+    def test_pick_item_rejects_qty_above_ordered(self):
+        self.mock_pli_repo.get.return_value = {
+            'id': 5,
+            'pick_list_id': 100,
+            'product_id': 201,
+            'qty_ordered': 10.0
+        }
+        with pytest.raises(ValueError) as exc_info:
+            self.service.pick_item(item_id=5, qty_picked=12.0)
+        assert 'exceeds ordered quantity' in str(exc_info.value)
+
     def test_complete_picking_deducts_stock(self):
         self.mock_pl_repo.get.return_value = {
             'id': 100,
@@ -491,6 +513,7 @@ class TestPickListControllerEndpoints:
         mock_svc.pick_item.assert_called_once_with(
             item_id=5,
             qty_picked=8.0,
+            pick_list_id=100,
             picked_batch_id=2,
             picked_batch_number='LOT-B'
         )

@@ -2,11 +2,11 @@
 -- SEQUENCES
 -- ============================================================
 
-CREATE SEQUENCE IF NOT EXISTS seq_invoice_number START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE IF NOT EXISTS seq_pick_list_number START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS "Nova".seq_invoice_number START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS "Nova".seq_pick_list_number START WITH 1 INCREMENT BY 1;
 
-COMMENT ON SEQUENCE seq_invoice_number IS 'Concurrency-safe atomic sequence for generating unique invoice numbers (INV-XXXXX)';
-COMMENT ON SEQUENCE seq_pick_list_number IS 'Concurrency-safe atomic sequence for generating unique pick list numbers (PKL-XXXXX)';
+COMMENT ON SEQUENCE "Nova".seq_invoice_number IS 'Concurrency-safe atomic sequence for generating unique invoice numbers (INV-XXXXX)';
+COMMENT ON SEQUENCE "Nova".seq_pick_list_number IS 'Concurrency-safe atomic sequence for generating unique pick list numbers (PKL-XXXXX)';
 
 -- T0022 - Navigation Permissions (metadata-driven menu)
 COMMENT ON TABLE T0022 IS 'Sidebar navigation items with permission keys for RBAC filtering';

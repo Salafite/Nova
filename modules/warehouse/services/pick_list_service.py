@@ -247,23 +247,53 @@ class PickListService(CrudService):
         available.sort(key=sort_key)
         return available
 
-    def pick_item(self, item_id, qty_picked, picked_batch_id=None, picked_batch_number=None, conn=None):
+    def _validate_batch_for_item(self, batch, item, qty_picked, warehouse_id=None):
+        batch_label = batch.get('batch_number') or batch.get('id')
+        product_id = batch.get('product_id')
+        if product_id is not None and product_id != item.get('product_id'):
+            raise ValueError(f"Batch {batch_label} does not match product {item.get('product_id')}")
+        if warehouse_id is not None:
+            batch_wh = batch.get('warehouse_id')
+            if batch_wh is not None and batch_wh != warehouse_id:
+                raise ValueError(f"Batch {batch_label} belongs to a different warehouse")
+        status = batch.get('status')
+        if status is not None and status not in ('Available', 'Partially Used', 'Active'):
+            raise ValueError(f"Batch {batch_label} is not available (status: {status})")
+        qty = batch.get('quantity')
+        if qty is not None and qty_picked > float(qty or 0):
+            raise ValueError(f"Batch {batch_label} has insufficient quantity ({qty}) for {qty_picked} picked")
+
+    def pick_item(self, item_id, qty_picked, pick_list_id=None, picked_batch_id=None, picked_batch_number=None, conn=None):
         item = self.pli_repo.get(item_id, **_conn_kwargs(conn))
         if not item:
             logger.error(f"Cannot pick item: Pick list item {item_id} not found")
             raise ValueError(f"Pick list item {item_id} not found")
+        if pick_list_id is not None and item.get('pick_list_id') != pick_list_id:
+            logger.warning(f"Cannot pick item {item_id}: it does not belong to pick list {pick_list_id}")
+            raise ValueError(f"Pick list item {item_id} not found in pick list {pick_list_id}")
         if qty_picked < 0:
             logger.warning(f"Invalid picked quantity {qty_picked} for item {item_id}")
             raise ValueError(f"Quantity picked cannot be negative: {qty_picked}")
+        ordered = float(item.get('qty_ordered', 0) or 0)
+        if qty_picked > ordered:
+            logger.warning(f"Picked quantity {qty_picked} exceeds ordered quantity {ordered} for item {item_id}")
+            raise ValueError(f"Quantity picked {qty_picked} exceeds ordered quantity {ordered}")
+
+        warehouse_id = None
+        if pick_list_id is not None:
+            pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
+            warehouse_id = pl.get('warehouse_id') if pl else None
 
         update_data = {'qty_picked': qty_picked}
         if picked_batch_id is not None:
             update_data['picked_batch_id'] = picked_batch_id
-            if not picked_batch_number:
-                batch = self.batch_service.get(picked_batch_id, **_conn_kwargs(conn))
-                if batch:
-                    update_data['picked_batch_number'] = batch.get('batch_number')
-            else:
+            batch = self.batch_service.get(picked_batch_id, **_conn_kwargs(conn))
+            if not batch:
+                raise ValueError(f"Batch {picked_batch_id} not found")
+            self._validate_batch_for_item(batch, item, qty_picked, warehouse_id=warehouse_id)
+            if batch.get('batch_number'):
+                update_data['picked_batch_number'] = batch.get('batch_number')
+            elif picked_batch_number:
                 update_data['picked_batch_number'] = picked_batch_number
         elif picked_batch_number is not None and str(picked_batch_number).strip():
             picked_batch_number = str(picked_batch_number).strip()
@@ -272,8 +302,10 @@ class PickListService(CrudService):
                 'batch_number': picked_batch_number,
                 'product_id': item.get('product_id')
             }, **_conn_kwargs(conn))
-            if batches:
-                update_data['picked_batch_id'] = batches[0]['id']
+            if not batches:
+                raise ValueError(f"Batch {picked_batch_number} not found for product {item.get('product_id')}")
+            self._validate_batch_for_item(batches[0], item, qty_picked, warehouse_id=warehouse_id)
+            update_data['picked_batch_id'] = batches[0]['id']
 
         try:
             self.pli_repo.update(item_id, update_data, **_conn_kwargs(conn))
@@ -308,7 +340,8 @@ class PickListService(CrudService):
         unpicked = []
         for item in items:
             if item.get('qty_picked', 0) < item.get('qty_ordered', 0):
-                unpicked.append(f"Item {item.get('product_name', item['product_id'])} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
+                label = item.get('product_name') or item.get('product_id') or f"id {item.get('id')}"
+                unpicked.append(f"Item {label} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
         if unpicked:
             msg = f"Cannot complete pick list {pick_list_id}: {'; '.join(unpicked)}"
             logger.warning(msg)
