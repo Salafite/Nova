@@ -8,6 +8,11 @@ from modules.bi.models.executive_analytics import (
     SkuMarginResponse,
     PeriodMarginTrendResponse,
     CustomerProfitabilityResponse,
+    DeliveryFulfillmentSummaryResponse,
+    DeliveryRouteMetricItem,
+    WarehouseDeliveryMetricItem,
+    CustomerDestinationMetricItem,
+    DeliveryVarianceLineItem,
 )
 from modules.bi.services.executive_analytics_service import (
     ExecutiveAnalyticsService,
@@ -17,6 +22,9 @@ from modules.bi.services.executive_analytics_service import (
 from modules.bi.repositories.executive_analytics_repo import ExecutiveAnalyticsRepository
 from modules.bi.services.customer_profitability_service import CustomerProfitabilityService
 from modules.bi.repositories.customer_profitability_repo import CustomerProfitabilityRepository
+from modules.bi.services.delivery_analytics_service import DeliveryAnalyticsService
+from modules.bi.repositories.delivery_analytics_repo import DeliveryAnalyticsRepository
+
 
 
 class TestExecutiveAnalyticsService:
@@ -543,3 +551,198 @@ class TestCustomerProfitabilityService:
 
         playbook_q4 = self.service.get_quadrant_playbook('Q4')
         assert playbook_q4['name'] == 'Unprofitable / Drain'
+
+
+class TestDeliveryAnalyticsService:
+    def setup_method(self):
+        self.mock_repo = MagicMock(spec=DeliveryAnalyticsRepository)
+        self.service = DeliveryAnalyticsService(repo=self.mock_repo)
+
+    def test_get_delivery_fulfillment_summary(self):
+        self.mock_repo.get_route_fulfillment_data.return_value = [
+            {
+                'delivery_route': 'North Metro Route',
+                'warehouse_id': 1,
+                'warehouse_name': 'Main DC',
+                'total_deliveries': 20,
+                'completed_deliveries': 18,
+                'on_time_deliveries': 16,
+                'delayed_deliveries': 2,
+                'total_freight_cost': 1200.0,
+                'total_qty_ordered': 1000.0,
+                'total_qty_shipped': 980.0,
+            },
+            {
+                'delivery_route': 'South Coastal Route',
+                'warehouse_id': 2,
+                'warehouse_name': 'Coastal Hub',
+                'total_deliveries': 10,
+                'completed_deliveries': 10,
+                'on_time_deliveries': 8,
+                'delayed_deliveries': 2,
+                'total_freight_cost': 800.0,
+                'total_qty_ordered': 500.0,
+                'total_qty_shipped': 500.0,
+            },
+        ]
+        self.mock_repo.get_delivery_summary_kpis.return_value = {
+            'total_routes': 2,
+            'total_deliveries': 30,
+            'completed_deliveries': 28,
+            'on_time_deliveries': 24,
+            'delayed_deliveries': 4,
+            'total_freight_cost': 2000.0,
+        }
+
+        resp = self.service.get_delivery_fulfillment_summary(
+            filters=ExecutiveAnalyticsFilter(period='Monthly')
+        )
+
+        assert isinstance(resp, DeliveryFulfillmentSummaryResponse)
+        assert resp.total_routes == 2
+        assert resp.total_deliveries == 30
+        assert resp.total_freight_cost == 2000.0
+        # Overall on time rate = 24 / 28 * 100 = 85.71%
+        assert resp.overall_on_time_rate == 85.71
+        # Overall completion rate = 28 / 30 * 100 = 93.33%
+        assert resp.overall_completion_rate == 93.33
+        # Avg freight per order = 2000 / 30 = 66.67
+        assert resp.avg_freight_cost_per_order == 66.67
+
+        assert len(resp.routes) == 2
+        r1 = resp.routes[0]
+        assert r1.delivery_route == 'North Metro Route'
+        assert r1.warehouse_name == 'Main DC'
+        # OTD rate = 16 / 18 * 100 = 88.89%
+        assert r1.on_time_delivery_rate == 88.89
+        # Route completion rate = 18 / 20 * 100 = 90.0%
+        assert r1.route_completion_rate == 90.0
+        # Avg freight = 1200 / 20 = 60.0
+        assert r1.avg_freight_per_delivery == 60.0
+        # Variance = (980 - 1000) / 1000 * 100 = -2.0%
+        assert r1.fulfillment_variance_pct == -2.0
+
+        r2 = resp.routes[1]
+        assert r2.delivery_route == 'South Coastal Route'
+        assert r2.on_time_delivery_rate == 80.0
+        assert r2.route_completion_rate == 100.0
+        assert r2.avg_freight_per_delivery == 80.0
+        assert r2.fulfillment_variance_pct == 0.0
+
+    def test_get_warehouse_efficiency(self):
+        self.mock_repo.get_warehouse_delivery_data.return_value = [
+            {
+                'warehouse_id': 1,
+                'warehouse_name': 'Central Depot',
+                'location': 'Riyadh',
+                'total_deliveries': 50,
+                'completed_deliveries': 48,
+                'on_time_deliveries': 46,
+                'delayed_deliveries': 2,
+                'total_freight_cost': 2500.0,
+                'total_qty_shipped': 5000.0,
+            }
+        ]
+
+        result = self.service.get_warehouse_efficiency()
+
+        assert len(result) == 1
+        item = result[0]
+        assert isinstance(item, WarehouseDeliveryMetricItem)
+        assert item.warehouse_id == 1
+        assert item.warehouse_name == 'Central Depot'
+        assert item.on_time_delivery_rate == 95.83  # 46 / 48 * 100
+        assert item.route_completion_rate == 96.0  # 48 / 50 * 100
+        assert item.avg_freight_per_delivery == 50.0  # 2500 / 50
+        assert item.total_qty_shipped == 5000.0
+
+    def test_get_customer_destination_metrics(self):
+        self.mock_repo.get_customer_destination_delivery_data.return_value = [
+            {
+                'customer_id': 10,
+                'customer_code': 'CUST-0010',
+                'customer_name': 'Gourmet Bistro',
+                'delivery_route': 'Downtown Core',
+                'total_deliveries': 12,
+                'completed_deliveries': 12,
+                'on_time_deliveries': 11,
+                'total_freight_cost': 600.0,
+                'total_qty_shipped': 350.0,
+            }
+        ]
+
+        result = self.service.get_customer_destination_metrics()
+
+        assert len(result) == 1
+        item = result[0]
+        assert isinstance(item, CustomerDestinationMetricItem)
+        assert item.customer_id == 10
+        assert item.customer_name == 'Gourmet Bistro'
+        assert item.delivery_route == 'Downtown Core'
+        assert item.on_time_delivery_rate == 91.67  # 11 / 12 * 100
+        assert item.avg_freight_per_delivery == 50.0  # 600 / 12
+
+    def test_get_delivery_fulfillment_variances(self):
+        self.mock_repo.get_delivery_variance_details.return_value = [
+            {
+                'delivery_id': 101,
+                'delivery_number': 'DEL-101',
+                'delivery_route': 'East Route',
+                'product_id': 5,
+                'product_name': 'Organic Butter 250g',
+                'qty_ordered': 100.0,
+                'qty_shipped': 80.0,
+                'variance_qty': -20.0,
+                'status': 'Delivered',
+            }
+        ]
+
+        variances = self.service.get_delivery_fulfillment_variances()
+
+        assert len(variances) == 1
+        v = variances[0]
+        assert isinstance(v, DeliveryVarianceLineItem)
+        assert v.delivery_id == 101
+        assert v.product_name == 'Organic Butter 250g'
+        assert v.qty_ordered == 100.0
+        assert v.qty_shipped == 80.0
+        assert v.variance_qty == -20.0
+        assert v.variance_pct == -20.0  # (-20 / 100) * 100
+
+    def test_get_delivery_kpi_gauges(self):
+        self.mock_repo.get_route_fulfillment_data.return_value = []
+        self.mock_repo.get_delivery_summary_kpis.return_value = {
+            'total_routes': 3,
+            'total_deliveries': 100,
+            'completed_deliveries': 98,
+            'on_time_deliveries': 96,
+            'delayed_deliveries': 2,
+            'total_freight_cost': 4500.0,
+        }
+
+        gauges = self.service.get_delivery_kpi_gauges()
+
+        assert gauges['total_deliveries'] == 100
+        # OTD % = 96 / 98 * 100 = 97.96%
+        assert gauges['overall_on_time_rate'] == 97.96
+        assert gauges['otd_rating'] == 'Excellent'
+        # Completion % = 98 / 100 * 100 = 98.0%
+        assert gauges['overall_completion_rate'] == 98.0
+        assert gauges['completion_rating'] == 'Optimal'
+        assert gauges['total_freight_cost'] == 4500.0
+        assert gauges['avg_freight_cost_per_order'] == 45.0
+
+    def test_empty_delivery_data_handling(self):
+        self.mock_repo.get_route_fulfillment_data.return_value = []
+        self.mock_repo.get_delivery_summary_kpis.return_value = {}
+
+        resp = self.service.get_delivery_fulfillment_summary()
+
+        assert isinstance(resp, DeliveryFulfillmentSummaryResponse)
+        assert resp.total_deliveries == 0
+        assert resp.overall_on_time_rate == 0.0
+        assert resp.overall_completion_rate == 0.0
+        assert resp.total_freight_cost == 0.0
+        assert resp.avg_freight_cost_per_order == 0.0
+        assert len(resp.routes) == 0
+

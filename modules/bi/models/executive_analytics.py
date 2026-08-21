@@ -210,6 +210,48 @@ class DeliveryFulfillmentSummaryResponse(BaseModel):
     routes: List[DeliveryRouteMetricItem] = Field(default_factory=list)
 
 
+class WarehouseDeliveryMetricItem(BaseModel):
+    warehouse_id: int
+    warehouse_name: str
+    location: Optional[str] = None
+    total_deliveries: int = 0
+    completed_deliveries: int = 0
+    on_time_deliveries: int = 0
+    delayed_deliveries: int = 0
+    on_time_delivery_rate: float = 0.0
+    route_completion_rate: float = 0.0
+    total_freight_cost: float = 0.0
+    avg_freight_per_delivery: float = 0.0
+    total_qty_shipped: float = 0.0
+
+
+class CustomerDestinationMetricItem(BaseModel):
+    customer_id: int
+    customer_name: str
+    customer_code: Optional[str] = None
+    delivery_route: Optional[str] = None
+    total_deliveries: int = 0
+    completed_deliveries: int = 0
+    on_time_delivery_rate: float = 0.0
+    total_freight_cost: float = 0.0
+    avg_freight_per_delivery: float = 0.0
+    total_qty_shipped: float = 0.0
+
+
+class DeliveryVarianceLineItem(BaseModel):
+    delivery_id: int
+    delivery_number: str
+    delivery_route: Optional[str] = None
+    product_id: Optional[int] = None
+    product_name: str
+    qty_ordered: float = 0.0
+    qty_shipped: float = 0.0
+    variance_qty: float = 0.0
+    variance_pct: float = 0.0
+    status: str = 'Dispatched'
+
+
+
 # ---------------------------------------------------------------------------
 # Financial Export Requests & Responses
 # ---------------------------------------------------------------------------
