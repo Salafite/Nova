@@ -48,6 +48,8 @@ from packages.mcp.servers.notifications_mcp import register_tools as register_no
 from packages.mcp.servers.pos_mcp import register_tools as register_pos_mcp
 from modules.administration.controllers.user_preferences import router as user_preferences_router
 from modules.administration.controllers.admin_preferences import router as admin_preferences_router
+from modules.purchasing.controllers.restock_controller import router as restock_router
+
 
 from contextlib import asynccontextmanager
 
@@ -88,6 +90,8 @@ app.include_router(bi_dashboard_router)
 app.include_router(ai_router)
 app.include_router(user_preferences_router)
 app.include_router(admin_preferences_router)
+app.include_router(restock_router)
+
 
 mcp_server = McpServer(name="NovaERP", version="1.0")
 register_database_mcp()

@@ -50,16 +50,16 @@ class DemandForecastService:
         """
         ref_date = reference_date or date.today()
         cutoff_date = ref_date - timedelta(days=days)
-
         should_release = False
-        if conn is None:
-            conn = get_connection()
-            should_release = True
 
         velocities: Dict[int, Dict[str, float]] = {}
 
         try:
+            if conn is None:
+                conn = get_connection()
+                should_release = True
             sql = f"""
+
                 SELECT
                     l.product_id,
                     COALESCE(SUM(l.qty), 0) AS total_sold,
@@ -145,16 +145,15 @@ class DemandForecastService:
         warehouse_id: Optional[int] = None,
         conn=None,
     ) -> Dict[int, Dict[str, float]]:
-        """Retrieve aggregated stock levels (qty, reserved_qty, available_stock, reorder_level) per product."""
         should_release = False
-        if conn is None:
-            conn = get_connection()
-            should_release = True
-
         stocks: Dict[int, Dict[str, float]] = {}
 
         try:
+            if conn is None:
+                conn = get_connection()
+                should_release = True
             sql = f"""
+
                 SELECT
                     product_id,
                     COALESCE(SUM(qty), 0) AS total_qty,
@@ -231,12 +230,13 @@ class DemandForecastService:
     def get_preferred_supplier(self, product_id: int, conn=None) -> Optional[Dict[str, Any]]:
         """Retrieve the preferred or primary supplier mapping from T0103 joined with T0011."""
         should_release = False
-        if conn is None:
-            conn = get_connection()
-            should_release = True
 
         try:
+            if conn is None:
+                conn = get_connection()
+                should_release = True
             sql = f"""
+
                 SELECT
                     ps.id AS mapping_id,
                     ps.product_id,

@@ -10,6 +10,30 @@
       </button>
     </div>
 
+    <div class="nav-cards mb-6">
+      <router-link to="/purchasing/requisitions" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">receipt_long</span>
+        <span class="nav-label">{{ t('pr-title', 'Requisitions') }}</span>
+      </router-link>
+      <router-link to="/purchasing/rfqs" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">request_quote</span>
+        <span class="nav-label">{{ t('rfq-title', 'RFQs') }}</span>
+      </router-link>
+      <router-link to="/purchasing" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">receipt</span>
+        <span class="nav-label">{{ t('purchase-orders', 'Purchase Orders') }}</span>
+      </router-link>
+      <router-link to="/purchasing/returns" class="nav-card nav-card-active">
+        <span class="material-symbols-outlined nav-icon">assignment_return</span>
+        <span class="nav-label">{{ t('returns-title', 'Returns') }}</span>
+      </router-link>
+      <router-link to="/purchasing/restock-suggestions" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">smart_toy</span>
+        <span class="nav-label">{{ t('ai-restock', 'AI Restock') }}</span>
+      </router-link>
+    </div>
+
+
     <SkeletonTable v-if="loading" />
     <ErrorState v-else-if="error" :message="error" @retry="load" />
     <div v-else-if="!items.length" class="empty-state">

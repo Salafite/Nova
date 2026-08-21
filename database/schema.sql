@@ -725,6 +725,12 @@ CREATE TABLE IF NOT EXISTS "Nova".t0099 (
     update_number   INT NOT NULL DEFAULT 1
 );
 
+INSERT INTO "Nova".t0099 (task_name, task_type, cron_expression, description, config, is_active, status)
+SELECT 'Demand Forecasting & Restock Requisitions', 'DemandForecastRestock', '0 6 * * *', 'Daily morning demand velocity analysis, stockout risk projection, and proactive restock digest notification', '{"days": 30, "safety_margin_days": 7, "target_coverage_days": 30}'::jsonb, true, 'Idle'
+WHERE NOT EXISTS (
+    SELECT 1 FROM "Nova".t0099 WHERE task_type = 'DemandForecastRestock'
+);
+
 CREATE TABLE IF NOT EXISTS "Nova".t0100 (
     id            SERIAL PRIMARY KEY,
     module_key    VARCHAR(50) NOT NULL UNIQUE,
