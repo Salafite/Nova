@@ -8,12 +8,14 @@ class ProductSupplierCreate(BaseModel):
     supplier_sku: Optional[str] = None
     unit_cost: float = 0
     lead_time_days: int = 0
+    min_order_qty: float = 1
     is_preferred: bool = False
 
 class ProductSupplierUpdate(BaseModel):
     supplier_sku: Optional[str] = None
     unit_cost: Optional[float] = None
     lead_time_days: Optional[int] = None
+    min_order_qty: Optional[float] = None
     is_preferred: Optional[bool] = None
 
 class ProductSupplierResponse(AuditMixin):
@@ -23,4 +25,5 @@ class ProductSupplierResponse(AuditMixin):
     supplier_sku: Optional[str] = None
     unit_cost: float
     lead_time_days: int
+    min_order_qty: float = 1
     is_preferred: bool

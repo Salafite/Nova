@@ -3,7 +3,7 @@ from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 from modules.core.services.base import CrudService
 
-repo = CrudRepository('T0103', business_columns=['id', 'product_id', 'supplier_id', 'supplier_sku', 'unit_cost', 'lead_time_days', 'is_preferred'])
+repo = CrudRepository('T0103', business_columns=['id', 'product_id', 'supplier_id', 'supplier_sku', 'unit_cost', 'lead_time_days', 'min_order_qty', 'is_preferred'])
 service = CrudService(repo)
 
 router = create_crud_router('/api/T0103I', 'T0103 - Product Suppliers', service,
