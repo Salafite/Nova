@@ -233,9 +233,13 @@ CREATE TABLE T0090 (
     invoice_number  VARCHAR(50) NOT NULL UNIQUE,
     invoice_type    VARCHAR(20) NOT NULL DEFAULT 'Sales',  -- Sales, Purchase
     partner_id      INT NOT NULL,                           -- customer or supplier ID
+    sales_order_id  INT REFERENCES T0012(id),
     issue_date      DATE NOT NULL,
     due_date        DATE NOT NULL,
     total_amount    NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
+    freight_amount  NUMERIC(12,2) NOT NULL DEFAULT 0,
+    discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+    sales_rep_id    INT REFERENCES T0021(id),
     status          VARCHAR(20) NOT NULL DEFAULT 'Draft',   -- Draft, Unpaid, Paid, Cancelled
     notes           TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -248,9 +252,13 @@ COMMENT ON COLUMN T0090.id IS 'Primary key (auto-increment)';
 COMMENT ON COLUMN T0090.invoice_number IS 'Unique invoice reference number';
 COMMENT ON COLUMN T0090.invoice_type IS 'Invoice type: Sales or Purchase';
 COMMENT ON COLUMN T0090.partner_id IS 'Customer or supplier ID';
+COMMENT ON COLUMN T0090.sales_order_id IS 'Associated sales order (FK to T0012)';
 COMMENT ON COLUMN T0090.issue_date IS 'Invoice issue date';
 COMMENT ON COLUMN T0090.due_date IS 'Payment due date';
 COMMENT ON COLUMN T0090.total_amount IS 'Total invoice amount';
+COMMENT ON COLUMN T0090.freight_amount IS 'Freight / shipping charges billed on invoice';
+COMMENT ON COLUMN T0090.discount_amount IS 'Customer discount deducted on invoice';
+COMMENT ON COLUMN T0090.sales_rep_id IS 'Assigned sales representative (FK to T0021)';
 COMMENT ON COLUMN T0090.status IS 'Invoice status: Draft, Unpaid, Paid, Cancelled';
 COMMENT ON COLUMN T0090.notes IS 'Free-text notes or comments';
 COMMENT ON COLUMN T0090.created_at IS 'Record creation timestamp';
@@ -260,6 +268,7 @@ COMMENT ON COLUMN T0090.updated_by IS 'User who last modified this record (FK to
 COMMENT ON COLUMN T0090.update_number IS 'Version counter incremented on each update, starts at 1';
 CREATE INDEX idx_T0090_partner ON T0090(partner_id);
 CREATE INDEX idx_T0090_status ON T0090(status);
+CREATE INDEX idx_T0090_sales_rep ON T0090(sales_rep_id);
 
 -- T0091 - Payments
 COMMENT ON TABLE T0091 IS 'Payments — received from customers or made to suppliers';
@@ -2323,6 +2332,9 @@ CREATE TABLE T0077 (
     sales_order_id  INT NOT NULL REFERENCES T0012(id),
     delivery_date   DATE NOT NULL DEFAULT CURRENT_DATE,
     warehouse_id    INT REFERENCES T0008(id),
+    freight_cost    NUMERIC(12,2) NOT NULL DEFAULT 0,
+    delivery_route  VARCHAR(100),
+    actual_delivery_date DATE,
     status          VARCHAR(20) NOT NULL DEFAULT 'Draft',
     notes           TEXT,
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -2336,6 +2348,9 @@ COMMENT ON COLUMN T0077.delivery_number IS 'Human-readable delivery reference (e
 COMMENT ON COLUMN T0077.sales_order_id IS 'Sales Order being fulfilled (FK to T0012)';
 COMMENT ON COLUMN T0077.delivery_date IS 'Date the goods are shipped';
 COMMENT ON COLUMN T0077.warehouse_id IS 'Warehouse from which goods are shipped (FK to T0008)';
+COMMENT ON COLUMN T0077.freight_cost IS 'Actual freight / transport cost incurred for delivery';
+COMMENT ON COLUMN T0077.delivery_route IS 'Assigned delivery route / zone';
+COMMENT ON COLUMN T0077.actual_delivery_date IS 'Actual date order delivery completed';
 COMMENT ON COLUMN T0077.status IS 'Delivery status: Draft, Shipped, Delivered, Cancelled';
 COMMENT ON COLUMN T0077.notes IS 'Free-text notes or comments';
 COMMENT ON COLUMN T0077.created_at IS 'Record creation timestamp';
@@ -2346,6 +2361,8 @@ COMMENT ON COLUMN T0077.update_number IS 'Version counter incremented on each up
 CREATE INDEX idx_T0077_so ON T0077(sales_order_id);
 CREATE INDEX idx_T0077_status ON T0077(status);
 CREATE INDEX idx_T0077_date ON T0077(delivery_date);
+CREATE INDEX idx_T0077_route ON T0077(delivery_route);
+CREATE INDEX idx_T0077_actual_date ON T0077(actual_delivery_date);
 
 -- T0078 - Delivery Lines
 COMMENT ON TABLE T0078 IS 'SALES — Individual line items on a Delivery Note';
@@ -2980,3 +2997,99 @@ COMMENT ON COLUMN T0097.updated_by         IS 'User who last modified this recor
 COMMENT ON COLUMN T0097.update_number      IS 'Version counter incremented on each update, starts at 1';
 
 CREATE INDEX idx_T0097_is_default ON T0097(is_default);
+
+-- ============================================================
+-- T0107 - Sales Commission Rules
+-- ============================================================
+
+COMMENT ON TABLE T0107 IS 'Sales Commission Rules and Rates master';
+CREATE TABLE T0107 (
+    id                     SERIAL PRIMARY KEY,
+    rule_name              VARCHAR(100) NOT NULL,
+    sales_rep_id           INT REFERENCES T0021(id),
+    base_commission_rate   NUMERIC(5,2) NOT NULL DEFAULT 5.00,
+    min_margin_threshold   NUMERIC(5,2) NOT NULL DEFAULT 15.00,
+    tier_rules             JSONB DEFAULT '[]',
+    discount_penalty_rate  NUMERIC(5,2) NOT NULL DEFAULT 0.50,
+    is_active              BOOLEAN NOT NULL DEFAULT true,
+    notes                  TEXT,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by             INT REFERENCES T0021(id),
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by             INT REFERENCES T0021(id),
+    update_number          INT NOT NULL DEFAULT 1
+);
+COMMENT ON COLUMN T0107.id                     IS 'Primary key (auto-increment)';
+COMMENT ON COLUMN T0107.rule_name              IS 'Rule or plan identifier';
+COMMENT ON COLUMN T0107.sales_rep_id           IS 'Specific sales rep (FK to T0021) or NULL for global default';
+COMMENT ON COLUMN T0107.base_commission_rate   IS 'Base commission percentage on realized gross profit';
+COMMENT ON COLUMN T0107.min_margin_threshold   IS 'Minimum gross margin percentage required to qualify for commission';
+COMMENT ON COLUMN T0107.tier_rules             IS 'Tiered commission rate JSON structure';
+COMMENT ON COLUMN T0107.discount_penalty_rate  IS 'Penalty reduction per discount percentage granted';
+COMMENT ON COLUMN T0107.is_active              IS 'Soft delete flag: TRUE = active, FALSE = inactive';
+COMMENT ON COLUMN T0107.notes                  IS 'Free-text notes';
+COMMENT ON COLUMN T0107.created_at             IS 'Record creation timestamp';
+COMMENT ON COLUMN T0107.created_by             IS 'User who created this record (FK to T0021)';
+COMMENT ON COLUMN T0107.updated_at             IS 'Last modification timestamp';
+COMMENT ON COLUMN T0107.updated_by             IS 'User who last modified this record (FK to T0021)';
+COMMENT ON COLUMN T0107.update_number          IS 'Version counter incremented on each update, starts at 1';
+
+CREATE INDEX idx_T0107_sales_rep ON T0107(sales_rep_id);
+CREATE INDEX idx_T0107_is_active ON T0107(is_active);
+
+-- ============================================================
+-- T0108 - Sales Commission Payouts and Realized Ledgers
+-- ============================================================
+
+COMMENT ON TABLE T0108 IS 'Sales Commission Payouts and Realized Ledgers';
+CREATE TABLE T0108 (
+    id                     SERIAL PRIMARY KEY,
+    payout_number          VARCHAR(50) NOT NULL UNIQUE,
+    sales_rep_id           INT NOT NULL REFERENCES T0021(id),
+    invoice_id             INT REFERENCES T0090(id),
+    payment_id             INT REFERENCES T0091(id),
+    rule_id                INT REFERENCES T0107(id),
+    period_start           DATE,
+    period_end             DATE,
+    collected_amount       NUMERIC(12,2) NOT NULL DEFAULT 0,
+    realized_gross_margin  NUMERIC(12,2) NOT NULL DEFAULT 0,
+    commission_rate        NUMERIC(5,2) NOT NULL DEFAULT 0,
+    commission_amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
+    discount_penalty       NUMERIC(12,2) NOT NULL DEFAULT 0,
+    net_commission_amount  NUMERIC(12,2) NOT NULL DEFAULT 0,
+    status                 VARCHAR(20) NOT NULL DEFAULT 'Pending',
+    payment_date           DATE,
+    notes                  TEXT,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by             INT REFERENCES T0021(id),
+    updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by             INT REFERENCES T0021(id),
+    update_number          INT NOT NULL DEFAULT 1
+);
+COMMENT ON COLUMN T0108.id                     IS 'Primary key (auto-increment)';
+COMMENT ON COLUMN T0108.payout_number          IS 'Unique commission payout or statement reference';
+COMMENT ON COLUMN T0108.sales_rep_id           IS 'Sales representative receiving commission (FK to T0021)';
+COMMENT ON COLUMN T0108.invoice_id             IS 'Associated sales invoice (FK to T0090)';
+COMMENT ON COLUMN T0108.payment_id             IS 'Payment collection trigger (FK to T0091)';
+COMMENT ON COLUMN T0108.rule_id                IS 'Commission rule used (FK to T0107)';
+COMMENT ON COLUMN T0108.period_start           IS 'Commission period start date';
+COMMENT ON COLUMN T0108.period_end             IS 'Commission period end date';
+COMMENT ON COLUMN T0108.collected_amount       IS 'Cash collected amount on invoice';
+COMMENT ON COLUMN T0108.realized_gross_margin  IS 'Gross profit realized on collected cash';
+COMMENT ON COLUMN T0108.commission_rate        IS 'Applied commission percentage';
+COMMENT ON COLUMN T0108.commission_amount      IS 'Gross commission calculated';
+COMMENT ON COLUMN T0108.discount_penalty       IS 'Deduction for excessive discounts granted';
+COMMENT ON COLUMN T0108.net_commission_amount  IS 'Net payable commission amount';
+COMMENT ON COLUMN T0108.status                 IS 'Pending | Approved | Paid | Cancelled';
+COMMENT ON COLUMN T0108.payment_date           IS 'Date commission was paid';
+COMMENT ON COLUMN T0108.notes                  IS 'Free-text notes';
+COMMENT ON COLUMN T0108.created_at             IS 'Record creation timestamp';
+COMMENT ON COLUMN T0108.created_by             IS 'User who created this record (FK to T0021)';
+COMMENT ON COLUMN T0108.updated_at             IS 'Last modification timestamp';
+COMMENT ON COLUMN T0108.updated_by             IS 'User who last modified this record (FK to T0021)';
+COMMENT ON COLUMN T0108.update_number          IS 'Version counter incremented on each update, starts at 1';
+
+CREATE INDEX idx_T0108_sales_rep ON T0108(sales_rep_id);
+CREATE INDEX idx_T0108_invoice ON T0108(invoice_id);
+CREATE INDEX idx_T0108_payment ON T0108(payment_id);
+CREATE INDEX idx_T0108_status ON T0108(status);
