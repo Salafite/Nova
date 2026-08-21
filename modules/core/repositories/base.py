@@ -75,6 +75,10 @@ class CrudRepository:
                 return dict(row) if row else None
         finally:
             if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 release_connection(conn)
 
     def create(self, payload: dict, conn=None):
