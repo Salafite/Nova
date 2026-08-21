@@ -10,4 +10,6 @@
 - [x] Subtask 2-2: Updated `packages/auth/jwt.py` and `packages/auth/service.py` to embed `business_id` in JWT access/refresh token claims during login, refresh, and signup with unit tests in `modules/core/tests/test_jwt.py`.
 - [x] Subtask 2-3: Updated `packages/auth/deps.py` to extract `business_id` from validated JWT tokens or user record and automatically populate the tenant contextvar, with unit tests in `modules/core/tests/test_deps.py`.
 
-
+## Phase 3: Repository & Service Layer Tenant Scoping
+- [x] Subtask 3-1: Updated `modules/core/repositories/base.py` (`CrudRepository`) to automatically apply `business_id = %s` on list, get, update, delete, count, auto-inject `business_id` from active tenant context on create, prevent tenant spoofing on update, and provide `get_unscoped`.
+- [x] Subtask 3-2: Updated `modules/core/services/base.py` (`CrudService`) and domain-specific services (`JournalEntryService`, `SalesOrderService`, `CustomerService`, `QuotationService`, `BatchNumberService`, `StockMovementService`, `dashboard_repo`, etc.) to honor tenant context and prevent cross-tenant operations.

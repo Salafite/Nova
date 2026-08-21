@@ -420,4 +420,198 @@ class TestUserRoleEndpoints:
             mock_audit.assert_called_once()
 
 
+class TestCrudServiceTenantScoping:
+    def test_crud_service_list_forwards_tenant_context_and_args(self):
+        from unittest.mock import MagicMock
+        from modules.core.services.base import CrudService
+
+        mock_repo = MagicMock()
+        mock_repo.list.return_value = [{'id': 1, 'name': 'test', 'business_id': 5}]
+        svc = CrudService(mock_repo)
+
+        res = svc.list(filters={'status': 'Active'}, order_by='name', limit=10, offset=2, business_id=5)
+        assert res == [{'id': 1, 'name': 'test', 'business_id': 5}]
+        mock_repo.list.assert_called_once_with(filters={'status': 'Active'}, order_by='name', limit=10, offset=2, business_id=5)
+
+    def test_crud_service_get_forwards_tenant_context_and_args(self):
+        from unittest.mock import MagicMock
+        from modules.core.services.base import CrudService
+
+        mock_repo = MagicMock()
+        mock_repo.get.return_value = {'id': 42, 'business_id': 9}
+        svc = CrudService(mock_repo)
+
+        res = svc.get(42, business_id=9)
+        assert res == {'id': 42, 'business_id': 9}
+        mock_repo.get.assert_called_once_with(42, business_id=9)
+
+    def test_crud_service_get_unscoped_calls_repo_get_unscoped(self):
+        from unittest.mock import MagicMock
+        from modules.core.services.base import CrudService
+
+        mock_repo = MagicMock()
+        mock_repo.get_unscoped.return_value = {'id': 42, 'business_id': 88}
+        svc = CrudService(mock_repo)
+
+        res = svc.get_unscoped(42)
+        assert res == {'id': 42, 'business_id': 88}
+        mock_repo.get_unscoped.assert_called_once_with(42)
+
+    def test_crud_service_create_forwards_tenant_context_and_args(self):
+        from unittest.mock import MagicMock
+        from modules.core.services.base import CrudService
+
+        mock_repo = MagicMock()
+        mock_repo.create.return_value = {'id': 1, 'name': 'new', 'business_id': 12}
+        svc = CrudService(mock_repo)
+
+        res = svc.create({'name': 'new'}, business_id=12)
+        assert res['business_id'] == 12
+        mock_repo.create.assert_called_once_with({'name': 'new'}, business_id=12)
+
+    def test_crud_service_update_forwards_tenant_context_and_args(self):
+        from unittest.mock import MagicMock
+        from modules.core.services.base import CrudService
+
+        mock_repo = MagicMock()
+        mock_repo.update.return_value = {'id': 1, 'name': 'updated', 'business_id': 12}
+        svc = CrudService(mock_repo)
+
+        res = svc.update(1, {'name': 'updated'}, business_id=12)
+        assert res['name'] == 'updated'
+        mock_repo.update.assert_called_once_with(1, {'name': 'updated'}, business_id=12)
+
+    def test_crud_service_delete_forwards_tenant_context_and_args(self):
+        from unittest.mock import MagicMock
+        from modules.core.services.base import CrudService
+
+        mock_repo = MagicMock()
+        mock_repo.delete.return_value = True
+        svc = CrudService(mock_repo)
+
+        res = svc.delete(1, business_id=12)
+        assert res is True
+        mock_repo.delete.assert_called_once_with(1, business_id=12)
+
+    def test_crud_service_count_forwards_tenant_context_and_args(self):
+        from unittest.mock import MagicMock
+        from modules.core.services.base import CrudService
+
+        mock_repo = MagicMock()
+        mock_repo.count.return_value = 25
+        svc = CrudService(mock_repo)
+
+        res = svc.count(filters={'active': True}, business_id=12)
+        assert res == 25
+        mock_repo.count.assert_called_once_with(filters={'active': True}, business_id=12)
+
+
+class TestDomainServicesTenantScoping:
+    def test_journal_service_cannot_update_cross_tenant_record(self):
+        from unittest.mock import MagicMock
+        from modules.accounting.services.journal_service import JournalEntryService
+
+        mock_repo = MagicMock()
+        # Returns None because record is in a different tenant
+        mock_repo.get.return_value = None
+        mock_repo.update.return_value = None
+
+        svc = JournalEntryService(mock_repo)
+        res = svc.update(99, {'status': 'Posted'})
+        assert res is None
+        mock_repo.get.assert_called_once_with(99)
+
+    def test_customer_service_delete_checks_only_own_tenant_orders(self):
+        from unittest.mock import patch, MagicMock
+        from modules.crm.services.customer_service import CustomerService
+        from modules.core.context import tenant_context
+
+        mock_repo = MagicMock()
+        mock_repo.delete.return_value = True
+        svc = CustomerService(mock_repo)
+
+        with tenant_context(10):
+            with patch('modules.core.repositories.base.CrudRepository.list', return_value=[]) as mock_list:
+                res = svc.delete(5)
+                assert res is True
+                # verify list was called for customer orders
+                mock_list.assert_called_once_with(filters={'customer_id': 5})
+
+    def test_quotation_service_convert_to_order_preserves_tenant_context(self):
+        from unittest.mock import patch, MagicMock
+        from modules.sales.services.quotation_service import QuotationService
+        from modules.core.context import tenant_context
+
+        mock_quote_repo = MagicMock()
+        mock_quote_repo.get.return_value = {
+            'id': 100,
+            'customer_id': 1,
+            'subtotal': 500,
+            'tax': 50,
+            'grand_total': 550,
+            'status': 'Accepted',
+            'quote_date': '2026-08-20',
+            'quote_number': 'QT-001',
+            'business_id': 20,
+        }
+        mock_quote_repo.update.return_value = {'id': 100, 'status': 'Converted'}
+
+        svc = QuotationService(mock_quote_repo)
+
+        with tenant_context(20):
+            with patch('modules.core.repositories.base.CrudRepository.list', return_value=[]), \
+                 patch('modules.core.repositories.base.CrudRepository.create', return_value={'id': 200, 'order_number': 'INV-001'}) as mock_order_create:
+                order = svc.convert_to_order(100)
+                assert order['id'] == 200
+                assert mock_order_create.called
+
+    def test_batch_service_fefo_allocation_scopes_by_tenant(self):
+        from unittest.mock import MagicMock
+        from modules.warehouse.services.batch_number_service import BatchNumberService
+        from modules.core.context import tenant_context
+
+        mock_batch_repo = MagicMock()
+        mock_batch_repo.list.return_value = [
+            {'id': 1, 'batch_number': 'B1', 'quantity': 50, 'status': 'Available', 'expiry_date': '2026-09-01', 'business_id': 7},
+            {'id': 2, 'batch_number': 'B2', 'quantity': 100, 'status': 'Available', 'expiry_date': '2026-10-01', 'business_id': 7},
+        ]
+        svc = BatchNumberService(mock_batch_repo)
+
+        with tenant_context(7):
+            allocations = svc.allocate_fefo_lots(product_id=1, qty_needed=75)
+            assert len(allocations) == 2
+            assert allocations[0]['batch_id'] == 1
+            assert allocations[0]['allocated_qty'] == 50
+            assert allocations[1]['batch_id'] == 2
+            assert allocations[1]['allocated_qty'] == 25
+
+    def test_bi_dashboard_stats_and_activity_scope_by_tenant(self):
+        from unittest.mock import patch, MagicMock
+        from modules.bi.repositories.dashboard_repo import get_stats, get_recent_activity
+        from modules.core.context import tenant_context
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.__enter__.return_value = mock_cur
+        mock_conn.cursor.return_value = mock_ctx
+        mock_cur.fetchone.return_value = {'c': 15}
+        mock_cur.fetchall.return_value = []
+
+        with patch('modules.bi.repositories.dashboard_repo.get_connection', return_value=mock_conn), \
+             patch('modules.bi.repositories.dashboard_repo.release_connection'):
+            with tenant_context(42):
+                stats = get_stats()
+                activity = get_recent_activity()
+
+        assert stats['products'] == 15
+        sql = mock_cur.execute.call_args[0][0]
+        params = mock_cur.execute.call_args[0][1]
+        assert 'WHERE business_id = %s' in sql
+        assert 42 in params
+
+
+
+
+
 

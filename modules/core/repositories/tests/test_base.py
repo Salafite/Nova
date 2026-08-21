@@ -173,3 +173,260 @@ class TestCrudRepository:
         assert '"id"' not in sql
         assert '"created_at"' not in sql
         assert '"name"' in sql
+
+    def test_list_with_active_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchall.return_value = [{'id': 1, 'name': 'item_t10', 'business_id': 10}]
+
+        with tenant_context(10):
+            res = repo.list()
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert '"business_id" = %s' in sql
+        assert 10 in params
+        assert res == [{'id': 1, 'name': 'item_t10', 'business_id': 10}]
+
+    def test_list_with_active_tenant_context_and_filters(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchall.return_value = []
+
+        with tenant_context(42):
+            repo.list(filters={'name': 'widget'})
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert '"business_id" = %s' in sql
+        assert '"name" = %s' in sql
+        assert 42 in params
+        assert 'widget' in params
+
+    def test_list_non_tenant_table_t0059_ignores_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0059', business_columns=['id', 'tenant_name'])
+        mock_db['cursor'].fetchall.return_value = [{'id': 1, 'tenant_name': 'Tenant Alpha'}]
+
+        with tenant_context(10):
+            repo.list()
+
+        sql = mock_db['cursor'].execute.call_args[0][0]
+        assert '"business_id"' not in sql
+
+    def test_list_with_explicit_business_id_arg(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchall.return_value = []
+
+        repo.list(business_id=99)
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert '"business_id" = %s' in sql
+        assert 99 in params
+
+    def test_get_with_active_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 5, 'name': 'my_item', 'business_id': 12}
+
+        with tenant_context(12):
+            res = repo.get(5)
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert '"id" = %s' in sql
+        assert '"business_id" = %s' in sql
+        assert params == (5, 12)
+        assert res == {'id': 5, 'name': 'my_item', 'business_id': 12}
+
+    def test_get_without_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 5, 'name': 'my_item'}
+
+        repo.get(5)
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert '"id" = %s' in sql
+        assert '"business_id"' not in sql
+        assert params == (5,)
+
+    def test_get_unscoped_ignores_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 7, 'name': 'cross_tenant_item', 'business_id': 99}
+
+        with tenant_context(10):
+            res = repo.get_unscoped(7)
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert '"id" = %s' in sql
+        assert '"business_id"' not in sql
+        assert params == (7,)
+        assert res['id'] == 7
+
+    def test_create_auto_injects_tenant_from_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 1, 'name': 'item1', 'business_id': 25}
+
+        with tenant_context(25):
+            res = repo.create({'name': 'item1'})
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        vals = call_args[0][1]
+        assert '"business_id"' in sql
+        assert 25 in vals
+        assert res['business_id'] == 25
+
+    def test_create_preserves_explicit_business_id(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 1, 'name': 'item1', 'business_id': 50}
+
+        with tenant_context(25):
+            repo.create({'name': 'item1', 'business_id': 50})
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        vals = call_args[0][1]
+        assert '"business_id"' in sql
+        assert 50 in vals
+
+    def test_create_non_tenant_table_t0059_does_not_inject_business_id(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0059', business_columns=['id', 'tenant_name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 1, 'tenant_name': 'Corp'}
+
+        with tenant_context(10):
+            repo.create({'tenant_name': 'Corp'})
+
+        sql = mock_db['cursor'].execute.call_args[0][0]
+        assert '"business_id"' not in sql
+
+    def test_update_with_active_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 3, 'name': 'new_val', 'business_id': 15}
+
+        with tenant_context(15):
+            repo.update(3, {'name': 'new_val'})
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        vals = call_args[0][1]
+        assert '"business_id" = %s' in sql
+        assert 3 in vals
+        assert 15 in vals
+
+    def test_update_excludes_business_id_from_set_clause(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 3, 'name': 'updated'}
+
+        with tenant_context(15):
+            # Attempt to change business_id via payload
+            repo.update(3, {'name': 'updated', 'business_id': 999})
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        set_part = sql.split('WHERE')[0]
+        assert '"business_id" = %s' not in set_part
+
+    def test_delete_soft_with_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name', 'is_active'])
+
+        with tenant_context(33):
+            res = repo.delete(10)
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert 'is_active = FALSE' in sql
+        assert '"business_id" = %s' in sql
+        assert params == (10, 33)
+        assert res is True
+
+    def test_delete_hard_with_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+
+        with tenant_context(33):
+            res = repo.delete(10)
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert 'DELETE FROM' in sql
+        assert '"business_id" = %s' in sql
+        assert params == (10, 33)
+        assert res is True
+
+    def test_count_with_active_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'cnt': 42}
+
+        with tenant_context(77):
+            cnt = repo.count()
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert '"business_id" = %s' in sql
+        assert 77 in params
+        assert cnt == 42
+
+    def test_count_without_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'cnt': 100}
+
+        cnt = repo.count()
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        assert '"business_id"' not in sql
+        assert cnt == 100
+
