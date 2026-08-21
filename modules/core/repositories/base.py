@@ -57,6 +57,26 @@ class CrudRepository:
             if should_release:
                 release_connection(conn)
 
+    def get_for_update(self, id_val, conn=None):
+        """SELECT ... FOR UPDATE — locks the row until the transaction commits or rolls back.
+
+        Requires an active transaction (conn must be provided or will be acquired).
+        The lock is released when the transaction commits or rolls back.
+        """
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" = %s FOR UPDATE'
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, (id_val,))
+                row = cur.fetchone()
+                return dict(row) if row else None
+        finally:
+            if should_release:
+                release_connection(conn)
+
     def create(self, payload: dict, conn=None):
         should_release = False
         if conn is None:

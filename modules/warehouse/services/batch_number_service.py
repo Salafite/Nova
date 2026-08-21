@@ -56,7 +56,7 @@ class BatchNumberService(CrudService):
         return super().create(payload)
 
     def adjustQuantity(self, id_val, qty: float, conn=None):
-        batch = self.get(id_val, conn=conn)
+        batch = self.repo.get_for_update(id_val, conn=conn) if conn else self.get(id_val)
         if not batch:
             raise ValueError('Batch not found')
         new_qty = batch['quantity'] + qty
@@ -83,7 +83,7 @@ class BatchNumberService(CrudService):
         if warehouse_id is not None:
             filters['warehouse_id'] = warehouse_id
 
-        batches = self.repo.list(filters=filters)
+        batches = self.repo.list(filters=filters, conn=conn)
 
         # Filter for status='Available' (or active available) and quantity > 0
         available_batches = [

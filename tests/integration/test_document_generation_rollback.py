@@ -818,20 +818,22 @@ class TestPickListServiceExplicitErrorsAndLogging:
         pli_repo.create({'id': 702, 'pick_list_id': 70, 'product_id': 11, 'product_name': 'Brass Fitting',
                          'qty_ordered': 5, 'qty_picked': 5, 'picked_batch_id': 102})
         service = PickListService(pl_repo)
-        call_count = [0]
+        adjust_calls = []
 
-        def failing_adjust(batch_id, qty, conn=None):
-            call_count[0] += 1
-            if call_count[0] == 2:
+        def tracking_adjust(batch_id, qty, conn=None):
+            adjust_calls.append(batch_id)
+            if len(adjust_calls) == 2:
                 raise RuntimeError("Simulated batch adjustment failure")
 
-        service.batch_service.adjustQuantity = failing_adjust
+        service.batch_service.adjustQuantity = tracking_adjust
 
         with pytest.raises(RuntimeError, match="Simulated batch adjustment failure"):
             service.complete_picking(70)
 
+        assert adjust_calls == [101, 102]
         pl = pl_repo.get(70)
         assert pl['status'] == 'In Progress'
+        mock_conn.rollback.assert_called_once_with()
         mock_release.assert_called_once_with(mock_conn)
 
 
