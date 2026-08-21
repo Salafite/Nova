@@ -70,21 +70,40 @@ class CrudRepository:
         if conn is None:
             conn = get_connection()
             should_release = True
+        released = False
         try:
             sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" = %s FOR UPDATE'
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, (id_val,))
                 row = cur.fetchone()
                 return dict(row) if row else None
-        finally:
+        except Exception:
             if should_release:
                 try:
                     conn.rollback()
                 except Exception as rb_err:
                     logger.error(f"Failed to rollback in get_for_update: {rb_err}")
-                    release_connection(conn, close=True)
-                    return None
-                release_connection(conn)
+                    try:
+                        release_connection(conn, close=True)
+                    except Exception:
+                        pass
+                    released = True
+                if not released:
+                    release_connection(conn)
+                    released = True
+            raise
+        finally:
+            if should_release and not released:
+                try:
+                    conn.rollback()
+                except Exception as rb_err:
+                    logger.error(f"Failed to rollback in get_for_update: {rb_err}")
+                    try:
+                        release_connection(conn, close=True)
+                    except Exception:
+                        pass
+                else:
+                    release_connection(conn)
 
     def create(self, payload: dict, conn=None):
         should_release = False
