@@ -9,6 +9,7 @@ class BOMCreate(BaseModel):
     quantity: float = 1
     version: int = 1
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class BOMUpdate(BaseModel):
     bom_code: Optional[str] = Field(None, max_length=30)
@@ -17,6 +18,7 @@ class BOMUpdate(BaseModel):
     quantity: Optional[float] = None
     version: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class BOMResponse(AuditMixin):
     id: int
@@ -36,6 +38,7 @@ class BOMLineCreate(BaseModel):
     scrap_pct: float = 0
     line_number: int = 0
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class BOMLineUpdate(BaseModel):
     bom_id: Optional[int] = None
@@ -46,6 +49,7 @@ class BOMLineUpdate(BaseModel):
     scrap_pct: Optional[float] = None
     line_number: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class BOMLineResponse(AuditMixin):
     id: int
@@ -53,7 +57,7 @@ class BOMLineResponse(AuditMixin):
     component_id: int
     component_name: str
     quantity: float
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     scrap_pct: float
     line_number: int
     is_active: bool

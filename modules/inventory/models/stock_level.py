@@ -8,6 +8,7 @@ class StockLevelCreate(BaseModel):
     qty: float = Field(default=0, ge=0)
     reserved_qty: float = Field(default=0, ge=0)
     reorder_level: float = Field(default=0, ge=0)
+    business_id: Optional[int] = None
 
 class StockLevelUpdate(BaseModel):
     product_id: Optional[int] = None
@@ -15,6 +16,7 @@ class StockLevelUpdate(BaseModel):
     qty: Optional[float] = Field(None, ge=0)
     reserved_qty: Optional[float] = Field(None, ge=0)
     reorder_level: Optional[float] = Field(None, ge=0)
+    business_id: Optional[int] = None
 
 class StockLevelResponse(AuditMixin):
     id: int

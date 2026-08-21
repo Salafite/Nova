@@ -15,6 +15,7 @@ class ProjectCreate(BaseModel):
     budget: float = Field(default=0, ge=0)
     status: str = 'Draft'
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ProjectUpdate(BaseModel):
     project_code: Optional[str] = Field(None, max_length=50)
@@ -27,19 +28,20 @@ class ProjectUpdate(BaseModel):
     budget: Optional[float] = Field(None, ge=0)
     status: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ProjectResponse(AuditMixin):
     id: int
     project_code: str
     project_name: str
-    description: Optional[str]
-    department_id: Optional[int]
-    manager_id: Optional[int]
-    start_date: Optional[date]
-    end_date: Optional[date]
-    budget: float
-    status: str
-    is_active: bool
+    description: Optional[str] = None
+    department_id: Optional[int] = None
+    manager_id: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    budget: float = 0
+    status: str = 'Draft'
+    is_active: bool = True
 
 
 class ProjectTaskCreate(BaseModel):
@@ -56,6 +58,7 @@ class ProjectTaskCreate(BaseModel):
     actual_hours: float = Field(default=0, ge=0)
     parent_task_id: Optional[int] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ProjectTaskUpdate(BaseModel):
     project_id: Optional[int] = None
@@ -71,22 +74,23 @@ class ProjectTaskUpdate(BaseModel):
     actual_hours: Optional[float] = Field(None, ge=0)
     parent_task_id: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ProjectTaskResponse(AuditMixin):
     id: int
     project_id: int
     task_code: str
     task_name: str
-    description: Optional[str]
-    assigned_to: Optional[int]
-    start_date: Optional[date]
-    end_date: Optional[date]
-    priority: str
-    status: str
-    estimated_hours: Optional[float]
-    actual_hours: float
-    parent_task_id: Optional[int]
-    is_active: bool
+    description: Optional[str] = None
+    assigned_to: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    priority: str = 'Medium'
+    status: str = 'Pending'
+    estimated_hours: Optional[float] = None
+    actual_hours: float = 0
+    parent_task_id: Optional[int] = None
+    is_active: bool = True
 
 
 class ResourceAllocationCreate(BaseModel):
@@ -97,6 +101,7 @@ class ResourceAllocationCreate(BaseModel):
     end_date: Optional[date] = None
     role: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ResourceAllocationUpdate(BaseModel):
     project_id: Optional[int] = None
@@ -106,16 +111,17 @@ class ResourceAllocationUpdate(BaseModel):
     end_date: Optional[date] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ResourceAllocationResponse(AuditMixin):
     id: int
     project_id: int
     employee_id: int
-    allocation_pct: int
-    start_date: Optional[date]
-    end_date: Optional[date]
-    role: Optional[str]
-    is_active: bool
+    allocation_pct: int = 100
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    role: Optional[str] = None
+    is_active: bool = True
 
 
 class TimesheetCreate(BaseModel):
@@ -128,6 +134,7 @@ class TimesheetCreate(BaseModel):
     status: str = 'Submitted'
     approved_by: Optional[int] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class TimesheetUpdate(BaseModel):
     employee_id: Optional[int] = None
@@ -139,18 +146,19 @@ class TimesheetUpdate(BaseModel):
     status: Optional[str] = None
     approved_by: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class TimesheetResponse(AuditMixin):
     id: int
     employee_id: int
-    project_id: Optional[int]
-    task_id: Optional[int]
+    project_id: Optional[int] = None
+    task_id: Optional[int] = None
     date: date
     hours: float
-    description: Optional[str]
-    status: str
-    approved_by: Optional[int]
-    is_active: bool
+    description: Optional[str] = None
+    status: str = 'Submitted'
+    approved_by: Optional[int] = None
+    is_active: bool = True
 
 
 class ServiceRequestCreate(BaseModel):
@@ -164,6 +172,7 @@ class ServiceRequestCreate(BaseModel):
     resolution: Optional[str] = None
     resolved_date: Optional[date] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ServiceRequestUpdate(BaseModel):
     request_code: Optional[str] = Field(None, max_length=50)
@@ -176,19 +185,20 @@ class ServiceRequestUpdate(BaseModel):
     resolution: Optional[str] = None
     resolved_date: Optional[date] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ServiceRequestResponse(AuditMixin):
     id: int
     request_code: str
     subject: str
-    description: Optional[str]
-    customer_id: Optional[int]
-    priority: str
-    status: str
-    assigned_to: Optional[int]
-    resolution: Optional[str]
-    resolved_date: Optional[date]
-    is_active: bool
+    description: Optional[str] = None
+    customer_id: Optional[int] = None
+    priority: str = 'Medium'
+    status: str = 'Open'
+    assigned_to: Optional[int] = None
+    resolution: Optional[str] = None
+    resolved_date: Optional[date] = None
+    is_active: bool = True
 
 
 class ContractCreate(BaseModel):
@@ -202,6 +212,7 @@ class ContractCreate(BaseModel):
     status: str = 'Active'
     notes: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ContractUpdate(BaseModel):
     contract_code: Optional[str] = Field(None, max_length=50)
@@ -214,19 +225,20 @@ class ContractUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ContractResponse(AuditMixin):
     id: int
     contract_code: str
     contract_name: str
-    customer_id: Optional[int]
-    contract_type: Optional[str]
+    customer_id: Optional[int] = None
+    contract_type: Optional[str] = None
     start_date: date
-    end_date: Optional[date]
-    value: float
-    status: str
-    notes: Optional[str]
-    is_active: bool
+    end_date: Optional[date] = None
+    value: float = 0
+    status: str = 'Active'
+    notes: Optional[str] = None
+    is_active: bool = True
 
 
 class SLADefinitionCreate(BaseModel):
@@ -237,6 +249,7 @@ class SLADefinitionCreate(BaseModel):
     resolution_time: Optional[str] = None
     penalty_rate: float = Field(default=0, ge=0)
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class SLADefinitionUpdate(BaseModel):
     contract_id: Optional[int] = None
@@ -246,13 +259,14 @@ class SLADefinitionUpdate(BaseModel):
     resolution_time: Optional[str] = None
     penalty_rate: Optional[float] = Field(None, ge=0)
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class SLADefinitionResponse(AuditMixin):
     id: int
     contract_id: int
     sla_code: str
     sla_name: str
-    response_time: Optional[str]
-    resolution_time: Optional[str]
-    penalty_rate: float
-    is_active: bool
+    response_time: Optional[str] = None
+    resolution_time: Optional[str] = None
+    penalty_rate: float = 0
+    is_active: bool = True

@@ -11,6 +11,7 @@ class TaxRateCreate(BaseModel):
     is_active: bool = True
     is_default: bool = False
     description: Optional[str] = None
+    business_id: Optional[int] = None
 
 class TaxRateUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
@@ -20,6 +21,7 @@ class TaxRateUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_default: Optional[bool] = None
     description: Optional[str] = None
+    business_id: Optional[int] = None
 
 class TaxRateResponse(AuditMixin):
     id: int
@@ -29,7 +31,7 @@ class TaxRateResponse(AuditMixin):
     type: str
     is_active: bool
     is_default: bool
-    description: Optional[str]
+    description: Optional[str] = None
 
 
 class TaxRuleCreate(BaseModel):
@@ -37,16 +39,18 @@ class TaxRuleCreate(BaseModel):
     applies_to: str = 'All'
     target_id: Optional[int] = 0
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class TaxRuleUpdate(BaseModel):
     tax_rate_id: Optional[int] = None
     applies_to: Optional[str] = None
     target_id: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class TaxRuleResponse(AuditMixin):
     id: int
     tax_rate_id: int
     applies_to: str
-    target_id: Optional[int]
+    target_id: Optional[int] = None
     is_active: bool

@@ -18,6 +18,7 @@ class ModuleRegistryCreate(BaseModel):
     is_active: bool = True
     installed_at: Optional[datetime] = None
     dependencies: list[str] = []
+    business_id: Optional[int] = None
 
 class ModuleRegistryUpdate(BaseModel):
     module_key: Optional[str] = Field(None, max_length=50)
@@ -32,19 +33,20 @@ class ModuleRegistryUpdate(BaseModel):
     is_core: Optional[bool] = None
     is_active: Optional[bool] = None
     dependencies: Optional[list[str]] = None
+    business_id: Optional[int] = None
 
 class ModuleRegistryResponse(AuditMixin):
     id: int
     module_key: str
     name: str
-    name_ar: Optional[str]
-    description: Optional[str]
-    description_ar: Optional[str]
-    version: str
-    author: Optional[str]
-    icon: Optional[str]
-    category: Optional[str]
-    is_core: bool
-    is_active: bool
-    installed_at: Optional[datetime]
+    name_ar: Optional[str] = None
+    description: Optional[str] = None
+    description_ar: Optional[str] = None
+    version: str = '1.0.0'
+    author: Optional[str] = None
+    icon: Optional[str] = None
+    category: Optional[str] = None
+    is_core: bool = False
+    is_active: bool = True
+    installed_at: Optional[datetime] = None
     dependencies: Optional[list[str]] = None

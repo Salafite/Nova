@@ -1,6 +1,7 @@
-from pydantic import BaseModel
 from typing import Optional
 from datetime import date, datetime
+from pydantic import BaseModel
+from modules.core.models.base import AuditMixin
 
 
 class PriceListCreate(BaseModel):
@@ -10,6 +11,7 @@ class PriceListCreate(BaseModel):
     currency: str = 'USD'
     is_active: bool = True
     is_default: bool = False
+    business_id: Optional[int] = None
 
 
 class PriceListUpdate(BaseModel):
@@ -19,9 +21,10 @@ class PriceListUpdate(BaseModel):
     currency: Optional[str] = None
     is_active: Optional[bool] = None
     is_default: Optional[bool] = None
+    business_id: Optional[int] = None
 
 
-class PriceListResponse(BaseModel):
+class PriceListResponse(AuditMixin):
     id: int
     name: str
     code: str
@@ -29,11 +32,6 @@ class PriceListResponse(BaseModel):
     currency: str
     is_active: bool
     is_default: bool
-    created_at: Optional[datetime] = None
-    created_by: Optional[int] = None
-    updated_at: Optional[datetime] = None
-    updated_by: Optional[int] = None
-    update_number: Optional[int] = None
 
 
 class PriceListItemCreate(BaseModel):
@@ -45,6 +43,7 @@ class PriceListItemCreate(BaseModel):
     effective_from: Optional[date] = None
     effective_to: Optional[date] = None
     line_number: int = 0
+    business_id: Optional[int] = None
 
 
 class PriceListItemUpdate(BaseModel):
@@ -56,9 +55,10 @@ class PriceListItemUpdate(BaseModel):
     effective_from: Optional[date] = None
     effective_to: Optional[date] = None
     line_number: Optional[int] = None
+    business_id: Optional[int] = None
 
 
-class PriceListItemResponse(BaseModel):
+class PriceListItemResponse(AuditMixin):
     id: int
     price_list_id: int
     product_id: int
@@ -68,8 +68,4 @@ class PriceListItemResponse(BaseModel):
     effective_from: Optional[date] = None
     effective_to: Optional[date] = None
     line_number: int
-    created_at: Optional[datetime] = None
-    created_by: Optional[int] = None
-    updated_at: Optional[datetime] = None
-    updated_by: Optional[int] = None
-    update_number: Optional[int] = None
+

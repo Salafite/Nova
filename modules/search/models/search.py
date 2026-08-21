@@ -9,6 +9,7 @@ class SearchIndexCreate(BaseModel):
     keywords: Optional[str] = None
     search_content: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class SearchIndexUpdate(BaseModel):
     entity_type: Optional[str] = Field(None, max_length=50)
@@ -16,11 +17,12 @@ class SearchIndexUpdate(BaseModel):
     keywords: Optional[str] = None
     search_content: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class SearchIndexResponse(AuditMixin):
     id: int
     entity_type: str
     entity_id: int
-    keywords: Optional[str]
-    search_content: Optional[str]
+    keywords: Optional[str] = None
+    search_content: Optional[str] = None
     is_active: bool

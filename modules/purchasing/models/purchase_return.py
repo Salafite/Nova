@@ -12,6 +12,7 @@ class PurchaseReturnCreate(BaseModel):
     status: str = 'Draft'
     reason: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PurchaseReturnUpdate(BaseModel):
     return_number: Optional[str] = Field(None, max_length=30)
@@ -21,16 +22,17 @@ class PurchaseReturnUpdate(BaseModel):
     status: Optional[str] = None
     reason: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PurchaseReturnResponse(AuditMixin):
     id: int
     return_number: str
-    purchase_order_id: Optional[int]
+    purchase_order_id: Optional[int] = None
     supplier_id: int
     return_date: date
     status: str
-    reason: Optional[str]
-    notes: Optional[str]
+    reason: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class PurchaseReturnLineCreate(BaseModel):
@@ -42,6 +44,7 @@ class PurchaseReturnLineCreate(BaseModel):
     line_total: float = 0
     uom_id: Optional[int] = None
     line_number: int = 0
+    business_id: Optional[int] = None
 
 class PurchaseReturnLineUpdate(BaseModel):
     return_id: Optional[int] = None
@@ -52,14 +55,15 @@ class PurchaseReturnLineUpdate(BaseModel):
     line_total: Optional[float] = None
     uom_id: Optional[int] = None
     line_number: Optional[int] = None
+    business_id: Optional[int] = None
 
 class PurchaseReturnLineResponse(AuditMixin):
     id: int
     return_id: int
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     product_name: str
     qty: float
     unit_price: float
     line_total: float
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     line_number: int

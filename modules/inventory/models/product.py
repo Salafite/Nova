@@ -10,6 +10,7 @@ class UOMCreate(BaseModel):
     category: str = 'Quantity'
     is_base_unit: bool = False
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class UOMUpdate(BaseModel):
     uom_code: Optional[str] = Field(None, max_length=10)
@@ -17,6 +18,7 @@ class UOMUpdate(BaseModel):
     category: Optional[str] = None
     is_base_unit: Optional[bool] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class UOMResponse(AuditMixin):
     id: int
@@ -31,11 +33,13 @@ class UOMConvCreate(BaseModel):
     from_uom_id: int
     to_uom_id: int
     factor: float = Field(..., gt=0)
+    business_id: Optional[int] = None
 
 class UOMConvUpdate(BaseModel):
     from_uom_id: Optional[int] = None
     to_uom_id: Optional[int] = None
     factor: Optional[float] = Field(None, gt=0)
+    business_id: Optional[int] = None
 
 class UOMConvResponse(AuditMixin):
     id: int
@@ -61,6 +65,7 @@ class ProductCreate(BaseModel):
     is_purchasable: bool = True
     is_saleable: bool = True
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=200)
@@ -79,25 +84,26 @@ class ProductUpdate(BaseModel):
     is_purchasable: Optional[bool] = None
     is_saleable: Optional[bool] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ProductResponse(AuditMixin):
     id: int
     name: str
     sku: str
-    barcode: Optional[str]
-    description: Optional[str]
-    type: str
-    price: float
-    cost_price: Optional[float]
-    category: Optional[str]
-    brand: Optional[str]
-    tax_rate: float
-    weight: float
-    volume: float
-    image_url: Optional[str]
-    is_purchasable: bool
-    is_saleable: bool
-    is_active: bool
+    barcode: Optional[str] = None
+    description: Optional[str] = None
+    type: str = 'stockable'
+    price: float = 0
+    cost_price: Optional[float] = 0
+    category: Optional[str] = None
+    brand: Optional[str] = None
+    tax_rate: float = 0.05
+    weight: float = 0
+    volume: float = 0
+    image_url: Optional[str] = None
+    is_purchasable: bool = True
+    is_saleable: bool = True
+    is_active: bool = True
 
 
 class BarcodeCreate(BaseModel):
@@ -105,12 +111,14 @@ class BarcodeCreate(BaseModel):
     barcode: str = Field(..., max_length=100)
     barcode_type: str = 'EAN13'
     is_primary: bool = False
+    business_id: Optional[int] = None
 
 class BarcodeUpdate(BaseModel):
     product_id: Optional[int] = None
     barcode: Optional[str] = Field(None, max_length=100)
     barcode_type: Optional[str] = None
     is_primary: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class BarcodeResponse(AuditMixin):
     id: int
@@ -130,6 +138,7 @@ class AttrDefCreate(BaseModel):
     attribute_group: Optional[str] = Field(None, max_length=100)
     sort_order: int = 0
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class AttrDefUpdate(BaseModel):
     attribute_name: Optional[str] = Field(None, max_length=50)
@@ -141,16 +150,17 @@ class AttrDefUpdate(BaseModel):
     attribute_group: Optional[str] = Field(None, max_length=100)
     sort_order: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class AttrDefResponse(AuditMixin):
     id: int
     attribute_name: str
     attribute_type: str
     display_type: str
-    description: Optional[str]
+    description: Optional[str] = None
     is_required: bool
     create_variant: bool
-    attribute_group: Optional[str]
+    attribute_group: Optional[str] = None
     sort_order: int
     is_active: bool
 
@@ -162,6 +172,7 @@ class AttrValueCreate(BaseModel):
     value_number: Optional[float] = None
     value_date: Optional[date] = None
     value_boolean: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class AttrValueUpdate(BaseModel):
     product_id: Optional[int] = None
@@ -170,15 +181,16 @@ class AttrValueUpdate(BaseModel):
     value_number: Optional[float] = None
     value_date: Optional[date] = None
     value_boolean: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class AttrValueResponse(AuditMixin):
     id: int
     product_id: int
     attribute_id: int
-    value_text: Optional[str]
-    value_number: Optional[float]
-    value_date: Optional[date]
-    value_boolean: Optional[bool]
+    value_text: Optional[str] = None
+    value_number: Optional[float] = None
+    value_date: Optional[date] = None
+    value_boolean: Optional[bool] = None
 
 
 class ProductUOMCreate(BaseModel):
@@ -188,6 +200,7 @@ class ProductUOMCreate(BaseModel):
     sales_uom_id: Optional[int] = None
     purchase_factor: float = 1
     sales_factor: float = 1
+    business_id: Optional[int] = None
 
 class ProductUOMUpdate(BaseModel):
     product_id: Optional[int] = None
@@ -196,13 +209,14 @@ class ProductUOMUpdate(BaseModel):
     sales_uom_id: Optional[int] = None
     purchase_factor: Optional[float] = None
     sales_factor: Optional[float] = None
+    business_id: Optional[int] = None
 
 class ProductUOMResponse(AuditMixin):
     id: int
     product_id: int
     base_uom_id: int
-    purchase_uom_id: Optional[int]
-    sales_uom_id: Optional[int]
+    purchase_uom_id: Optional[int] = None
+    sales_uom_id: Optional[int] = None
     purchase_factor: float
     sales_factor: float
 
@@ -213,6 +227,7 @@ class ProductTypeCreate(BaseModel):
     description: Optional[str] = None
     color: str = '#6b7280'
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ProductTypeUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
@@ -220,11 +235,12 @@ class ProductTypeUpdate(BaseModel):
     description: Optional[str] = None
     color: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ProductTypeResponse(AuditMixin):
     id: int
     name: str
-    code: Optional[str]
-    description: Optional[str]
+    code: Optional[str] = None
+    description: Optional[str] = None
     color: str
     is_active: bool

@@ -17,6 +17,7 @@ class AdjustmentCreate(BaseModel):
     warehouse_id: int
     new_qty: float
     description: Optional[str] = None
+    business_id: Optional[int] = None
 
 
 @router.get('/')

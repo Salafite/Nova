@@ -13,6 +13,7 @@ class PurchaseOrderCreate(BaseModel):
     expected_date: Optional[date] = None
     notes: Optional[str] = None
     converted_rfq_id: Optional[int] = None
+    business_id: Optional[int] = None
 
 class PurchaseOrderUpdate(BaseModel):
     order_number: Optional[str] = Field(None, max_length=30)
@@ -23,6 +24,7 @@ class PurchaseOrderUpdate(BaseModel):
     expected_date: Optional[date] = None
     notes: Optional[str] = None
     converted_rfq_id: Optional[int] = None
+    business_id: Optional[int] = None
 
 class PurchaseOrderResponse(AuditMixin):
     id: int
@@ -31,9 +33,9 @@ class PurchaseOrderResponse(AuditMixin):
     total: float
     status: str
     order_date: date
-    expected_date: Optional[date]
-    notes: Optional[str]
-    converted_rfq_id: Optional[int]
+    expected_date: Optional[date] = None
+    notes: Optional[str] = None
+    converted_rfq_id: Optional[int] = None
 
 
 class PurchaseLineCreate(BaseModel):
@@ -45,6 +47,7 @@ class PurchaseLineCreate(BaseModel):
     unit_price: float = Field(..., ge=0)
     line_total: float = Field(..., ge=0)
     line_number: int = 0
+    business_id: Optional[int] = None
 
 class PurchaseLineUpdate(BaseModel):
     purchase_order_id: Optional[int] = None
@@ -55,13 +58,14 @@ class PurchaseLineUpdate(BaseModel):
     unit_price: Optional[float] = Field(None, ge=0)
     line_total: Optional[float] = Field(None, ge=0)
     line_number: Optional[int] = None
+    business_id: Optional[int] = None
 
 class PurchaseLineResponse(AuditMixin):
     id: int
     purchase_order_id: int
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     product_name: str
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     qty: float
     unit_price: float
     line_total: float
@@ -77,6 +81,7 @@ class RequisitionCreate(BaseModel):
     status: str = 'Draft'
     priority: str = 'Medium'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class RequisitionUpdate(BaseModel):
     req_number: Optional[str] = Field(None, max_length=30)
@@ -88,18 +93,19 @@ class RequisitionUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class RequisitionResponse(AuditMixin):
     id: int
     req_number: str
     title: str
-    description: Optional[str]
-    department_id: Optional[int]
+    description: Optional[str] = None
+    department_id: Optional[int] = None
     requested_by: int
-    approved_by: Optional[int]
+    approved_by: Optional[int] = None
     status: str
     priority: str
-    notes: Optional[str]
+    notes: Optional[str] = None
 
 
 class RequisitionLineCreate(BaseModel):
@@ -113,6 +119,7 @@ class RequisitionLineCreate(BaseModel):
     expected_date: Optional[date] = None
     notes: Optional[str] = None
     line_number: int = 0
+    business_id: Optional[int] = None
 
 class RequisitionLineUpdate(BaseModel):
     requisition_id: Optional[int] = None
@@ -125,18 +132,19 @@ class RequisitionLineUpdate(BaseModel):
     expected_date: Optional[date] = None
     notes: Optional[str] = None
     line_number: Optional[int] = None
+    business_id: Optional[int] = None
 
 class RequisitionLineResponse(AuditMixin):
     id: int
     requisition_id: int
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     description: str
     qty: float
     unit_price: float
     total_price: float
-    uom_id: Optional[int]
-    expected_date: Optional[date]
-    notes: Optional[str]
+    uom_id: Optional[int] = None
+    expected_date: Optional[date] = None
+    notes: Optional[str] = None
     line_number: int
 
 
@@ -147,6 +155,7 @@ class RFQCreate(BaseModel):
     status: str = 'Draft'
     due_date: Optional[date] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class RFQUpdate(BaseModel):
     rfq_number: Optional[str] = Field(None, max_length=30)
@@ -155,15 +164,16 @@ class RFQUpdate(BaseModel):
     status: Optional[str] = None
     due_date: Optional[date] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class RFQResponse(AuditMixin):
     id: int
     rfq_number: str
-    title: Optional[str]
-    description: Optional[str]
+    title: Optional[str] = None
+    description: Optional[str] = None
     status: str
-    due_date: Optional[date]
-    notes: Optional[str]
+    due_date: Optional[date] = None
+    notes: Optional[str] = None
 
 
 class RFQLineCreate(BaseModel):
@@ -173,6 +183,7 @@ class RFQLineCreate(BaseModel):
     qty: float = Field(..., gt=0)
     uom_id: Optional[int] = None
     line_number: int = 0
+    business_id: Optional[int] = None
 
 class RFQLineUpdate(BaseModel):
     rfq_id: Optional[int] = None
@@ -181,14 +192,15 @@ class RFQLineUpdate(BaseModel):
     qty: Optional[float] = Field(None, gt=0)
     uom_id: Optional[int] = None
     line_number: Optional[int] = None
+    business_id: Optional[int] = None
 
 class RFQLineResponse(AuditMixin):
     id: int
     rfq_id: int
-    product_id: Optional[int]
-    description: Optional[str]
+    product_id: Optional[int] = None
+    description: Optional[str] = None
     qty: float
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     line_number: int
 
 
@@ -196,11 +208,13 @@ class RFQVendorCreate(BaseModel):
     rfq_id: int
     vendor_id: int
     status: str = 'Pending'
+    business_id: Optional[int] = None
 
 class RFQVendorUpdate(BaseModel):
     rfq_id: Optional[int] = None
     vendor_id: Optional[int] = None
     status: Optional[str] = None
+    business_id: Optional[int] = None
 
 class RFQVendorResponse(AuditMixin):
     id: int
@@ -220,6 +234,7 @@ class RFQQuoteCreate(BaseModel):
     currency: str = 'USD'
     valid_until: Optional[date] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class RFQQuoteUpdate(BaseModel):
     rfq_id: Optional[int] = None
@@ -232,16 +247,17 @@ class RFQQuoteUpdate(BaseModel):
     currency: Optional[str] = None
     valid_until: Optional[date] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class RFQQuoteResponse(AuditMixin):
     id: int
     rfq_id: int
-    vendor_id: Optional[int]
-    rfq_vendor_id: Optional[int]
+    vendor_id: Optional[int] = None
+    rfq_vendor_id: Optional[int] = None
     line_id: int
     unit_price: float
     total_price: float
-    delivery_days: Optional[int]
+    delivery_days: Optional[int] = None
     currency: str
-    valid_until: Optional[date]
-    notes: Optional[str]
+    valid_until: Optional[date] = None
+    notes: Optional[str] = None

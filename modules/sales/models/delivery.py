@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 from datetime import date
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
@@ -14,6 +14,7 @@ class DeliveryCreate(BaseModel):
     actual_delivery_date: Optional[date] = None
     status: str = 'Draft'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class DeliveryUpdate(BaseModel):
     delivery_number: Optional[str] = Field(None, max_length=30)
@@ -25,6 +26,7 @@ class DeliveryUpdate(BaseModel):
     actual_delivery_date: Optional[date] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class DeliveryResponse(AuditMixin):
     id: int
@@ -35,8 +37,9 @@ class DeliveryResponse(AuditMixin):
     freight_cost: float = 0
     delivery_route: Optional[str] = None
     actual_delivery_date: Optional[date] = None
+
     status: str
-    notes: Optional[str]
+    notes: Optional[str] = None
 
 
 class DeliveryLineCreate(BaseModel):
@@ -48,6 +51,7 @@ class DeliveryLineCreate(BaseModel):
     qty_ordered: float = 0
     uom_id: Optional[int] = None
     line_number: int = 0
+    business_id: Optional[int] = None
 
 class DeliveryLineUpdate(BaseModel):
     delivery_id: Optional[int] = None
@@ -58,14 +62,16 @@ class DeliveryLineUpdate(BaseModel):
     qty_ordered: Optional[float] = None
     uom_id: Optional[int] = None
     line_number: Optional[int] = None
+    business_id: Optional[int] = None
 
 class DeliveryLineResponse(AuditMixin):
     id: int
     delivery_id: int
-    sales_order_line_id: Optional[int]
-    product_id: Optional[int]
+    sales_order_line_id: Optional[int] = None
+    product_id: Optional[int] = None
     product_name: str
     qty_shipped: float
     qty_ordered: float
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     line_number: int
+

@@ -1,11 +1,11 @@
--- Nova ERP � Consolidated Full Schema
+﻿-- Nova ERP ï؟½ Consolidated Full Schema
 -- Combines 001_full_schema.sql + 002_missing_tables.sql
 -- Run against an empty PostgreSQL database.
--- Creates the "Nova" schema and ALL business tables (T0001�T0100).
+-- Creates the "Nova" schema and ALL business tables (T0001ï؟½T0100).
 
 BEGIN;
 
--- Nova ERP — Full Schema Migration
+-- Nova ERP â€” Full Schema Migration
 -- Run against an empty PostgreSQL database with a user that has CREATE privileges.
 -- Creates the "Nova" schema and all business tables.
 
@@ -38,11 +38,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE TYPE user_role    AS ENUM ('Admin','Sales Rep','Viewer','Manager','Cashier');
+  CREATE TYPE user_role    AS ENUM ('Admin','Sales Rep','Viewer','Manager','Cashier','Salesman','Warehouse','Accountant');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
-  CREATE TYPE user_status  AS ENUM ('Active','Inactive');
+  CREATE TYPE user_status  AS ENUM ('Active','Inactive','Invited');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN
@@ -79,44 +79,69 @@ CREATE TABLE IF NOT EXISTS "Nova".t0001 (
     category      uom_category NOT NULL DEFAULT 'Quantity',
     is_base_unit  BOOLEAN      NOT NULL DEFAULT false,
     is_active     BOOLEAN      NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT          NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0001.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0001_business_id ON "Nova".t0001(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0001_business_id_id ON "Nova".t0001(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0002 (
     id          SERIAL PRIMARY KEY,
     from_uom_id INT NOT NULL REFERENCES "Nova".t0001(id),
     to_uom_id   INT NOT NULL REFERENCES "Nova".t0001(id),
     factor      NUMERIC(12,6) NOT NULL CHECK (factor > 0),
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by  INT,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0002.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0002_business_id ON "Nova".t0002(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0002_business_id_id ON "Nova".t0002(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0003 (
     id          SERIAL PRIMARY KEY,
     name        VARCHAR(200) NOT NULL,
     sku         VARCHAR(50)  NOT NULL UNIQUE,
+    barcode     VARCHAR(100),
+    description TEXT,
+    type        VARCHAR(20) NOT NULL DEFAULT 'stockable',
     price       NUMERIC(12,2) NOT NULL DEFAULT 0,
     cost_price  NUMERIC(12,2) NOT NULL DEFAULT 0,
     category    VARCHAR(100),
     brand       VARCHAR(100),
     tax_rate    NUMERIC(5,2) DEFAULT 0,
+    weight      NUMERIC(10,3) NOT NULL DEFAULT 0,
+    volume      NUMERIC(10,3) NOT NULL DEFAULT 0,
     image_url   TEXT,
-    is_phantom  BOOLEAN NOT NULL DEFAULT false,
+    is_purchasable BOOLEAN NOT NULL DEFAULT true,
+    is_saleable    BOOLEAN NOT NULL DEFAULT true,
+    is_phantom     BOOLEAN NOT NULL DEFAULT false,
     last_transaction_date TIMESTAMPTZ,
     is_active   BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by  INT,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0003.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0003_business_id ON "Nova".t0003(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0003_business_id_id ON "Nova".t0003(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0004 (
     id          SERIAL PRIMARY KEY,
@@ -124,26 +149,42 @@ CREATE TABLE IF NOT EXISTS "Nova".t0004 (
     barcode     VARCHAR(100) NOT NULL,
     barcode_type VARCHAR(20) DEFAULT 'EAN13',
     is_primary  BOOLEAN NOT NULL DEFAULT false,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by  INT,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0004.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0004_business_id ON "Nova".t0004(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0004_business_id_id ON "Nova".t0004(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0005 (
     id             SERIAL PRIMARY KEY,
     attribute_name VARCHAR(100) NOT NULL,
     attribute_type attr_type NOT NULL DEFAULT 'Text',
+    display_type   VARCHAR(20) NOT NULL DEFAULT 'select',
+    description    TEXT,
+    create_variant BOOLEAN NOT NULL DEFAULT true,
+    attribute_group VARCHAR(100),
     is_required    BOOLEAN NOT NULL DEFAULT false,
     sort_order     INT NOT NULL DEFAULT 0,
     is_active      BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by     INT,
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by     INT,
     update_number  INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0005.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0005_business_id ON "Nova".t0005(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0005_business_id_id ON "Nova".t0005(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0006 (
     id            SERIAL PRIMARY KEY,
@@ -153,12 +194,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0006 (
     value_number  NUMERIC(12,4),
     value_date    DATE,
     value_boolean BOOLEAN,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0006.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0006_business_id ON "Nova".t0006(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0006_business_id_id ON "Nova".t0006(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0007 (
     id              SERIAL PRIMARY KEY,
@@ -168,24 +215,36 @@ CREATE TABLE IF NOT EXISTS "Nova".t0007 (
     sales_uom_id    INT REFERENCES "Nova".t0001(id),
     purchase_factor NUMERIC(12,6) NOT NULL DEFAULT 1,
     sales_factor    NUMERIC(12,6) NOT NULL DEFAULT 1,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0007.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0007_business_id ON "Nova".t0007(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0007_business_id_id ON "Nova".t0007(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0008 (
     id          SERIAL PRIMARY KEY,
     name        VARCHAR(200) NOT NULL,
     location    VARCHAR(200),
     is_active   BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by  INT,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by  INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0008.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0008_business_id ON "Nova".t0008(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0008_business_id_id ON "Nova".t0008(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0009 (
     id             SERIAL PRIMARY KEY,
@@ -194,12 +253,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0009 (
     qty            NUMERIC(12,2) NOT NULL DEFAULT 0,
     reserved_qty   NUMERIC(12,2) NOT NULL DEFAULT 0,
     reorder_level  NUMERIC(12,2) NOT NULL DEFAULT 0,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by     INT,
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by     INT,
     update_number  INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0009.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0009_business_id ON "Nova".t0009(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0009_business_id_id ON "Nova".t0009(business_id, id);
+
+
 
 -- ============================================================
 -- CRM TABLES
@@ -217,12 +282,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0010 (
     default_price_list_id INT,
     default_tax_rate_id   INT,
     payment_term_id       INT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by          INT,
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by          INT,
     update_number       INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0010.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0010_business_id ON "Nova".t0010(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0010_business_id_id ON "Nova".t0010(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0011 (
     id            SERIAL PRIMARY KEY,
@@ -233,12 +304,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0011 (
     payment_terms VARCHAR(100),
     rating        INT DEFAULT 0,
     is_active     BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0011.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0011_business_id ON "Nova".t0011(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0011_business_id_id ON "Nova".t0011(business_id, id);
+
+
 
 -- ============================================================
 -- SALES ORDERS
@@ -261,6 +338,7 @@ CREATE TABLE IF NOT EXISTS "Nova".t0012 (
     price_list_id   INT,
     tax_rate_id     INT,
     payment_term_id INT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -270,6 +348,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0012 (
 COMMENT ON COLUMN "Nova".t0012.freight_amount IS 'Freight / shipping charges applied to sales order';
 COMMENT ON COLUMN "Nova".t0012.discount_amount IS 'Header-level discount amount applied to sales order';
 COMMENT ON COLUMN "Nova".t0012.sales_rep_id IS 'Assigned sales representative (User ID)';
+COMMENT ON COLUMN "Nova".t0012.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0012_business_id ON "Nova".t0012(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0012_business_id_id ON "Nova".t0012(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0013 (
     id              SERIAL PRIMARY KEY,
@@ -283,6 +366,7 @@ CREATE TABLE IF NOT EXISTS "Nova".t0013 (
     discount        NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_total      NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_number     INT NOT NULL DEFAULT 1,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -291,6 +375,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0013 (
 );
 COMMENT ON COLUMN "Nova".t0013.cost_price IS 'Unit cost price / COGS at time of order';
 COMMENT ON COLUMN "Nova".t0013.discount IS 'Line-level discount amount';
+COMMENT ON COLUMN "Nova".t0013.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0013_business_id ON "Nova".t0013(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0013_business_id_id ON "Nova".t0013(business_id, id);
+
+
 
 -- ============================================================
 -- PURCHASE ORDERS
@@ -306,12 +395,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0014 (
     expected_date   DATE,
     notes           TEXT,
     converted_rfq_id INT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0014.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0014_business_id ON "Nova".t0014(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0014_business_id_id ON "Nova".t0014(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0015 (
     id                SERIAL PRIMARY KEY,
@@ -323,12 +418,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0015 (
     unit_price        NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_total        NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_number       INT NOT NULL DEFAULT 1,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by        INT,
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by        INT,
     update_number     INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0015.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0015_business_id ON "Nova".t0015(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0015_business_id_id ON "Nova".t0015(business_id, id);
+
+
 
 -- ============================================================
 -- INSTALLMENTS (Sales)
@@ -344,12 +445,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0016 (
     first_due_date  DATE,
     status          installment_status NOT NULL DEFAULT 'Pending',
     notes           TEXT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0016.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0016_business_id ON "Nova".t0016(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0016_business_id_id ON "Nova".t0016(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0017 (
     id                SERIAL PRIMARY KEY,
@@ -362,12 +469,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0017 (
     payment_method      VARCHAR(50),
     status              installment_status NOT NULL DEFAULT 'Pending',
     notes               TEXT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by          INT,
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by          INT,
     update_number       INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0017.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0017_business_id ON "Nova".t0017(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0017_business_id_id ON "Nova".t0017(business_id, id);
+
+
 
 -- ============================================================
 -- MANUFACTURING
@@ -382,12 +495,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0018 (
     status        mfg_status NOT NULL DEFAULT 'Pending',
     due_date      DATE,
     priority      INT DEFAULT 0,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0018.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0018_business_id ON "Nova".t0018(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0018_business_id_id ON "Nova".t0018(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0019 (
     id              SERIAL PRIMARY KEY,
@@ -399,12 +518,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0019 (
     inspector       VARCHAR(100),
     inspection_date DATE,
     notes           TEXT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0019.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0019_business_id ON "Nova".t0019(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0019_business_id_id ON "Nova".t0019(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0020 (
     id            SERIAL PRIMARY KEY,
@@ -414,12 +539,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0020 (
     quantity      NUMERIC(12,2) NOT NULL DEFAULT 0,
     workstation   VARCHAR(100),
     status        job_status NOT NULL DEFAULT 'Pending',
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0020.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0020_business_id ON "Nova".t0020(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0020_business_id_id ON "Nova".t0020(business_id, id);
+
+
 
 -- ============================================================
 -- ADMINISTRATION
@@ -433,8 +564,9 @@ CREATE TABLE IF NOT EXISTS "Nova".t0021 (
     email         VARCHAR(200),
     role          VARCHAR(30) NOT NULL DEFAULT 'Viewer',
     permissions   TEXT[] DEFAULT '{}',
-    business_id   INT,
     status        VARCHAR(20) NOT NULL DEFAULT 'Active',
+    business_id   INT REFERENCES "Nova".t0059(id),
+    invite_token  VARCHAR(100),
     last_login    TIMESTAMPTZ,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
@@ -442,6 +574,9 @@ CREATE TABLE IF NOT EXISTS "Nova".t0021 (
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0021.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0021_business_id ON "Nova".t0021(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0021_business_id_id ON "Nova".t0021(business_id, id);
 
 CREATE TABLE IF NOT EXISTS "Nova".t0022 (
     id            SERIAL PRIMARY KEY,
@@ -453,12 +588,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0022 (
     permission_key VARCHAR(50),
     sort_order    INT NOT NULL DEFAULT 0,
     is_active     BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0022.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0022_business_id ON "Nova".t0022(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0022_business_id_id ON "Nova".t0022(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0023 (
     id            SERIAL PRIMARY KEY,
@@ -468,54 +609,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0023 (
     changed_data  JSONB,
     changed_by    INT,
     changed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0023.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0023_business_id ON "Nova".t0023(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0023_business_id_id ON "Nova".t0023(business_id, id);
 
--- Production Plans
-CREATE TABLE IF NOT EXISTS "Nova".t0024 (
-    id SERIAL PRIMARY KEY,
-    plan_number VARCHAR(30) NOT NULL,
-    product_id INT,
-    product_name VARCHAR(200) NOT NULL,
-    quantity NUMERIC(12,2) NOT NULL DEFAULT 0,
-    start_date DATE,
-    end_date DATE,
-    status VARCHAR(20) NOT NULL DEFAULT 'Draft',
-    notes TEXT,
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_by INT,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_by INT,
-    update_number INT NOT NULL DEFAULT 1
-);
-COMMENT ON TABLE "Nova".t0024 IS 'Production Plans';
-CREATE INDEX IF NOT EXISTS idx_t0024_status ON "Nova".t0024(status);
-CREATE INDEX IF NOT EXISTS idx_t0024_plan_number ON "Nova".t0024(plan_number);
 
--- Global Settings
-CREATE TABLE IF NOT EXISTS "Nova".t0025 (
-    id SERIAL PRIMARY KEY,
-    setting_key VARCHAR(100) NOT NULL UNIQUE,
-    setting_value TEXT,
-    description TEXT,
-    setting_group VARCHAR(50),
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_by INT,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_by INT,
-    update_number INT NOT NULL DEFAULT 1
-);
-COMMENT ON TABLE "Nova".t0025 IS 'Global Settings';
-COMMENT ON COLUMN "Nova".t0025.setting_key IS 'Key identifier for the setting';
-COMMENT ON COLUMN "Nova".t0025.setting_group IS 'Group name for UI organisation';
-CREATE INDEX IF NOT EXISTS idx_t0025_group ON "Nova".t0025(setting_group);
-CREATE INDEX IF NOT EXISTS idx_t0025_key ON "Nova".t0025(setting_key);
 
 -- ============================================================
 -- ACCOUNTING
@@ -529,12 +634,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0026 (
     parent_id     INT,
     currency      VARCHAR(3) NOT NULL DEFAULT 'USD',
     is_active     BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0026.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0026_business_id ON "Nova".t0026(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0026_business_id_id ON "Nova".t0026(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0027 (
     id            SERIAL PRIMARY KEY,
@@ -542,12 +653,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0027 (
     reference     VARCHAR(100),
     description   VARCHAR(255) NOT NULL,
     status        VARCHAR(20) NOT NULL DEFAULT 'Draft',
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0027.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0027_business_id ON "Nova".t0027(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0027_business_id_id ON "Nova".t0027(business_id, id);
+
+
 
 -- ============================================================
 -- HR
@@ -560,12 +677,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0028 (
     parent_id       INT,
     manager_id      INT,
     is_active       BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0028.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0028_business_id ON "Nova".t0028(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0028_business_id_id ON "Nova".t0028(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0029 (
     id               SERIAL PRIMARY KEY,
@@ -573,12 +696,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0029 (
     designation_name VARCHAR(100) NOT NULL,
     department_id    INT,
     is_active        BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by       INT,
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by       INT,
     update_number    INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0029.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0029_business_id ON "Nova".t0029(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0029_business_id_id ON "Nova".t0029(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0030 (
     id                SERIAL PRIMARY KEY,
@@ -600,40 +729,22 @@ CREATE TABLE IF NOT EXISTS "Nova".t0030 (
     designation_id    INT,
     manager_id        INT,
     is_active         BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by        INT,
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by        INT,
     update_number     INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0030.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0030_business_id ON "Nova".t0030(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0030_business_id_id ON "Nova".t0030(business_id, id);
+
+
 
 -- ============================================================
--- JOURNAL LINES, INVOICES & PAYMENTS
+-- INVOICES & PAYMENTS
 -- ============================================================
-
--- Journal Entry Lines (Detail lines for T0027 Journal Entries)
-CREATE TABLE IF NOT EXISTS "Nova".t0089 (
-    id SERIAL PRIMARY KEY,
-    journal_entry_id INT NOT NULL REFERENCES "Nova".t0027(id),
-    account_id INT NOT NULL REFERENCES "Nova".t0026(id),
-    description VARCHAR(255),
-    debit NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (debit >= 0),
-    credit NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (credit >= 0),
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_by INT,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_by INT,
-    update_number INT NOT NULL DEFAULT 1
-);
-COMMENT ON TABLE "Nova".t0089 IS 'Journal Entry Lines';
-COMMENT ON COLUMN "Nova".t0089.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0089.journal_entry_id IS 'Reference to Journal Entry';
-COMMENT ON COLUMN "Nova".t0089.account_id IS 'Reference to Chart of Accounts';
-COMMENT ON COLUMN "Nova".t0089.debit IS 'Debit amount';
-COMMENT ON COLUMN "Nova".t0089.credit IS 'Credit amount';
-CREATE INDEX IF NOT EXISTS idx_t0089_journal_entry_id ON "Nova".t0089(journal_entry_id);
-CREATE INDEX IF NOT EXISTS idx_t0089_account_id ON "Nova".t0089(account_id);
 
 CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     id              SERIAL PRIMARY KEY,
@@ -648,7 +759,9 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
     sales_rep_id    INT REFERENCES "Nova".t0021(id),
     status          VARCHAR(20) NOT NULL DEFAULT 'Unpaid',
+    status          VARCHAR(20) NOT NULL DEFAULT 'Draft',
     notes           TEXT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -658,6 +771,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
 COMMENT ON COLUMN "Nova".t0090.freight_amount IS 'Freight / shipping charges billed on invoice';
 COMMENT ON COLUMN "Nova".t0090.discount_amount IS 'Customer discount deducted on invoice';
 COMMENT ON COLUMN "Nova".t0090.sales_rep_id IS 'Assigned sales representative (User ID)';
+COMMENT ON COLUMN "Nova".t0090.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0090_business_id ON "Nova".t0090(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_business_id_id ON "Nova".t0090(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0091 (
     id              SERIAL PRIMARY KEY,
@@ -669,12 +787,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0091 (
     reference       VARCHAR(100),
     status          VARCHAR(20) NOT NULL DEFAULT 'Completed',
     notes           TEXT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0091.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0091_business_id ON "Nova".t0091(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0091_business_id_id ON "Nova".t0091(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0096 (
     id                 SERIAL PRIMARY KEY,
@@ -686,12 +810,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0096 (
     discount_days      INT NOT NULL DEFAULT 0,
     is_active          BOOLEAN NOT NULL DEFAULT true,
     is_default         BOOLEAN NOT NULL DEFAULT false,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by         INT,
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by         INT,
     update_number      INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0096.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0096_business_id ON "Nova".t0096(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0096_business_id_id ON "Nova".t0096(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0097 (
     id            SERIAL PRIMARY KEY,
@@ -700,12 +830,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0097 (
     description   TEXT,
     is_active     BOOLEAN NOT NULL DEFAULT true,
     is_default    BOOLEAN NOT NULL DEFAULT false,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0097.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0097_business_id ON "Nova".t0097(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0097_business_id_id ON "Nova".t0097(business_id, id);
+
+
 
 -- ============================================================
 -- NOTIFICATIONS, SCHEDULER, MODULE REGISTRY
@@ -720,8 +856,14 @@ CREATE TABLE IF NOT EXISTS "Nova".t0098 (
     reference_type    VARCHAR(30),
     reference_id      INT,
     is_read           BOOLEAN NOT NULL DEFAULT false,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+COMMENT ON COLUMN "Nova".t0098.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0098_business_id ON "Nova".t0098(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0098_business_id_id ON "Nova".t0098(business_id, id);
+
+
 
 CREATE TABLE IF NOT EXISTS "Nova".t0099 (
     id              SERIAL PRIMARY KEY,
@@ -734,12 +876,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0099 (
     last_run_at     TIMESTAMPTZ,
     next_run_at     TIMESTAMPTZ,
     status          VARCHAR(20) NOT NULL DEFAULT 'Idle',
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ,
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0099.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0099_business_id ON "Nova".t0099(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0099_business_id_id ON "Nova".t0099(business_id, id);
+
+
 
 INSERT INTO "Nova".t0099 (task_name, task_type, cron_expression, description, config, is_active, status)
 SELECT 'Demand Forecasting & Restock Requisitions', 'DemandForecastRestock', '0 6 * * *', 'Daily morning demand velocity analysis, stockout risk projection, and proactive restock digest notification', '{"days": 30, "safety_margin_days": 7, "target_coverage_days": 30}'::jsonb, true, 'Idle'
@@ -762,12 +910,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0100 (
     is_active     BOOLEAN NOT NULL DEFAULT true,
     installed_at  TIMESTAMPTZ,
     dependencies  JSONB DEFAULT '[]'::jsonb,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by    INT,
     updated_at    TIMESTAMPTZ,
     updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0100.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0100_business_id ON "Nova".t0100(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0100_business_id_id ON "Nova".t0100(business_id, id);
+
+
 
 -- ============================================================
 -- INDEXES
@@ -797,7 +951,7 @@ CREATE INDEX IF NOT EXISTS idx_t0100_key ON "Nova".t0100(module_key);
 CREATE INDEX IF NOT EXISTS idx_t0100_active ON "Nova".t0100(is_active);
 CREATE INDEX IF NOT EXISTS idx_t0100_category ON "Nova".t0100(category);
 
--- Nova ERP — Missing Tables Migration (002)
+-- Nova ERP â€” Missing Tables Migration (002)
 -- Generated from controller business_columns and Pydantic models
 -- Run against a PostgreSQL database with the Nova schema already created
 
@@ -816,12 +970,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0031 (
     other_allowances NUMERIC(12,2),
     currency VARCHAR(30),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0031.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0031_business_id ON "Nova".t0031(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0031_business_id_id ON "Nova".t0031(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0031 IS 'Employee Contracts';
 COMMENT ON COLUMN "Nova".t0031.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0031.employee_id IS 'Reference to Employee';
@@ -838,12 +998,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0032 (
     file_path TEXT,
     expiry_date DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0032.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0032_business_id ON "Nova".t0032(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0032_business_id_id ON "Nova".t0032(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0032 IS 'Employee Documents';
 COMMENT ON COLUMN "Nova".t0032.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0032.employee_id IS 'Reference to Employee';
@@ -860,12 +1026,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0033 (
     end_time TIME,
     grace_minutes NUMERIC(12,2),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0033.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0033_business_id ON "Nova".t0033(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0033_business_id_id ON "Nova".t0033(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0033 IS 'Work Shifts';
 COMMENT ON COLUMN "Nova".t0033.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0033.is_active IS 'Active status flag';
@@ -881,12 +1053,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0034 (
     clock_out TIME,
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0034.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0034_business_id ON "Nova".t0034(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0034_business_id_id ON "Nova".t0034(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0034 IS 'Employee Attendance Records';
 COMMENT ON COLUMN "Nova".t0034.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0034.employee_id IS 'Reference to Employee';
@@ -906,12 +1084,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0035 (
     days_per_year VARCHAR(200),
     is_paid VARCHAR(200),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0035.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0035_business_id ON "Nova".t0035(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0035_business_id_id ON "Nova".t0035(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0035 IS 'Leave Types';
 COMMENT ON COLUMN "Nova".t0035.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0035.is_active IS 'Active status flag';
@@ -929,12 +1113,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0036 (
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     approved_by VARCHAR(200),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0036.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0036_business_id ON "Nova".t0036(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0036_business_id_id ON "Nova".t0036(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0036 IS 'Leave Requests';
 COMMENT ON COLUMN "Nova".t0036.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0036.employee_id IS 'Reference to Employee';
@@ -955,12 +1145,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0037 (
     end_date DATE,
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0037.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0037_business_id ON "Nova".t0037(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0037_business_id_id ON "Nova".t0037(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0037 IS 'Payroll Periods';
 COMMENT ON COLUMN "Nova".t0037.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0037.status IS 'Status';
@@ -986,12 +1182,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0038 (
     payment_date DATE,
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0038.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0038_business_id ON "Nova".t0038(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0038_business_id_id ON "Nova".t0038(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0038 IS 'Payroll Entries';
 COMMENT ON COLUMN "Nova".t0038.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0038.employee_id IS 'Reference to Employee';
@@ -1017,12 +1219,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0039 (
     posted_date DATE,
     closing_date DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0039.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0039_business_id ON "Nova".t0039(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0039_business_id_id ON "Nova".t0039(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0039 IS 'Job Openings';
 COMMENT ON COLUMN "Nova".t0039.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0039.department_id IS 'Reference to Department';
@@ -1047,12 +1255,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0040 (
     notes TEXT,
     applied_date DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0040.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0040_business_id ON "Nova".t0040(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0040_business_id_id ON "Nova".t0040(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0040 IS 'Job Candidates';
 COMMENT ON COLUMN "Nova".t0040.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0040.job_opening_id IS 'Reference to Job_Opening';
@@ -1078,12 +1292,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0041 (
     warranty_expiry VARCHAR(200),
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0041.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0041_business_id ON "Nova".t0041(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0041_business_id_id ON "Nova".t0041(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0041 IS 'Maintenance Assets';
 COMMENT ON COLUMN "Nova".t0041.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0041.department_id IS 'Reference to Department';
@@ -1106,12 +1326,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0042 (
     assigned_to VARCHAR(200),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0042.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0042_business_id ON "Nova".t0042(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0042_business_id_id ON "Nova".t0042(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0042 IS 'Maintenance Schedules';
 COMMENT ON COLUMN "Nova".t0042.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0042.asset_id IS 'Reference to Asset';
@@ -1134,12 +1360,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0043 (
     cost NUMERIC(12,2),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0043.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0043_business_id ON "Nova".t0043(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0043_business_id_id ON "Nova".t0043(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0043 IS 'Maintenance Work Orders';
 COMMENT ON COLUMN "Nova".t0043.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0043.asset_id IS 'Reference to Asset';
@@ -1164,12 +1396,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0044 (
     budget NUMERIC(12,2),
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0044.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0044_business_id ON "Nova".t0044(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0044_business_id_id ON "Nova".t0044(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0044 IS 'Projects';
 COMMENT ON COLUMN "Nova".t0044.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0044.department_id IS 'Reference to Department';
@@ -1197,12 +1435,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0045 (
     actual_hours NUMERIC(8,2),
     parent_task_id INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0045.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0045_business_id ON "Nova".t0045(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0045_business_id_id ON "Nova".t0045(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0045 IS 'Project Tasks';
 COMMENT ON COLUMN "Nova".t0045.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0045.project_id IS 'Reference to Project';
@@ -1224,12 +1468,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0046 (
     end_date DATE,
     role VARCHAR(200),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0046.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0046_business_id ON "Nova".t0046(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0046_business_id_id ON "Nova".t0046(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0046 IS 'Project Resource Allocations';
 COMMENT ON COLUMN "Nova".t0046.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0046.project_id IS 'Reference to Project';
@@ -1251,12 +1501,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0047 (
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     approved_by VARCHAR(200),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0047.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0047_business_id ON "Nova".t0047(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0047_business_id_id ON "Nova".t0047(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0047 IS 'Project Timesheets';
 COMMENT ON COLUMN "Nova".t0047.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0047.employee_id IS 'Reference to Employee';
@@ -1283,12 +1539,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0048 (
     resolution TEXT,
     resolved_date DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0048.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0048_business_id ON "Nova".t0048(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0048_business_id_id ON "Nova".t0048(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0048 IS 'Service Requests';
 COMMENT ON COLUMN "Nova".t0048.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0048.customer_id IS 'Reference to Customer';
@@ -1311,12 +1573,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0049 (
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0049.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0049_business_id ON "Nova".t0049(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0049_business_id_id ON "Nova".t0049(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0049 IS 'Customer Contracts';
 COMMENT ON COLUMN "Nova".t0049.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0049.customer_id IS 'Reference to Customer';
@@ -1336,12 +1604,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0050 (
     resolution_time NUMERIC(12,2),
     penalty_rate NUMERIC(12,2),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0050.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0050_business_id ON "Nova".t0050(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0050_business_id_id ON "Nova".t0050(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0050 IS 'SLA Definitions';
 COMMENT ON COLUMN "Nova".t0050.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0050.contract_id IS 'Reference to Contract';
@@ -1357,12 +1631,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0051 (
     keywords TEXT,
     search_content TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0051.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0051_business_id ON "Nova".t0051(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0051_business_id_id ON "Nova".t0051(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0051 IS 'Search Index';
 COMMENT ON COLUMN "Nova".t0051.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0051.entity_id IS 'Reference to Entity';
@@ -1380,12 +1660,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0052 (
     target_value NUMERIC(12,2),
     formula VARCHAR(200),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0052.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0052_business_id ON "Nova".t0052(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0052_business_id_id ON "Nova".t0052(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0052 IS 'KPI Definitions';
 COMMENT ON COLUMN "Nova".t0052.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0052.is_active IS 'Active status flag';
@@ -1400,12 +1686,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0053 (
     actual_value NUMERIC(12,2),
     target_value NUMERIC(12,2),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0053.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0053_business_id ON "Nova".t0053(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0053_business_id_id ON "Nova".t0053(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0053 IS 'KPI Values';
 COMMENT ON COLUMN "Nova".t0053.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0053.kpi_id IS 'Reference to Kpi';
@@ -1421,12 +1713,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0054 (
     owner_id INT,
     config JSONB,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0054.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0054_business_id ON "Nova".t0054(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0054_business_id_id ON "Nova".t0054(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0054 IS 'BI Dashboards';
 COMMENT ON COLUMN "Nova".t0054.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0054.owner_id IS 'Reference to Owner';
@@ -1443,12 +1741,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0055 (
     config JSONB,
     position INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0055.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0055_business_id ON "Nova".t0055(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0055_business_id_id ON "Nova".t0055(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0055 IS 'Dashboard Widgets';
 COMMENT ON COLUMN "Nova".t0055.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0055.dashboard_id IS 'Reference to Dashboard';
@@ -1465,12 +1769,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0056 (
     permissions TEXT[],
     expires_at DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0056.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0056_business_id ON "Nova".t0056(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0056_business_id_id ON "Nova".t0056(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0056 IS 'API Keys';
 COMMENT ON COLUMN "Nova".t0056.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0056.client_id IS 'Reference to Client';
@@ -1487,12 +1797,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0057 (
     config JSONB,
     credentials JSONB,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0057.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0057_business_id ON "Nova".t0057(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0057_business_id_id ON "Nova".t0057(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0057 IS 'Integration Configurations';
 COMMENT ON COLUMN "Nova".t0057.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0057.is_active IS 'Active status flag';
@@ -1508,12 +1824,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0058 (
     message TEXT,
     synced_at DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0058.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0058_business_id ON "Nova".t0058(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0058_business_id_id ON "Nova".t0058(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0058 IS 'Integration Sync Logs';
 COMMENT ON COLUMN "Nova".t0058.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0058.integration_id IS 'Reference to Integration';
@@ -1550,12 +1872,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0060 (
     entity_type VARCHAR(30),
     config JSONB,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0060.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0060_business_id ON "Nova".t0060(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0060_business_id_id ON "Nova".t0060(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0060 IS 'Workflow Definitions';
 COMMENT ON COLUMN "Nova".t0060.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0060.is_active IS 'Active status flag';
@@ -1571,12 +1899,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0061 (
     current_step VARCHAR(200),
     config JSONB,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0061.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0061_business_id ON "Nova".t0061(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0061_business_id_id ON "Nova".t0061(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0061 IS 'Workflow Instances';
 COMMENT ON COLUMN "Nova".t0061.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0061.workflow_id IS 'Reference to Workflow';
@@ -1600,12 +1934,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0062 (
     file_size NUMERIC(12,2),
     version NUMERIC(12,2),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0062.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0062_business_id ON "Nova".t0062(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0062_business_id_id ON "Nova".t0062(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0062 IS 'Enterprise Documents';
 COMMENT ON COLUMN "Nova".t0062.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0062.entity_id IS 'Reference to Entity';
@@ -1622,12 +1962,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0063 (
     description TEXT,
     config JSONB,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0063.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0063_business_id ON "Nova".t0063(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0063_business_id_id ON "Nova".t0063(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0063 IS 'Compliance Rules';
 COMMENT ON COLUMN "Nova".t0063.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0063.is_active IS 'Active status flag';
@@ -1644,13 +1990,20 @@ CREATE TABLE IF NOT EXISTS "Nova".t0064 (
     qty_change NUMERIC(12,2),
     balance_after NUMERIC(12,2),
     description TEXT,
+    movement_date TIMESTAMPTZ NOT NULL DEFAULT now(),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0064.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0064_business_id ON "Nova".t0064(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0064_business_id_id ON "Nova".t0064(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0064 IS 'Stock Movements';
 COMMENT ON COLUMN "Nova".t0064.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0064.product_id IS 'Reference to Product';
@@ -1671,12 +2024,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0065 (
     quantity NUMERIC(12,2),
     version NUMERIC(12,2),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0065.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0065_business_id ON "Nova".t0065(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0065_business_id_id ON "Nova".t0065(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0065 IS 'Bill of Materials';
 COMMENT ON COLUMN "Nova".t0065.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0065.product_id IS 'Reference to Product';
@@ -1695,12 +2054,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0066 (
     scrap_pct NUMERIC(5,2),
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0066.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0066_business_id ON "Nova".t0066(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0066_business_id_id ON "Nova".t0066(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0066 IS 'BOM Lines';
 COMMENT ON COLUMN "Nova".t0066.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0066.bom_id IS 'Reference to Bom';
@@ -1724,13 +2089,20 @@ CREATE TABLE IF NOT EXISTS "Nova".t0067 (
     grand_total NUMERIC(12,2),
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     notes TEXT,
+    converted_order_id INT REFERENCES "Nova".t0012(id),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0067.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0067_business_id ON "Nova".t0067(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0067_business_id_id ON "Nova".t0067(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0067 IS 'Sales Quotations';
 COMMENT ON COLUMN "Nova".t0067.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0067.customer_id IS 'Reference to Customer';
@@ -1752,12 +2124,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0068 (
     line_total NUMERIC(12,2),
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0068.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0068_business_id ON "Nova".t0068(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0068_business_id_id ON "Nova".t0068(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0068 IS 'Sales Quotation Lines';
 COMMENT ON COLUMN "Nova".t0068.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0068.quotation_id IS 'Reference to Quotation';
@@ -1782,12 +2160,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0069 (
     priority VARCHAR(200),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0069.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0069_business_id ON "Nova".t0069(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0069_business_id_id ON "Nova".t0069(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0069 IS 'Purchase Requisitions';
 COMMENT ON COLUMN "Nova".t0069.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0069.department_id IS 'Reference to Department';
@@ -1811,12 +2195,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0070 (
     notes TEXT,
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0070.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0070_business_id ON "Nova".t0070(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0070_business_id_id ON "Nova".t0070(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0070 IS 'Purchase Requisition Lines';
 COMMENT ON COLUMN "Nova".t0070.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0070.requisition_id IS 'Reference to Requisition';
@@ -1838,12 +2228,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0071 (
     due_date DATE,
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0071.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0071_business_id ON "Nova".t0071(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0071_business_id_id ON "Nova".t0071(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0071 IS 'Request for Quotations (RFQ)';
 COMMENT ON COLUMN "Nova".t0071.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0071.status IS 'Status';
@@ -1861,12 +2257,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0072 (
     uom_id INT,
     line_number NUMERIC(12,2),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0072.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0072_business_id ON "Nova".t0072(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0072_business_id_id ON "Nova".t0072(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0072 IS 'RFQ Lines';
 COMMENT ON COLUMN "Nova".t0072.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0072.rfq_id IS 'Reference to Rfq';
@@ -1885,12 +2287,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0073 (
     vendor_id INT,
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0073.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0073_business_id ON "Nova".t0073(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0073_business_id_id ON "Nova".t0073(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0073 IS 'RFQ Vendors';
 COMMENT ON COLUMN "Nova".t0073.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0073.rfq_id IS 'Reference to Rfq';
@@ -1916,12 +2324,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0074 (
     valid_until DATE,
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0074.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0074_business_id ON "Nova".t0074(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0074_business_id_id ON "Nova".t0074(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0074 IS 'RFQ Vendor Quotes';
 COMMENT ON COLUMN "Nova".t0074.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0074.rfq_id IS 'Reference to Rfq';
@@ -1945,12 +2359,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0075 (
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0075.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0075_business_id ON "Nova".t0075(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0075_business_id_id ON "Nova".t0075(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0075 IS 'Goods Receipts';
 COMMENT ON COLUMN "Nova".t0075.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0075.purchase_order_id IS 'Reference to Purchase_Order';
@@ -1977,12 +2397,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0076 (
     manufacturing_date DATE,
     expiry_date DATE,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0076.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0076_business_id ON "Nova".t0076(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0076_business_id_id ON "Nova".t0076(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0076 IS 'Goods Receipt Lines';
 COMMENT ON COLUMN "Nova".t0076.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0076.receipt_id IS 'Reference to Receipt';
@@ -2014,12 +2440,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0077 (
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0077.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0077_business_id ON "Nova".t0077(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0077_business_id_id ON "Nova".t0077(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0077 IS 'Sales Deliveries';
 COMMENT ON COLUMN "Nova".t0077.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0077.sales_order_id IS 'Reference to Sales_Order';
@@ -2048,12 +2480,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0078 (
     uom_id INT,
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0078.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0078_business_id ON "Nova".t0078(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0078_business_id_id ON "Nova".t0078(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0078 IS 'Sales Delivery Lines';
 COMMENT ON COLUMN "Nova".t0078.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0078.delivery_id IS 'Reference to Delivery';
@@ -2078,12 +2516,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0079 (
     reason VARCHAR(200),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0079.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0079_business_id ON "Nova".t0079(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0079_business_id_id ON "Nova".t0079(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0079 IS 'Sales Returns';
 COMMENT ON COLUMN "Nova".t0079.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0079.sales_order_id IS 'Reference to Sales_Order';
@@ -2107,12 +2551,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0080 (
     uom_id INT,
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0080.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0080_business_id ON "Nova".t0080(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0080_business_id_id ON "Nova".t0080(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0080 IS 'Sales Return Lines';
 COMMENT ON COLUMN "Nova".t0080.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0080.return_id IS 'Reference to Return';
@@ -2135,12 +2585,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0081 (
     reason VARCHAR(200),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0081.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0081_business_id ON "Nova".t0081(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_business_id_id ON "Nova".t0081(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0081 IS 'Purchase Returns';
 COMMENT ON COLUMN "Nova".t0081.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0081.purchase_order_id IS 'Reference to Purchase_Order';
@@ -2164,12 +2620,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0082 (
     uom_id INT,
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0082.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0082_business_id ON "Nova".t0082(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0082_business_id_id ON "Nova".t0082(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0082 IS 'Purchase Return Lines';
 COMMENT ON COLUMN "Nova".t0082.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0082.return_id IS 'Reference to Return';
@@ -2180,30 +2642,6 @@ CREATE INDEX IF NOT EXISTS idx_t0082_return_id ON "Nova".t0082(return_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_product_id ON "Nova".t0082(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_uom_id ON "Nova".t0082(uom_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_active ON "Nova".t0082(is_active);
-
--- Price Lists
-CREATE TABLE IF NOT EXISTS "Nova".t0083 (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    description TEXT,
-    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    is_default BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_by INT,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_by INT,
-    update_number INT NOT NULL DEFAULT 1
-);
-COMMENT ON TABLE "Nova".t0083 IS 'Price Lists';
-COMMENT ON COLUMN "Nova".t0083.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0083.name IS 'Price list name';
-COMMENT ON COLUMN "Nova".t0083.code IS 'Unique price list code';
-COMMENT ON COLUMN "Nova".t0083.is_default IS 'Default price list flag';
-CREATE INDEX IF NOT EXISTS idx_t0083_code ON "Nova".t0083(code);
-CREATE INDEX IF NOT EXISTS idx_t0083_default ON "Nova".t0083(is_default);
-CREATE INDEX IF NOT EXISTS idx_t0083_active ON "Nova".t0083(is_active);
 
 -- Price List Items
 CREATE TABLE IF NOT EXISTS "Nova".t0084 (
@@ -2217,12 +2655,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0084 (
     effective_to DATE,
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0084.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0084_business_id ON "Nova".t0084(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0084_business_id_id ON "Nova".t0084(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0084 IS 'Price List Items';
 COMMENT ON COLUMN "Nova".t0084.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0084.price_list_id IS 'Reference to Price_List';
@@ -2241,12 +2685,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0086 (
     applies_to VARCHAR(200),
     target_id INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0086.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0086_business_id ON "Nova".t0086(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0086_business_id_id ON "Nova".t0086(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0086 IS 'Tax Rules';
 COMMENT ON COLUMN "Nova".t0086.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0086.tax_rate_id IS 'Reference to Tax_Rate';
@@ -2267,12 +2717,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0087 (
     sales_order_line_id INT,
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0087.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0087_business_id ON "Nova".t0087(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0087_business_id_id ON "Nova".t0087(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0087 IS 'Serial Numbers';
 COMMENT ON COLUMN "Nova".t0087.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0087.product_id IS 'Reference to Product';
@@ -2300,12 +2756,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0088 (
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0088.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0088_business_id ON "Nova".t0088(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0088_business_id_id ON "Nova".t0088(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0088 IS 'Batch Numbers';
 COMMENT ON COLUMN "Nova".t0088.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0088.product_id IS 'Reference to Product';
@@ -2326,12 +2788,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0089 (
     credit NUMERIC(12,2),
     description TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0089.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0089_business_id ON "Nova".t0089(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0089_business_id_id ON "Nova".t0089(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0089 IS 'Journal Entry Lines';
 COMMENT ON COLUMN "Nova".t0089.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0089.journal_entry_id IS 'Reference to Journal_Entry';
@@ -2355,12 +2823,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0092 (
     assigned_to VARCHAR(200),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0092.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0092_business_id ON "Nova".t0092(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0092_business_id_id ON "Nova".t0092(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0092 IS 'CRM Leads';
 COMMENT ON COLUMN "Nova".t0092.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0092.status IS 'Status';
@@ -2378,12 +2852,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0093 (
     activity_date DATE,
     completed VARCHAR(200),
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0093.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0093_business_id ON "Nova".t0093(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0093_business_id_id ON "Nova".t0093(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0093 IS 'CRM Lead Activities';
 COMMENT ON COLUMN "Nova".t0093.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0093.lead_id IS 'Reference to Lead';
@@ -2404,12 +2884,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0094 (
     assigned_to VARCHAR(200),
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0094.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0094_business_id ON "Nova".t0094(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0094_business_id_id ON "Nova".t0094(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0094 IS 'CRM Opportunities';
 COMMENT ON COLUMN "Nova".t0094.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0094.lead_id IS 'Reference to Lead';
@@ -2430,12 +2916,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0095 (
     line_total NUMERIC(12,2),
     line_number INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by INT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0095.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0095_business_id ON "Nova".t0095(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0095_business_id_id ON "Nova".t0095(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0095 IS 'CRM Opportunity Lines';
 COMMENT ON COLUMN "Nova".t0095.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0095.opportunity_id IS 'Reference to Opportunity';
@@ -2444,6 +2936,47 @@ COMMENT ON COLUMN "Nova".t0095.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0095_opportunity_id ON "Nova".t0095(opportunity_id);
 CREATE INDEX IF NOT EXISTS idx_t0095_product_id ON "Nova".t0095(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0095_active ON "Nova".t0095(is_active);
+
+-- ============================================================
+-- BUSINESS SIGN-UP & INVITE MIGRATION
+-- ============================================================
+
+-- Add business_id column to users table if not exists
+DO $$ BEGIN
+  ALTER TABLE "Nova".t0021 ADD COLUMN business_id INT REFERENCES "Nova".t0059(id);
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Add invite_link column to users table
+DO $$ BEGIN
+  ALTER TABLE "Nova".t0021 ADD COLUMN invite_token VARCHAR(100);
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Extend user_role enum with new roles
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'Salesman';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'Warehouse';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'Accountant';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Extend user_status enum
+DO $$ BEGIN
+  ALTER TYPE user_status ADD VALUE IF NOT EXISTS 'Invited';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+COMMENT ON COLUMN "Nova".t0021.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0021_business_id ON "Nova".t0021(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0021_business_id_id ON "Nova".t0021(business_id, id);
+
 
 -- ============================================================
 -- PICK LISTS (Order Fulfillment)
@@ -2456,13 +2989,19 @@ CREATE TABLE IF NOT EXISTS "Nova".t0101 (
     warehouse_id    INT REFERENCES "Nova".t0008(id),
     status          VARCHAR(30) NOT NULL DEFAULT 'Pending',
     notes           TEXT,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
-COMMENT ON TABLE "Nova".t0101 IS 'Pick Lists — generated from confirmed sales orders';
+COMMENT ON COLUMN "Nova".t0101.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0101_business_id ON "Nova".t0101(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0101_business_id_id ON "Nova".t0101(business_id, id);
+
+
+COMMENT ON TABLE "Nova".t0101 IS 'Pick Lists â€” generated from confirmed sales orders';
 COMMENT ON COLUMN "Nova".t0101.status IS 'Pending | In Progress | Completed | Cancelled';
 CREATE INDEX IF NOT EXISTS idx_t0101_sales_order_id ON "Nova".t0101(sales_order_id);
 CREATE INDEX IF NOT EXISTS idx_t0101_status ON "Nova".t0101(status);
@@ -2481,12 +3020,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0102 (
     expiry_date       DATE,
     picked_batch_id   INT REFERENCES "Nova".t0088(id),
     picked_batch_number VARCHAR(255),
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by        INT,
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by        INT,
     update_number     INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0102.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0102_business_id ON "Nova".t0102(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0102_business_id_id ON "Nova".t0102(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0102 IS 'Pick List Items';
 COMMENT ON COLUMN "Nova".t0102.qty_ordered IS 'Quantity ordered (target to pick)';
 COMMENT ON COLUMN "Nova".t0102.qty_picked IS 'Quantity actually picked so far';
@@ -2515,6 +3060,7 @@ CREATE TABLE IF NOT EXISTS "Nova".t0103 (
     min_order_qty   NUMERIC(12,2) DEFAULT 1,
     is_preferred    BOOLEAN NOT NULL DEFAULT false,
     is_active       BOOLEAN NOT NULL DEFAULT true,
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2522,6 +3068,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0103 (
     update_number   INT NOT NULL DEFAULT 1,
     UNIQUE(product_id, supplier_id)
 );
+COMMENT ON COLUMN "Nova".t0103.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0103_business_id ON "Nova".t0103(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0103_business_id_id ON "Nova".t0103(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0103 IS 'Product-Supplier linking with supplier SKU and cost';
 COMMENT ON COLUMN "Nova".t0103.supplier_sku IS 'Supplier''s SKU for this product';
 COMMENT ON COLUMN "Nova".t0103.unit_cost IS 'Cost from this supplier';
@@ -2542,12 +3093,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0104 (
     total_rows      INT NOT NULL DEFAULT 0,
     inserted_rows   INT NOT NULL DEFAULT 0,
     status          VARCHAR(20) NOT NULL DEFAULT 'Preview',
+    business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
     update_number   INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0104.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0104_business_id ON "Nova".t0104(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0104_business_id_id ON "Nova".t0104(business_id, id);
+
+
 COMMENT ON TABLE "Nova".t0104 IS 'Migration batches for tracking CSV imports';
 COMMENT ON COLUMN "Nova".t0104.status IS 'Preview | Committed | RolledBack';
 
@@ -2653,5 +3210,187 @@ GRANT SELECT (id, key_name, client_id, permissions, expires_at, is_active, creat
 REVOKE SELECT (api_key) ON "Nova".t0056 FROM nova_readonly;
 
 GRANT nova_readonly TO CURRENT_USER;
+
+-- Production Plans
+CREATE TABLE IF NOT EXISTS "Nova".t0024 (
+    id SERIAL PRIMARY KEY,
+    plan_number VARCHAR(30) NOT NULL,
+    product_id INT,
+    product_name VARCHAR(200) NOT NULL,
+    quantity NUMERIC(12,2) NOT NULL DEFAULT 0,
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'Draft',
+    notes TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id INT REFERENCES "Nova".t0059(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0024 IS 'Production Plans';
+COMMENT ON COLUMN "Nova".t0024.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0024.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0024_status ON "Nova".t0024(status);
+CREATE INDEX IF NOT EXISTS idx_t0024_plan_number ON "Nova".t0024(plan_number);
+CREATE INDEX IF NOT EXISTS idx_t0024_business_id ON "Nova".t0024(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0024_business_id_id ON "Nova".t0024(business_id, id);
+
+-- Global Settings
+CREATE TABLE IF NOT EXISTS "Nova".t0025 (
+    id SERIAL PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT,
+    description TEXT,
+    setting_group VARCHAR(50),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id INT REFERENCES "Nova".t0059(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0025 IS 'Global Settings';
+COMMENT ON COLUMN "Nova".t0025.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0025.setting_key IS 'Key identifier for the setting';
+COMMENT ON COLUMN "Nova".t0025.setting_group IS 'Group name for UI organisation';
+COMMENT ON COLUMN "Nova".t0025.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0025_group ON "Nova".t0025(setting_group);
+CREATE INDEX IF NOT EXISTS idx_t0025_key ON "Nova".t0025(setting_key);
+CREATE INDEX IF NOT EXISTS idx_t0025_business_id ON "Nova".t0025(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0025_business_id_id ON "Nova".t0025(business_id, id);
+
+-- Price Lists
+CREATE TABLE IF NOT EXISTS "Nova".t0083 (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    business_id INT REFERENCES "Nova".t0059(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0083 IS 'Price Lists';
+COMMENT ON COLUMN "Nova".t0083.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0083.name IS 'Price list name';
+COMMENT ON COLUMN "Nova".t0083.code IS 'Unique price list code';
+COMMENT ON COLUMN "Nova".t0083.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0083_code ON "Nova".t0083(code);
+CREATE INDEX IF NOT EXISTS idx_t0083_active ON "Nova".t0083(is_active);
+CREATE INDEX IF NOT EXISTS idx_t0083_business_id ON "Nova".t0083(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0083_business_id_id ON "Nova".t0083(business_id, id);
+
+-- Tax Rates
+CREATE TABLE IF NOT EXISTS "Nova".t0085 (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(20) NOT NULL UNIQUE,
+    rate NUMERIC(5,2) NOT NULL,
+    type VARCHAR(20) NOT NULL DEFAULT 'Sales',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    description TEXT,
+    business_id INT REFERENCES "Nova".t0059(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0085 IS 'Tax Rates';
+COMMENT ON COLUMN "Nova".t0085.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0085.code IS 'Tax rate code';
+COMMENT ON COLUMN "Nova".t0085.type IS 'Tax type';
+COMMENT ON COLUMN "Nova".t0085.is_active IS 'Active status flag';
+COMMENT ON COLUMN "Nova".t0085.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0085_code ON "Nova".t0085(code);
+CREATE INDEX IF NOT EXISTS idx_t0085_type ON "Nova".t0085(type);
+CREATE INDEX IF NOT EXISTS idx_t0085_active ON "Nova".t0085(is_active);
+CREATE INDEX IF NOT EXISTS idx_t0085_business_id ON "Nova".t0085(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0085_business_id_id ON "Nova".t0085(business_id, id);
+
+-- Inventory Counts
+CREATE TABLE IF NOT EXISTS "Nova".t0105 (
+    id SERIAL PRIMARY KEY,
+    count_number VARCHAR(30) NOT NULL,
+    warehouse_id INT REFERENCES "Nova".t0008(id) ON DELETE SET NULL,
+    count_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'Draft',
+    notes TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id INT REFERENCES "Nova".t0059(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0105 IS 'Inventory Counts';
+COMMENT ON COLUMN "Nova".t0105.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0105.count_number IS 'Count identifier number';
+COMMENT ON COLUMN "Nova".t0105.status IS 'Status';
+COMMENT ON COLUMN "Nova".t0105.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0105_status ON "Nova".t0105(status);
+CREATE INDEX IF NOT EXISTS idx_t0105_business_id ON "Nova".t0105(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0105_business_id_id ON "Nova".t0105(business_id, id);
+
+-- Inventory Count Lines
+CREATE TABLE IF NOT EXISTS "Nova".t0106 (
+    id SERIAL PRIMARY KEY,
+    count_id INT NOT NULL REFERENCES "Nova".t0105(id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES "Nova".t0003(id) ON DELETE CASCADE,
+    expected_qty NUMERIC(12,4) NOT NULL DEFAULT 0,
+    counted_qty NUMERIC(12,4),
+    notes TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id INT REFERENCES "Nova".t0059(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0106 IS 'Inventory Count Lines';
+COMMENT ON COLUMN "Nova".t0106.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0106.count_id IS 'Reference to Inventory Count';
+COMMENT ON COLUMN "Nova".t0106.product_id IS 'Reference to Product';
+COMMENT ON COLUMN "Nova".t0106.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0106_count ON "Nova".t0106(count_id);
+CREATE INDEX IF NOT EXISTS idx_t0106_product ON "Nova".t0106(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0106_business_id ON "Nova".t0106(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0106_business_id_id ON "Nova".t0106(business_id, id);
+
+-- Product Types
+CREATE TABLE IF NOT EXISTS "Nova".t0107 (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(20),
+    description TEXT,
+    color VARCHAR(7) DEFAULT '#6b7280',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    business_id INT REFERENCES "Nova".t0059(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by INT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by INT,
+    update_number INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0107 IS 'Product Types';
+COMMENT ON COLUMN "Nova".t0107.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0107.name IS 'Product type name';
+COMMENT ON COLUMN "Nova".t0107.code IS 'Product type code';
+COMMENT ON COLUMN "Nova".t0107.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0107_code ON "Nova".t0107(code);
+CREATE INDEX IF NOT EXISTS idx_t0107_business_id ON "Nova".t0107(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0107_business_id_id ON "Nova".t0107(business_id, id);
 
 COMMIT;

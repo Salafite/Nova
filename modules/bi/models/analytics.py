@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 from datetime import date
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
@@ -12,6 +12,7 @@ class KPIDefinitionCreate(BaseModel):
     target_value: Optional[float] = None
     formula: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class KPIDefinitionUpdate(BaseModel):
     kpi_code: Optional[str] = Field(None, max_length=50)
@@ -21,16 +22,17 @@ class KPIDefinitionUpdate(BaseModel):
     target_value: Optional[float] = None
     formula: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class KPIDefinitionResponse(AuditMixin):
     id: int
     kpi_code: str
     kpi_name: str
-    category: Optional[str]
-    metric_unit: Optional[str]
-    target_value: Optional[float]
-    formula: Optional[str]
-    is_active: bool
+    category: Optional[str] = None
+    metric_unit: Optional[str] = None
+    target_value: Optional[float] = None
+    formula: Optional[str] = None
+    is_active: bool = True
 
 
 class KPIValueCreate(BaseModel):
@@ -40,6 +42,7 @@ class KPIValueCreate(BaseModel):
     actual_value: Optional[float] = None
     target_value: Optional[float] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class KPIValueUpdate(BaseModel):
     kpi_id: Optional[int] = None
@@ -48,15 +51,16 @@ class KPIValueUpdate(BaseModel):
     actual_value: Optional[float] = None
     target_value: Optional[float] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class KPIValueResponse(AuditMixin):
     id: int
     kpi_id: int
     period: date
-    period_type: str
-    actual_value: Optional[float]
-    target_value: Optional[float]
-    is_active: bool
+    period_type: str = 'Daily'
+    actual_value: Optional[float] = None
+    target_value: Optional[float] = None
+    is_active: bool = True
 
 
 class BIDashboardCreate(BaseModel):
@@ -65,6 +69,7 @@ class BIDashboardCreate(BaseModel):
     owner_id: Optional[int] = None
     config: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class BIDashboardUpdate(BaseModel):
     dashboard_code: Optional[str] = Field(None, max_length=50)
@@ -72,14 +77,15 @@ class BIDashboardUpdate(BaseModel):
     owner_id: Optional[int] = None
     config: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class BIDashboardResponse(AuditMixin):
     id: int
     dashboard_code: str
     dashboard_name: str
-    owner_id: Optional[int]
-    config: Optional[str]
-    is_active: bool
+    owner_id: Optional[int] = None
+    config: Optional[str] = None
+    is_active: bool = True
 
 
 class DashboardWidgetCreate(BaseModel):
@@ -89,6 +95,7 @@ class DashboardWidgetCreate(BaseModel):
     config: Optional[str] = None
     position: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class DashboardWidgetUpdate(BaseModel):
     dashboard_id: Optional[int] = None
@@ -97,6 +104,7 @@ class DashboardWidgetUpdate(BaseModel):
     config: Optional[str] = None
     position: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class DashboardWidgetResponse(AuditMixin):
     id: int
@@ -119,4 +127,6 @@ from modules.bi.models.executive_analytics import (
     DeliveryRouteMetricItem, DeliveryFulfillmentSummaryResponse,
     ExecutiveExportRequest, ExecutiveExportResponse,
 )
+
+
 

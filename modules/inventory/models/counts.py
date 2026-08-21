@@ -9,12 +9,14 @@ class InventoryCountCreate(BaseModel):
     warehouse_id: Optional[int] = None
     count_date: date
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 
 class InventoryCountUpdate(BaseModel):
     warehouse_id: Optional[int] = None
     count_date: Optional[date] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 
 class InventoryCountResponse(AuditMixin):
@@ -32,12 +34,14 @@ class CountItemCreate(BaseModel):
     expected_qty: float = 0
     counted_qty: Optional[float] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 
 class CountItemUpdate(BaseModel):
     counted_qty: Optional[float] = None
     expected_qty: Optional[float] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 
 class CountItemResponse(AuditMixin):

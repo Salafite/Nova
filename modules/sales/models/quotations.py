@@ -14,6 +14,7 @@ class QuotationCreate(BaseModel):
     grand_total: float = 0
     status: str = 'Draft'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class QuotationUpdate(BaseModel):
     quote_number: Optional[str] = Field(None, max_length=30)
@@ -25,19 +26,20 @@ class QuotationUpdate(BaseModel):
     grand_total: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class QuotationResponse(AuditMixin):
     id: int
     quote_number: str
     customer_id: int
     quote_date: date
-    valid_until: Optional[date]
+    valid_until: Optional[date] = None
     subtotal: float
     tax: float
     grand_total: float
     status: str
-    notes: Optional[str]
-    converted_order_id: Optional[int]
+    notes: Optional[str] = None
+    converted_order_id: Optional[int] = None
 
 
 class QuotationLineCreate(BaseModel):
@@ -49,6 +51,7 @@ class QuotationLineCreate(BaseModel):
     unit_price: float = Field(..., ge=0)
     line_total: float = Field(..., ge=0)
     line_number: int = 0
+    business_id: Optional[int] = None
 
 class QuotationLineUpdate(BaseModel):
     quotation_id: Optional[int] = None
@@ -59,13 +62,14 @@ class QuotationLineUpdate(BaseModel):
     unit_price: Optional[float] = Field(None, ge=0)
     line_total: Optional[float] = Field(None, ge=0)
     line_number: Optional[int] = None
+    business_id: Optional[int] = None
 
 class QuotationLineResponse(AuditMixin):
     id: int
     quotation_id: int
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     product_name: str
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     qty: float
     unit_price: float
     line_total: float
