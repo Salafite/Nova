@@ -13,3 +13,5 @@
 ## Phase 3: Repository & Service Layer Tenant Scoping
 - [x] Subtask 3-1: Updated `modules/core/repositories/base.py` (`CrudRepository`) to automatically apply `business_id = %s` on list, get, update, delete, count, auto-inject `business_id` from active tenant context on create, prevent tenant spoofing on update, and provide `get_unscoped`.
 - [x] Subtask 3-2: Updated `modules/core/services/base.py` (`CrudService`) and domain-specific services (`JournalEntryService`, `SalesOrderService`, `CustomerService`, `QuotationService`, `BatchNumberService`, `StockMovementService`, `dashboard_repo`, etc.) to honor tenant context and prevent cross-tenant operations.
+- [x] Subtask 3-3: Added comprehensive unit test suites in `modules/core/repositories/tests/test_tenant_isolation.py` and `modules/core/repositories/tests/test_base.py` covering tenant-scoped CRUD operations (list, get, count, get_unscoped, create injection, update scoping & tamper protection, delete soft/hard), T0059 non-tenant exemptions, nested contexts, concurrency/threads/async, custom schemas/PKs, and cross-tenant operation guards.
+
