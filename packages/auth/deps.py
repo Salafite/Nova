@@ -4,6 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from packages.auth.jwt import decode_token
 from packages.auth.repository import get_user_by_id
 from modules.core.services.permission_service import has_permission, derive_permissions
+from modules.core.context import set_current_tenant
 
 _bearer = HTTPBearer()
 
@@ -16,6 +17,13 @@ def get_current_user(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> 
         user = get_user_by_id(int(payload['sub']))
         if not user:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'User not found')
+
+        business_id = payload.get('business_id')
+        if business_id is None and isinstance(user, dict):
+            business_id = user.get('business_id')
+        if business_id is not None:
+            set_current_tenant(business_id)
+
         return user
     except HTTPException:
         raise

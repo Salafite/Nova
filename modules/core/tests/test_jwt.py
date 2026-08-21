@@ -1,4 +1,4 @@
-from packages.auth.jwt import create_access_token, create_refresh_token, decode_token
+﻿from packages.auth.jwt import create_access_token, create_refresh_token, decode_token
 import jwt
 
 
@@ -149,4 +149,16 @@ def test_validate_secret_key_non_production_defaults(monkeypatch):
     # Insecure/placeholder allowed in non-prod
     assert validate_secret_key('change-me-in-production', is_production=False) == 'change-me-in-production'
     assert validate_secret_key('short', is_production=False) == 'short'
+def test_create_access_token_contains_business_id():
+    token = create_access_token(42, business_id=99)
+    payload = decode_token(token)
+    assert payload['sub'] == '42'
+    assert payload['business_id'] == 99
+
+
+def test_create_refresh_token_contains_business_id():
+    token = create_refresh_token(42, business_id=99)
+    payload = decode_token(token)
+    assert payload['sub'] == '42'
+    assert payload['business_id'] == 99
 
