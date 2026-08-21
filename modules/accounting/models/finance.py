@@ -78,8 +78,11 @@ class InvoiceCreate(BaseModel):
     invoice_type: str = 'Sales'
     partner_id: int
     sales_order_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
     issue_date: date
     due_date: date
+    freight_amount: float = 0
+    discount_amount: float = 0
     total_amount: float = Field(..., ge=0)
     status: str = 'Unpaid'
     notes: Optional[str] = None
@@ -89,8 +92,11 @@ class InvoiceUpdate(BaseModel):
     invoice_type: Optional[str] = None
     partner_id: Optional[int] = None
     sales_order_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
+    freight_amount: Optional[float] = None
+    discount_amount: Optional[float] = None
     total_amount: Optional[float] = Field(None, ge=0)
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -101,8 +107,11 @@ class InvoiceResponse(AuditMixin):
     invoice_type: str
     partner_id: int
     sales_order_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
     issue_date: date
     due_date: date
+    freight_amount: float = 0
+    discount_amount: float = 0
     total_amount: float
     status: str
     notes: Optional[str] = None
