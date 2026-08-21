@@ -132,7 +132,12 @@ def _fetch_and_delete_action(action_id: str) -> dict | None:
     _pending_actions.pop(action_id, None)
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8")
-    return json.loads(raw)
+    if isinstance(raw, str):
+        try:
+            return json.loads(raw)
+        except Exception:
+            return None
+    return raw if isinstance(raw, dict) else None
 
 
 def confirm_action(action_id: str) -> dict:
@@ -186,18 +191,7 @@ def _ensure_meta_tools():
     _CONFIRM_ACTION_REGISTERED = True
 
     def _handle_confirm_action(action_id: str):
-        entry = _fetch_and_delete_action(action_id)
-        if not entry:
-            raise ValueError(f"Action not found or expired: {action_id}")
-        tool_entry = _tools.get(entry["tool_name"])
-        if not tool_entry:
-            raise ValueError(f"Original tool not found: {entry['tool_name']}")
-        user = _current_user.get() or entry.get("user")
-        token = _current_user.set(user)
-        try:
-            return tool_entry["handler"](**entry["arguments"])
-        finally:
-            _current_user.reset(token)
+        return confirm_action(action_id)
 
     register_tool(
         Tool(

@@ -10,10 +10,15 @@ from packages.mcp.types import Tool, Resource, Prompt, PromptArg
 class TestRegistry:
     def setup_method(self):
         from packages.mcp import registry
+        from packages.redis.client import get_redis_client
         registry._tools.clear()
         registry._resources.clear()
         registry._prompts.clear()
         _pending_actions.clear()
+        try:
+            get_redis_client().flushdb()
+        except Exception:
+            pass
 
     def test_register_and_list_tools(self):
         tool = Tool(name="hello", description="Says hello", input_schema={"type": "object"})
