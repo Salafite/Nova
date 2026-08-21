@@ -49,32 +49,79 @@ def parse_trusted_proxies(trusted_proxies: list[str] | str | None = None) -> lis
     return [item.strip() for item in raw_list if item.strip()]
 
 
+def _clean_ip(ip_str: str) -> str:
+    """Strip whitespace, quotes, and optional port/brackets from an IP string."""
+    if not ip_str:
+        return ""
+    ip_str = ip_str.strip().strip("'\"")
+    if not ip_str:
+        return ""
+
+    # Bracketed IPv6: [2001:db8::1]:8080 or [2001:db8::1]
+    if ip_str.startswith("["):
+        end_idx = ip_str.find("]")
+        if end_idx != -1:
+            return ip_str[1:end_idx].strip()
+
+    # IPv4 with port: 1.2.3.4:8080
+    if ":" in ip_str and ip_str.count(":") == 1:
+        host, _, _ = ip_str.partition(":")
+        try:
+            ipaddress.IPv4Address(host.strip())
+            return host.strip()
+        except ValueError:
+            pass
+
+    return ip_str
+
+
+def _to_ip_address(ip_str: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """Parse an IP string into an IPAddress object, unwrapping IPv4-mapped IPv6."""
+    cleaned = _clean_ip(ip_str)
+    if not cleaned:
+        return None
+    try:
+        ip = ipaddress.ip_address(cleaned)
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+            return ip.ipv4_mapped
+        return ip
+    except ValueError:
+        return None
+
+
 def is_ip_trusted(ip_str: str, trusted_proxies: list[str]) -> bool:
     """Check if an IP address matches any trusted proxy IP or subnet."""
     if not ip_str or not trusted_proxies:
         return False
 
-    ip_str = ip_str.strip()
-    if "*" in trusted_proxies or "all" in trusted_proxies:
-        return True
-
-    try:
-        ip = ipaddress.ip_address(ip_str)
-    except ValueError:
+    cleaned = _clean_ip(ip_str)
+    if not cleaned:
         return False
 
     for item in trusted_proxies:
         item = item.strip()
         if not item:
             continue
+        if item in ("*", "all", "0.0.0.0/0", "::/0"):
+            return True
+
+    ip = _to_ip_address(cleaned)
+    if ip is None:
+        return False
+
+    for item in trusted_proxies:
+        item = item.strip()
+        if not item or item in ("*", "all", "0.0.0.0/0", "::/0"):
+            continue
         try:
             if "/" in item:
                 net = ipaddress.ip_network(item, strict=False)
-                if ip in net:
+                if ip.version == net.version and ip in net:
                     return True
             else:
-                trusted_ip = ipaddress.ip_address(item)
-                if ip == trusted_ip:
+                trusted_cleaned = _clean_ip(item)
+                trusted_ip = _to_ip_address(trusted_cleaned)
+                if trusted_ip is not None and ip == trusted_ip:
                     return True
         except ValueError:
             continue
@@ -82,38 +129,72 @@ def is_ip_trusted(ip_str: str, trusted_proxies: list[str]) -> bool:
     return False
 
 
-def extract_client_ip(request: Any, trusted_proxies: list[str] | str | None = None) -> str:
-    """Extract client IP from request, honoring X-Forwarded-For and X-Real-IP when from trusted proxies."""
-    trusted_list = parse_trusted_proxies(trusted_proxies)
-
-    peer_ip = None
-    if hasattr(request, "client") and request.client is not None:
-        host = getattr(request.client, "host", None)
-        if isinstance(host, str) and host.strip():
-            peer_ip = host.strip()
-
-    # Safely extract headers
-    xff: str | None = None
-    x_real_ip: str | None = None
-
+def _extract_header(request: Any, name: str) -> str | None:
+    """Safely extract header value from request, checking headers mapping and ASGI scope."""
     if hasattr(request, "headers") and request.headers is not None:
         try:
-            val_xff = request.headers.get("x-forwarded-for") or request.headers.get("X-Forwarded-For")
-            if isinstance(val_xff, str) and val_xff.strip():
-                xff = val_xff.strip()
-
-            val_real = request.headers.get("x-real-ip") or request.headers.get("X-Real-IP")
-            if isinstance(val_real, str) and val_real.strip():
-                x_real_ip = val_real.strip()
+            val = (
+                request.headers.get(name)
+                or request.headers.get(name.lower())
+                or request.headers.get(name.title())
+            )
+            if val:
+                return str(val).strip()
+            if hasattr(request.headers, "getlist"):
+                values = request.headers.getlist(name) or request.headers.getlist(name.lower())
+                if values:
+                    return ", ".join(str(v).strip() for v in values if str(v).strip())
         except Exception:
             pass
 
-    # If peer IP is trusted or not present, we can trust proxy headers
+    scope = getattr(request, "scope", None)
+    if isinstance(scope, dict):
+        raw_headers = scope.get("headers")
+        if isinstance(raw_headers, (list, tuple)):
+            target = name.lower().encode("latin-1")
+            matches = [v.decode("latin-1").strip() for k, v in raw_headers if k.lower() == target]
+            if matches:
+                return ", ".join(matches)
+
+    return None
+
+
+def _extract_peer_ip(request: Any) -> str | None:
+    """Extract immediate peer IP from request.client or ASGI scope."""
+    if hasattr(request, "client") and request.client is not None:
+        client = request.client
+        if hasattr(client, "host") and isinstance(client.host, str) and client.host.strip():
+            return _clean_ip(client.host)
+        if isinstance(client, (tuple, list)) and len(client) > 0 and isinstance(client[0], str):
+            return _clean_ip(client[0])
+        if isinstance(client, str) and client.strip():
+            return _clean_ip(client)
+
+    scope = getattr(request, "scope", None)
+    if isinstance(scope, dict):
+        client = scope.get("client")
+        if isinstance(client, (tuple, list)) and len(client) > 0 and isinstance(client[0], str):
+            return _clean_ip(client[0])
+
+    return None
+
+
+def extract_client_ip(request: Any, trusted_proxies: list[str] | str | None = None) -> str:
+    """Extract client IP from request, honoring X-Forwarded-For and X-Real-IP when from trusted proxies."""
+    trusted_list = parse_trusted_proxies(trusted_proxies)
+    peer_ip = _extract_peer_ip(request)
+
+    # Safely extract proxy headers
+    xff = _extract_header(request, "x-forwarded-for")
+    x_real_ip = _extract_header(request, "x-real-ip")
+
+    # If peer IP is trusted (or peer_ip is None in test mocks), we trust proxy headers
     if peer_ip is None or is_ip_trusted(peer_ip, trusted_list):
         if xff:
-            ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
+            ips = [_clean_ip(ip) for ip in xff.split(",") if _clean_ip(ip)]
             if ips:
-                # Traverse right-to-left across proxy chain
+                # Traverse right-to-left across proxy chain:
+                # The first IP from the right that is NOT in trusted_proxies is the authentic client IP
                 for ip in reversed(ips):
                     if not is_ip_trusted(ip, trusted_list):
                         return ip
@@ -121,14 +202,16 @@ def extract_client_ip(request: Any, trusted_proxies: list[str] | str | None = No
                 return ips[0]
 
         if x_real_ip:
-            return x_real_ip
+            cleaned_real = _clean_ip(x_real_ip)
+            if cleaned_real:
+                return cleaned_real
 
         if peer_ip is not None:
             return peer_ip
 
         return "127.0.0.1"
 
-    # Peer is untrusted direct client; ignore spoofable headers
+    # Peer is an untrusted direct client; ignore spoofable headers
     return peer_ip
 
 
