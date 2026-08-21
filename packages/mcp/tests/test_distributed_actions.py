@@ -147,8 +147,16 @@ class TestDistributedActions:
         proposal = propose_action("wipe_data", {"target": "cache"})
         action_id = proposal["action_id"]
 
-        # Ensure tools including meta-tools are registered
-        get_tools()
+        # Register confirm_action tool handler
+        register_tool(
+            Tool(
+                name="confirm_action",
+                description="Confirm a previously proposed action for execution.",
+                input_schema={"type": "object", "properties": {"action_id": {"type": "string"}}, "required": ["action_id"]},
+                tier="tier1",
+            ),
+            lambda action_id: confirm_action(action_id),
+        )
 
         # Simulate Worker 2 executing the confirm_action MCP tool
         _pending_actions.clear()

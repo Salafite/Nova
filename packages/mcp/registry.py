@@ -15,7 +15,6 @@ _prompts: dict[str, dict] = {}
 _pending_actions: dict[str, dict] = {}
 _ACTION_TTL = 300
 _ACTION_KEY_PREFIX = "nova:mcp:action:"
-_CONFIRM_ACTION_REGISTERED = False
 
 # Context variable for the current user, set before handler execution
 _current_user: contextvars.ContextVar[dict | None] = contextvars.ContextVar("current_user", default=None)
@@ -47,7 +46,6 @@ def register_prompt(prompt: Prompt, handler):
 
 
 def get_tools() -> list[Tool]:
-    _ensure_meta_tools()
     return [v["tool"] for v in _tools.values()]
 
 
@@ -181,33 +179,3 @@ def get_prompt(name: str, arguments: dict = None):
     if not entry:
         raise ValueError(f"Prompt not found: {name}")
     return entry["handler"](**(arguments or {}))
-
-
-def _ensure_meta_tools():
-    """Register meta-tools like confirm_action once."""
-    global _CONFIRM_ACTION_REGISTERED
-    if _CONFIRM_ACTION_REGISTERED:
-        return
-    _CONFIRM_ACTION_REGISTERED = True
-
-    def _handle_confirm_action(action_id: str):
-        return confirm_action(action_id)
-
-    register_tool(
-        Tool(
-            name="confirm_action",
-            description="Confirm a previously proposed action for execution. Use this when the user has approved a proposed action that requires confirmation.",
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "action_id": {
-                        "type": "string",
-                        "description": "The action_id from a previously proposed action",
-                    },
-                },
-                "required": ["action_id"],
-            },
-            tier="tier1",
-        ),
-        _handle_confirm_action,
-    )

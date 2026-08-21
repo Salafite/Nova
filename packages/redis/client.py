@@ -515,7 +515,8 @@ def get_redis_client(
                 )
                 if _mock_client is None or force_new:
                     _mock_client = InMemoryRedis()
-                return _mock_client
+                _client = _mock_client
+                return _client
             raise
 
 
@@ -568,10 +569,11 @@ def reset_redis_client() -> None:
     global _pool, _client, _mock_client
     with _lock:
         if _client is not None:
-            try:
-                _client.close()
-            except Exception:
-                pass
+            if _client is not _mock_client:
+                try:
+                    _client.close()
+                except Exception:
+                    pass
             _client = None
         if _pool is not None:
             try:
