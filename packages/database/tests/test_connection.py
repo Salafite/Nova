@@ -120,11 +120,16 @@ class TestReleaseConnection:
     def test_release_valid_connection(self, mock_pool):
         mock_conn = MagicMock()
         release_connection(mock_conn)
-        mock_pool.putconn.assert_called_once_with(mock_conn)
+        mock_pool.putconn.assert_called_once_with(mock_conn, close=False)
 
     def test_release_none_connection(self, mock_pool):
         release_connection(None)
         mock_pool.putconn.assert_not_called()
+
+    def test_release_with_close_discards_connection(self, mock_pool):
+        mock_conn = MagicMock()
+        release_connection(mock_conn, close=True)
+        mock_pool.putconn.assert_called_once_with(mock_conn, close=True)
 
 
 class TestDbConnectionContextManager:
@@ -138,7 +143,7 @@ class TestDbConnectionContextManager:
             assert conn is mock_conn
             mock_pool.putconn.assert_not_called()
 
-        mock_pool.putconn.assert_called_once_with(mock_conn)
+        mock_pool.putconn.assert_called_once_with(mock_conn, close=False)
 
     def test_db_connection_exception_in_context(self, mock_pool):
         mock_conn = MagicMock()
@@ -151,4 +156,4 @@ class TestDbConnectionContextManager:
                 assert conn is mock_conn
                 raise RuntimeError("error during query execution")
 
-        mock_pool.putconn.assert_called_once_with(mock_conn)
+        mock_pool.putconn.assert_called_once_with(mock_conn, close=False)
