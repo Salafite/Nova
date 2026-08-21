@@ -55,8 +55,8 @@ class BatchNumberService(CrudService):
         payload.setdefault('status', 'Available')
         return super().create(payload)
 
-    def adjustQuantity(self, id_val, qty: float):
-        batch = self.get(id_val)
+    def adjustQuantity(self, id_val, qty: float, conn=None):
+        batch = self.repo.get_for_update(id_val, conn=conn) if conn else self.get(id_val)
         if not batch:
             raise ValueError('Batch not found')
         new_qty = batch['quantity'] + qty
@@ -67,9 +67,9 @@ class BatchNumberService(CrudService):
             payload['status'] = 'Depleted'
         elif batch['quantity'] > 0 and new_qty > 0 and batch['status'] not in ('Expired',):
             payload['status'] = 'Available' if batch.get('quantity', 0) == 0 else 'Partially Used'
-        return self.update(id_val, payload)
+        return self.update(id_val, payload, conn=conn)
 
-    def allocate_fefo_lots(self, product_id: int, warehouse_id: int = None, qty_needed: float = 0.0) -> list[dict]:
+    def allocate_fefo_lots(self, product_id: int, warehouse_id: int = None, qty_needed: float = 0.0, conn=None) -> list[dict]:
         """
         Allocate lots using FEFO (First-Expired-First-Out).
         Queries available batches sorted by expiry_date ASC NULLS LAST, id ASC,
@@ -83,7 +83,7 @@ class BatchNumberService(CrudService):
         if warehouse_id is not None:
             filters['warehouse_id'] = warehouse_id
 
-        batches = self.repo.list(filters=filters)
+        batches = self.repo.list(filters=filters, conn=conn)
 
         # Filter for status='Available' (or active available) and quantity > 0
         available_batches = [

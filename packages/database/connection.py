@@ -35,9 +35,9 @@ def get_connection():
     raise last_err
 
 
-def release_connection(conn):
+def release_connection(conn, close=False):
     if conn is not None:
-        _pool.putconn(conn)
+        _pool.putconn(conn, close=close)
 
 
 @contextmanager

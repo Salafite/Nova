@@ -1,6 +1,9 @@
 import os
+import logging
 import psycopg2.extras
 from packages.database.connection import get_connection, release_connection
+
+logger = logging.getLogger(__name__)
 
 AUDIT_COLUMNS = {'created_at', 'created_by', 'updated_at', 'updated_by', 'update_number'}
 
@@ -56,6 +59,51 @@ class CrudRepository:
         finally:
             if should_release:
                 release_connection(conn)
+
+    def get_for_update(self, id_val, conn=None):
+        """SELECT ... FOR UPDATE — locks the row until the transaction commits or rolls back.
+
+        Requires an active transaction (conn must be provided or will be acquired).
+        The lock is released when the transaction commits or rolls back.
+        """
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        released = False
+        try:
+            sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" = %s FOR UPDATE'
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, (id_val,))
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception as rb_err:
+                    logger.error(f"Failed to rollback in get_for_update: {rb_err}")
+                    try:
+                        release_connection(conn, close=True)
+                    except Exception:
+                        pass
+                    released = True
+                if not released:
+                    release_connection(conn)
+                    released = True
+            raise
+        finally:
+            if should_release and not released:
+                try:
+                    conn.rollback()
+                except Exception as rb_err:
+                    logger.error(f"Failed to rollback in get_for_update: {rb_err}")
+                    try:
+                        release_connection(conn, close=True)
+                    except Exception:
+                        pass
+                else:
+                    release_connection(conn)
 
     def create(self, payload: dict, conn=None):
         should_release = False
