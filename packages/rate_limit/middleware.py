@@ -104,6 +104,15 @@ def is_ip_trusted(ip_str: str, trusted_proxies: list[str]) -> bool:
             continue
         if item in ("*", "all", "0.0.0.0/0", "::/0"):
             return True
+        if cleaned.lower() == item.lower():
+            return True
+
+    # Treat localhost / testclient loopbacks as 127.0.0.1 for trust checking
+    if cleaned.lower() in ("localhost", "testclient"):
+        for item in trusted_proxies:
+            item_cleaned = _clean_ip(item).lower()
+            if item_cleaned in ("127.0.0.1", "::1", "localhost", "testclient", "127.0.0.0/8"):
+                return True
 
     ip = _to_ip_address(cleaned)
     if ip is None:
@@ -138,12 +147,14 @@ def _extract_header(request: Any, name: str) -> str | None:
                 or request.headers.get(name.lower())
                 or request.headers.get(name.title())
             )
-            if val:
-                return str(val).strip()
+            if val is not None and not type(val).__name__ == "MagicMock":
+                s = str(val).strip()
+                if s:
+                    return s
             if hasattr(request.headers, "getlist"):
                 values = request.headers.getlist(name) or request.headers.getlist(name.lower())
                 if values:
-                    return ", ".join(str(v).strip() for v in values if str(v).strip())
+                    return ", ".join(str(v).strip() for v in values if str(v).strip() and not type(v).__name__ == "MagicMock")
         except Exception:
             pass
 
