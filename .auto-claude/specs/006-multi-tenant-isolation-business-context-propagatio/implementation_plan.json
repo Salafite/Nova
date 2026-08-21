@@ -93,7 +93,8 @@
           "id": "subtask-4-1",
           "title": "Implement security audit event recorder in packages/security/audit.py to log unauthorized access attempts to T0023 and the security logger.",
           "description": "Implement security audit event recorder in packages/security/audit.py to log unauthorized access attempts to T0023 and the security logger.",
-          "status": "pending"
+          "status": "completed",
+          "completed_at": "2026-08-21T23:47:01.028Z"
         },
         {
           "id": "subtask-4-2",
@@ -166,7 +167,7 @@
   ],
   "description": "# Multi-Tenant Isolation & Business Context Propagation\n\nAdd `business_id` columns across all business schema tables, inject tenant context into JWT claims and repository queries, and enforce strict database tenant separation across API and MCP tool calls.\n\n## Rationale\nCurrently, business tables lack `business_id` columns and tenant scoping. In a multi-tenant or SaaS deployment, one business could inadvertently access or modify data belonging to another tenant.\n\n## User Stories\n- As a SaaS distributor customer, I want guaranteed data isolation so that our pricing, customer lists, and financial records are completely inaccessible to other distributors.\n- As an AI assistant user, I want tool calls scoped strictly to my organization's business ID without accidental data leakage.\n\n## Acceptance Criteria\n- [ ] Schema migration adds NOT NULL `business_id` foreign keys and composite indexes to all business entities\n- [ ] FastAPI dependency extracts `business_id` from validated JWT and injects it into every repository query automatically\n- [ ] MCP tool handlers enforce tenant filtering on all queries and mutations\n- [ ] Cross-tenant data access attempts return 403 Forbidden and trigger a security audit event\n",
   "created_at": "2026-08-19T01:16:58.216Z",
-  "updated_at": "2026-08-21T23:43:15.281Z",
+  "updated_at": "2026-08-21T23:47:01.021Z",
   "status": "in_progress",
   "planStatus": "in_progress",
   "xstateState": "coding",
