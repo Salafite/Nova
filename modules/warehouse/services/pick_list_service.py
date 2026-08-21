@@ -2,6 +2,7 @@ import logging
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.sequence import generate_pick_list_number
+from packages.database.connection import get_connection, release_connection
 from modules.warehouse.services.batch_number_service import BatchNumberService
 
 logger = logging.getLogger(__name__)
@@ -132,7 +133,8 @@ class PickListService(CrudService):
                     allocations = self.batch_service.allocate_fefo_lots(
                         product_id=product_id,
                         warehouse_id=wh_id,
-                        qty_needed=qty_ordered
+                        qty_needed=qty_ordered,
+                        conn=conn
                     )
                 except Exception:
                     allocations = []
@@ -332,21 +334,27 @@ class PickListService(CrudService):
         return self.repo.get(pick_list_id, **_conn_kwargs(conn))
 
     def complete_picking(self, pick_list_id, conn=None):
-        pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
-        if not pl:
-            logger.error(f"Cannot complete picking: Pick list {pick_list_id} not found")
-            raise ValueError(f"Pick list {pick_list_id} not found")
-        items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
-        unpicked = []
-        for item in items:
-            if item.get('qty_picked', 0) < item.get('qty_ordered', 0):
-                label = item.get('product_name') or item.get('product_id') or f"id {item.get('id')}"
-                unpicked.append(f"Item {label} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
-        if unpicked:
-            msg = f"Cannot complete pick list {pick_list_id}: {'; '.join(unpicked)}"
-            logger.warning(msg)
-            raise ValueError(msg)
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
         try:
+            pl = self.repo.get(pick_list_id, conn=conn)
+            if not pl:
+                logger.error(f"Cannot complete picking: Pick list {pick_list_id} not found")
+                raise ValueError(f"Pick list {pick_list_id} not found")
+            items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, conn=conn)
+            unpicked = []
+            for item in items:
+                if item.get('qty_picked', 0) < item.get('qty_ordered', 0):
+                    label = item.get('product_name') or item.get('product_id') or f"id {item.get('id')}"
+                    unpicked.append(f"Item {label} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
+            if unpicked:
+                msg = f"Cannot complete pick list {pick_list_id}: {'; '.join(unpicked)}"
+                logger.warning(msg)
+                raise ValueError(msg)
+
             for item in items:
                 picked_qty = float(item.get('qty_picked', 0) or 0)
                 if picked_qty <= 0:
@@ -358,20 +366,31 @@ class PickListService(CrudService):
                     batches = self.batch_service.repo.list(filters={
                         'batch_number': batch_num,
                         'product_id': item.get('product_id')
-                    }, **_conn_kwargs(conn))
+                    }, conn=conn)
                     if batches:
                         batch_id = batches[0]['id']
 
                 if batch_id:
-                    self.batch_service.adjustQuantity(batch_id, -picked_qty)
+                    self.batch_service.adjustQuantity(batch_id, -picked_qty, conn=conn)
 
-            self.repo.update(pick_list_id, {'status': 'Completed'}, **_conn_kwargs(conn))
-            self.order_repo.update(pl['sales_order_id'], {'status': 'Shipped'}, **_conn_kwargs(conn))
+            self.repo.update(pick_list_id, {'status': 'Completed'}, conn=conn)
+            self.order_repo.update(pl['sales_order_id'], {'status': 'Shipped'}, conn=conn)
             logger.info(f"Completed pick list {pick_list_id} and updated sales order {pl['sales_order_id']} to Shipped")
+
+            if should_release:
+                conn.commit()
+            return self.get_with_items(pick_list_id, conn=conn)
         except Exception as e:
-            logger.error(f"Failed to complete picking for pick list {pick_list_id}: {e}")
-            raise RuntimeError(f"Failed to complete picking for pick list {pick_list_id}: {e}") from e
-        return self.get_with_items(pick_list_id, conn=conn)
+            if should_release:
+                try:
+                    conn.rollback()
+                    logger.info(f"Transaction rolled back for pick list {pick_list_id} complete: {e}")
+                except Exception as rb_err:
+                    logger.error(f"Error during transaction rollback for pick list {pick_list_id}: {rb_err}")
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
 
     def _calc_progress(self, items):
         if not items:

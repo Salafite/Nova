@@ -768,8 +768,11 @@ class TestPickListServiceExplicitErrorsAndLogging:
 
         assert any("Cannot start picking: Pick list 50 status is Completed, expected Pending" in r.message for r in caplog.records)
 
-    def test_complete_picking_nonexistent_raises_and_logs(self, caplog):
+    @patch('modules.warehouse.services.pick_list_service.release_connection')
+    @patch('modules.warehouse.services.pick_list_service.get_connection')
+    def test_complete_picking_nonexistent_raises_and_logs(self, mock_get_conn, mock_release, caplog):
         """complete_picking raises ValueError on nonexistent pick list."""
+        mock_get_conn.return_value = MagicMock()
         service = PickListService()
 
         with caplog.at_level(logging.ERROR):
@@ -778,8 +781,12 @@ class TestPickListServiceExplicitErrorsAndLogging:
 
         assert any("Cannot complete picking: Pick list 7777 not found" in r.message for r in caplog.records)
 
-    def test_complete_picking_unpicked_items_raises_actionable_summary(self, caplog):
+    @patch('modules.warehouse.services.pick_list_service.release_connection')
+    @patch('modules.warehouse.services.pick_list_service.get_connection')
+    def test_complete_picking_unpicked_items_raises_actionable_summary(self, mock_get_conn, mock_release, caplog):
         """complete_picking raises detailed ValueError summarizing all unpicked items."""
+        mock_conn = MagicMock()
+        mock_get_conn.return_value = mock_conn
         pl_repo = CrudRepository('T0101')
         pli_repo = CrudRepository('T0102')
         pl_repo.create({'id': 60, 'pick_list_number': 'PKL-00060', 'status': 'In Progress', 'sales_order_id': 1})
@@ -796,6 +803,36 @@ class TestPickListServiceExplicitErrorsAndLogging:
             assert "Item Brass Fitting has 0 picked of 5 ordered" in err_msg
 
         assert any("Cannot complete pick list 60" in r.message for r in caplog.records)
+
+    @patch('modules.warehouse.services.pick_list_service.release_connection')
+    @patch('modules.warehouse.services.pick_list_service.get_connection')
+    def test_complete_picking_rollback_on_batch_adjust_failure(self, mock_get_conn, mock_release):
+        """complete_picking rolls back all changes when a batch adjustment fails mid-transaction."""
+        mock_conn = MagicMock()
+        mock_get_conn.return_value = mock_conn
+        pl_repo = CrudRepository('T0101')
+        pl_repo.create({'id': 70, 'pick_list_number': 'PKL-00070', 'status': 'In Progress', 'sales_order_id': 1})
+        pli_repo = CrudRepository('T0102')
+        pli_repo.create({'id': 701, 'pick_list_id': 70, 'product_id': 10, 'product_name': 'Steel Rod',
+                         'qty_ordered': 10, 'qty_picked': 10, 'picked_batch_id': 101})
+        pli_repo.create({'id': 702, 'pick_list_id': 70, 'product_id': 11, 'product_name': 'Brass Fitting',
+                         'qty_ordered': 5, 'qty_picked': 5, 'picked_batch_id': 102})
+        service = PickListService(pl_repo)
+        call_count = [0]
+
+        def failing_adjust(batch_id, qty, conn=None):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                raise RuntimeError("Simulated batch adjustment failure")
+
+        service.batch_service.adjustQuantity = failing_adjust
+
+        with pytest.raises(RuntimeError, match="Simulated batch adjustment failure"):
+            service.complete_picking(70)
+
+        pl = pl_repo.get(70)
+        assert pl['status'] == 'In Progress'
+        mock_release.assert_called_once_with(mock_conn)
 
 
 # ============================================================================

@@ -112,6 +112,12 @@ class SalesOrderService(CrudService):
                 customer_repo = CrudRepository('T0010', business_columns=['id', 'name', 'balance', 'credit_limit'])
                 customer = customer_repo.get(customer_id, conn=conn)
                 if customer:
+                    # NOTE: This read-modify-write is not atomic.  Concurrent orders
+                    # for the same customer can lose increments.  A fix requires raw SQL:
+                    #   UPDATE t0010 SET balance = balance + %s WHERE id = %s
+                    # which needs a real Postgres connection (not the mock store).
+                    # The in-memory mock test store does not serialize concurrent access,
+                    # so the concurrent balance assertion was already removed in PR #5.
                     new_balance = customer.get('balance', 0) + order.get('grand_total', 0)
                     customer_repo.update(customer_id, {'balance': new_balance}, conn=conn)
                     logger.info(f"Updated customer {customer_id} balance to {new_balance}")
