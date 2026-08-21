@@ -12,3 +12,4 @@ posthog==7.21.3
 sentry-sdk==2.61.1
 python-multipart==0.0.30
 openai==2.41.1
+redis==5.3.1
