@@ -1,6 +1,9 @@
 import os
+import logging
 import psycopg2.extras
 from packages.database.connection import get_connection, release_connection
+
+logger = logging.getLogger(__name__)
 
 AUDIT_COLUMNS = {'created_at', 'created_by', 'updated_at', 'updated_by', 'update_number'}
 
@@ -77,8 +80,10 @@ class CrudRepository:
             if should_release:
                 try:
                     conn.rollback()
-                except Exception:
-                    pass
+                except Exception as rb_err:
+                    logger.error(f"Failed to rollback in get_for_update: {rb_err}")
+                    release_connection(conn, close=True)
+                    return None
                 release_connection(conn)
 
     def create(self, payload: dict, conn=None):
