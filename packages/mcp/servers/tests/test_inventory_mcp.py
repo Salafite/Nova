@@ -103,6 +103,22 @@ class TestSearchProducts:
                 args = mock_cur.execute.call_args[0][1]
                 assert args == ("%test%", "%test%", 20)
 
+    def test_executes_ilike_query_with_tenant(self):
+        from modules.core.context import tenant_context
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = [MOCK_PRODUCT]
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        with tenant_context(42):
+            with patch("packages.mcp.servers.inventory_mcp.get_connection", return_value=mock_conn):
+                with patch("packages.mcp.servers.inventory_mcp.release_connection"):
+                    result = inventory_mcp._search_products(query="test")
+                    assert result == [MOCK_PRODUCT]
+                    sql = mock_cur.execute.call_args[0][0]
+                    args = mock_cur.execute.call_args[0][1]
+                    assert "business_id = %s" in sql
+                    assert args == (42, "%test%", "%test%", 20)
+
     def test_releases_connection(self):
         mock_conn = MagicMock()
         mock_cur = MagicMock()

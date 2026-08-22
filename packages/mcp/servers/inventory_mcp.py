@@ -1,4 +1,5 @@
 import psycopg2.extras
+from modules.core.context import get_current_tenant
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.connection import get_connection, release_connection
@@ -193,10 +194,16 @@ def _delete_product(id: int):
 def _search_products(query: str, limit: int = 20):
     conn = get_connection()
     try:
-        sql = 'SELECT * FROM "Nova".t0003 WHERE is_active = TRUE AND (name ILIKE %s OR sku ILIKE %s) ORDER BY name LIMIT %s'
+        tenant_id = get_current_tenant()
         pattern = f'%{query}%'
+        if tenant_id is not None:
+            sql = 'SELECT * FROM "Nova".t0003 WHERE is_active = TRUE AND business_id = %s AND (name ILIKE %s OR sku ILIKE %s) ORDER BY name LIMIT %s'
+            params = (tenant_id, pattern, pattern, limit)
+        else:
+            sql = 'SELECT * FROM "Nova".t0003 WHERE is_active = TRUE AND (name ILIKE %s OR sku ILIKE %s) ORDER BY name LIMIT %s'
+            params = (pattern, pattern, limit)
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(sql, (pattern, pattern, limit))
+            cur.execute(sql, params)
             return [dict(r) for r in cur.fetchall()]
     finally:
         release_connection(conn)
