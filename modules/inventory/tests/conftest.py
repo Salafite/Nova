@@ -11,6 +11,9 @@ _mock_pool.getconn.return_value = _mock_conn
 _pool_patcher = patch('psycopg2.pool.SimpleConnectionPool', return_value=_mock_pool)
 _pool_patcher.start()
 
+import packages.database.connection
+packages.database.connection._pool = _mock_pool
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from modules.core.controllers import all_routers

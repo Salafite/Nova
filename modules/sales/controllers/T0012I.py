@@ -1,11 +1,13 @@
-import asyncio
+﻿import asyncio
 import logging
 from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from modules.sales.services.sales_service import SalesOrderService
 from modules.sales.services.enhanced_sales_order_service import EnhancedSalesOrderService
 from modules.core.repositories.base import CrudRepository
-from modules.core.controllers.base import create_crud_router
+from modules.core.controllers.base import create_crud_router, check_record_ownership
 from modules.sales.models import SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse
+from packages.auth.deps import get_current_user
 from packages.ws.broadcast import order_status_changed
 
 logger = logging.getLogger(__name__)
@@ -58,8 +60,11 @@ def create_order_with_lines(body: dict):
 @router.post('/{id}/confirm')
 def confirm_order(id: int):
     """Confirm a pending order: reserves stock, creates pick list, and updates status atomically."""
+def confirm_order(id: int, user: dict = Depends(get_current_user)):
+    """Confirm a pending order: reserves stock and updates status."""
     order = service.get(id)
     if not order:
+        check_record_ownership(service, id, user, 'T0012', 'POST')
         raise HTTPException(404, 'Order not found')
     if order.get('status') not in ('Draft', 'Pending'):
         raise HTTPException(400, f'Only Draft or Pending orders can be confirmed. Current status: {order.get("status")}')
@@ -92,8 +97,11 @@ def deliver_order(id: int):
 @router.post('/{id}/cancel')
 def cancel_order(id: int):
     """Cancel an order: releases reserved stock and updates status atomically."""
+def cancel_order(id: int, user: dict = Depends(get_current_user)):
+    """Cancel an order: releases reserved stock."""
     order = service.get(id)
     if not order:
+        check_record_ownership(service, id, user, 'T0012', 'POST')
         raise HTTPException(404, 'Order not found')
     if order.get('status') in ('Paid', 'Cancelled'):
         raise HTTPException(400, f'Order cannot be cancelled. Current status: {order.get("status")}')
