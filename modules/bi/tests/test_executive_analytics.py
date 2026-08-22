@@ -746,3 +746,169 @@ class TestDeliveryAnalyticsService:
         assert resp.avg_freight_cost_per_order == 0.0
         assert len(resp.routes) == 0
 
+
+class TestExecutiveAnalyticsControllerEndpoints:
+    """Tests FastAPI REST endpoints and RBAC enforcement on /api/bi/executive."""
+
+    @pytest.fixture(autouse=True)
+    def setup_client(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        self.client = TestClient(app)
+
+    def _make_auth_header(self, user_id=1, role='Admin', permissions=None):
+        from packages.auth.jwt import create_access_token
+        token = create_access_token(user_id)
+        user_dict = {
+            'id': user_id,
+            'username': f'user_{role.lower().replace(" ", "_")}_{user_id}',
+            'full_name': f'Test {role}',
+            'email': f'{role.lower().replace(" ", "_")}@example.com',
+            'role': role,
+            'permissions': permissions,
+            'status': 'Active',
+            'business_id': 1,
+        }
+        return {'Authorization': f'Bearer {token}'}, user_dict
+
+    def test_executive_summary_endpoint_authorized(self):
+        headers, user = self._make_auth_header(1, 'Manager', permissions=['BI_VIEW'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch('modules.bi.services.executive_analytics_service.executive_analytics_service.get_margin_summary') as mock_summary:
+            mock_summary.return_value = ExecutiveMarginSummary(
+                gross_sales=10000.0,
+                net_revenue=9500.0,
+                gross_profit=3000.0,
+                gross_margin_pct=31.58,
+            )
+            resp = self.client.get('/api/bi/executive/summary?period=Monthly', headers=headers)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data['gross_sales'] == 10000.0
+            assert data['gross_profit'] == 3000.0
+            assert data['gross_margin_pct'] == 31.58
+
+    def test_executive_summary_endpoint_forbidden_for_viewer(self):
+        headers, user = self._make_auth_header(2, 'Viewer', permissions=['PRODUCTS_VIEW'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user):
+            resp = self.client.get('/api/bi/executive/summary', headers=headers)
+            assert resp.status_code == 403
+            assert 'BI_VIEW' in resp.json().get('detail', '')
+
+    def test_customer_matrix_endpoint(self):
+        headers, user = self._make_auth_header(1, 'Admin', permissions=['*'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch('modules.bi.services.customer_profitability_service.customer_profitability_service.get_customer_profitability_matrix') as mock_matrix:
+            mock_matrix.return_value = CustomerProfitabilityResponse(
+                total_customers=5,
+                revenue_median_threshold=5000.0,
+                margin_threshold_pct=15.0,
+            )
+            resp = self.client.get('/api/bi/executive/customer-matrix', headers=headers)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data['total_customers'] == 5
+            assert data['margin_threshold_pct'] == 15.0
+
+    def test_delivery_summary_endpoint(self):
+        headers, user = self._make_auth_header(1, 'Admin', permissions=['*'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch('modules.bi.services.delivery_analytics_service.delivery_analytics_service.get_delivery_fulfillment_summary') as mock_deliv:
+            mock_deliv.return_value = DeliveryFulfillmentSummaryResponse(
+                total_deliveries=50,
+                overall_on_time_rate=92.5,
+                total_freight_cost=2500.0,
+            )
+            resp = self.client.get('/api/bi/executive/delivery/summary', headers=headers)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data['total_deliveries'] == 50
+            assert data['overall_on_time_rate'] == 92.5
+
+    def test_delivery_gauges_endpoint(self):
+        headers, user = self._make_auth_header(1, 'Admin', permissions=['*'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch('modules.bi.services.delivery_analytics_service.delivery_analytics_service.get_delivery_kpi_gauges') as mock_gauges:
+            mock_gauges.return_value = {
+                'total_deliveries': 100,
+                'overall_on_time_rate': 96.0,
+                'otd_rating': 'Excellent',
+                'overall_completion_rate': 98.0,
+                'completion_rating': 'Optimal',
+            }
+            resp = self.client.get('/api/bi/executive/delivery/gauges', headers=headers)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data['otd_rating'] == 'Excellent'
+
+
+class TestCommissionControllerEndpoints:
+    """Tests FastAPI REST endpoints and RBAC enforcement on /api/sales/commission."""
+
+    @pytest.fixture(autouse=True)
+    def setup_client(self):
+        from fastapi.testclient import TestClient
+        from apps.api.main import app
+        self.client = TestClient(app)
+
+    def _make_auth_header(self, user_id=1, role='Sales Rep', permissions=None):
+        from packages.auth.jwt import create_access_token
+        token = create_access_token(user_id)
+        user_dict = {
+            'id': user_id,
+            'username': f'user_{role.lower().replace(" ", "_")}_{user_id}',
+            'full_name': f'Test {role}',
+            'email': f'{role.lower().replace(" ", "_")}@example.com',
+            'role': role,
+            'permissions': permissions,
+            'status': 'Active',
+            'business_id': 1,
+        }
+        return {'Authorization': f'Bearer {token}'}, user_dict
+
+    def test_commission_statement_endpoint_allowed_for_sales_rep(self):
+        headers, user = self._make_auth_header(10, 'Sales Rep', permissions=['SALES_VIEW'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch('modules.sales.services.commission_service.commission_service.calculate_statement') as mock_calc:
+            from modules.sales.models.commission import CommissionStatementResponse
+            mock_calc.return_value = CommissionStatementResponse(
+                sales_rep_id=10,
+                sales_rep_name='Sarah Sales',
+                total_collected_amount=15000.0,
+                total_realized_gross_margin=4500.0,
+                net_commission_payable=225.0,
+            )
+            resp = self.client.get('/api/sales/commission/statement?sales_rep_id=10', headers=headers)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data['sales_rep_id'] == 10
+            assert data['net_commission_payable'] == 225.0
+
+    def test_commission_statement_endpoint_forbidden_for_viewer(self):
+        headers, user = self._make_auth_header(20, 'Viewer', permissions=['PRODUCTS_VIEW'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user):
+            resp = self.client.get('/api/sales/commission/statement?sales_rep_id=10', headers=headers)
+            assert resp.status_code == 403
+            assert 'SALES_VIEW' in resp.json().get('detail', '')
+
+    def test_commission_summaries_endpoint(self):
+        headers, user = self._make_auth_header(1, 'Manager', permissions=['SALES_VIEW'])
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch('modules.sales.services.commission_service.commission_service.get_commission_summaries') as mock_summaries:
+            from modules.sales.models.commission import CommissionSummaryItem
+            mock_summaries.return_value = [
+                CommissionSummaryItem(
+                    sales_rep_id=10,
+                    sales_rep_name='Sarah Sales',
+                    total_collected=20000.0,
+                    total_gross_margin=6000.0,
+                    net_commission=300.0,
+                )
+            ]
+            resp = self.client.get('/api/sales/commission/summaries', headers=headers)
+            assert resp.status_code == 200
+            data = resp.json()
+            assert len(data) == 1
+            assert data[0]['sales_rep_name'] == 'Sarah Sales'
+
+

@@ -108,7 +108,8 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0104': 'ADMIN_VIEW',         # Data Migration
     'T0105': 'INVENTORY_VIEW',     # Inventory Counts
     'T0106': 'INVENTORY_VIEW',     # Inventory Count Items
-    'T0107': 'PRODUCTS_VIEW',      # Product Types
+    'T0107': 'SALES_VIEW',         # Commission Rules
+    'T0108': 'SALES_VIEW',         # Commission Payouts
 }
 
 # Non-T-code custom route and tag mappings
@@ -116,6 +117,9 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/categories': 'PRODUCTS_VIEW',
     '/api/v1/migration': 'ADMIN_VIEW',
     '/api/bi/dashboard': 'BI_VIEW',
+    '/api/bi/executive': 'BI_VIEW',
+    '/api/bi/executive/export': 'BI_VIEW',
+    '/api/sales/commission': 'SALES_VIEW',
     '/api/admin/users': 'ADMIN_VIEW',
     '/api/adjustments': 'INVENTORY_VIEW',
     '/api/pos': 'POS_VIEW',
@@ -124,6 +128,11 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'Categories': 'PRODUCTS_VIEW',
     'Migration': 'ADMIN_VIEW',
     'BI Dashboard': 'BI_VIEW',
+    'Executive Analytics': 'BI_VIEW',
+    'Executive Financial Exports': 'BI_VIEW',
+    'Sales Commissions': 'SALES_VIEW',
+    'T0107 - Commission Rules': 'SALES_VIEW',
+    'T0108 - Commission Payouts': 'SALES_VIEW',
     'Admin User Preferences': 'ADMIN_VIEW',
     'Stock Adjustments': 'INVENTORY_VIEW',
     'POS': 'POS_VIEW',
