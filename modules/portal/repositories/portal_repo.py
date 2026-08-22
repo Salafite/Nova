@@ -844,3 +844,182 @@ class PortalRepository:
             if should_release:
                 release_connection(conn)
 
+    # ----------------------------------------------------------------------
+    # Invoice & Payment Data Access Methods (T0090, T0091)
+    # ----------------------------------------------------------------------
+
+    def get_invoice_by_id(
+        self,
+        invoice_id: int,
+        customer_id: Optional[int] = None,
+        conn=None
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieve customer invoice by ID with paid amount and balance due calculations."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            where_sql = "i.id = %s"
+            params: List[Any] = [invoice_id]
+            if customer_id is not None:
+                where_sql += " AND i.partner_id = %s"
+                params.append(customer_id)
+
+            sql = f"""
+                SELECT 
+                    i.id, i.invoice_number, i.invoice_type, i.partner_id,
+                    c.name AS customer_name,
+                    i.sales_order_id, o.order_number AS sales_order_number,
+                    i.issue_date, i.due_date, i.total_amount, i.status,
+                    i.notes, i.stripe_payment_intent_id, i.stripe_checkout_session_id,
+                    i.payment_link, i.created_at, i.created_by, i.updated_at, i.updated_by, i.update_number,
+                    COALESCE((
+                        SELECT SUM(p.amount) 
+                        FROM "{self.schema}".t0091 p 
+                        WHERE p.invoice_id = i.id AND p.status = 'Completed'
+                    ), 0.0) AS paid_amount
+                FROM "{self.schema}".t0090 i
+                LEFT JOIN "{self.schema}".t0010 c ON c.id = i.partner_id
+                LEFT JOIN "{self.schema}".t0012 o ON o.id = i.sales_order_id
+                WHERE {where_sql}
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, params)
+                row = cur.fetchone()
+                if not row:
+                    return None
+                inv_dict = dict(row)
+                total_amt = _to_float(inv_dict.get('total_amount'))
+                paid_amt = _to_float(inv_dict.get('paid_amount'))
+                inv_dict['total_amount'] = total_amt
+                inv_dict['paid_amount'] = paid_amt
+                inv_dict['balance_due'] = max(0.0, round(total_amt - paid_amt, 2))
+                return inv_dict
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_invoices(
+        self,
+        customer_id: int,
+        status: Optional[str] = None,
+        page: int = 1,
+        limit: int = 50,
+        conn=None
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """Query invoices for a customer with strict customer data isolation."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            page = max(1, page)
+            limit = max(1, min(limit, 100))
+            offset = (page - 1) * limit
+
+            where_clauses = ["i.partner_id = %s"]
+            params: List[Any] = [customer_id]
+
+            if status:
+                where_clauses.append("i.status = %s")
+                params.append(status)
+
+            where_sql = " AND ".join(where_clauses)
+
+            count_sql = f"""
+                SELECT COUNT(*) AS total
+                FROM "{self.schema}".t0090 i
+                WHERE {where_sql}
+            """
+
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(count_sql, params)
+                count_row = cur.fetchone()
+                total = count_row['total'] if count_row else 0
+
+                if total == 0:
+                    return [], 0
+
+                data_params = list(params) + [limit, offset]
+                sql = f"""
+                    SELECT 
+                        i.id, i.invoice_number, i.invoice_type, i.partner_id,
+                        c.name AS customer_name,
+                        i.sales_order_id, o.order_number AS sales_order_number,
+                        i.issue_date, i.due_date, i.total_amount, i.status,
+                        i.notes, i.stripe_payment_intent_id, i.stripe_checkout_session_id,
+                        i.payment_link, i.created_at, i.created_by, i.updated_at, i.updated_by, i.update_number,
+                        COALESCE((
+                            SELECT SUM(p.amount) 
+                            FROM "{self.schema}".t0091 p 
+                            WHERE p.invoice_id = i.id AND p.status = 'Completed'
+                        ), 0.0) AS paid_amount
+                    FROM "{self.schema}".t0090 i
+                    LEFT JOIN "{self.schema}".t0010 c ON c.id = i.partner_id
+                    LEFT JOIN "{self.schema}".t0012 o ON o.id = i.sales_order_id
+                    WHERE {where_sql}
+                    ORDER BY i.issue_date DESC, i.id DESC
+                    LIMIT %s OFFSET %s
+                """
+                cur.execute(sql, data_params)
+                rows = cur.fetchall()
+
+                invoices = []
+                for r in rows:
+                    inv = dict(r)
+                    total_amt = _to_float(inv.get('total_amount'))
+                    paid_amt = _to_float(inv.get('paid_amount'))
+                    inv['total_amount'] = total_amt
+                    inv['paid_amount'] = paid_amt
+                    inv['balance_due'] = max(0.0, round(total_amt - paid_amt, 2))
+                    invoices.append(inv)
+
+                return invoices, total
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def update_invoice_stripe_session(
+        self,
+        invoice_id: int,
+        session_id: str,
+        payment_link: Optional[str] = None,
+        payment_intent_id: Optional[str] = None,
+        conn=None
+    ) -> bool:
+        """Update Stripe checkout session ID and payment link on invoice in T0090."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            sql = f"""
+                UPDATE "{self.schema}".t0090
+                SET 
+                    stripe_checkout_session_id = %s,
+                    payment_link = COALESCE(%s, payment_link),
+                    stripe_payment_intent_id = COALESCE(%s, stripe_payment_intent_id),
+                    updated_at = now()
+                WHERE id = %s
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, (session_id, payment_link, payment_intent_id, invoice_id))
+                updated = cur.rowcount > 0
+
+            if should_release:
+                conn.commit()
+
+            return updated
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+

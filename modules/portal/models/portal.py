@@ -182,7 +182,7 @@ class PortalReorderRequest(BaseModel):
     """Request to create a duplicate replenishment order from history."""
     model_config = ConfigDict(extra='forbid')
 
-    order_id: int
+    order_id: Optional[int] = None
     requested_delivery_date: Optional[date] = None
     notes: Optional[str] = None
     status: str = 'Confirmed'

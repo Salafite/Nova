@@ -134,8 +134,132 @@ def _handle_invoice_payment_failed(invoice):
     _update_subscription_status_by_customer(invoice.get('customer', ''), 'past_due')
 
 
+def create_settlement_checkout_session(
+    customer_id: int,
+    amount: float,
+    settlement_type: str = 'invoice',
+    invoice_id: int | None = None,
+    invoice_ids: list | None = None,
+    invoice_number: str | None = None,
+    customer_name: str | None = None,
+    customer_email: str | None = None,
+    payment_method_types: list | None = None,
+    success_url: str | None = None,
+    cancel_url: str | None = None,
+) -> dict:
+    """Create a Stripe Checkout Session for B2B portal invoice or balance settlement with Card & ACH."""
+    stripe = _get_stripe()
+    if not stripe:
+        return {'error': 'Stripe not configured'}
+
+    try:
+        amount_cents = int(round(amount * 100))
+        if amount_cents <= 0:
+            return {'error': 'Amount must be greater than zero'}
+
+        methods = payment_method_types or ['card', 'us_bank_account']
+
+        if settlement_type == 'invoice' and invoice_number:
+            line_item_name = f"Invoice #{invoice_number}"
+            line_item_desc = f"Online settlement for Invoice #{invoice_number}" + (f" - {customer_name}" if customer_name else "")
+        else:
+            line_item_name = f"Account Balance Settlement" + (f" - {customer_name}" if customer_name else "")
+            line_item_desc = f"B2B account balance settlement" + (f" for {customer_name}" if customer_name else "")
+
+        metadata = {
+            'customer_id': str(customer_id),
+            'settlement_type': settlement_type,
+            'amount': f"{amount:.2f}",
+            'amount_cents': str(amount_cents),
+        }
+        if customer_name:
+            metadata['customer_name'] = customer_name
+        if invoice_id is not None:
+            metadata['invoice_id'] = str(invoice_id)
+        if invoice_number:
+            metadata['invoice_number'] = invoice_number
+        if invoice_ids:
+            metadata['invoice_ids'] = ','.join(str(i) for i in invoice_ids)
+
+        session_params = {
+            'mode': 'payment',
+            'payment_method_types': methods,
+            'line_items': [{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': line_item_name,
+                        'description': line_item_desc,
+                    },
+                    'unit_amount': amount_cents,
+                },
+                'quantity': 1,
+            }],
+            'success_url': success_url or 'http://localhost:5173/portal/payment/result?session_id={CHECKOUT_SESSION_ID}&status=success',
+            'cancel_url': cancel_url or 'http://localhost:5173/portal/invoices?session_id={CHECKOUT_SESSION_ID}&status=cancelled',
+            'metadata': metadata,
+            'payment_intent_data': {
+                'metadata': metadata,
+            },
+        }
+
+        if customer_email:
+            session_params['customer_email'] = customer_email
+
+        if settlement_type == 'invoice' and invoice_id:
+            session_params['client_reference_id'] = f"cust_{customer_id}_inv_{invoice_id}"
+        else:
+            session_params['client_reference_id'] = f"cust_{customer_id}_balance"
+
+        session = stripe.checkout.Session.create(**session_params)
+        return {
+            'session_id': session.id,
+            'url': session.url,
+            'amount': amount,
+            'amount_cents': amount_cents,
+            'currency': 'usd',
+            'settlement_type': settlement_type,
+            'invoice_id': invoice_id,
+            'payment_method_types': methods,
+            'status': getattr(session, 'status', 'open') or 'open',
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def get_checkout_session(session_id: str) -> dict:
+    """Retrieve details and live payment status for a Stripe Checkout Session."""
+    stripe = _get_stripe()
+    if not stripe:
+        return {'error': 'Stripe not configured'}
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        customer_email = getattr(session, 'customer_email', None)
+        if not customer_email and hasattr(session, 'customer_details') and session.customer_details:
+            customer_email = getattr(session.customer_details, 'email', None) or session.customer_details.get('email')
+
+        amount_total = None
+        raw_total = getattr(session, 'amount_total', None)
+        if raw_total is not None:
+            amount_total = raw_total / 100.0
+
+        return {
+            'session_id': session.id,
+            'status': getattr(session, 'status', 'open'),
+            'payment_status': getattr(session, 'payment_status', 'unpaid'),
+            'payment_intent_id': getattr(session, 'payment_intent', None),
+            'amount_total': amount_total,
+            'currency': getattr(session, 'currency', 'usd'),
+            'customer_email': customer_email,
+            'metadata': getattr(session, 'metadata', {}) or {},
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
 _WEBHOOK_HANDLERS = {
     'checkout.session.completed': _handle_checkout_completed,
     'invoice.paid': _handle_invoice_paid,
     'invoice.payment_failed': _handle_invoice_payment_failed,
 }
+
