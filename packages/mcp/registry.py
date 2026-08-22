@@ -62,12 +62,14 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
 
     start = time.time()
 
-    # Extract tenant_id from user dict or fallback to NOVA_TENANT_ID env var
+    # Extract tenant_id from user dict, active tenant context, or fallback to NOVA_TENANT_ID env var
     tenant_id = None
     if user and isinstance(user, dict):
         tenant_id = user.get("business_id")
         if tenant_id is None:
             tenant_id = user.get("tenant_id")
+    if tenant_id is None:
+        tenant_id = get_current_tenant()
     if tenant_id is None:
         env_tenant = os.environ.get("NOVA_TENANT_ID")
         if env_tenant:
@@ -105,7 +107,7 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
         _current_user.reset(user_token)
 
 
-def propose_action(tool_name: str, arguments: dict) -> dict:
+def propose_action(tool_name: str, arguments: dict, user: dict | None = None) -> dict:
     """Propose a tier-2 action without executing it. Returns an action_id and preview."""
     entry = _tools.get(tool_name)
     if not entry:
@@ -120,6 +122,12 @@ def propose_action(tool_name: str, arguments: dict) -> dict:
         "created_at": now,
         "timestamp": now,
         "user": user,
+    stored_user = user if user is not None else _current_user.get()
+    _pending_actions[action_id] = {
+        "tool_name": tool_name,
+        "arguments": arguments,
+        "created_at": time.time(),
+        "user": stored_user,
     }
     client = get_redis_client()
     key = _get_action_key(action_id)
@@ -165,12 +173,15 @@ def _fetch_and_delete_action(action_id: str) -> dict | None:
 
 
 def confirm_action(action_id: str) -> dict:
+def confirm_action(action_id: str, user: dict | None = None) -> dict:
     """Confirm and execute a previously proposed action."""
     entry = _fetch_and_delete_action(action_id)
     if not entry:
         raise ValueError(f"Action not found or expired: {action_id}")
     user = _current_user.get() or entry.get("user")
     return call_tool(entry["tool_name"], entry["arguments"], user=user)
+    exec_user = user if user is not None else (_current_user.get() or entry.get("user"))
+    return call_tool(entry["tool_name"], entry["arguments"], user=exec_user)
 
 
 def _purge_expired_actions():
@@ -232,7 +243,7 @@ def _ensure_meta_tools():
         entry = _pending_actions.pop(action_id, None)
         if not entry:
             raise ValueError(f"Action not found or expired: {action_id}")
-        user = _current_user.get()
+        user = _current_user.get() or entry.get("user")
         return call_tool(entry["tool_name"], entry["arguments"], user=user)
 
     register_tool(

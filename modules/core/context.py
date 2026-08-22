@@ -30,7 +30,11 @@ def set_current_tenant(tenant_id: Optional[Union[int, str]]) -> contextvars.Toke
 
 def reset_current_tenant(token: contextvars.Token) -> None:
     """Reset the tenant context variable to the state before set_current_tenant was called."""
-    _current_tenant.reset(token)
+    try:
+        _current_tenant.reset(token)
+    except ValueError:
+        # Token was created in a different Context (e.g. across async/thread generator steps)
+        pass
 
 
 def clear_current_tenant() -> contextvars.Token:
