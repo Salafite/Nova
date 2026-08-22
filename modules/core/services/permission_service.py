@@ -125,6 +125,7 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/pos': 'POS_VIEW',
     '/api/T0025I': 'ADMIN_VIEW',
     '/api/T0100I': 'ADMIN_VIEW',
+    '/api/sales/mobile': 'FIELD_SALES_MOBILE',
     'Categories': 'PRODUCTS_VIEW',
     'Migration': 'ADMIN_VIEW',
     'BI Dashboard': 'BI_VIEW',
@@ -138,6 +139,8 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'POS': 'POS_VIEW',
     'T0025 - Global Settings': 'ADMIN_VIEW',
     'T0100 - Module Registry': 'ADMIN_VIEW',
+    'Field Sales Mobile': 'FIELD_SALES_MOBILE',
+    'Field Sales': 'FIELD_SALES_MOBILE',
 }
 
 # Role to granted permissions mapping
@@ -163,6 +166,22 @@ _ROLE_PERMISSIONS: dict[str, list[str]] = {
         'MAINTENANCE_VIEW',
         'BI_VIEW',
         'HR_VIEW',
+        'FIELD_SALES_MOBILE',
+    ],
+    'Sales Manager': [
+        'DASHBOARD_VIEW',
+        'SALES_VIEW',
+        'POS_VIEW',
+        'CRM_VIEW',
+        'CUSTOMERS_VIEW',
+        'SUPPLIERS_VIEW',
+        'PURCHASING_VIEW',
+        'PRODUCTS_VIEW',
+        'INVENTORY_VIEW',
+        'WAREHOUSE_VIEW',
+        'FINANCE_VIEW',
+        'BI_VIEW',
+        'FIELD_SALES_MOBILE',
     ],
     'Sales Rep': [
         'DASHBOARD_VIEW',
@@ -172,6 +191,7 @@ _ROLE_PERMISSIONS: dict[str, list[str]] = {
         'CUSTOMERS_VIEW',
         'PRODUCTS_VIEW',
         'INVENTORY_VIEW',
+        'FIELD_SALES_MOBILE',
     ],
     'Cashier': [
         'DASHBOARD_VIEW',
