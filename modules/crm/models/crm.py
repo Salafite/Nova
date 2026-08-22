@@ -14,6 +14,9 @@ CustomerCreate, CustomerUpdate, CustomerResponse = crud_model('Customer', [
     ('default_price_list_id', Optional[int], None),
     ('default_tax_rate_id', Optional[int], None),
     ('payment_term_id', Optional[int], None),
+    ('min_order_amount', float, Field(0, ge=0)),
+    ('order_cutoff_time', Optional[str], Field(None, max_length=10)),
+    ('allow_reorders', bool, True),
 ])
 
 SupplierCreate, SupplierUpdate, SupplierResponse = crud_model('Supplier', [
