@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
 
@@ -11,16 +11,17 @@ class SalesOrderCreate(BaseModel):
     subtotal: float = 0
     tax: float = 0
     grand_total: float = 0
-    freight_amount: float = 0
-    discount_amount: float = 0
-    sales_rep_id: Optional[int] = None
     status: str = 'Pending'
     order_date: date = Field(default_factory=date.today)
     price_list_id: Optional[int] = None
     tax_rate_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     notes: Optional[str] = None
-    business_id: Optional[int] = None
+    client_order_uuid: Optional[str] = Field(None, max_length=64)
+    is_offline_sync: bool = False
+    sync_status: str = 'Synced'
+    offline_created_at: Optional[datetime] = None
+    sales_rep_id: Optional[int] = None
 
 class SalesOrderUpdate(BaseModel):
     order_number: Optional[str] = Field(None, max_length=30)
@@ -29,16 +30,17 @@ class SalesOrderUpdate(BaseModel):
     subtotal: Optional[float] = None
     tax: Optional[float] = None
     grand_total: Optional[float] = None
-    freight_amount: Optional[float] = None
-    discount_amount: Optional[float] = None
-    sales_rep_id: Optional[int] = None
     status: Optional[str] = None
     order_date: Optional[date] = None
     price_list_id: Optional[int] = None
     tax_rate_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     notes: Optional[str] = None
-    business_id: Optional[int] = None
+    client_order_uuid: Optional[str] = Field(None, max_length=64)
+    is_offline_sync: Optional[bool] = None
+    sync_status: Optional[str] = None
+    offline_created_at: Optional[datetime] = None
+    sales_rep_id: Optional[int] = None
 
 class SalesOrderResponse(AuditMixin):
     id: int
@@ -48,15 +50,17 @@ class SalesOrderResponse(AuditMixin):
     subtotal: float
     tax: float
     grand_total: float
-    freight_amount: float = 0
-    discount_amount: float = 0
-    sales_rep_id: Optional[int] = None
     status: str
     order_date: date
     price_list_id: Optional[int] = None
     tax_rate_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     notes: Optional[str] = None
+    client_order_uuid: Optional[str] = None
+    is_offline_sync: bool = False
+    sync_status: str = 'Synced'
+    offline_created_at: Optional[datetime] = None
+    sales_rep_id: Optional[int] = None
 
 
 class SalesLineCreate(BaseModel):
@@ -66,11 +70,8 @@ class SalesLineCreate(BaseModel):
     uom_id: Optional[int] = None
     qty: float = Field(..., gt=0)
     unit_price: float = Field(..., ge=0)
-    cost_price: float = 0
-    discount: float = 0
     line_total: float = Field(..., ge=0)
     line_number: int = 0
-    business_id: Optional[int] = None
 
 class SalesLineUpdate(BaseModel):
     sales_order_id: Optional[int] = None
@@ -79,22 +80,17 @@ class SalesLineUpdate(BaseModel):
     uom_id: Optional[int] = None
     qty: Optional[float] = Field(None, gt=0)
     unit_price: Optional[float] = Field(None, ge=0)
-    cost_price: Optional[float] = None
-    discount: Optional[float] = None
     line_total: Optional[float] = Field(None, ge=0)
     line_number: Optional[int] = None
-    business_id: Optional[int] = None
 
 class SalesLineResponse(AuditMixin):
     id: int
     sales_order_id: int
-    product_id: Optional[int] = None
+    product_id: Optional[int]
     product_name: str
-    uom_id: Optional[int] = None
+    uom_id: Optional[int]
     qty: float
     unit_price: float
-    cost_price: float = 0
-    discount: float = 0
     line_total: float
     line_number: int
 
@@ -108,7 +104,6 @@ class InstallmentPlanCreate(BaseModel):
     first_due_date: date
     status: str = 'Pending'
     notes: Optional[str] = None
-    business_id: Optional[int] = None
 
 class InstallmentPlanUpdate(BaseModel):
     sales_order_id: Optional[int] = None
@@ -119,7 +114,6 @@ class InstallmentPlanUpdate(BaseModel):
     first_due_date: Optional[date] = None
     status: Optional[str] = None
     notes: Optional[str] = None
-    business_id: Optional[int] = None
 
 class InstallmentPlanResponse(AuditMixin):
     id: int
@@ -130,7 +124,7 @@ class InstallmentPlanResponse(AuditMixin):
     frequency_days: int
     first_due_date: date
     status: str
-    notes: Optional[str] = None
+    notes: Optional[str]
 
 
 class InstallPaymentCreate(BaseModel):
@@ -143,7 +137,6 @@ class InstallPaymentCreate(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=50)
     status: str = 'Pending'
     notes: Optional[str] = None
-    business_id: Optional[int] = None
 
 class InstallPaymentUpdate(BaseModel):
     installment_plan_id: Optional[int] = None
@@ -155,7 +148,6 @@ class InstallPaymentUpdate(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=50)
     status: Optional[str] = None
     notes: Optional[str] = None
-    business_id: Optional[int] = None
 
 class InstallPaymentResponse(AuditMixin):
     id: int
@@ -164,7 +156,7 @@ class InstallPaymentResponse(AuditMixin):
     due_date: date
     amount_due: float
     amount_paid: float
-    paid_date: Optional[date] = None
-    payment_method: Optional[str] = None
+    paid_date: Optional[date]
+    payment_method: Optional[str]
     status: str
-    notes: Optional[str] = None
+    notes: Optional[str]
