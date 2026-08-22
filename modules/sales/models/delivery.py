@@ -9,6 +9,9 @@ class DeliveryCreate(BaseModel):
     sales_order_id: int
     delivery_date: Optional[date] = None
     warehouse_id: Optional[int] = None
+    freight_cost: float = 0
+    delivery_route: Optional[str] = Field(None, max_length=100)
+    actual_delivery_date: Optional[date] = None
     status: str = 'Draft'
     notes: Optional[str] = None
 
@@ -17,6 +20,9 @@ class DeliveryUpdate(BaseModel):
     sales_order_id: Optional[int] = None
     delivery_date: Optional[date] = None
     warehouse_id: Optional[int] = None
+    freight_cost: Optional[float] = None
+    delivery_route: Optional[str] = Field(None, max_length=100)
+    actual_delivery_date: Optional[date] = None
     status: Optional[str] = None
     notes: Optional[str] = None
 
@@ -26,6 +32,9 @@ class DeliveryResponse(AuditMixin):
     sales_order_id: int
     delivery_date: date
     warehouse_id: Optional[int]
+    freight_cost: float = 0
+    delivery_route: Optional[str] = None
+    actual_delivery_date: Optional[date] = None
     status: str
     notes: Optional[str]
 

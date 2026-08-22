@@ -106,3 +106,17 @@ class DashboardWidgetResponse(AuditMixin):
     config: Optional[str]
     position: Optional[str]
     is_active: bool
+
+
+# Re-export executive analytics models
+from modules.bi.models.executive_analytics import (
+    ExecutiveAnalyticsFilter,
+    ExecutiveMarginSummary,
+    CategoryMarginItem, CategoryMarginResponse,
+    SkuMarginItem, SkuMarginResponse,
+    PeriodMarginTrendItem, PeriodMarginTrendResponse,
+    CustomerProfitabilityItem, QuadrantSummaryItem, CustomerProfitabilityResponse,
+    DeliveryRouteMetricItem, DeliveryFulfillmentSummaryResponse,
+    ExecutiveExportRequest, ExecutiveExportResponse,
+)
+

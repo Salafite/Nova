@@ -24,6 +24,9 @@ from packages.auth.controller import router as auth_router
 from packages.ws.handlers import router as ws_router
 from packages.billing.controller import router as billing_router
 from modules.bi.controllers.dashboard import router as bi_dashboard_router
+from modules.bi.controllers.executive_analytics_controller import router as bi_executive_analytics_router
+from modules.bi.controllers.executive_export_controller import router as bi_executive_export_router
+from modules.sales.controllers.commission_controller import router as sales_commission_router
 from packages.rate_limit import RateLimitMiddleware
 from packages.analytics.sentry import init_sentry
 from packages.cache.middleware import CacheControlMiddleware
@@ -87,6 +90,9 @@ for router in all_routers:
 app.include_router(ws_router)
 app.include_router(billing_router)
 app.include_router(bi_dashboard_router)
+app.include_router(bi_executive_analytics_router)
+app.include_router(bi_executive_export_router)
+app.include_router(sales_commission_router)
 app.include_router(ai_router)
 app.include_router(user_preferences_router)
 app.include_router(admin_preferences_router)

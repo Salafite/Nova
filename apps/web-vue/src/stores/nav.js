@@ -96,6 +96,7 @@ export const useNavStore = defineStore('nav', {
           { id: 'maintenance-schedules', icon: 'calendar_month', label: 'Schedules', label_ar: 'جداول الصيانة', permission: 'MAINTENANCE_VIEW', module: 'maintenance-schedules' },
           { id: 'maintenance-work-orders', icon: 'assignment', label: 'Work Orders', label_ar: 'أوامر العمل', permission: 'MAINTENANCE_VIEW', module: 'maintenance-work-orders' },
           { section: 'BI & Reporting', section_ar: 'ذكاء الأعمال والتقارير' },
+          { id: 'bi-executive', icon: 'query_stats', label: 'Executive Analytics', label_ar: 'التحليلات التنفيذية', permission: 'BI_VIEW', module: 'bi-executive' },
           { id: 'bi-kpis', icon: 'monitoring', label: 'KPI Management', label_ar: 'إدارة مؤشرات الأداء', permission: 'BI_VIEW', module: 'bi-kpis' },
           { id: 'bi-dashboards', icon: 'dashboard_customize', label: 'Dashboard Builder', label_ar: 'منشئ لوحات البيانات', permission: 'BI_VIEW', module: 'bi-dashboards' },
           { id: 'bi-reports', icon: 'description', label: 'Reports', label_ar: 'التقارير', permission: 'BI_VIEW', module: 'bi-reports' },
