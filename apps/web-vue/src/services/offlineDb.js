@@ -413,9 +413,10 @@ export class OfflineDb {
   // -------------------------------------------------------------------------
 
   async saveDraftOrder(draft) {
+    const plain = JSON.parse(JSON.stringify(draft || {}))
     const draftData = {
       id: 'active_draft',
-      ...draft,
+      ...plain,
       updated_at: new Date().toISOString()
     }
     await this.put(STORES.DRAFT_ORDERS, draftData)
@@ -442,15 +443,16 @@ export class OfflineDb {
    * Enqueue an order for synchronization
    */
   async enqueueOrder(order) {
-    const uuid = order.client_order_uuid || this._generateUuid()
+    const plain = JSON.parse(JSON.stringify(order || {}))
+    const uuid = plain.client_order_uuid || this._generateUuid()
     const record = {
-      ...order,
+      ...plain,
       client_order_uuid: uuid,
-      status: order.status || 'Pending',
-      queued_at: order.queued_at || new Date().toISOString(),
-      retry_count: order.retry_count || 0,
-      last_error: order.last_error || null,
-      conflicts: order.conflicts || []
+      status: plain.status || 'Pending',
+      queued_at: plain.queued_at || new Date().toISOString(),
+      retry_count: plain.retry_count || 0,
+      last_error: plain.last_error || null,
+      conflicts: plain.conflicts || []
     }
     await this.put(STORES.SYNC_QUEUE, record)
     return record
