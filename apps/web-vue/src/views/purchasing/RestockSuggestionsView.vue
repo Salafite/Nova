@@ -392,7 +392,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from '../../composables/useI18n.js'
 import SkeletonTable from '../../components/SkeletonTable.vue'
 import ErrorState from '../../components/ErrorState.vue'
-import api from '../../services/api.js'
+import { api } from '../../api/client.js'
 
 const router = useRouter()
 const { t, dir } = useI18n()
