@@ -123,6 +123,9 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/admin/users': 'ADMIN_VIEW',
     '/api/adjustments': 'INVENTORY_VIEW',
     '/api/pos': 'POS_VIEW',
+    '/api/portal': 'PORTAL_VIEW',
+    '/api/portal/orders': 'PORTAL_ORDER',
+    '/api/portal/invoices': 'PORTAL_PAY',
     '/api/T0025I': 'ADMIN_VIEW',
     '/api/T0100I': 'ADMIN_VIEW',
     '/api/sales/mobile': 'FIELD_SALES_MOBILE',
@@ -137,6 +140,9 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'Admin User Preferences': 'ADMIN_VIEW',
     'Stock Adjustments': 'INVENTORY_VIEW',
     'POS': 'POS_VIEW',
+    'Customer Portal': 'PORTAL_VIEW',
+    'Portal Orders': 'PORTAL_ORDER',
+    'Portal Invoices': 'PORTAL_PAY',
     'T0025 - Global Settings': 'ADMIN_VIEW',
     'T0100 - Module Registry': 'ADMIN_VIEW',
     'Field Sales Mobile': 'FIELD_SALES_MOBILE',
@@ -206,6 +212,11 @@ _ROLE_PERMISSIONS: dict[str, list[str]] = {
         'PRODUCTS_VIEW',
         'CRM_VIEW',
         'CUSTOMERS_VIEW',
+    ],
+    'Customer': [
+        'PORTAL_VIEW',
+        'PORTAL_ORDER',
+        'PORTAL_PAY',
     ],
 }
 

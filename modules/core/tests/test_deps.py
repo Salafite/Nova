@@ -237,4 +237,108 @@ class TestAuthMeEndpoint:
             assert 'FINANCE_VIEW' in data2['permissions']
             assert 'HR_VIEW' in data2['permissions']
 
+    def test_me_endpoint_returns_customer_id_and_permissions(self):
+        from packages.auth.controller import me_endpoint
+        customer_user = {
+            'id': 60,
+            'username': 'portal_buyer',
+            'full_name': 'Portal Buyer',
+            'email': 'buyer@example.com',
+            'role': 'Customer',
+            'permissions': None,
+            'business_id': 1,
+            'customer_id': 99,
+        }
+        res = me_endpoint(user=customer_user)
+        assert res['id'] == 60
+        assert res['role'] == 'Customer'
+        assert res['customer_id'] == 99
+        assert 'PORTAL_VIEW' in res['permissions']
+        assert 'PORTAL_ORDER' in res['permissions']
+        assert 'PORTAL_PAY' in res['permissions']
+
+
+class TestPortalCustomerDeps:
+    def test_portal_customer_with_valid_customer_id_allowed(self):
+        from packages.auth.deps import get_current_portal_customer
+        user = {
+            'id': 70,
+            'username': 'buyer1',
+            'role': 'Customer',
+            'permissions': None,
+            'customer_id': 42,
+        }
+        result = get_current_portal_customer(user=user)
+        assert result == user
+        assert result['customer_id'] == 42
+
+    def test_portal_customer_without_customer_id_raises_403(self):
+        from packages.auth.deps import get_current_portal_customer
+        user = {
+            'id': 71,
+            'username': 'buyer_no_cust',
+            'role': 'Customer',
+            'permissions': None,
+            'customer_id': None,
+        }
+        with pytest.raises(HTTPException) as exc:
+            get_current_portal_customer(user=user)
+        assert exc.value.status_code == 403
+        assert 'User is not associated with a customer account' in str(exc.value.detail)
+
+    def test_portal_customer_without_portal_permission_raises_403(self):
+        from packages.auth.deps import get_current_portal_customer
+        user = {
+            'id': 72,
+            'username': 'viewer_user',
+            'role': 'Viewer',
+            'permissions': ['CRM_VIEW'],
+            'customer_id': 42,
+        }
+        with pytest.raises(HTTPException) as exc:
+            get_current_portal_customer(user=user)
+        assert exc.value.status_code == 403
+        assert 'PORTAL_VIEW' in str(exc.value.detail)
+
+    def test_portal_customer_admin_wildcard_allowed(self):
+        from packages.auth.deps import get_current_portal_customer
+        user = {
+            'id': 1,
+            'username': 'admin',
+            'role': 'Admin',
+            'permissions': ['*'],
+            'customer_id': 10,
+        }
+        result = get_current_portal_customer(user=user)
+        assert result == user
+
+    def test_require_portal_permission_success(self):
+        from packages.auth.deps import require_portal_permission
+        checker = require_portal_permission('PORTAL_ORDER')
+        user = {
+            'id': 73,
+            'username': 'buyer_order',
+            'role': 'Customer',
+            'permissions': None,
+            'customer_id': 42,
+        }
+        result = checker(user=user)
+        assert result == user
+
+    def test_require_portal_permission_denied(self):
+        from packages.auth.deps import require_portal_permission
+        checker = require_portal_permission('ADMIN_VIEW')
+        user = {
+            'id': 74,
+            'username': 'buyer_no_admin',
+            'role': 'Customer',
+            'permissions': None,
+            'customer_id': 42,
+        }
+        with pytest.raises(HTTPException) as exc:
+            checker(user=user)
+        assert exc.value.status_code == 403
+        assert 'ADMIN_VIEW' in str(exc.value.detail)
+
+
 

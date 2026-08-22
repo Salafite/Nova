@@ -18,6 +18,7 @@ class CurrentUserResponse(BaseModel):
     role: str
     permissions: list[str] = []
     business_id: Optional[int] = None
+    customer_id: Optional[int] = None
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -42,6 +43,7 @@ class InviteRequest(BaseModel):
     email: str
     role: str
     full_name: Optional[str] = None
+    customer_id: Optional[int] = None
 
 class InviteResponse(BaseModel):
     user_id: int

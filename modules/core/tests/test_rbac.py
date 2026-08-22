@@ -107,6 +107,20 @@ class TestTCodeRBACEnforcement:
             resp = client.get(endpoint, headers=headers)
             assert resp.status_code == expected_status
 
+    @pytest.mark.parametrize("endpoint,expected_status", [
+        ("/api/T0001I/", 403),  # Products (PRODUCTS_VIEW) - forbidden for Customer
+        ("/api/T0012I/", 403),  # Sales Orders (SALES_VIEW) - forbidden for Customer
+        ("/api/T0014I/", 403),  # Purchase Orders (PURCHASING_VIEW) - forbidden
+        ("/api/T0026I/", 403),  # Finance (FINANCE_VIEW) - forbidden
+        ("/api/T0021I/", 403),  # Admin (ADMIN_VIEW) - forbidden
+    ])
+    def test_customer_access_matrix(self, endpoint, expected_status):
+        headers, user = _make_user_header(501, 'Customer')
+        user['customer_id'] = 10
+        with patch('packages.auth.deps.get_user_by_id', return_value=user):
+            resp = client.get(endpoint, headers=headers)
+            assert resp.status_code == expected_status
+
     @pytest.mark.parametrize("endpoint", [
         "/api/T0001I/",
         "/api/T0012I/",

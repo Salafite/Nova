@@ -77,14 +77,14 @@ def get_business_by_id(business_id: int) -> dict | None:
 
 
 def create_user(username: str, password_hash: str, full_name: str,
-                email: str, role: str, business_id: int = None) -> dict:
+                email: str, role: str, business_id: int = None, customer_id: int = None) -> dict:
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                f'INSERT INTO {_S("t0021")} (username, password_hash, full_name, email, role, business_id, status) '
-                'VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *',
-                (username, password_hash, full_name, email, role, business_id, 'Active')
+                f'INSERT INTO {_S("t0021")} (username, password_hash, full_name, email, role, business_id, status, customer_id) '
+                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING *',
+                (username, password_hash, full_name, email, role, business_id, 'Active', customer_id)
             )
             row = cur.fetchone()
             conn.commit()
@@ -104,7 +104,7 @@ def get_users_by_business(business_id: int) -> list[dict]:
 
 
 def create_invited_user(email: str, role: str, full_name: str | None,
-                        business_id: int, invited_by: int) -> dict:
+                        business_id: int, invited_by: int, customer_id: int | None = None) -> dict:
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -112,9 +112,9 @@ def create_invited_user(email: str, role: str, full_name: str | None,
             username = email.split('@')[0] + '_' + token[:6]
             cur.execute(
                 f'INSERT INTO {_S("t0021")} (username, password_hash, full_name, email, role, '
-                'business_id, status, invite_token, created_by) '
-                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *',
-                (username, '', full_name, email, role, business_id, 'Invited', token, invited_by)
+                'business_id, status, invite_token, created_by, customer_id) '
+                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *',
+                (username, '', full_name, email, role, business_id, 'Invited', token, invited_by, customer_id)
             )
             row = cur.fetchone()
             conn.commit()
