@@ -84,7 +84,7 @@ class McpServer:
                     "resources": [r.model_dump() if hasattr(r, 'model_dump') else r for r in resources]
                 })
             elif method == "resources/read":
-                result = read_resource(params["uri"])
+                result = read_resource(params["uri"], user=user)
                 text = json.dumps(result, default=_json_safe, indent=2)
                 return self._result(req_id, {
                     "contents": [{"uri": params["uri"], "text": text}]

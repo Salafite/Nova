@@ -196,14 +196,14 @@ def list_resources() -> list[Resource]:
     return [v["resource"] for v in _resources.values()]
 
 
-def read_resource(uri: str):
+def read_resource(uri: str, user: dict | None = None):
     entry = _resources.get(uri)
     if not entry:
         raise ValueError(f"Resource not found: {uri}")
-    user = _current_user.get()
+    exec_user = user if user is not None else _current_user.get()
     tenant_id = None
-    if user and isinstance(user, dict):
-        tenant_id = user.get("business_id") or user.get("tenant_id")
+    if exec_user and isinstance(exec_user, dict):
+        tenant_id = exec_user.get("business_id") or exec_user.get("tenant_id")
     if tenant_id is None:
         env_tenant = os.environ.get("NOVA_TENANT_ID")
         if env_tenant:
@@ -211,7 +211,7 @@ def read_resource(uri: str):
                 tenant_id = int(env_tenant)
             except (ValueError, TypeError):
                 tenant_id = None
-    user_token = _current_user.set(user or {})
+    user_token = _current_user.set(exec_user or {})
     tenant_token = set_current_tenant(tenant_id)
     try:
         return entry["handler"]()
