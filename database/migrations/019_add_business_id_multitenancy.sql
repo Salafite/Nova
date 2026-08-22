@@ -492,23 +492,11 @@ CREATE INDEX IF NOT EXISTS idx_t0082_business_id ON "Nova".t0082(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_business_id_id ON "Nova".t0082(business_id, id);
 COMMENT ON COLUMN "Nova".t0082.business_id IS 'Tenant / business organization identifier (FK to T0059)';
 
--- T0083
-ALTER TABLE "Nova".t0083 ADD COLUMN IF NOT EXISTS business_id INT REFERENCES "Nova".t0059(id);
-CREATE INDEX IF NOT EXISTS idx_t0083_business_id ON "Nova".t0083(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0083_business_id_id ON "Nova".t0083(business_id, id);
-COMMENT ON COLUMN "Nova".t0083.business_id IS 'Tenant / business organization identifier (FK to T0059)';
-
 -- T0084
 ALTER TABLE "Nova".t0084 ADD COLUMN IF NOT EXISTS business_id INT REFERENCES "Nova".t0059(id);
 CREATE INDEX IF NOT EXISTS idx_t0084_business_id ON "Nova".t0084(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0084_business_id_id ON "Nova".t0084(business_id, id);
 COMMENT ON COLUMN "Nova".t0084.business_id IS 'Tenant / business organization identifier (FK to T0059)';
-
--- T0085
-ALTER TABLE "Nova".t0085 ADD COLUMN IF NOT EXISTS business_id INT REFERENCES "Nova".t0059(id);
-CREATE INDEX IF NOT EXISTS idx_t0085_business_id ON "Nova".t0085(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0085_business_id_id ON "Nova".t0085(business_id, id);
-COMMENT ON COLUMN "Nova".t0085.business_id IS 'Tenant / business organization identifier (FK to T0059)';
 
 -- T0086
 ALTER TABLE "Nova".t0086 ADD COLUMN IF NOT EXISTS business_id INT REFERENCES "Nova".t0059(id);
