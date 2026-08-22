@@ -2555,7 +2555,7 @@ COMMENT ON COLUMN "Nova".t0104.status IS 'Preview | Committed | RolledBack';
 -- SALES COMMISSION CONFIGURATION & PAYOUTS
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS "Nova".t0107 (
+CREATE TABLE IF NOT EXISTS "Nova".t0109 (
     id                     SERIAL PRIMARY KEY,
     rule_name              VARCHAR(100) NOT NULL,
     sales_rep_id           INT REFERENCES "Nova".t0021(id),
@@ -2572,24 +2572,24 @@ CREATE TABLE IF NOT EXISTS "Nova".t0107 (
     update_number          INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0107 IS 'Sales Commission Rules and Rates';
-COMMENT ON COLUMN "Nova".t0107.rule_name IS 'Rule or plan identifier';
-COMMENT ON COLUMN "Nova".t0107.sales_rep_id IS 'Specific sales rep or NULL for global default';
-COMMENT ON COLUMN "Nova".t0107.base_commission_rate IS 'Base commission percentage on realized gross profit';
-COMMENT ON COLUMN "Nova".t0107.min_margin_threshold IS 'Minimum gross margin percentage required to qualify for commission';
-COMMENT ON COLUMN "Nova".t0107.tier_rules IS 'Tiered commission rate JSON structure';
-COMMENT ON COLUMN "Nova".t0107.discount_penalty_rate IS 'Penalty reduction per discount percentage granted';
+COMMENT ON TABLE "Nova".t0109 IS 'Sales Commission Rules and Rates';
+COMMENT ON COLUMN "Nova".t0109.rule_name IS 'Rule or plan identifier';
+COMMENT ON COLUMN "Nova".t0109.sales_rep_id IS 'Specific sales rep or NULL for global default';
+COMMENT ON COLUMN "Nova".t0109.base_commission_rate IS 'Base commission percentage on realized gross profit';
+COMMENT ON COLUMN "Nova".t0109.min_margin_threshold IS 'Minimum gross margin percentage required to qualify for commission';
+COMMENT ON COLUMN "Nova".t0109.tier_rules IS 'Tiered commission rate JSON structure';
+COMMENT ON COLUMN "Nova".t0109.discount_penalty_rate IS 'Penalty reduction per discount percentage granted';
 
-CREATE INDEX IF NOT EXISTS idx_t0107_sales_rep_id ON "Nova".t0107(sales_rep_id);
-CREATE INDEX IF NOT EXISTS idx_t0107_is_active ON "Nova".t0107(is_active);
+CREATE INDEX IF NOT EXISTS idx_t0109_sales_rep_id ON "Nova".t0109(sales_rep_id);
+CREATE INDEX IF NOT EXISTS idx_t0109_is_active ON "Nova".t0109(is_active);
 
-CREATE TABLE IF NOT EXISTS "Nova".t0108 (
+CREATE TABLE IF NOT EXISTS "Nova".t0110 (
     id                     SERIAL PRIMARY KEY,
     payout_number          VARCHAR(50) NOT NULL UNIQUE,
     sales_rep_id           INT NOT NULL REFERENCES "Nova".t0021(id),
     invoice_id             INT REFERENCES "Nova".t0090(id),
     payment_id             INT REFERENCES "Nova".t0091(id),
-    rule_id                INT REFERENCES "Nova".t0107(id),
+    rule_id                INT REFERENCES "Nova".t0109(id),
     period_start           DATE,
     period_end             DATE,
     collected_amount       NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -2599,6 +2599,7 @@ CREATE TABLE IF NOT EXISTS "Nova".t0108 (
     discount_penalty       NUMERIC(12,2) NOT NULL DEFAULT 0,
     net_commission_amount  NUMERIC(12,2) NOT NULL DEFAULT 0,
     status                 VARCHAR(20) NOT NULL DEFAULT 'Pending',
+    is_active              BOOLEAN NOT NULL DEFAULT true,
     payment_date           DATE,
     notes                  TEXT,
     created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2608,23 +2609,24 @@ CREATE TABLE IF NOT EXISTS "Nova".t0108 (
     update_number          INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0108 IS 'Sales Commission Payouts and Realized Ledgers';
-COMMENT ON COLUMN "Nova".t0108.payout_number IS 'Unique commission payout or statement reference';
-COMMENT ON COLUMN "Nova".t0108.sales_rep_id IS 'Sales representative receiving commission';
-COMMENT ON COLUMN "Nova".t0108.invoice_id IS 'Associated sales invoice';
-COMMENT ON COLUMN "Nova".t0108.payment_id IS 'Payment collection trigger';
-COMMENT ON COLUMN "Nova".t0108.collected_amount IS 'Cash collected amount on invoice';
-COMMENT ON COLUMN "Nova".t0108.realized_gross_margin IS 'Gross profit realized on collected cash';
-COMMENT ON COLUMN "Nova".t0108.commission_rate IS 'Applied commission percentage';
-COMMENT ON COLUMN "Nova".t0108.commission_amount IS 'Gross commission calculated';
-COMMENT ON COLUMN "Nova".t0108.discount_penalty IS 'Deduction for excessive discounts granted';
-COMMENT ON COLUMN "Nova".t0108.net_commission_amount IS 'Net payable commission amount';
-COMMENT ON COLUMN "Nova".t0108.status IS 'Pending | Approved | Paid | Cancelled';
+COMMENT ON TABLE "Nova".t0110 IS 'Sales Commission Payouts and Realized Ledgers';
+COMMENT ON COLUMN "Nova".t0110.payout_number IS 'Unique commission payout or statement reference';
+COMMENT ON COLUMN "Nova".t0110.sales_rep_id IS 'Sales representative receiving commission';
+COMMENT ON COLUMN "Nova".t0110.invoice_id IS 'Associated sales invoice';
+COMMENT ON COLUMN "Nova".t0110.payment_id IS 'Payment collection trigger';
+COMMENT ON COLUMN "Nova".t0110.collected_amount IS 'Cash collected amount on invoice';
+COMMENT ON COLUMN "Nova".t0110.realized_gross_margin IS 'Gross profit realized on collected cash';
+COMMENT ON COLUMN "Nova".t0110.commission_rate IS 'Applied commission percentage';
+COMMENT ON COLUMN "Nova".t0110.commission_amount IS 'Gross commission calculated';
+COMMENT ON COLUMN "Nova".t0110.discount_penalty IS 'Deduction for excessive discounts granted';
+COMMENT ON COLUMN "Nova".t0110.net_commission_amount IS 'Net payable commission amount';
+COMMENT ON COLUMN "Nova".t0110.status IS 'Pending | Approved | Paid | Cancelled';
+COMMENT ON COLUMN "Nova".t0110.is_active IS 'Soft-delete flag; inactive payouts excluded from commission calculations';
 
-CREATE INDEX IF NOT EXISTS idx_t0108_sales_rep_id ON "Nova".t0108(sales_rep_id);
-CREATE INDEX IF NOT EXISTS idx_t0108_invoice_id ON "Nova".t0108(invoice_id);
-CREATE INDEX IF NOT EXISTS idx_t0108_payment_id ON "Nova".t0108(payment_id);
-CREATE INDEX IF NOT EXISTS idx_t0108_status ON "Nova".t0108(status);
+CREATE INDEX IF NOT EXISTS idx_t0110_sales_rep_id ON "Nova".t0110(sales_rep_id);
+CREATE INDEX IF NOT EXISTS idx_t0110_invoice_id ON "Nova".t0110(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_t0110_payment_id ON "Nova".t0110(payment_id);
+CREATE INDEX IF NOT EXISTS idx_t0110_status ON "Nova".t0110(status);
 
 -- ============================================================
 -- ROLES & PERMISSIONS

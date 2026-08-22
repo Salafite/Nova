@@ -276,6 +276,7 @@ class CustomerProfitabilityService:
         self,
         limit: int = 10,
         filters: Union[ExecutiveAnalyticsFilter, Dict[str, Any], None] = None,
+        threshold_pct: Optional[float] = None,
         conn=None,
     ) -> List[CustomerProfitabilityItem]:
         """
@@ -283,6 +284,8 @@ class CustomerProfitabilityService:
         """
         resp = self.get_customer_profitability_matrix(filters=filters, conn=conn)
         sorted_customers = sorted(resp.customers, key=lambda c: (c.gross_margin_pct, c.gross_profit))
+        if threshold_pct is not None:
+            sorted_customers = [c for c in sorted_customers if c.gross_margin_pct <= threshold_pct]
         return sorted_customers[:limit]
 
     def get_customer_details(

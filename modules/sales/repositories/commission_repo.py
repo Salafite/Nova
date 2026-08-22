@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 class CommissionRepository:
     """
-    Repository for Sales Commission calculation rules (Nova.t0107), payout ledgers (Nova.t0108),
+    Repository for Sales Commission calculation rules (Nova.t0109), payout ledgers (Nova.t0110),
     and invoice collection / realized gross margin queries.
     """
 
     def __init__(self):
         self.schema = os.getenv('DB_SCHEMA', 'Nova')
         self.rule_repo = CrudRepository(
-            'T0107',
+            'T0109',
             pk='id',
             business_columns=[
                 'id',
@@ -34,7 +34,7 @@ class CommissionRepository:
             ],
         )
         self.payout_repo = CrudRepository(
-            'T0108',
+            'T0110',
             pk='id',
             business_columns=[
                 'id',
@@ -58,7 +58,7 @@ class CommissionRepository:
         )
 
     # -----------------------------------------------------------------------
-    # Commission Rules (Nova.t0107)
+    # Commission Rules (Nova.t0109)
     # -----------------------------------------------------------------------
 
     def get_rule(self, rule_id: int, conn=None) -> Optional[Dict[str, Any]]:
@@ -73,7 +73,7 @@ class CommissionRepository:
             SELECT 
                 r.*,
                 COALESCE(u.full_name, u.username) AS sales_rep_name
-            FROM "{self.schema}".t0107 r
+            FROM "{self.schema}".t0109 r
             LEFT JOIN "{self.schema}".t0021 u ON r.sales_rep_id = u.id
             WHERE r.id = %s;
             """
@@ -113,7 +113,7 @@ class CommissionRepository:
                 if sales_rep_id is not None:
                     query = f"""
                     SELECT r.*, COALESCE(u.full_name, u.username) AS sales_rep_name
-                    FROM "{self.schema}".t0107 r
+                    FROM "{self.schema}".t0109 r
                     LEFT JOIN "{self.schema}".t0021 u ON r.sales_rep_id = u.id
                     WHERE r.sales_rep_id = %s AND r.is_active = true
                     ORDER BY r.id DESC LIMIT 1;
@@ -134,7 +134,7 @@ class CommissionRepository:
                 # 2. Check global default rule
                 query = f"""
                 SELECT r.*, NULL AS sales_rep_name
-                FROM "{self.schema}".t0107 r
+                FROM "{self.schema}".t0109 r
                 WHERE r.sales_rep_id IS NULL AND r.is_active = true
                 ORDER BY r.id DESC LIMIT 1;
                 """
@@ -200,7 +200,7 @@ class CommissionRepository:
                 r.*,
                 COALESCE(u.full_name, u.username) AS sales_rep_name,
                 COUNT(*) OVER()::INT AS full_count
-            FROM "{self.schema}".t0107 r
+            FROM "{self.schema}".t0109 r
             LEFT JOIN "{self.schema}".t0021 u ON r.sales_rep_id = u.id
             WHERE {where_sql}
             ORDER BY r.id DESC
@@ -226,7 +226,7 @@ class CommissionRepository:
                 release_connection(conn)
 
     def create_rule(self, payload: dict, conn=None) -> Dict[str, Any]:
-        """Creates a new commission rule in Nova.t0107."""
+        """Creates a new commission rule in Nova.t0109."""
         clean_payload = dict(payload)
         if isinstance(clean_payload.get('tier_rules'), (list, dict)):
             clean_payload['tier_rules'] = json.dumps(clean_payload['tier_rules'])
@@ -244,7 +244,7 @@ class CommissionRepository:
         return self.rule_repo.delete(rule_id, conn=conn)
 
     # -----------------------------------------------------------------------
-    # Commission Payouts & Ledger (Nova.t0108)
+    # Commission Payouts & Ledger (Nova.t0110)
     # -----------------------------------------------------------------------
 
     def get_payout(self, payout_id: int, conn=None) -> Optional[Dict[str, Any]]:
@@ -260,7 +260,7 @@ class CommissionRepository:
                 p.*,
                 COALESCE(u.full_name, u.username) AS sales_rep_name,
                 inv.invoice_number
-            FROM "{self.schema}".t0108 p
+            FROM "{self.schema}".t0110 p
             JOIN "{self.schema}".t0021 u ON p.sales_rep_id = u.id
             LEFT JOIN "{self.schema}".t0090 inv ON p.invoice_id = inv.id
             WHERE p.id = %s;
@@ -314,7 +314,7 @@ class CommissionRepository:
                 COALESCE(u.full_name, u.username) AS sales_rep_name,
                 inv.invoice_number,
                 COUNT(*) OVER()::INT AS full_count
-            FROM "{self.schema}".t0108 p
+            FROM "{self.schema}".t0110 p
             JOIN "{self.schema}".t0021 u ON p.sales_rep_id = u.id
             LEFT JOIN "{self.schema}".t0090 inv ON p.invoice_id = inv.id
             WHERE {where_sql}
@@ -333,11 +333,11 @@ class CommissionRepository:
                 release_connection(conn)
 
     def create_payout(self, payload: dict, conn=None) -> Dict[str, Any]:
-        """Creates a new payout record in Nova.t0108."""
+        """Creates a new payout record in Nova.t0110."""
         return self.payout_repo.create(payload, conn=conn)
 
     def update_payout(self, payout_id: int, payload: dict, conn=None) -> Optional[Dict[str, Any]]:
-        """Updates an existing payout record in Nova.t0108."""
+        """Updates an existing payout record in Nova.t0110."""
         return self.payout_repo.update(payout_id, payload, conn=conn)
 
     def delete_payout(self, payout_id: int, conn=None) -> bool:
@@ -409,10 +409,15 @@ class CommissionRepository:
             payout_aggregates AS (
                 SELECT 
                     po.invoice_id,
-                    MAX(po.status) AS payout_status,
+                    CASE
+                        WHEN BOOL_OR(po.status = 'Paid') THEN 'Paid'
+                        WHEN BOOL_OR(po.status = 'Approved') THEN 'Approved'
+                        WHEN BOOL_OR(po.status = 'Pending') THEN 'Pending'
+                        ELSE MIN(po.status)
+                    END AS payout_status,
                     SUM(CASE WHEN po.status = 'Paid' THEN po.net_commission_amount ELSE 0 END) AS paid_commission,
                     SUM(CASE WHEN po.status != 'Paid' AND po.status != 'Cancelled' THEN po.net_commission_amount ELSE 0 END) AS pending_commission
-                FROM "{self.schema}".t0108 po
+                FROM "{self.schema}".t0110 po
                 GROUP BY po.invoice_id
             ),
             filtered_invoices AS (
@@ -465,7 +470,8 @@ class CommissionRepository:
                 pa.latest_payment_date,
                 COALESCE(la.line_gross_sales, fi.invoice_total + fi.inv_discount)::FLOAT AS gross_sales,
                 (COALESCE(la.line_discount, 0) + fi.inv_discount + fi.so_discount)::FLOAT AS discount_amount,
-                COALESCE(la.line_cogs, 0)::FLOAT AS cogs,
+                la.line_cogs::FLOAT AS cogs,
+                (la.line_cogs IS NOT NULL) AS has_cogs_data,
                 COALESCE(NULLIF(fi.inv_freight, 0), fi.so_freight, 0)::FLOAT AS freight_cost,
                 poa.payout_status,
                 COALESCE(poa.paid_commission, 0)::FLOAT AS existing_paid_commission,
@@ -533,7 +539,7 @@ class CommissionRepository:
             WHERE u.status = 'Active'
                OR EXISTS (SELECT 1 FROM "{self.schema}".t0012 so WHERE so.sales_rep_id = u.id)
                OR EXISTS (SELECT 1 FROM "{self.schema}".t0090 inv WHERE inv.sales_rep_id = u.id)
-               OR EXISTS (SELECT 1 FROM "{self.schema}".t0107 r WHERE r.sales_rep_id = u.id)
+               OR EXISTS (SELECT 1 FROM "{self.schema}".t0109 r WHERE r.sales_rep_id = u.id)
             ORDER BY full_name ASC;
             """
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:

@@ -338,6 +338,7 @@ class ExecutiveAnalyticsService:
         self,
         filters: Union[ExecutiveAnalyticsFilter, Dict[str, Any], None] = None,
         period_type: Optional[str] = None,
+        periods_count: int = 12,
         conn=None,
     ) -> PeriodMarginTrendResponse:
         """
@@ -345,6 +346,28 @@ class ExecutiveAnalyticsService:
         """
         flt, start_date, end_date = self._normalize_filter(filters)
         chosen_period = period_type or flt.period or 'Monthly'
+
+        if flt.date_from is None and flt.date_to is None:
+            today = date.today()
+            p = chosen_period.capitalize()
+            if p == 'Daily':
+                start_date = today - timedelta(days=periods_count - 1)
+            elif p == 'Weekly':
+                start_date = today - timedelta(weeks=periods_count - 1)
+            elif p == 'Monthly':
+                year = today.year
+                month = today.month - periods_count + 1
+                while month <= 0:
+                    month += 12
+                    year -= 1
+                start_date = date(year, month, 1)
+            elif p == 'Quarterly':
+                year = today.year
+                month = today.month - (periods_count * 3) + 1
+                while month <= 0:
+                    month += 12
+                    year -= 1
+                start_date = date(year, month, 1)
 
         rows = self.repo.get_period_margin_trends_data(
             date_from=start_date,

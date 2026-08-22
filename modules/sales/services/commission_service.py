@@ -3,6 +3,7 @@ import uuid
 import logging
 from typing import Optional, Dict, Any, List, Union, Tuple
 from datetime import date
+from packages.database.connection import get_connection, release_connection
 from ..models.commission import (
     CommissionRuleCreate,
     CommissionRuleUpdate,
@@ -277,50 +278,69 @@ class CommissionService:
         conn=None,
     ) -> List[Dict[str, Any]]:
         """
-        Generates formal commission payout ledger records in Nova.t0108 for all unpaid collected
-        items for a sales representative in the specified period.
+        Generates formal commission payout ledger records in Nova.t0110 for all unpaid collected
+        items for a sales representative in the specified period. Executes within a single
+        transaction and uses a unique constraint to prevent duplicate payouts per invoice.
         """
-        stmt = self.calculate_statement(
-            sales_rep_id=sales_rep_id,
-            period_start=period_start,
-            period_end=period_end,
-            rule_id=rule_id,
-            include_pending=False,
-            conn=conn,
-        )
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
 
-        payouts_created: List[Dict[str, Any]] = []
+        try:
+            stmt = self.calculate_statement(
+                sales_rep_id=sales_rep_id,
+                period_start=period_start,
+                period_end=period_end,
+                rule_id=rule_id,
+                include_pending=False,
+                conn=conn,
+            )
 
-        for item in stmt.items:
-            if item.net_commission <= 0 or item.status in ('Paid', 'Approved'):
-                continue
+            payouts_created: List[Dict[str, Any]] = []
 
-            payout_number = f"PAY-{sales_rep_id}-{item.invoice_id or 0}-{uuid.uuid4().hex[:6].upper()}"
-            payload = {
-                'payout_number': payout_number,
-                'sales_rep_id': sales_rep_id,
-                'invoice_id': item.invoice_id,
-                'payment_id': item.payment_id,
-                'rule_id': rule_id,
-                'period_start': period_start,
-                'period_end': period_end,
-                'collected_amount': item.collected_cash,
-                'realized_gross_margin': item.realized_gross_margin,
-                'commission_rate': item.commission_rate,
-                'commission_amount': item.gross_commission,
-                'discount_penalty': item.discount_penalty,
-                'net_commission_amount': item.net_commission,
-                'status': 'Pending',
-                'payment_date': None,
-                'notes': f'Commission payout for Invoice {item.invoice_number or item.invoice_id}',
-                'created_by': user_id,
-            }
-            try:
+            for item in stmt.items:
+                if item.net_commission <= 0 or item.status in ('Paid', 'Approved'):
+                    continue
+
+                payout_number = f"PAY-{sales_rep_id}-{item.invoice_id or 0}-{uuid.uuid4().hex[:6].upper()}"
+                payload = {
+                    'payout_number': payout_number,
+                    'sales_rep_id': sales_rep_id,
+                    'invoice_id': item.invoice_id,
+                    'payment_id': item.payment_id,
+                    'rule_id': rule_id,
+                    'period_start': period_start,
+                    'period_end': period_end,
+                    'collected_amount': item.collected_cash,
+                    'realized_gross_margin': item.realized_gross_margin,
+                    'commission_rate': item.commission_rate,
+                    'commission_amount': item.gross_commission,
+                    'discount_penalty': item.discount_penalty,
+                    'net_commission_amount': item.net_commission,
+                    'status': 'Pending',
+                    'payment_date': None,
+                    'notes': f'Commission payout for Invoice {item.invoice_number or item.invoice_id}',
+                    'created_by': user_id,
+                }
                 res = self.repo.create_payout(payload, conn=conn)
                 if res:
                     payouts_created.append(res)
-            except Exception as e:
-                logger.warning(f"Could not create payout record for invoice {item.invoice_id}: {e}")
+
+            if should_release:
+                conn.commit()
+            return payouts_created
+        except Exception as e:
+            if should_release:
+                try:
+                    conn.rollback()
+                    logger.exception('Payout generation failed for sales rep %s; rolled back', sales_rep_id)
+                except Exception as rb_err:
+                    logger.error(f"Error during transaction rollback: {rb_err}")
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
 
         return payouts_created
 
@@ -440,14 +460,14 @@ class CommissionService:
 
 
 class CommissionRuleService(CrudService):
-    """CRUD Service wrapper for commission rules (T0107)."""
+    """CRUD Service wrapper for commission rules (T0109)."""
     def __init__(self, repo: Optional[CommissionRepository] = None):
         self.commission_repo = repo or default_repo
         super().__init__(self.commission_repo.rule_repo)
 
 
 class CommissionPayoutService(CrudService):
-    """CRUD Service wrapper for commission payouts (T0108)."""
+    """CRUD Service wrapper for commission payouts (T0110)."""
     def __init__(self, repo: Optional[CommissionRepository] = None):
         self.commission_repo = repo or default_repo
         super().__init__(self.commission_repo.payout_repo)

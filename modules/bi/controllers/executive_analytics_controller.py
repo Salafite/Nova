@@ -165,11 +165,13 @@ def get_period_margin_trends(
     periods_count: int = Query(12, ge=1, le=36, description='Number of trailing historical periods'),
     category_id: Optional[int] = Query(None, description='Filter by product category ID'),
     sales_rep_id: Optional[int] = Query(None, description='Filter by sales representative ID'),
+    date_from: Optional[date] = Query(None, description='Filter start date (YYYY-MM-DD)'),
+    date_to: Optional[date] = Query(None, description='Filter end date (YYYY-MM-DD)'),
 ):
     """
     Returns historical period margin trends for charting and forecasting.
     """
-    flt = _build_filter(category_id=category_id, sales_rep_id=sales_rep_id)
+    flt = _build_filter(category_id=category_id, sales_rep_id=sales_rep_id, date_from=date_from, date_to=date_to)
     return default_executive_service.get_period_margin_trends(
         period_type=period_type,
         periods_count=periods_count,

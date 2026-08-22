@@ -11,7 +11,7 @@ class TierRule(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Commission Rules (Nova.t0107)
+# Commission Rules (Nova.t0109)
 # ---------------------------------------------------------------------------
 
 class CommissionRuleCreate(BaseModel):
@@ -50,7 +50,7 @@ class CommissionRuleResponse(AuditMixin):
 
 
 # ---------------------------------------------------------------------------
-# Commission Payouts & Ledger (Nova.t0108)
+# Commission Payouts & Ledger (Nova.t0110)
 # ---------------------------------------------------------------------------
 
 class CommissionPayoutCreate(BaseModel):

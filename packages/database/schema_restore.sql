@@ -2999,11 +2999,10 @@ COMMENT ON COLUMN T0097.update_number      IS 'Version counter incremented on ea
 CREATE INDEX idx_T0097_is_default ON T0097(is_default);
 
 -- ============================================================
--- T0107 - Sales Commission Rules
+-- T0109 - Sales Commission Rules
 -- ============================================================
 
-COMMENT ON TABLE T0107 IS 'Sales Commission Rules and Rates master';
-CREATE TABLE T0107 (
+CREATE TABLE T0109 (
     id                     SERIAL PRIMARY KEY,
     rule_name              VARCHAR(100) NOT NULL,
     sales_rep_id           INT REFERENCES T0021(id),
@@ -3019,36 +3018,36 @@ CREATE TABLE T0107 (
     updated_by             INT REFERENCES T0021(id),
     update_number          INT NOT NULL DEFAULT 1
 );
-COMMENT ON COLUMN T0107.id                     IS 'Primary key (auto-increment)';
-COMMENT ON COLUMN T0107.rule_name              IS 'Rule or plan identifier';
-COMMENT ON COLUMN T0107.sales_rep_id           IS 'Specific sales rep (FK to T0021) or NULL for global default';
-COMMENT ON COLUMN T0107.base_commission_rate   IS 'Base commission percentage on realized gross profit';
-COMMENT ON COLUMN T0107.min_margin_threshold   IS 'Minimum gross margin percentage required to qualify for commission';
-COMMENT ON COLUMN T0107.tier_rules             IS 'Tiered commission rate JSON structure';
-COMMENT ON COLUMN T0107.discount_penalty_rate  IS 'Penalty reduction per discount percentage granted';
-COMMENT ON COLUMN T0107.is_active              IS 'Soft delete flag: TRUE = active, FALSE = inactive';
-COMMENT ON COLUMN T0107.notes                  IS 'Free-text notes';
-COMMENT ON COLUMN T0107.created_at             IS 'Record creation timestamp';
-COMMENT ON COLUMN T0107.created_by             IS 'User who created this record (FK to T0021)';
-COMMENT ON COLUMN T0107.updated_at             IS 'Last modification timestamp';
-COMMENT ON COLUMN T0107.updated_by             IS 'User who last modified this record (FK to T0021)';
-COMMENT ON COLUMN T0107.update_number          IS 'Version counter incremented on each update, starts at 1';
+COMMENT ON TABLE T0109 IS 'Sales Commission Rules and Rates';
+COMMENT ON COLUMN T0109.id                     IS 'Primary key (auto-increment)';
+COMMENT ON COLUMN T0109.rule_name              IS 'Rule or plan identifier';
+COMMENT ON COLUMN T0109.sales_rep_id           IS 'Specific sales rep (FK to T0021) or NULL for global default';
+COMMENT ON COLUMN T0109.base_commission_rate   IS 'Base commission percentage on realized gross profit';
+COMMENT ON COLUMN T0109.min_margin_threshold   IS 'Minimum gross margin percentage required to qualify for commission';
+COMMENT ON COLUMN T0109.tier_rules             IS 'Tiered commission rate JSON structure';
+COMMENT ON COLUMN T0109.discount_penalty_rate  IS 'Penalty reduction per discount percentage granted';
+COMMENT ON COLUMN T0109.is_active              IS 'Soft delete flag: TRUE = active, FALSE = inactive';
+COMMENT ON COLUMN T0109.notes                  IS 'Free-text notes';
+COMMENT ON COLUMN T0109.created_at             IS 'Record creation timestamp';
+COMMENT ON COLUMN T0109.created_by             IS 'User who created this record (FK to T0021)';
+COMMENT ON COLUMN T0109.updated_at             IS 'Last modification timestamp';
+COMMENT ON COLUMN T0109.updated_by             IS 'User who last modified this record (FK to T0021)';
+COMMENT ON COLUMN T0109.update_number          IS 'Version counter incremented on each update, starts at 1';
 
-CREATE INDEX idx_T0107_sales_rep ON T0107(sales_rep_id);
-CREATE INDEX idx_T0107_is_active ON T0107(is_active);
+CREATE INDEX idx_T0109_sales_rep ON T0109(sales_rep_id);
+CREATE INDEX idx_T0109_is_active ON T0109(is_active);
 
 -- ============================================================
--- T0108 - Sales Commission Payouts and Realized Ledgers
+-- T0110 - Sales Commission Payouts and Realized Ledgers
 -- ============================================================
 
-COMMENT ON TABLE T0108 IS 'Sales Commission Payouts and Realized Ledgers';
-CREATE TABLE T0108 (
+CREATE TABLE T0110 (
     id                     SERIAL PRIMARY KEY,
     payout_number          VARCHAR(50) NOT NULL UNIQUE,
     sales_rep_id           INT NOT NULL REFERENCES T0021(id),
     invoice_id             INT REFERENCES T0090(id),
     payment_id             INT REFERENCES T0091(id),
-    rule_id                INT REFERENCES T0107(id),
+    rule_id                INT REFERENCES T0109(id),
     period_start           DATE,
     period_end             DATE,
     collected_amount       NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -3058,6 +3057,7 @@ CREATE TABLE T0108 (
     discount_penalty       NUMERIC(12,2) NOT NULL DEFAULT 0,
     net_commission_amount  NUMERIC(12,2) NOT NULL DEFAULT 0,
     status                 VARCHAR(20) NOT NULL DEFAULT 'Pending',
+    is_active              BOOLEAN NOT NULL DEFAULT true,
     payment_date           DATE,
     notes                  TEXT,
     created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -3066,30 +3066,32 @@ CREATE TABLE T0108 (
     updated_by             INT REFERENCES T0021(id),
     update_number          INT NOT NULL DEFAULT 1
 );
-COMMENT ON COLUMN T0108.id                     IS 'Primary key (auto-increment)';
-COMMENT ON COLUMN T0108.payout_number          IS 'Unique commission payout or statement reference';
-COMMENT ON COLUMN T0108.sales_rep_id           IS 'Sales representative receiving commission (FK to T0021)';
-COMMENT ON COLUMN T0108.invoice_id             IS 'Associated sales invoice (FK to T0090)';
-COMMENT ON COLUMN T0108.payment_id             IS 'Payment collection trigger (FK to T0091)';
-COMMENT ON COLUMN T0108.rule_id                IS 'Commission rule used (FK to T0107)';
-COMMENT ON COLUMN T0108.period_start           IS 'Commission period start date';
-COMMENT ON COLUMN T0108.period_end             IS 'Commission period end date';
-COMMENT ON COLUMN T0108.collected_amount       IS 'Cash collected amount on invoice';
-COMMENT ON COLUMN T0108.realized_gross_margin  IS 'Gross profit realized on collected cash';
-COMMENT ON COLUMN T0108.commission_rate        IS 'Applied commission percentage';
-COMMENT ON COLUMN T0108.commission_amount      IS 'Gross commission calculated';
-COMMENT ON COLUMN T0108.discount_penalty       IS 'Deduction for excessive discounts granted';
-COMMENT ON COLUMN T0108.net_commission_amount  IS 'Net payable commission amount';
-COMMENT ON COLUMN T0108.status                 IS 'Pending | Approved | Paid | Cancelled';
-COMMENT ON COLUMN T0108.payment_date           IS 'Date commission was paid';
-COMMENT ON COLUMN T0108.notes                  IS 'Free-text notes';
-COMMENT ON COLUMN T0108.created_at             IS 'Record creation timestamp';
-COMMENT ON COLUMN T0108.created_by             IS 'User who created this record (FK to T0021)';
-COMMENT ON COLUMN T0108.updated_at             IS 'Last modification timestamp';
-COMMENT ON COLUMN T0108.updated_by             IS 'User who last modified this record (FK to T0021)';
-COMMENT ON COLUMN T0108.update_number          IS 'Version counter incremented on each update, starts at 1';
+COMMENT ON TABLE T0110 IS 'Sales Commission Payouts and Realized Ledgers';
+COMMENT ON COLUMN T0110.id                     IS 'Primary key (auto-increment)';
+COMMENT ON COLUMN T0110.payout_number          IS 'Unique commission payout or statement reference';
+COMMENT ON COLUMN T0110.sales_rep_id           IS 'Sales representative receiving commission (FK to T0021)';
+COMMENT ON COLUMN T0110.invoice_id             IS 'Associated sales invoice (FK to T0090)';
+COMMENT ON COLUMN T0110.payment_id             IS 'Payment collection trigger (FK to T0091)';
+COMMENT ON COLUMN T0110.rule_id                IS 'Commission rule used (FK to T0109)';
+COMMENT ON COLUMN T0110.period_start           IS 'Commission period start date';
+COMMENT ON COLUMN T0110.period_end             IS 'Commission period end date';
+COMMENT ON COLUMN T0110.collected_amount       IS 'Cash collected amount on invoice';
+COMMENT ON COLUMN T0110.realized_gross_margin  IS 'Gross profit realized on collected cash';
+COMMENT ON COLUMN T0110.commission_rate        IS 'Applied commission percentage';
+COMMENT ON COLUMN T0110.commission_amount      IS 'Gross commission calculated';
+COMMENT ON COLUMN T0110.discount_penalty       IS 'Deduction for excessive discounts granted';
+COMMENT ON COLUMN T0110.net_commission_amount  IS 'Net payable commission amount';
+COMMENT ON COLUMN T0110.status                 IS 'Pending | Approved | Paid | Cancelled';
+COMMENT ON COLUMN T0110.is_active              IS 'Soft-delete flag; inactive payouts excluded from commission calculations';
+COMMENT ON COLUMN T0110.payment_date           IS 'Date commission was paid';
+COMMENT ON COLUMN T0110.notes                  IS 'Free-text notes';
+COMMENT ON COLUMN T0110.created_at             IS 'Record creation timestamp';
+COMMENT ON COLUMN T0110.created_by             IS 'User who created this record (FK to T0021)';
+COMMENT ON COLUMN T0110.updated_at             IS 'Last modification timestamp';
+COMMENT ON COLUMN T0110.updated_by             IS 'User who last modified this record (FK to T0021)';
+COMMENT ON COLUMN T0110.update_number          IS 'Version counter incremented on each update, starts at 1';
 
-CREATE INDEX idx_T0108_sales_rep ON T0108(sales_rep_id);
-CREATE INDEX idx_T0108_invoice ON T0108(invoice_id);
-CREATE INDEX idx_T0108_payment ON T0108(payment_id);
-CREATE INDEX idx_T0108_status ON T0108(status);
+CREATE INDEX idx_T0110_sales_rep ON T0110(sales_rep_id);
+CREATE INDEX idx_T0110_invoice ON T0110(invoice_id);
+CREATE INDEX idx_T0110_payment ON T0110(payment_id);
+CREATE INDEX idx_T0110_status ON T0110(status);
