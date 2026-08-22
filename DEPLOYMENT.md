@@ -1,4 +1,4 @@
-# Nova ERP Deployment Guide
+﻿# Nova ERP Deployment Guide
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@
 createdb nova_erp
 psql -d nova_erp -f database/schema.sql
 
-# Redis (optional for standalone dev — falls back to thread-safe in-memory store if offline)
+# Redis (optional for standalone dev â€” falls back to thread-safe in-memory store if offline)
 docker run -d --name nova-redis -p 6379:6379 redis:7-alpine
 ```
 
@@ -47,9 +47,9 @@ docker compose up -d
 ```
 
 Services:
-- `db` — PostgreSQL 16 on port 5432 with health check and persistent volume `pgdata`
-- `redis` — Redis 7 on port 6379 with persistent volume `redisdata`, `volatile-ttl` eviction policy, and 256MB memory cap
-- `api` — FastAPI on port 8070 running 4 uvicorn workers (serves REST API, MCP SSE, and built Vue 3 frontend)
+- `db` â€” PostgreSQL 16 on port 5432 with health check and persistent volume `pgdata`
+- `redis` â€” Redis 7 on port 6379 with persistent volume `redisdata`, `volatile-ttl` eviction policy, and 256MB memory cap
+- `api` â€” FastAPI on port 8070 running 4 uvicorn workers (serves REST API, MCP SSE, and built Vue 3 frontend)
 
 Build the frontend before running Compose:
 
@@ -95,6 +95,14 @@ uvicorn apps.api.main:app --host 0.0.0.0 --port 8070 --workers 4
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | JWT refresh token expiry (days) |
 | `ALLOWED_ORIGINS` | `*` | CORS allowed origins (comma-separated) |
 | `NOVA_ENV` | *(none)* | Set to `production` for multi-worker production mode |
+| `SECRET_KEY` | *(required)* | JWT signing key |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | JWT access token expiry |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | JWT refresh token expiry |
+| `ALLOWED_ORIGINS` | `*` | CORS origins |
+| `NOVA_ENV` | *(none)* | Set to `production` for prod mode |
+| `NOVA_TENANT_ID` | *(none)* | Default business/tenant ID for stdio MCP sessions |
+| `OPENAI_API_KEY` | *(none)* | OpenAI API key for in-app AI assistant (`/api/ai/chat`) |
+| `OPENAI_MODEL` | `gpt-4o` | Model name for in-app AI assistant |
 
 ## Production Checklist
 

@@ -94,14 +94,38 @@ def _list_products(limit=50):
     ...
 ```
 
-### Tenant Scoping (Known Gap)
+### Multi-Tenant Isolation & Business Context Architecture
 
-**Finding:** No tenant scoping currently exists in any layer (controllers, services, or repositories). Most business tables lack a `business_id` column. Full tenant isolation requires:
-1. Adding `business_id` to all business tables (schema migration)
-2. Injecting tenant context in the service/repository layer
-3. Adding `business_id` to the JWT payload for efficiency
+Multi-tenant data isolation is fully implemented and enforced end-to-end across database, API, and MCP layers:
 
-Without this, MCP tools operate against all data regardless of tenant. Tools that accept `user_id` or `business_id` params must be called explicitly.
+1. **Database Schema & Foreign Keys**:
+   - All business entity tables (`t0001` through `t0107`, excluding the platform table `t0059`) include `business_id INT REFERENCES "Nova".t0059(id)`.
+   - Single-column indexes (`idx_tXXXX_business_id`) and composite indexes (`idx_tXXXX_business_id_id ON "Nova".tXXXX(business_id, id)`) guarantee fast, indexed tenant-filtered queries.
+   - Pydantic models inherit `TenantMixin` (`business_id: Optional[int]`), and the model factory (`crud_model`) defaults to `tenant=True`.
+
+2. **Context Propagation (`modules.core.context`)**:
+   - Thread-safe and async-safe context variable `_current_tenant` managed via `get_current_tenant()`, `set_current_tenant()`, `reset_current_tenant()`, `clear_current_tenant()`, and `tenant_context()` context manager.
+
+3. **JWT Authentication & Context Extraction**:
+   - Access and refresh tokens embed `business_id` in claims during login, signup, and token refresh (`packages.auth.jwt`, `packages.auth.service`).
+   - FastAPI dependency `get_current_user` in `packages.auth.deps` automatically extracts `business_id` from validated JWT tokens and sets the `current_tenant` context variable for the duration of the request.
+
+4. **Repository & Service Layer Tenant Scoping**:
+   - `CrudRepository` (`modules.core.repositories.base`) automatically injects `business_id = %s` on `list`, `get`, `update`, `delete`, and `count` operations.
+   - Auto-injects `business_id` from the active tenant context on `create()`.
+   - Protects against tenant spoofing on `update()` (ignores or rejects attempts to mutate `business_id`).
+   - Provides `get_unscoped()` for ownership checks and platform administration.
+   - `CrudService` (`modules.core.services.base`) and domain services strictly honor active tenant context.
+
+5. **Cross-Tenant Access Protection & Security Auditing**:
+   - Base controllers (`modules.core.controllers.base`) and custom routes verify record ownership via `check_record_ownership()`.
+   - Cross-tenant access attempts return `HTTP 403 Forbidden` and log a security audit event to table `t0023` and `security.audit` logger (`packages.security.audit.record_security_event`).
+
+6. **MCP Server & AI Tool Isolation**:
+   - **SSE Transport**: Sessions validate JWT via `Depends(get_current_user)` and inherit the authenticated user's `business_id`.
+   - **Stdio Transport**: Initializes tenant context from `NOVA_TENANT_ID` environment variable or user dict.
+   - **In-App AI Assistant**: `POST /api/ai/chat` forwards authenticated user and tenant context to every MCP tool execution and Tier 2 propose/confirm action.
+   - **Audit Logging**: Every MCP tool call is recorded in `mcp.audit` with `tool`, `user`, `tenant`, `status`, and `latency_ms`.
 
 ### Audit Logging
 
