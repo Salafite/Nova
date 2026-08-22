@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from modules.core.controllers.base import create_crud_router, check_record_ownership
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
-from modules.core.context import tenant_context, clear_current_tenant
+from modules.core.context import tenant_context, clear_current_tenant, get_current_tenant
 from packages.auth.jwt import create_access_token
 from apps.api.main import app
 
@@ -351,3 +351,550 @@ class TestControllerCrudTenantScoping:
             assert resp.status_code == 403
             assert "cross-tenant access forbidden" in resp.json()["detail"]
             assert mock_audit_create.called
+
+
+class TestMultiDomainCrossTenantIntegration:
+    """Integration tests verifying cross-tenant 403 Forbidden and T0023 audits across ERP domain controllers."""
+
+    def setup_method(self):
+        clear_current_tenant()
+
+    def teardown_method(self):
+        clear_current_tenant()
+
+    def test_products_crud_cross_tenant_protection(self):
+        test_client = TestClient(app)
+        token = create_access_token(5, business_id=10)
+        user = {"id": 5, "username": "inv_mgr", "role": "Admin", "permissions": ["*"], "business_id": 10}
+
+        sample_product_tenant20 = {
+            "id": 100,
+            "sku": "WIDGET-01",
+            "name": "Tenant 20 Widget",
+            "category_id": 1,
+            "uom_id": 1,
+            "cost_price": 10.0,
+            "selling_price": 20.0,
+            "is_active": True,
+            "business_id": 20,
+        }
+
+        # Cross-tenant GET
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = sample_product_tenant20
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0003I/100", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            audit_entry = mock_audit.call_args[0][0]
+            assert audit_entry["table_name"] == "T0003"
+            assert audit_entry["record_id"] == 100
+            assert audit_entry["action"] == "CROSS_TENANT_ACCESS"
+            assert audit_entry["changed_by"] == 5
+            assert audit_entry["business_id"] == 10
+
+        # Cross-tenant PUT
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = sample_product_tenant20
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.put(
+                "/api/T0003I/100",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"name": "Hacked Widget"},
+            )
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            audit_entry = mock_audit.call_args[0][0]
+            assert audit_entry["table_name"] == "T0003"
+            assert audit_entry["record_id"] == 100
+            payload = json.loads(audit_entry["changed_data"])
+            assert payload["details"]["method"] == "PUT"
+
+        # Cross-tenant DELETE
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = sample_product_tenant20
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.delete("/api/T0003I/100", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            audit_entry = mock_audit.call_args[0][0]
+            assert audit_entry["table_name"] == "T0003"
+            assert audit_entry["record_id"] == 100
+            payload = json.loads(audit_entry["changed_data"])
+            assert payload["details"]["method"] == "DELETE"
+
+    def test_customers_crud_and_subroutes_cross_tenant_protection(self):
+        test_client = TestClient(app)
+        token = create_access_token(8, business_id=15)
+        user = {"id": 8, "username": "crm_rep", "role": "Admin", "permissions": ["*"], "business_id": 15}
+
+        # Cross-tenant GET customer
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 250, "name": "Acme Corp", "business_id": 99}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0010I/250", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            assert mock_audit.call_args[0][0]["table_name"] == "T0010"
+            assert mock_audit.call_args[0][0]["record_id"] == 250
+
+        # Customer Aging subroute: GET /api/T0010I/{id}/aging
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 250, "name": "Acme Corp", "business_id": 99}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0010I/250/aging", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+
+        # Customer Payments subroute: GET /api/T0010I/{id}/payments
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 250, "name": "Acme Corp", "business_id": 99}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0010I/250/payments", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+
+        # Customer Invoices subroute: GET /api/T0010I/{id}/invoices
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 250, "name": "Acme Corp", "business_id": 99}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0010I/250/invoices", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+
+    def test_sales_orders_confirm_and_cancel_cross_tenant_protection(self):
+        test_client = TestClient(app)
+        token = create_access_token(3, business_id=1)
+        user = {"id": 3, "username": "sales_admin", "role": "Admin", "permissions": ["*"], "business_id": 1}
+
+        # POST /api/T0012I/{id}/confirm
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 501, "order_number": "SO-501", "status": "Draft", "business_id": 2}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.post("/api/T0012I/501/confirm", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            entry = mock_audit.call_args[0][0]
+            assert entry["table_name"] == "T0012"
+            assert entry["record_id"] == 501
+            assert entry["action"] == "CROSS_TENANT_ACCESS"
+            assert entry["changed_by"] == 3
+            assert entry["business_id"] == 1
+
+        # POST /api/T0012I/{id}/cancel
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 502, "order_number": "SO-502", "status": "Draft", "business_id": 2}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.post("/api/T0012I/502/cancel", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            entry = mock_audit.call_args[0][0]
+            assert entry["table_name"] == "T0012"
+            assert entry["record_id"] == 502
+            assert entry["action"] == "CROSS_TENANT_ACCESS"
+
+    def test_sales_returns_custom_actions_cross_tenant_protection(self):
+        test_client = TestClient(app)
+        token = create_access_token(12, business_id=100)
+        user = {"id": 12, "username": "returns_rep", "role": "Admin", "permissions": ["*"], "business_id": 100}
+
+        # POST /api/T0079I/{id}/approve
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 701, "status": "Draft", "business_id": 200}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.post("/api/T0079I/701/approve", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            assert mock_audit.call_args[0][0]["table_name"] == "T0079"
+            assert mock_audit.call_args[0][0]["record_id"] == 701
+
+        # POST /api/T0079I/{id}/receive
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 702, "status": "Approved", "business_id": 200}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.post("/api/T0079I/702/receive", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+
+        # POST /api/T0079I/{id}/cancel
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 703, "status": "Draft", "business_id": 200}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.post("/api/T0079I/703/cancel", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+
+    def test_invoices_cross_tenant_protection(self):
+        test_client = TestClient(app)
+        token = create_access_token(6, business_id=4)
+        user = {"id": 6, "username": "accountant", "role": "Admin", "permissions": ["*"], "business_id": 4}
+
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 901, "invoice_number": "INV-901", "total_amount": 5000, "business_id": 5}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0090I/901", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            assert mock_audit.call_args[0][0]["table_name"] == "T0090"
+            assert mock_audit.call_args[0][0]["record_id"] == 901
+
+    def test_settings_and_modules_cross_tenant_protection(self):
+        test_client = TestClient(app)
+        token = create_access_token(2, business_id=50)
+        user = {"id": 2, "username": "sysadmin", "role": "Admin", "permissions": ["*"], "business_id": 50}
+
+        # T0025 Settings: GET
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 25, "setting_key": "app.logo", "business_id": 60}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0025I/25", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            assert mock_audit.call_args[0][0]["table_name"] == "T0025"
+
+        # T0100 Module Registry: PUT toggle
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_unscoped.return_value = {"id": 101, "module_key": "custom_mfg", "is_active": True, "business_id": 60}
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.put(
+                "/api/T0100I/101/toggle",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"is_active": False},
+            )
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert mock_audit.called
+            assert mock_audit.call_args[0][0]["table_name"] == "T0100"
+
+
+class TestBidirectionalAndMultiTenantIsolation:
+    """Integration tests validating bidirectional cross-tenant isolation between tenants."""
+
+    def setup_method(self):
+        clear_current_tenant()
+
+    def teardown_method(self):
+        clear_current_tenant()
+
+    def test_bidirectional_isolation_tenant_a_and_tenant_b(self):
+        test_client = TestClient(app)
+        user_a = {"id": 101, "username": "user_a", "role": "Admin", "permissions": ["*"], "business_id": 10}
+        user_b = {"id": 202, "username": "user_b", "role": "Admin", "permissions": ["*"], "business_id": 20}
+        token_a = create_access_token(101, business_id=10)
+        token_b = create_access_token(202, business_id=20)
+
+        record_a = {
+            "id": 1,
+            "uom_code": "PCS-A",
+            "uom_name": "Pieces A",
+            "category": "Count",
+            "is_base_unit": True,
+            "is_active": True,
+            "business_id": 10,
+        }
+        record_b = {
+            "id": 2,
+            "uom_code": "PCS-B",
+            "uom_name": "Pieces B",
+            "category": "Count",
+            "is_base_unit": True,
+            "is_active": True,
+            "business_id": 20,
+        }
+
+        # Tenant A accessing Tenant B's record -> 403 + logged
+        with patch("packages.auth.deps.get_user_by_id", return_value=user_a), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped", return_value=record_b), \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_audit.return_value = {"id": 1}
+
+            resp = test_client.get("/api/T0001I/2", headers={"Authorization": f"Bearer {token_a}"})
+            assert resp.status_code == 403
+            assert mock_audit.called
+            entry = mock_audit.call_args[0][0]
+            assert entry["business_id"] == 10
+            payload = json.loads(entry["changed_data"])
+            assert payload["tenant_id"] == 10
+            assert payload["target_tenant_id"] == 20
+
+        # Tenant B accessing Tenant A's record -> 403 + logged
+        with patch("packages.auth.deps.get_user_by_id", return_value=user_b), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped", return_value=record_a), \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+            mock_audit.return_value = {"id": 2}
+
+            resp = test_client.get("/api/T0001I/1", headers={"Authorization": f"Bearer {token_b}"})
+            assert resp.status_code == 403
+            assert mock_audit.called
+            entry = mock_audit.call_args[0][0]
+            assert entry["business_id"] == 20
+            payload = json.loads(entry["changed_data"])
+            assert payload["tenant_id"] == 20
+            assert payload["target_tenant_id"] == 10
+
+        # Tenant A accessing Tenant A's record -> 200 OK without audit
+        with patch("packages.auth.deps.get_user_by_id", return_value=user_a), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=record_a), \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+
+            resp = test_client.get("/api/T0001I/1", headers={"Authorization": f"Bearer {token_a}"})
+            assert resp.status_code == 200
+            assert not mock_audit.called
+
+        # Tenant B accessing Tenant B's record -> 200 OK without audit
+        with patch("packages.auth.deps.get_user_by_id", return_value=user_b), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=record_b), \
+             patch("packages.security.audit._audit_repo.create") as mock_audit:
+
+            resp = test_client.get("/api/T0001I/2", headers={"Authorization": f"Bearer {token_b}"})
+            assert resp.status_code == 200
+            assert not mock_audit.called
+
+
+class TestCrossTenantSecurityAuditFailClosed:
+    """Tests ensuring that security enforcement fails closed (403 Forbidden preserved even if audit logging encounters an error)."""
+
+    def setup_method(self):
+        clear_current_tenant()
+
+    def teardown_method(self):
+        clear_current_tenant()
+
+    def test_audit_db_error_still_returns_403(self):
+        test_client = TestClient(app)
+        token = create_access_token(1, business_id=1)
+        user = {"id": 1, "username": "admin", "role": "Admin", "permissions": ["*"], "business_id": 1}
+
+        with patch("packages.auth.deps.get_user_by_id", return_value=user), \
+             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch("packages.security.audit._audit_repo.create", side_effect=Exception("Database connection lost")):
+            mock_unscoped.return_value = {"id": 99, "business_id": 2}
+
+            resp = test_client.get("/api/T0001I/99", headers={"Authorization": f"Bearer {token}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+
+
+class TestEndToEndControllerCrossTenantIntegration:
+    """Stateful end-to-end integration test suite simulating real database storage across tenants."""
+
+    def setup_method(self):
+        clear_current_tenant()
+
+    def teardown_method(self):
+        clear_current_tenant()
+
+    def test_full_cross_tenant_crud_workflow_with_t0023_audit_storage(self):
+        # Database store holding records across tenants
+        db_store = {
+            "T0001": {
+                1: {"id": 1, "uom_code": "TEN1-UOM", "uom_name": "Tenant 1 Unit", "category": "Count", "is_base_unit": True, "is_active": True, "business_id": 100},
+                2: {"id": 2, "uom_code": "TEN2-UOM", "uom_name": "Tenant 2 Unit", "category": "Count", "is_base_unit": True, "is_active": True, "business_id": 200},
+            },
+            "T0023": {},
+        }
+        audit_seq = [0]
+
+        def fake_get(self, id, business_id=None):
+            active_tenant = business_id if business_id is not None else get_current_tenant()
+            table_dict = db_store.get(self.table, {})
+            row = table_dict.get(id)
+            if not row:
+                return None
+            if active_tenant is not None and row.get("business_id") != active_tenant:
+                return None
+            return dict(row)
+
+        def fake_get_unscoped(self, id):
+            table_dict = db_store.get(self.table, {})
+            row = table_dict.get(id)
+            return dict(row) if row else None
+
+        def fake_update(self, id, data, business_id=None):
+            active_tenant = business_id if business_id is not None else get_current_tenant()
+            table_dict = db_store.get(self.table, {})
+            row = table_dict.get(id)
+            if not row or (active_tenant is not None and row.get("business_id") != active_tenant):
+                return None
+            row.update(data)
+            return dict(row)
+
+        def fake_delete(self, id, hard=False, business_id=None):
+            active_tenant = business_id if business_id is not None else get_current_tenant()
+            table_dict = db_store.get(self.table, {})
+            row = table_dict.get(id)
+            if not row or (active_tenant is not None and row.get("business_id") != active_tenant):
+                return False
+            del table_dict[id]
+            return True
+
+        def fake_create(self, data, business_id=None):
+            active_tenant = business_id if business_id is not None else get_current_tenant()
+            audit_seq[0] += 1
+            new_id = audit_seq[0]
+            entry = dict(data, id=new_id)
+            if active_tenant is not None and "business_id" not in entry:
+                entry["business_id"] = active_tenant
+            db_store.setdefault(self.table, {})[new_id] = entry
+            return entry
+
+        test_client = TestClient(app)
+        user_tenant100 = {"id": 11, "username": "user100", "role": "Admin", "permissions": ["*"], "business_id": 100}
+        user_tenant200 = {"id": 22, "username": "user200", "role": "Admin", "permissions": ["*"], "business_id": 200}
+        token_tenant100 = create_access_token(11, business_id=100)
+        token_tenant200 = create_access_token(22, business_id=200)
+
+        with patch("packages.auth.deps.get_user_by_id", side_effect=lambda uid: user_tenant100 if uid == 11 else user_tenant200), \
+             patch("modules.core.repositories.base.CrudRepository.get", fake_get), \
+             patch("modules.core.repositories.base.CrudRepository.get_unscoped", fake_get_unscoped), \
+             patch("modules.core.repositories.base.CrudRepository.update", fake_update), \
+             patch("modules.core.repositories.base.CrudRepository.delete", fake_delete), \
+             patch("modules.core.repositories.base.CrudRepository.create", fake_create):
+
+            # 1. Tenant 100 reads own record (id=1) -> 200 OK
+            resp = test_client.get("/api/T0001I/1", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp.status_code == 200
+            assert resp.json()["uom_code"] == "TEN1-UOM"
+            assert len(db_store["T0023"]) == 0
+
+            # 2. Tenant 100 attempts GET on Tenant 200 record (id=2) -> 403 Forbidden & audits in T0023
+            resp = test_client.get("/api/T0001I/2", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert len(db_store["T0023"]) == 1
+
+            audit_1 = list(db_store["T0023"].values())[0]
+            assert audit_1["table_name"] == "T0001"
+            assert audit_1["record_id"] == 2
+            assert audit_1["action"] == "CROSS_TENANT_ACCESS"
+            assert audit_1["changed_by"] == 11
+            assert audit_1["business_id"] == 100
+            payload_1 = json.loads(audit_1["changed_data"])
+            assert payload_1["tenant_id"] == 100
+            assert payload_1["target_tenant_id"] == 200
+            assert payload_1["details"]["method"] == "GET"
+
+            # 3. Tenant 100 attempts PUT on Tenant 200 record (id=2) -> 403 Forbidden & audits in T0023
+            resp = test_client.put(
+                "/api/T0001I/2",
+                headers={"Authorization": f"Bearer {token_tenant100}"},
+                json={"uom_name": "Tampered Unit"},
+            )
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert len(db_store["T0023"]) == 2
+
+            # Verify Tenant 200 data in db_store was NOT tampered with
+            assert db_store["T0001"][2]["uom_name"] == "Tenant 2 Unit"
+
+            audit_2 = list(db_store["T0023"].values())[1]
+            assert audit_2["table_name"] == "T0001"
+            assert audit_2["record_id"] == 2
+            assert audit_2["action"] == "CROSS_TENANT_ACCESS"
+            payload_2 = json.loads(audit_2["changed_data"])
+            assert payload_2["details"]["method"] == "PUT"
+
+            # 4. Tenant 100 attempts DELETE on Tenant 200 record (id=2) -> 403 Forbidden & audits in T0023
+            resp = test_client.delete(
+                "/api/T0001I/2",
+                headers={"Authorization": f"Bearer {token_tenant100}"},
+            )
+            assert resp.status_code == 403
+            assert "cross-tenant access forbidden" in resp.json()["detail"]
+            assert len(db_store["T0023"]) == 3
+            # Verify Tenant 200 record still exists
+            assert 2 in db_store["T0001"]
+
+            audit_3 = list(db_store["T0023"].values())[2]
+            payload_3 = json.loads(audit_3["changed_data"])
+            assert payload_3["details"]["method"] == "DELETE"
+
+            # 5. Tenant 100 queries a non-existent record (id=999) -> 404 Not Found (no new T0023 entry)
+            resp = test_client.get("/api/T0001I/999", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp.status_code == 404
+            assert len(db_store["T0023"]) == 3
+
+            # 6. Tenant 200 accesses its own record (id=2) -> 200 OK
+            resp = test_client.get("/api/T0001I/2", headers={"Authorization": f"Bearer {token_tenant200}"})
+            assert resp.status_code == 200
+            assert resp.json()["uom_name"] == "Tenant 2 Unit"
+            assert len(db_store["T0023"]) == 3
+
+

@@ -7,7 +7,7 @@ from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.auth.deps import get_current_user, require_permission
 from modules.core.services.permission_service import get_required_permission
-from modules.core.context import get_current_tenant
+from modules.core.context import get_current_tenant, set_current_tenant
 from packages.security.audit import record_security_event
 
 
@@ -74,15 +74,24 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
     audit_repo = CrudRepository('T0023', pk='id', business_columns=['id', 'table_name', 'record_id', 'action', 'changed_data', 'changed_by', 'changed_at'])
 
     @router.get('/', response_model=list[response_model] if response_model else None)
-    def list_all():
+    def list_all(user: dict = Depends(get_current_user)):
+        b_id = user.get('business_id') if isinstance(user, dict) else None
+        if b_id is not None:
+            set_current_tenant(b_id)
         return service.list()
 
     @router.get('/count')
-    def count_all():
+    def count_all(user: dict = Depends(get_current_user)):
+        b_id = user.get('business_id') if isinstance(user, dict) else None
+        if b_id is not None:
+            set_current_tenant(b_id)
         return {'count': service.count()}
 
     @router.get('/{id}', response_model=response_model if response_model else None)
     def get_one(id: int, user: dict = Depends(get_current_user)):
+        b_id = user.get('business_id') if isinstance(user, dict) else None
+        if b_id is not None:
+            set_current_tenant(b_id)
         row = service.get(id)
         if not row:
             check_record_ownership(service, id, user, table_name, 'GET')
@@ -91,6 +100,9 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
 
     @router.post('/', response_model=response_model if response_model else None, status_code=201)
     def create_one(body: create_schema if create_schema else dict = None, user: dict = Depends(get_current_user)):
+        b_id = user.get('business_id') if isinstance(user, dict) else None
+        if b_id is not None:
+            set_current_tenant(b_id)
         result = service.create(body.model_dump() if body else {})
         if result:
             audit_repo.create({
@@ -105,6 +117,9 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
 
     @router.put('/{id}', response_model=response_model if response_model else None)
     def update_one(id: int, body: update_schema if update_schema else dict = None, user: dict = Depends(get_current_user)):
+        b_id = user.get('business_id') if isinstance(user, dict) else None
+        if b_id is not None:
+            set_current_tenant(b_id)
         existing = service.get(id)
         if not existing:
             check_record_ownership(service, id, user, table_name, 'PUT')
@@ -130,6 +145,9 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
 
     @router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
     def delete_one(id: int, user: dict = Depends(get_current_user)):
+        b_id = user.get('business_id') if isinstance(user, dict) else None
+        if b_id is not None:
+            set_current_tenant(b_id)
         existing = service.get(id)
         if not existing:
             check_record_ownership(service, id, user, table_name, 'DELETE')
