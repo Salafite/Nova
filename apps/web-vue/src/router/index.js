@@ -45,7 +45,9 @@ const ROUTE_PERMISSIONS = {
   'purchasing-rfqs': 'purchasing',
   'purchasing-order-detail': 'purchasing',
   'purchasing-returns': 'purchasing',
+  'purchasing-restock-suggestions': 'purchasing',
   purchasing: 'purchasing',
+
   'goods-receipt': 'warehouse',
   admin: 'admin',
   modules: 'admin',
@@ -122,7 +124,9 @@ const routes = [
       { path: 'purchasing/rfqs', name: 'purchasing-rfqs', meta: { requiresAuth: true }, component: () => import('../views/purchasing/RFQView.vue') },
       { path: 'purchasing/orders/:id', name: 'purchasing-order-detail', meta: { requiresAuth: true }, component: () => import('../views/purchasing/PurchaseOrdersDetailView.vue') },
       { path: 'purchasing/returns', name: 'purchasing-returns', meta: { requiresAuth: true }, component: () => import('../views/purchasing/PurchaseReturnsView.vue') },
+      { path: 'purchasing/restock-suggestions', name: 'purchasing-restock-suggestions', meta: { requiresAuth: true }, component: () => import('../views/purchasing/RestockSuggestionsView.vue') },
       { path: 'inventory', name: 'inventory', meta: { requiresAuth: true }, component: () => import('../views/inventory/InventoryView.vue') },
+
       { path: 'inventory/overview', name: 'inventory-overview', meta: { requiresAuth: true }, component: () => import('../views/inventory/InventoryOverviewView.vue') },
       { path: 'inventory/reports', name: 'inventory-reports', meta: { requiresAuth: true }, component: () => import('../views/inventory/InventoryReportsView.vue') },
       { path: 'inventory/config', name: 'inventory-config', meta: { requiresAuth: true }, component: () => import('../views/inventory/InventoryConfigView.vue') },

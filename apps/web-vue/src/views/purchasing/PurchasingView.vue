@@ -27,7 +27,12 @@
         <span class="material-symbols-outlined nav-icon">assignment_return</span>
         <span class="nav-label">{{ t('returns-title', 'Returns') }}</span>
       </router-link>
+      <router-link to="/purchasing/restock-suggestions" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">smart_toy</span>
+        <span class="nav-label">{{ t('ai-restock', 'AI Restock') }}</span>
+      </router-link>
     </div>
+
 
     <SkeletonTable v-if="loading" />
     <ErrorState v-else-if="error" :message="error" @retry="load" />

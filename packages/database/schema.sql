@@ -654,6 +654,12 @@ CREATE TABLE IF NOT EXISTS "Nova".t0099 (
     update_number   INT NOT NULL DEFAULT 1
 );
 
+INSERT INTO "Nova".t0099 (task_name, task_type, cron_expression, description, config, is_active, status)
+SELECT 'Demand Forecasting & Restock Requisitions', 'DemandForecastRestock', '0 6 * * *', 'Daily morning demand velocity analysis, stockout risk projection, and proactive restock digest notification', '{"days": 30, "safety_margin_days": 7, "target_coverage_days": 30}'::jsonb, true, 'Idle'
+WHERE NOT EXISTS (
+    SELECT 1 FROM "Nova".t0099 WHERE task_type = 'DemandForecastRestock'
+);
+
 CREATE TABLE IF NOT EXISTS "Nova".t0100 (
     id            SERIAL PRIMARY KEY,
     module_key    VARCHAR(50) NOT NULL UNIQUE,
@@ -2423,6 +2429,7 @@ CREATE TABLE IF NOT EXISTS "Nova".t0103 (
     supplier_sku    VARCHAR(100),
     unit_cost       NUMERIC(12,2) DEFAULT 0,
     lead_time_days  INT DEFAULT 0,
+    min_order_qty   NUMERIC(12,2) DEFAULT 1,
     is_preferred    BOOLEAN NOT NULL DEFAULT false,
     is_active       BOOLEAN NOT NULL DEFAULT true,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2436,6 +2443,7 @@ COMMENT ON TABLE "Nova".t0103 IS 'Product-Supplier linking with supplier SKU and
 COMMENT ON COLUMN "Nova".t0103.supplier_sku IS 'Supplier''s SKU for this product';
 COMMENT ON COLUMN "Nova".t0103.unit_cost IS 'Cost from this supplier';
 COMMENT ON COLUMN "Nova".t0103.lead_time_days IS 'Typical lead time in days';
+COMMENT ON COLUMN "Nova".t0103.min_order_qty IS 'Minimum order quantity (MOQ) from this supplier';
 COMMENT ON COLUMN "Nova".t0103.is_preferred IS 'Marked as preferred supplier';
 CREATE INDEX IF NOT EXISTS idx_t0103_product_id ON "Nova".t0103(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0103_supplier_id ON "Nova".t0103(supplier_id);
