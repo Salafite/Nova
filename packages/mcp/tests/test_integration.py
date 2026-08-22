@@ -1,3 +1,4 @@
+import io
 from unittest.mock import patch, MagicMock
 from packages.mcp.server import McpServer
 from packages.mcp.registry import _tools, _resources, _prompts
@@ -34,6 +35,8 @@ ALL_TOOL_NAMES = [
     "list_employees", "get_employee", "list_departments", "list_attendance",
     "list_leave_requests", "list_payroll_entries", "list_shifts", "list_job_openings",
     "list_kpis", "get_kpi_values", "list_dashboards", "get_dashboard_widgets",
+    "get_executive_margin_summary", "get_product_category_margins", "get_customer_profitability_matrix",
+    "calculate_sales_rep_commissions", "get_delivery_fulfillment_metrics", "export_executive_analytics_report",
     "list_leads", "list_opportunities", "list_suppliers", "list_customer_groups",
     "list_projects", "get_project", "list_tasks", "list_milestones",
     "list_manufacturing_orders", "list_boms", "list_qc_inspections", "list_shop_jobs",
@@ -434,6 +437,204 @@ class TestMcpIntegration:
             }))
         assert "Revenue" in resp["result"]["content"][0]["text"]
 
+    # -----------------------------------------------------------------------
+    # Executive Analytics MCP Integration Tests
+    # -----------------------------------------------------------------------
+
+    def test_bi_get_executive_margin_summary(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_executive_analytics_svc", MagicMock()) as svc:
+            svc.get_margin_summary.return_value = {
+                "period": "Monthly",
+                "gross_sales": 150000.0,
+                "discount_amount": 5000.0,
+                "net_revenue": 145000.0,
+                "cogs": 95000.0,
+                "freight_cost": 8000.0,
+                "gross_profit": 42000.0,
+                "gross_margin_pct": 28.97,
+            }
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "get_executive_margin_summary",
+                "arguments": {"period": "Monthly", "date_from": "2026-01-01", "date_to": "2026-01-31"},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert "42000" in text
+        assert "28.97" in text
+
+    def test_bi_get_product_category_margins(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_executive_analytics_svc", MagicMock()) as svc:
+            svc.get_category_margins.return_value = {
+                "period": "Monthly",
+                "total_categories": 1,
+                "items": [{"category_name": "Bakery", "gross_profit": 12000.0, "gross_margin_pct": 32.0}],
+            }
+            svc.get_sku_margins.return_value = {
+                "items": [{"sku_code": "BAK-001", "product_name": "Sourdough Bread"}],
+            }
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "get_product_category_margins",
+                "arguments": {"include_skus": True},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert "Bakery" in text
+        assert "BAK-001" in text
+
+    def test_bi_get_customer_profitability_matrix(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_customer_profitability_svc", MagicMock()) as svc:
+            svc.get_customer_profitability_matrix.return_value = {
+                "period": "Monthly",
+                "total_customers": 1,
+                "quadrants": [{"quadrant": "Core Stars", "quadrant_code": "Q1"}],
+                "customers": [{"customer_name": "Epicurean Club", "quadrant_code": "Q1", "gross_margin_pct": 35.0}],
+            }
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "get_customer_profitability_matrix",
+                "arguments": {"quadrant": "Q1"},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert "Epicurean Club" in text
+        assert "Core Stars" in text
+
+    def test_bi_calculate_sales_rep_commissions_single_rep(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_commission_svc", MagicMock()) as svc:
+            svc.calculate_statement.return_value = {
+                "sales_rep_id": 7,
+                "sales_rep_name": "Elena Rostova",
+                "total_realized_gross_margin": 18500.0,
+                "net_commission_payable": 925.0,
+                "items": [],
+            }
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "calculate_sales_rep_commissions",
+                "arguments": {"sales_rep_id": 7},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert "Elena Rostova" in text
+        assert "925" in text
+
+    def test_bi_calculate_sales_rep_commissions_all_reps(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_commission_svc", MagicMock()) as svc:
+            svc.get_commission_summaries.return_value = [
+                {"sales_rep_id": 1, "sales_rep_name": "Rep One", "net_commission": 500.0},
+                {"sales_rep_id": 2, "sales_rep_name": "Rep Two", "net_commission": 750.0},
+            ]
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "calculate_sales_rep_commissions",
+                "arguments": {},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert "Rep One" in text
+        assert "Rep Two" in text
+
+    def test_bi_get_delivery_fulfillment_metrics(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_delivery_analytics_svc", MagicMock()) as svc:
+            svc.get_delivery_fulfillment_summary.return_value = {
+                "total_routes": 1,
+                "overall_on_time_rate": 96.5,
+                "routes": [{"delivery_route": "Route-South", "on_time_delivery_rate": 96.5}],
+            }
+            svc.get_warehouse_efficiency.return_value = [
+                {"warehouse_id": 1, "warehouse_name": "South Warehouse", "on_time_delivery_rate": 96.5}
+            ]
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "get_delivery_fulfillment_metrics",
+                "arguments": {"delivery_route": "Route-South", "include_warehouses": True},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert "Route-South" in text
+        assert "South Warehouse" in text
+
+    def test_bi_export_executive_analytics_report_pdf(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_pdf_export_svc", MagicMock()) as svc:
+            svc.generate_pdf.return_value = io.BytesIO(b"%PDF-1.4 executive test pdf")
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "export_executive_analytics_report",
+                "arguments": {"format": "pdf", "period": "Monthly"},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert '"format": "pdf"' in text
+        assert "application/pdf" in text
+        assert "data_base64" in text
+
+    def test_bi_export_executive_analytics_report_excel(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_excel_export_svc", MagicMock()) as svc:
+            svc.generate_workbook.return_value = io.BytesIO(b"PK\x03\x04 fake excel workbook")
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "export_executive_analytics_report",
+                "arguments": {"format": "excel", "period": "Quarterly"},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert '"format": "excel"' in text
+        assert "spreadsheetml" in text
+        assert "data_base64" in text
+
+    def test_bi_export_executive_analytics_report_json(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with (
+            patch.object(m, "_executive_analytics_svc", MagicMock()) as exec_svc,
+            patch.object(m, "_customer_profitability_svc", MagicMock()) as cust_svc,
+            patch.object(m, "_commission_svc", MagicMock()) as comm_svc,
+            patch.object(m, "_delivery_analytics_svc", MagicMock()) as deliv_svc,
+        ):
+            mock_summary = MagicMock()
+            mock_summary.date_from = None
+            mock_summary.date_to = None
+            mock_summary.model_dump.return_value = {"gross_sales": 80000.0}
+            exec_svc.get_margin_summary.return_value = mock_summary
+            exec_svc.get_category_margins.return_value = {"items": []}
+            cust_svc.get_customer_profitability_matrix.return_value = {"customers": []}
+            comm_svc.get_commission_summaries.return_value = []
+            deliv_svc.get_delivery_fulfillment_summary.return_value = {"routes": []}
+
+            resp = self.server.handle_request(_req("tools/call", {
+                "name": "export_executive_analytics_report",
+                "arguments": {"format": "json"},
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        text = resp["result"]["content"][0]["text"]
+        assert '"format": "json"' in text
+        assert "executive_summary" in text
+
+    def test_bi_read_executive_margin_resource(self):
+        self._register_all()
+        import packages.mcp.servers.bi_mcp as m
+        with patch.object(m, "_executive_analytics_svc", MagicMock()) as svc:
+            svc.get_margin_summary.return_value = {
+                "gross_margin_pct": 31.5,
+                "gross_profit": 63000.0,
+            }
+            resp = self.server.handle_request(_req("resources/read", {
+                "uri": "nova://bi/executive-margin",
+            }))
+        assert resp["jsonrpc"] == "2.0"
+        assert resp["result"]["contents"][0]["uri"] == "nova://bi/executive-margin"
+        assert "31.5" in resp["result"]["contents"][0]["text"]
+
     def test_crm_list_leads(self):
         self._register_all()
         import packages.mcp.servers.crm_mcp as m
@@ -524,3 +725,4 @@ class TestMcpIntegration:
         assert "nova://schema" in uris
         assert "nova://inventory/products" in uris
         assert "nova://sales/orders" in uris
+        assert "nova://bi/executive-margin" in uris
