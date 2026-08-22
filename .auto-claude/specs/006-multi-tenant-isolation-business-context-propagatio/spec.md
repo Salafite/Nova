@@ -10,7 +10,7 @@ Currently, business tables lack `business_id` columns and tenant scoping. In a m
 - As an AI assistant user, I want tool calls scoped strictly to my organization's business ID without accidental data leakage.
 
 ## Acceptance Criteria
-- [ ] Schema migration adds NOT NULL `business_id` foreign keys and composite indexes to all business entities
-- [ ] FastAPI dependency extracts `business_id` from validated JWT and injects it into every repository query automatically
-- [ ] MCP tool handlers enforce tenant filtering on all queries and mutations
-- [ ] Cross-tenant data access attempts return 403 Forbidden and trigger a security audit event
+- [x] Schema migration adds NOT NULL `business_id` foreign keys and composite indexes to all business entities
+- [x] FastAPI dependency extracts `business_id` from validated JWT and injects it into every repository query automatically
+- [x] MCP tool handlers enforce tenant filtering on all queries and mutations
+- [x] Cross-tenant data access attempts return 403 Forbidden and trigger a security audit event
