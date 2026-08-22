@@ -62,6 +62,30 @@ class TestMcpServer:
         }))
         assert "5" in resp["result"]["content"][0]["text"]
 
+    def test_tools_call_with_user_tenant_context(self):
+        from modules.core.context import get_current_tenant
+        captured = []
+        tool = Tool(name="tenant_check", description="Tenant check", input_schema={})
+        register_tool(tool, lambda: captured.append(get_current_tenant()))
+        resp = self.server.handle_request(
+            self._req("tools/call", {"name": "tenant_check", "arguments": {}}),
+            user={"id": 1, "business_id": 88},
+        )
+        assert resp["result"] is not None
+        assert captured == [88]
+
+    def test_tools_call_with_env_tenant_context(self, monkeypatch):
+        from modules.core.context import get_current_tenant
+        monkeypatch.setenv("NOVA_TENANT_ID", "99")
+        captured = []
+        tool = Tool(name="tenant_check", description="Tenant check", input_schema={})
+        register_tool(tool, lambda: captured.append(get_current_tenant()))
+        resp = self.server.handle_request(
+            self._req("tools/call", {"name": "tenant_check", "arguments": {}})
+        )
+        assert resp["result"] is not None
+        assert captured == [99]
+
     def test_tools_call_not_found(self):
         resp = self.server.handle_request(self._req("tools/call", {
             "name": "nonexistent", "arguments": {},

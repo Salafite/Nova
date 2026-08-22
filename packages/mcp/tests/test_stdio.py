@@ -52,3 +52,54 @@ class TestStdioTransport:
         tools_resp = json.loads(lines[2])
         assert tools_resp["id"] == 3
         assert len(tools_resp["result"]["tools"]) == 1
+
+    def test_run_stdio_with_tenant_env(self, monkeypatch):
+        from modules.core.context import get_current_tenant
+        monkeypatch.setenv("NOVA_TENANT_ID", "55")
+        captured_tenant = []
+        tool = Tool(name="check_tenant", description="Returns current tenant", input_schema={})
+        register_tool(tool, lambda: captured_tenant.append(get_current_tenant()))
+
+        stdin = io.StringIO(
+            json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {
+                "name": "check_tenant", "arguments": {},
+            }}) + "\n"
+        )
+        stdout = io.StringIO()
+
+        old_stdin = sys.stdin
+        old_stdout = sys.stdout
+        sys.stdin = stdin
+        sys.stdout = stdout
+        try:
+            run_stdio(self.server)
+        finally:
+            sys.stdin = old_stdin
+            sys.stdout = old_stdout
+
+        assert captured_tenant == [55]
+
+    def test_run_stdio_with_user_param(self):
+        from modules.core.context import get_current_tenant
+        captured_tenant = []
+        tool = Tool(name="check_tenant", description="Returns current tenant", input_schema={})
+        register_tool(tool, lambda: captured_tenant.append(get_current_tenant()))
+
+        stdin = io.StringIO(
+            json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {
+                "name": "check_tenant", "arguments": {},
+            }}) + "\n"
+        )
+        stdout = io.StringIO()
+
+        old_stdin = sys.stdin
+        old_stdout = sys.stdout
+        sys.stdin = stdin
+        sys.stdout = stdout
+        try:
+            run_stdio(self.server, user={"id": 2, "business_id": 66})
+        finally:
+            sys.stdin = old_stdin
+            sys.stdout = old_stdout
+
+        assert captured_tenant == [66]
