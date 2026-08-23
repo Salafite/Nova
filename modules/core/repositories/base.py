@@ -31,8 +31,11 @@ class CrudRepository:
             return True
         return True
 
-    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, business_id: Optional[int] = None):
-        conn = get_connection()
+    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None, business_id: Optional[int] = None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             clauses = ['TRUE']
             params = []
@@ -61,10 +64,14 @@ class CrudRepository:
                 cur.execute(sql, params)
                 return [dict(r) for r in cur.fetchall()]
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def get(self, id_val, business_id: Optional[int] = None):
-        conn = get_connection()
+    def get(self, id_val, conn=None, business_id: Optional[int] = None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             tenant_id = business_id if business_id is not None else get_current_tenant()
             if tenant_id is not None and self._has_business_id():
@@ -79,7 +86,8 @@ class CrudRepository:
                 row = cur.fetchone()
                 return dict(row) if row else None
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
     def get_unscoped(self, id_val):
         """Retrieve record by PK ignoring any tenant context."""
@@ -138,8 +146,11 @@ class CrudRepository:
                 else:
                     release_connection(conn)
 
-    def create(self, payload: dict, business_id: Optional[int] = None):
-        conn = get_connection()
+    def create(self, payload: dict, conn=None, business_id: Optional[int] = None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             data = dict(payload)
             tenant_id = business_id if business_id is not None else get_current_tenant()
@@ -154,22 +165,28 @@ class CrudRepository:
             sql = f'INSERT INTO {self.qualified} ({cols_str}) VALUES ({placeholders}) RETURNING *'
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, vals)
-                conn.commit()
+                if should_release:
+                    conn.commit()
                 row = cur.fetchone()
                 return dict(row) if row else None
         except psycopg2.Error:
-            conn.rollback()
+            if should_release:
+                conn.rollback()
             raise
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def update(self, id_val, payload: dict, business_id: Optional[int] = None):
-        conn = get_connection()
+    def update(self, id_val, payload: dict, conn=None, business_id: Optional[int] = None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             tenant_id = business_id if business_id is not None else get_current_tenant()
             cols = [c for c in payload.keys() if c != self.pk and c != 'business_id' and c not in AUDIT_COLUMNS]
             if not cols:
-                return self.get(id_val, business_id=tenant_id)
+                return self.get(id_val, conn=conn, business_id=tenant_id)
             set_clauses = [f'"{c}" = %s' for c in cols]
             set_clauses.append('"updated_at" = NOW()')
             set_clauses.append('"update_number" = "update_number" + 1')
@@ -184,17 +201,23 @@ class CrudRepository:
 
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, vals)
-                conn.commit()
+                if should_release:
+                    conn.commit()
                 row = cur.fetchone()
                 return dict(row) if row else None
         except psycopg2.Error:
-            conn.rollback()
+            if should_release:
+                conn.rollback()
             raise
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def delete(self, id_val, business_id: Optional[int] = None):
-        conn = get_connection()
+    def delete(self, id_val, conn=None, business_id: Optional[int] = None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             tenant_id = business_id if business_id is not None else get_current_tenant()
             where_clauses = [f'"{self.pk}" = %s']
@@ -210,16 +233,22 @@ class CrudRepository:
                 sql = f'DELETE FROM {self.qualified} WHERE {where_str}'
             with conn.cursor() as cur:
                 cur.execute(sql, tuple(params))
-                conn.commit()
+                if should_release:
+                    conn.commit()
                 return cur.rowcount > 0
         except psycopg2.Error:
-            conn.rollback()
+            if should_release:
+                conn.rollback()
             raise
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
 
-    def count(self, filters: dict = None, business_id: Optional[int] = None):
-        conn = get_connection()
+    def count(self, filters: dict = None, conn=None, business_id: Optional[int] = None):
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
         try:
             clauses = ['TRUE']
             params = []
@@ -241,4 +270,5 @@ class CrudRepository:
                 row = cur.fetchone()
                 return row['cnt'] if row else 0
         finally:
-            release_connection(conn)
+            if should_release:
+                release_connection(conn)
