@@ -224,7 +224,7 @@ class InvoiceCheckoutSessionRequest(BaseModel):
     """Request to create a Stripe Checkout session for a specific invoice."""
     model_config = ConfigDict(extra='forbid')
 
-    invoice_id: int
+    invoice_id: Optional[int] = None
     payment_method_types: List[str] = Field(default_factory=lambda: ["card", "us_bank_account"])
     success_url: Optional[str] = None
     cancel_url: Optional[str] = None
