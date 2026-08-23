@@ -92,6 +92,13 @@ const ROUTE_PERMISSIONS = {
   'enterprise-tenants': 'admin',
   'enterprise-governance': 'admin',
   'enterprise-platform': 'admin',
+  'portal-dashboard': 'portal',
+  'portal-catalog': 'portal',
+  'portal-cart': 'portal',
+  'portal-orders': 'portal',
+  'portal-order-detail': 'portal',
+  'portal-invoices': 'portal',
+  'portal-payment-result': 'portal',
 }
 
 const routes = [
@@ -201,6 +208,23 @@ const routes = [
       { path: ':pathMatch(.*)*', name: 'not-found', component: () => import('../views/errors/NotFoundView.vue') },
     ]
   },
+  {
+    path: '/portal',
+    component: () => import('../layouts/PortalLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', redirect: { name: 'portal-catalog' } },
+      { path: 'dashboard', name: 'portal-dashboard', meta: { requiresAuth: true }, component: () => import('../views/portal/PortalDashboardView.vue') },
+      { path: 'catalog', name: 'portal-catalog', meta: { requiresAuth: true }, component: () => import('../views/portal/PortalCatalogView.vue') },
+      { path: 'supplies', redirect: { name: 'portal-catalog' } },
+      { path: 'cart', name: 'portal-cart', meta: { requiresAuth: true }, component: () => import('../views/portal/PortalCartCheckoutView.vue') },
+      { path: 'orders', name: 'portal-orders', meta: { requiresAuth: true }, component: () => import('../views/portal/PortalOrdersView.vue') },
+      { path: 'orders/:id', name: 'portal-order-detail', meta: { requiresAuth: true }, component: () => import('../views/portal/PortalOrderDetailView.vue') },
+      { path: 'invoices', name: 'portal-invoices', meta: { requiresAuth: true }, component: () => import('../views/portal/PortalInvoicesView.vue') },
+      { path: 'payment/success', name: 'portal-payment-result', meta: { requiresAuth: true }, component: () => import('../views/portal/PortalPaymentResultView.vue') },
+      { path: 'payment/result', redirect: { name: 'portal-payment-result' } },
+    ]
+  },
   { path: '/:pathMatch(.*)*', name: 'not-found-root', component: () => import('../views/errors/NotFoundView.vue') },
 ]
 
@@ -211,11 +235,24 @@ router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
 
   if (to.meta.requiresAuth && !token) return next('/login')
-  if (token && (to.name === 'login' || to.name === 'signup')) return next('/dashboard')
+  if (token && (to.name === 'login' || to.name === 'signup')) {
+    if (auth.user?.role === 'Customer' || auth.user?.customer_id) {
+      return next('/portal/catalog')
+    }
+    return next('/dashboard')
+  }
+
+  const isCustomer = auth.user?.role === 'Customer' || (auth.user?.customer_id && !auth.hasPermission('*'))
+  if (token && isCustomer && !to.path.startsWith('/portal') && to.name !== 'not-found' && to.name !== 'not-found-root') {
+    return next('/portal/catalog')
+  }
 
   const required = ROUTE_PERMISSIONS[to.name]
   if (required) {
-    if (!auth.hasPermission(required)) return next('/dashboard')
+    if (!auth.hasPermission(required)) {
+      if (isCustomer) return next('/portal/catalog')
+      return next('/dashboard')
+    }
   }
 
   next()
