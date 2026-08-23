@@ -358,3 +358,113 @@ def test_portal_repo_reconcile_idempotency():
     assert result["payment_id"] == 55
     assert result["journal_entry_id"] is None
 
+
+def test_create_invoice_checkout_session_cancelled_invoice_raises(settlement_service, mock_portal_repo):
+    mock_portal_repo.get_invoice_by_id.return_value = {
+        "id": 42,
+        "invoice_number": "INV-2026-00042",
+        "partner_id": 10,
+        "total_amount": 500.0,
+        "paid_amount": 0.0,
+        "balance_due": 500.0,
+        "status": "Cancelled",
+    }
+    req = InvoiceCheckoutSessionRequest(invoice_id=42)
+    with pytest.raises(ValueError, match="has been cancelled"):
+        settlement_service.create_invoice_checkout_session(customer_id=10, request=req)
+
+
+def test_create_invoice_checkout_session_customer_not_found(settlement_service, mock_portal_repo):
+    mock_portal_repo.get_customer_by_id.return_value = None
+    req = InvoiceCheckoutSessionRequest(invoice_id=42)
+    with pytest.raises(ValueError, match="does not exist"):
+        settlement_service.create_invoice_checkout_session(customer_id=999, request=req)
+
+
+def test_create_balance_settlement_session_invalid_amount(settlement_service):
+    with pytest.raises(Exception):
+        BalanceSettlementCheckoutRequest(amount=0.0)
+
+    mock_req = MagicMock()
+    mock_req.amount = -10.0
+    mock_req.invoice_ids = None
+    with pytest.raises(ValueError, match="must be greater than zero"):
+        settlement_service.create_balance_settlement_session(customer_id=10, request=mock_req)
+
+
+
+def test_create_balance_settlement_session_invoice_not_found(settlement_service, mock_portal_repo):
+    mock_portal_repo.get_invoice_by_id.return_value = None
+    req = BalanceSettlementCheckoutRequest(amount=500.0, invoice_ids=[999])
+    with pytest.raises(ValueError, match="was not found or does not belong"):
+        settlement_service.create_balance_settlement_session(customer_id=10, request=req)
+
+
+def test_reconcile_checkout_session_skipped_no_customer_id(settlement_service):
+    session_data = {
+        "id": "cs_test_no_meta",
+        "metadata": {},
+    }
+    res = settlement_service.reconcile_checkout_session(session_data)
+    assert res.get("skipped") is True
+
+
+def test_reconcile_payment_intent_success(settlement_service, mock_portal_repo):
+    mock_portal_repo.reconcile_settlement_transaction.return_value = {
+        "reconciled": True,
+        "payment_id": 105,
+        "customer_id": 10,
+        "amount": 250.0,
+        "invoice_id": 42,
+    }
+
+    pi_data = {
+        "id": "pi_test_portal_intent",
+        "amount": 25000,
+        "payment_method_types": ["card"],
+        "metadata": {
+            "customer_id": "10",
+            "settlement_type": "invoice",
+            "invoice_id": "42",
+        },
+    }
+
+    res = settlement_service.reconcile_payment_intent(pi_data)
+    assert res["reconciled"] is True
+    assert res["payment_id"] == 105
+    mock_portal_repo.reconcile_settlement_transaction.assert_called_once_with(
+        customer_id=10,
+        amount=250.0,
+        settlement_type="invoice",
+        invoice_id=42,
+        invoice_ids=None,
+        session_id=None,
+        payment_intent_id="pi_test_portal_intent",
+        payment_method="Stripe Card",
+        payment_link=None,
+    )
+
+
+def test_reconcile_payment_intent_skipped_without_customer_id(settlement_service):
+    pi_data = {
+        "id": "pi_test_no_cust",
+        "metadata": {"other": "value"},
+    }
+    res = settlement_service.reconcile_payment_intent(pi_data)
+    assert res.get("skipped") is True
+
+
+def test_verify_and_reconcile_session_unpaid_not_reconciled(settlement_service):
+    with patch("modules.portal.services.stripe_settlement_service.get_checkout_session") as mock_get_sess:
+        mock_get_sess.return_value = {
+            "session_id": "cs_test_unpaid",
+            "status": "open",
+            "payment_status": "unpaid",
+            "metadata": {"customer_id": "10"},
+        }
+        res = settlement_service.verify_and_reconcile_session("cs_test_unpaid", customer_id=10)
+        assert res["reconciled"] is False
+        assert res["status"] == "open"
+        assert res["payment_status"] == "unpaid"
+
+

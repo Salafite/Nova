@@ -119,3 +119,55 @@ class TestInvoicePdfService:
 
         with pytest.raises(ValueError, match="Invoice #101 was not found or does not belong to your account"):
             pdf_service.generate_invoice_pdf(invoice_id=101, customer_id=999)
+
+    def test_generate_invoice_pdf_partially_paid_with_link(self, pdf_service, mock_repo):
+        mock_repo.get_invoice_by_id.return_value = {
+            "id": 103,
+            "invoice_number": "INV-2026-00103",
+            "invoice_type": "Sales",
+            "partner_id": 50,
+            "customer_name": "Bistro Bella",
+            "sales_order_id": None,
+            "issue_date": date(2026, 8, 10),
+            "due_date": date(2026, 9, 10),
+            "total_amount": 1000.0,
+            "paid_amount": 400.0,
+            "balance_due": 600.0,
+            "status": "Partially Paid",
+            "notes": "Partial settlement received.",
+            "payment_link": "https://checkout.stripe.com/pay/cs_test_partial",
+        }
+        mock_repo.get_customer_by_id.return_value = {
+            "id": 50,
+            "name": "Bistro Bella",
+        }
+
+        pdf_bytes = pdf_service.generate_invoice_pdf(invoice_id=103, customer_id=50)
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 500
+        assert pdf_bytes.startswith(b"%PDF")
+
+    def test_generate_invoice_pdf_missing_customer_record(self, pdf_service, mock_repo):
+        mock_repo.get_invoice_by_id.return_value = {
+            "id": 104,
+            "invoice_number": "INV-2026-00104",
+            "invoice_type": "Sales",
+            "partner_id": 50,
+            "customer_name": "Direct Client",
+            "sales_order_id": None,
+            "issue_date": date(2026, 8, 12),
+            "due_date": date(2026, 8, 26),
+            "total_amount": 300.0,
+            "paid_amount": 0.0,
+            "balance_due": 300.0,
+            "status": "Unpaid",
+            "notes": None,
+            "payment_link": None,
+        }
+        mock_repo.get_customer_by_id.return_value = None
+
+        pdf_bytes = pdf_service.generate_invoice_pdf(invoice_id=104, customer_id=50)
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 500
+        assert pdf_bytes.startswith(b"%PDF")
+
