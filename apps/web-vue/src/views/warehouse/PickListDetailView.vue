@@ -171,7 +171,7 @@
                     <strong>{{ item.product_name || `#${item.product_id}` }}</strong>
                     <span v-if="isCatchWeightItem(item)" class="badge badge-cw" :title="t('dual-uom-item', 'Catch-weight item with actual scale weight pricing')">
                       <span class="material-symbols-outlined icon-xs">scale</span>
-                      {{ t('catch-weight', 'Catch Weight') }}
+                      {{ t('catch-weight-item', 'Catch Weight') }}
                     </span>
                   </div>
                   <div class="text-muted text-xs flex items-center gap-2 mt-1">
@@ -901,7 +901,7 @@ async function savePick(item) {
     item.supervisor_approved_at = res.data.supervisor_approved_at
     item.supervisor_notes = res.data.supervisor_notes
 
-    toast(t('pick-updated', `Line #${item.line_number} pick recorded`), 'success')
+    toast(t('pick-updated', `Line #${item.line_number} pick recorded`, item.line_number), 'success')
     await load(false)
   } catch (e) {
     console.error('Pick error:', e)

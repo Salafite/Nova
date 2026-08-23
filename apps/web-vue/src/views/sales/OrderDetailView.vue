@@ -180,7 +180,7 @@
                     <strong>{{ line.product_name || `#${line.product_id}` }}</strong>
                     <span v-if="isCatchWeightLine(line)" class="badge badge-cw" :title="t('cw-item', 'Catch-Weight item billed by physical scale weight')">
                       <span class="material-symbols-outlined icon-xs">scale</span>
-                      {{ t('catch-weight', 'Catch Weight') }}
+                      {{ t('catch-weight-item', 'Catch Weight') }}
                     </span>
                   </div>
                   <div class="text-muted text-xs flex items-center gap-2 mt-1">
