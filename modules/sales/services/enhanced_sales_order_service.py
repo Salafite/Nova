@@ -15,7 +15,28 @@ def _to_decimal(value) -> Decimal:
 class EnhancedSalesOrderService(CrudService):
     def __init__(self, repo):
         super().__init__(repo)
-        self.line_repo = CrudRepository('T0013', ['id', 'sales_order_id', 'product_id', 'product_name', 'qty', 'unit_price', 'line_total', 'line_number'])
+        self.line_repo = CrudRepository(
+            'T0013',
+            [
+                'id',
+                'sales_order_id',
+                'product_id',
+                'product_name',
+                'uom_id',
+                'qty',
+                'unit_price',
+                'cost_price',
+                'discount',
+                'line_total',
+                'line_number',
+                'is_catch_weight',
+                'pricing_uom_id',
+                'unit_price_pricing_uom',
+                'nominal_weight',
+                'catch_weight_actual',
+                'recalculated_total',
+            ],
+        )
         self.price_list_item_repo = CrudRepository('T0084', ['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
         self.tax_rate_repo = CrudRepository('T0085', ['id', 'name', 'code', 'rate', 'type'])
 

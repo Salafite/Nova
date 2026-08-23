@@ -17,7 +17,28 @@ VALID_SALES_STATUS_TRANSITIONS = {
     'Cancelled': [],
 }
 
-LINE_REPO = CrudRepository('T0013', business_columns=['id', 'sales_order_id', 'product_id', 'product_name', 'qty', 'unit_price', 'line_total', 'line_number'])
+LINE_REPO = CrudRepository(
+    'T0013',
+    business_columns=[
+        'id',
+        'sales_order_id',
+        'product_id',
+        'product_name',
+        'uom_id',
+        'qty',
+        'unit_price',
+        'cost_price',
+        'discount',
+        'line_total',
+        'line_number',
+        'is_catch_weight',
+        'pricing_uom_id',
+        'unit_price_pricing_uom',
+        'nominal_weight',
+        'catch_weight_actual',
+        'recalculated_total',
+    ],
+)
 
 class SalesOrderService(CrudService):
     def create(self, payload: dict, conn=None):

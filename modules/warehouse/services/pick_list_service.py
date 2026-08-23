@@ -149,7 +149,7 @@ class PickListService(CrudService):
         for item in items:
             status = item.get('tolerance_status')
             approved = item.get('supervisor_approved', False)
-            if status == 'Out of Tolerance' or (status not in ('Within Tolerance', 'Not Applicable', 'Approved') and not approved):
+            if status == 'Out of Tolerance' and not approved:
                 discrepancies.append(item)
         return discrepancies
 
@@ -357,18 +357,12 @@ class PickListService(CrudService):
         pl['items'] = items
         pl['progress_pct'] = self._calc_progress(items)
         pl['has_discrepancies'] = any(
-            it.get('tolerance_status') == 'Out of Tolerance' or (
-                it.get('tolerance_status') not in ('Within Tolerance', 'Not Applicable', 'Approved')
-                and not it.get('supervisor_approved')
-            )
+            it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
             for it in items
         )
         pl['discrepancy_count'] = sum(
             1 for it in items
-            if it.get('tolerance_status') == 'Out of Tolerance' or (
-                it.get('tolerance_status') not in ('Within Tolerance', 'Not Applicable', 'Approved')
-                and not it.get('supervisor_approved')
-            )
+            if it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
         )
         return pl
 
@@ -619,10 +613,7 @@ class PickListService(CrudService):
             all_items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
             target_items = [
                 it for it in all_items
-                if it.get('tolerance_status') == 'Out of Tolerance' or (
-                    it.get('tolerance_status') not in ('Within Tolerance', 'Not Applicable', 'Approved')
-                    and not it.get('supervisor_approved')
-                )
+                if it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
             ]
 
         approval_notes = supervisor_notes if supervisor_notes is not None else notes
