@@ -192,6 +192,34 @@ class TestCustomRoutersRBAC:
         assert has_permission(derive_permissions('Cashier'), 'FIELD_SALES_MOBILE') is False
         assert has_permission(derive_permissions('Viewer'), 'FIELD_SALES_MOBILE') is False
 
+    def test_migration_router_permissions(self):
+        from modules.core.services.permission_service import has_permission, derive_permissions, get_required_permission
+
+        # Verify get_required_permission resolves correctly
+        assert get_required_permission('/api/v1/migration') == 'ADMIN_MIGRATION'
+        assert get_required_permission('/api/v1/migration/connectors/test') == 'ADMIN_MIGRATION'
+        assert get_required_permission('/api/v1/migration/batches/1/reconciliation') == 'ADMIN_MIGRATION'
+        assert get_required_permission(tag='Migration') == 'ADMIN_MIGRATION'
+        assert get_required_permission(tag='T0104 - Data Migration') == 'ADMIN_MIGRATION'
+
+        # Superadmin, Administrator, Admin have access
+        assert has_permission(derive_permissions('Superadmin'), 'ADMIN_MIGRATION') is True
+        assert has_permission(derive_permissions('Super Admin'), 'ADMIN_MIGRATION') is True
+        assert has_permission(derive_permissions('Administrator'), 'ADMIN_MIGRATION') is True
+        assert has_permission(derive_permissions('Admin'), 'ADMIN_MIGRATION') is True
+
+        # Non-admin roles do not have migration access
+        assert has_permission(derive_permissions('Manager'), 'ADMIN_MIGRATION') is False
+        assert has_permission(derive_permissions('Sales Manager'), 'ADMIN_MIGRATION') is False
+        assert has_permission(derive_permissions('Sales Rep'), 'ADMIN_MIGRATION') is False
+        assert has_permission(derive_permissions('Cashier'), 'ADMIN_MIGRATION') is False
+        assert has_permission(derive_permissions('Viewer'), 'ADMIN_MIGRATION') is False
+
+        # Explicit ADMIN_VIEW or ADMIN_MIGRATION permissions grant access
+        assert has_permission(['ADMIN_VIEW'], 'ADMIN_MIGRATION') is True
+        assert has_permission(['ADMIN_MIGRATION'], 'ADMIN_MIGRATION') is True
+        assert has_permission(['SALES_VIEW'], 'ADMIN_MIGRATION') is False
+
 
 class TestUnauthenticatedAccess:
     """Test unauthenticated or malformed token requests."""
@@ -343,7 +371,7 @@ class TestCompleteTCodeMapCoverage:
         for tcode, perm in T_CODE_PERMISSIONS.items():
             assert isinstance(tcode, str) and tcode.startswith('T'), f"Invalid tcode key: {tcode}"
             assert isinstance(perm, str) and len(perm) > 0, f"Invalid perm for {tcode}: {perm}"
-            assert perm.endswith('_VIEW') or perm == 'ADMIN_VIEW', f"Unexpected permission format for {tcode}: {perm}"
+            assert perm.endswith('_VIEW') or perm in ('ADMIN_VIEW', 'ADMIN_MIGRATION'), f"Unexpected permission format for {tcode}: {perm}"
 
     def test_get_required_permission_resolves_all_mapped_tcodes(self):
         for tcode, expected_perm in T_CODE_PERMISSIONS.items():

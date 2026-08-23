@@ -3,7 +3,7 @@ from modules.migration.services import migration_service
 from packages.auth.deps import require_permission
 
 router = APIRouter(prefix='/api/v1/migration', tags=['Migration'],
-                   dependencies=[Depends(require_permission('ADMIN_VIEW'))])
+                   dependencies=[Depends(require_permission('ADMIN_MIGRATION'))])
 
 @router.post('/upload')
 def upload_csv(
