@@ -15,6 +15,7 @@ class PosCheckoutRequest(BaseModel):
     warehouse_id: int = 1
     payment_method: str = "Cash"
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 
 class PosCheckoutResponse(BaseModel):

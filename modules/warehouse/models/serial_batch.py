@@ -12,6 +12,7 @@ class SerialNumberCreate(BaseModel):
     purchase_order_line_id: Optional[int] = None
     sales_order_line_id: Optional[int] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class SerialNumberUpdate(BaseModel):
     product_id: Optional[int] = None
@@ -21,16 +22,17 @@ class SerialNumberUpdate(BaseModel):
     purchase_order_line_id: Optional[int] = None
     sales_order_line_id: Optional[int] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class SerialNumberResponse(AuditMixin):
     id: int
     product_id: int
     serial_number: str
     status: str
-    warehouse_id: Optional[int]
-    purchase_order_line_id: Optional[int]
-    sales_order_line_id: Optional[int]
-    notes: Optional[str]
+    warehouse_id: Optional[int] = None
+    purchase_order_line_id: Optional[int] = None
+    sales_order_line_id: Optional[int] = None
+    notes: Optional[str] = None
 
 
 class BatchNumberCreate(BaseModel):
@@ -42,6 +44,7 @@ class BatchNumberCreate(BaseModel):
     warehouse_id: Optional[int] = None
     status: str = 'Available'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class BatchNumberUpdate(BaseModel):
     product_id: Optional[int] = None
@@ -52,14 +55,15 @@ class BatchNumberUpdate(BaseModel):
     warehouse_id: Optional[int] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class BatchNumberResponse(AuditMixin):
     id: int
     product_id: int
     batch_number: str
-    expiry_date: Optional[date]
-    manufacturing_date: Optional[date]
+    expiry_date: Optional[date] = None
+    manufacturing_date: Optional[date] = None
     quantity: float
-    warehouse_id: Optional[int]
+    warehouse_id: Optional[int] = None
     status: str
-    notes: Optional[str]
+    notes: Optional[str] = None

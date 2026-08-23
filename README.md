@@ -8,7 +8,8 @@ Inventory management, sales orders, warehouse pick lists, purchasing, accounting
 
 | Layer | Stack |
 |-------|-------|
-| Backend | Python 3.11+ · FastAPI · psycopg2 · JWT auth |
+| Backend | Python 3.11+ · FastAPI · psycopg2 · JWT auth · Multi-Tenant Isolation |
+| AI / MCP | Model Context Protocol (15 servers) · OpenAI GPT-4o In-App Assistant |
 | Frontend | Vue 3 · Vite · Pinia · Vue Router |
 | Database | PostgreSQL 16+ |
 | Deployment | Docker Compose |
@@ -104,6 +105,8 @@ docker compose up -d
 - **Customers & Suppliers** — Full CRM with balance tracking
 - **Migration** — CSV import with preview and rollback
 - **User Management** — Roles, permissions, audit log
+- **Multi-Tenant Isolation** — Native database-level scoping, JWT context propagation, role-based security, and cross-tenant access protection
+- **AI & MCP Integration** — 15 Model Context Protocol servers exposing domain tools for natural language querying and automation with 2-tier safety rails
 
 ## Roadmap
 

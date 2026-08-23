@@ -11,6 +11,7 @@ class ApiKeyCreate(BaseModel):
     permissions: Optional[str] = None
     expires_at: Optional[datetime] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ApiKeyUpdate(BaseModel):
     key_name: Optional[str] = Field(None, max_length=100)
@@ -19,15 +20,16 @@ class ApiKeyUpdate(BaseModel):
     permissions: Optional[str] = None
     expires_at: Optional[datetime] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ApiKeyResponse(AuditMixin):
     id: int
     key_name: str
     api_key: str
-    client_id: Optional[str]
-    permissions: Optional[str]
-    expires_at: Optional[datetime]
-    is_active: bool
+    client_id: Optional[str] = None
+    permissions: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    is_active: bool = True
 
 
 class IntegrationConfigCreate(BaseModel):
@@ -37,6 +39,7 @@ class IntegrationConfigCreate(BaseModel):
     config: Optional[str] = None
     credentials: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class IntegrationConfigUpdate(BaseModel):
     integration_code: Optional[str] = Field(None, max_length=50)
@@ -45,15 +48,16 @@ class IntegrationConfigUpdate(BaseModel):
     config: Optional[str] = None
     credentials: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class IntegrationConfigResponse(AuditMixin):
     id: int
     integration_code: str
     integration_name: str
-    provider: Optional[str]
-    config: Optional[str]
-    credentials: Optional[str]
-    is_active: bool
+    provider: Optional[str] = None
+    config: Optional[str] = None
+    credentials: Optional[str] = None
+    is_active: bool = True
 
 
 class SyncLogCreate(BaseModel):
@@ -64,13 +68,14 @@ class SyncLogCreate(BaseModel):
     message: Optional[str] = None
     synced_at: Optional[datetime] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class SyncLogResponse(AuditMixin):
     id: int
-    integration_id: Optional[int]
-    entity_type: Optional[str]
-    action: Optional[str]
-    status: Optional[str]
-    message: Optional[str]
-    synced_at: Optional[datetime]
-    is_active: bool
+    integration_id: Optional[int] = None
+    entity_type: Optional[str] = None
+    action: Optional[str] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
+    synced_at: Optional[datetime] = None
+    is_active: bool = True

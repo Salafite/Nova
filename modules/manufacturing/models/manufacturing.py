@@ -12,6 +12,7 @@ class MfgOrderCreate(BaseModel):
     status: str = 'Pending'
     due_date: Optional[date] = None
     priority: str = 'Medium'
+    business_id: Optional[int] = None
 
 class MfgOrderUpdate(BaseModel):
     order_number: Optional[str] = Field(None, max_length=30)
@@ -21,15 +22,16 @@ class MfgOrderUpdate(BaseModel):
     status: Optional[str] = None
     due_date: Optional[date] = None
     priority: Optional[str] = None
+    business_id: Optional[int] = None
 
 class MfgOrderResponse(AuditMixin):
     id: int
     order_number: str
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     product_name: str
     quantity: float
     status: str
-    due_date: Optional[date]
+    due_date: Optional[date] = None
     priority: str
 
 
@@ -42,6 +44,7 @@ class QCInspectionCreate(BaseModel):
     inspector: Optional[str] = Field(None, max_length=100)
     inspection_date: date = Field(default_factory=date.today)
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class QCInspectionUpdate(BaseModel):
     inspection_no: Optional[str] = Field(None, max_length=30)
@@ -52,17 +55,18 @@ class QCInspectionUpdate(BaseModel):
     inspector: Optional[str] = Field(None, max_length=100)
     inspection_date: Optional[date] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class QCInspectionResponse(AuditMixin):
     id: int
     inspection_no: str
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     product_name: str
-    batch_no: Optional[str]
+    batch_no: Optional[str] = None
     result: str
-    inspector: Optional[str]
+    inspector: Optional[str] = None
     inspection_date: date
-    notes: Optional[str]
+    notes: Optional[str] = None
 
 
 class ShopJobCreate(BaseModel):
@@ -72,6 +76,7 @@ class ShopJobCreate(BaseModel):
     quantity: float = Field(..., gt=0)
     workstation: Optional[str] = Field(None, max_length=100)
     status: str = 'Pending'
+    business_id: Optional[int] = None
 
 class ShopJobUpdate(BaseModel):
     job_number: Optional[str] = Field(None, max_length=30)
@@ -80,12 +85,13 @@ class ShopJobUpdate(BaseModel):
     quantity: Optional[float] = Field(None, gt=0)
     workstation: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = None
+    business_id: Optional[int] = None
 
 class ShopJobResponse(AuditMixin):
     id: int
     job_number: str
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     product_name: str
     quantity: float
-    workstation: Optional[str]
+    workstation: Optional[str] = None
     status: str

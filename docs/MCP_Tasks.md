@@ -14,7 +14,7 @@
 - [x] **1.3** Add `mcp` dependency in `apps/api/requirements.txt`
 - [x] **1.4** Unit tests for all transport modes (stdio, SSE, server, registry)
 - [x] **1.5** Audit current REST controllers/services for tenant scoping
-  - **Finding:** No tenant scoping exists in any layer. Most business tables lack `business_id`. Documented in `AGENTS.md`.
+  - **Resolution:** Full tenant scoping implemented across DB schema (migration 019), contextvars (`modules.core.context`), JWT claims, `CrudRepository`/`CrudService`, 403 ownership verification with T0023 security auditing, and MCP registry/server isolation across all 15 servers. Documented in `AGENTS.md` and `docs/MCP_Plan.md`.
 - [x] **1.6** Shared auth/tenant-context resolver via `contextvars` in `registry.py`
   - `get_current_user()` returns authenticated user dict
   - Threaded through: router → sse → server → registry → AI service

@@ -51,9 +51,10 @@ def login(username: str, password: str) -> dict | None:
     if not user:
         return None
     update_last_login(user['id'])
+    business_id = user.get('business_id')
     return {
-        'access_token': create_access_token(user['id']),
-        'refresh_token': create_refresh_token(user['id']),
+        'access_token': create_access_token(user['id'], business_id=business_id),
+        'refresh_token': create_refresh_token(user['id'], business_id=business_id),
         'token_type': 'bearer',
         'user': _build_user_dict(user),
     }
@@ -70,9 +71,10 @@ def refresh(token: str) -> dict | None:
     user = get_user_by_id(user_id)
     if not user:
         return None
+    business_id = user.get('business_id') if user else payload.get('business_id')
     return {
-        'access_token': create_access_token(user['id']),
-        'refresh_token': create_refresh_token(user['id']),
+        'access_token': create_access_token(user['id'], business_id=business_id),
+        'refresh_token': create_refresh_token(user['id'], business_id=business_id),
         'token_type': 'bearer',
     }
 
@@ -86,9 +88,10 @@ def signup(business_name: str, username: str, password: str,
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     business = create_business(business_name, 0)
     user = create_user(username, password_hash, full_name, email, 'Admin', business['id'])
+    business_id = business['id']
     return {
-        'access_token': create_access_token(user['id']),
-        'refresh_token': create_refresh_token(user['id']),
+        'access_token': create_access_token(user['id'], business_id=business_id),
+        'refresh_token': create_refresh_token(user['id'], business_id=business_id),
         'token_type': 'bearer',
         'user': _build_user_dict(user),
     }

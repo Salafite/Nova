@@ -8,16 +8,18 @@ class WarehouseCreate(BaseModel):
     name: str = Field(..., max_length=100)
     location: Optional[str] = Field(None, max_length=200)
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class WarehouseUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
     location: Optional[str] = Field(None, max_length=200)
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class WarehouseResponse(AuditMixin):
     id: int
     name: str
-    location: Optional[str]
+    location: Optional[str] = None
     is_active: bool
 
 
@@ -26,12 +28,14 @@ class InventoryCreate(BaseModel):
     warehouse_id: int
     qty: float = Field(default=0, ge=0)
     reorder_level: float = 10
+    business_id: Optional[int] = None
 
 class InventoryUpdate(BaseModel):
     product_id: Optional[int] = None
     warehouse_id: Optional[int] = None
     qty: Optional[float] = Field(None, ge=0)
     reorder_level: Optional[float] = None
+    business_id: Optional[int] = None
 
 class InventoryResponse(AuditMixin):
     id: int
@@ -48,6 +52,7 @@ class GoodsReceiptCreate(BaseModel):
     warehouse_id: Optional[int] = None
     status: str = 'Draft'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class GoodsReceiptUpdate(BaseModel):
     receipt_number: Optional[str] = Field(None, max_length=30)
@@ -56,15 +61,16 @@ class GoodsReceiptUpdate(BaseModel):
     warehouse_id: Optional[int] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class GoodsReceiptResponse(AuditMixin):
     id: int
     receipt_number: str
-    purchase_order_id: Optional[int]
+    purchase_order_id: Optional[int] = None
     receipt_date: date
-    warehouse_id: Optional[int]
+    warehouse_id: Optional[int] = None
     status: str
-    notes: Optional[str]
+    notes: Optional[str] = None
 
 
 class GoodsReceiptLineCreate(BaseModel):
@@ -79,6 +85,7 @@ class GoodsReceiptLineCreate(BaseModel):
     batch_number: Optional[str] = Field(None, max_length=255)
     manufacturing_date: Optional[date] = None
     expiry_date: Optional[date] = None
+    business_id: Optional[int] = None
 
 class GoodsReceiptLineUpdate(BaseModel):
     receipt_id: Optional[int] = None
@@ -92,16 +99,17 @@ class GoodsReceiptLineUpdate(BaseModel):
     batch_number: Optional[str] = Field(None, max_length=255)
     manufacturing_date: Optional[date] = None
     expiry_date: Optional[date] = None
+    business_id: Optional[int] = None
 
 class GoodsReceiptLineResponse(AuditMixin):
     id: int
     receipt_id: int
-    purchase_order_line_id: Optional[int]
-    product_id: Optional[int]
+    purchase_order_line_id: Optional[int] = None
+    product_id: Optional[int] = None
     product_name: str
     qty_received: float
     qty_ordered: float
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     line_number: int
     batch_number: Optional[str] = None
     manufacturing_date: Optional[date] = None

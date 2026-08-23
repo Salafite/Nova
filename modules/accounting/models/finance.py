@@ -10,6 +10,7 @@ class COACreate(BaseModel):
     account_type: str = Field(..., max_length=50) # Asset, Liability, Equity, Revenue, Expense
     currency: str = 'USD'
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class COAUpdate(BaseModel):
     account_code: Optional[str] = Field(None, max_length=20)
@@ -17,14 +18,15 @@ class COAUpdate(BaseModel):
     account_type: Optional[str] = Field(None, max_length=50)
     currency: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class COAResponse(AuditMixin):
     id: int
     account_code: str
     account_name: str
     account_type: str
-    currency: str
-    is_active: bool
+    currency: str = 'USD'
+    is_active: bool = True
 
 
 # Journal Entry
@@ -33,19 +35,21 @@ class JournalEntryCreate(BaseModel):
     reference: Optional[str] = Field(None, max_length=100)
     description: str = Field(..., max_length=255)
     status: str = 'Draft' # Draft, Posted, Cancelled
+    business_id: Optional[int] = None
 
 class JournalEntryUpdate(BaseModel):
     entry_date: Optional[date] = None
     reference: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, max_length=255)
     status: Optional[str] = None
+    business_id: Optional[int] = None
 
 class JournalEntryResponse(AuditMixin):
     id: int
     entry_date: date
-    reference: Optional[str]
+    reference: Optional[str] = None
     description: str
-    status: str
+    status: str = 'Draft'
 
 
 # Journal Line
@@ -55,6 +59,7 @@ class JournalLineCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=255)
     debit: float = Field(default=0, ge=0)
     credit: float = Field(default=0, ge=0)
+    business_id: Optional[int] = None
 
 class JournalLineUpdate(BaseModel):
     journal_entry_id: Optional[int] = None
@@ -62,14 +67,15 @@ class JournalLineUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=255)
     debit: Optional[float] = Field(None, ge=0)
     credit: Optional[float] = Field(None, ge=0)
+    business_id: Optional[int] = None
 
 class JournalLineResponse(AuditMixin):
     id: int
     journal_entry_id: int
     account_id: int
-    description: Optional[str]
-    debit: float
-    credit: float
+    description: Optional[str] = None
+    debit: float = 0
+    credit: float = 0
 
 
 # Invoice (Accounts Receivable / Payable)
@@ -86,6 +92,7 @@ class InvoiceCreate(BaseModel):
     total_amount: float = Field(..., ge=0)
     status: str = 'Unpaid'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class InvoiceUpdate(BaseModel):
     invoice_number: Optional[str] = Field(None, max_length=50)
@@ -100,6 +107,7 @@ class InvoiceUpdate(BaseModel):
     total_amount: Optional[float] = Field(None, ge=0)
     status: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class InvoiceResponse(AuditMixin):
     id: int
@@ -113,7 +121,7 @@ class InvoiceResponse(AuditMixin):
     freight_amount: float = 0
     discount_amount: float = 0
     total_amount: float
-    status: str
+    status: str = 'Unpaid'
     notes: Optional[str] = None
 
 
@@ -126,6 +134,7 @@ class PaymentCreate(BaseModel):
     payment_method: str = Field(..., max_length=50) # Cash, Bank Transfer, Card
     reference: Optional[str] = Field(None, max_length=100)
     status: str = 'Completed'
+    business_id: Optional[int] = None
 
 class PaymentUpdate(BaseModel):
     payment_date: Optional[date] = None
@@ -135,13 +144,14 @@ class PaymentUpdate(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PaymentResponse(AuditMixin):
     id: int
     payment_date: date
-    invoice_id: Optional[int]
+    invoice_id: Optional[int] = None
     partner_id: int
     amount: float
     payment_method: str
-    reference: Optional[str]
-    status: str
+    reference: Optional[str] = None
+    status: str = 'Completed'

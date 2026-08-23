@@ -62,6 +62,60 @@ class TestRegistry:
         call_tool("echo", {}, user={"id": 1})
         assert get_current_user() is None
 
+    def test_call_tool_sets_and_resets_tenant_context(self):
+        from modules.core.context import get_current_tenant
+        captured_tenant = []
+        tool = Tool(name="tenant_tool", description="Checks tenant", input_schema={})
+        register_tool(tool, lambda: captured_tenant.append(get_current_tenant()))
+        user = {"id": 1, "username": "alice", "business_id": 42}
+        call_tool("tenant_tool", {}, user=user)
+        assert captured_tenant == [42]
+        assert get_current_tenant() is None
+
+    def test_call_tool_with_tenant_id_key(self):
+        from modules.core.context import get_current_tenant
+        captured_tenant = []
+        tool = Tool(name="tenant_tool", description="Checks tenant", input_schema={})
+        register_tool(tool, lambda: captured_tenant.append(get_current_tenant()))
+        user = {"id": 1, "username": "alice", "tenant_id": 99}
+        call_tool("tenant_tool", {}, user=user)
+        assert captured_tenant == [99]
+        assert get_current_tenant() is None
+
+    def test_call_tool_with_nova_tenant_id_env_var(self, monkeypatch):
+        from modules.core.context import get_current_tenant
+        monkeypatch.setenv("NOVA_TENANT_ID", "77")
+        captured_tenant = []
+        tool = Tool(name="tenant_tool", description="Checks tenant", input_schema={})
+        register_tool(tool, lambda: captured_tenant.append(get_current_tenant()))
+        call_tool("tenant_tool", {})
+        assert captured_tenant == [77]
+        assert get_current_tenant() is None
+
+    def test_call_tool_user_overrides_nova_tenant_id_env_var(self, monkeypatch):
+        from modules.core.context import get_current_tenant
+        monkeypatch.setenv("NOVA_TENANT_ID", "77")
+        captured_tenant = []
+        tool = Tool(name="tenant_tool", description="Checks tenant", input_schema={})
+        register_tool(tool, lambda: captured_tenant.append(get_current_tenant()))
+        user = {"id": 1, "business_id": 100}
+        call_tool("tenant_tool", {}, user=user)
+        assert captured_tenant == [100]
+        assert get_current_tenant() is None
+
+    def test_call_tool_exception_resets_tenant_context(self):
+        import pytest
+        from modules.core.context import get_current_tenant
+        def _failing_handler():
+            assert get_current_tenant() == 42
+            raise RuntimeError("handler failed")
+        tool = Tool(name="fail_tool", description="Fails", input_schema={})
+        register_tool(tool, _failing_handler)
+        with pytest.raises(RuntimeError, match="handler failed"):
+            call_tool("fail_tool", {}, user={"business_id": 42})
+        assert get_current_tenant() is None
+        assert get_current_user() is None
+
     def test_propose_action_returns_preview(self):
         tool = Tool(name="test_tool_name", description="Test", input_schema={})
         register_tool(tool, lambda: "executed")

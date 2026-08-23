@@ -10,6 +10,7 @@ class DepartmentCreate(BaseModel):
     parent_id: Optional[int] = None
     manager_id: Optional[int] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class DepartmentUpdate(BaseModel):
     department_code: Optional[str] = Field(None, max_length=20)
@@ -17,14 +18,15 @@ class DepartmentUpdate(BaseModel):
     parent_id: Optional[int] = None
     manager_id: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class DepartmentResponse(AuditMixin):
     id: int
     department_code: str
     department_name: str
-    parent_id: Optional[int]
-    manager_id: Optional[int]
-    is_active: bool
+    parent_id: Optional[int] = None
+    manager_id: Optional[int] = None
+    is_active: bool = True
 
 
 class DesignationCreate(BaseModel):
@@ -32,19 +34,21 @@ class DesignationCreate(BaseModel):
     designation_name: str = Field(..., max_length=100)
     department_id: Optional[int] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class DesignationUpdate(BaseModel):
     designation_code: Optional[str] = Field(None, max_length=20)
     designation_name: Optional[str] = Field(None, max_length=100)
     department_id: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class DesignationResponse(AuditMixin):
     id: int
     designation_code: str
     designation_name: str
-    department_id: Optional[int]
-    is_active: bool
+    department_id: Optional[int] = None
+    is_active: bool = True
 
 
 class EmployeeCreate(BaseModel):
@@ -66,6 +70,7 @@ class EmployeeCreate(BaseModel):
     designation_id: Optional[int] = None
     manager_id: Optional[int] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class EmployeeUpdate(BaseModel):
     employee_code: Optional[str] = Field(None, max_length=30)
@@ -86,27 +91,28 @@ class EmployeeUpdate(BaseModel):
     designation_id: Optional[int] = None
     manager_id: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class EmployeeResponse(AuditMixin):
     id: int
     employee_code: str
     full_name: str
-    arabic_name: Optional[str]
-    email: Optional[str]
-    phone: Optional[str]
-    address: Optional[str]
-    national_id: Optional[str]
-    passport_no: Optional[str]
-    gender: Optional[str]
-    marital_status: Optional[str]
-    birth_date: Optional[date]
-    hire_date: Optional[date]
-    termination_date: Optional[date]
-    employment_status: str
-    department_id: Optional[int]
-    designation_id: Optional[int]
-    manager_id: Optional[int]
-    is_active: bool
+    arabic_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    national_id: Optional[str] = None
+    passport_no: Optional[str] = None
+    gender: Optional[str] = None
+    marital_status: Optional[str] = None
+    birth_date: Optional[date] = None
+    hire_date: Optional[date] = None
+    termination_date: Optional[date] = None
+    employment_status: str = 'Active'
+    department_id: Optional[int] = None
+    designation_id: Optional[int] = None
+    manager_id: Optional[int] = None
+    is_active: bool = True
 
 
 class EmployeeContractCreate(BaseModel):
@@ -120,6 +126,7 @@ class EmployeeContractCreate(BaseModel):
     other_allowances: float = 0
     currency: str = 'USD'
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class EmployeeContractUpdate(BaseModel):
     employee_id: Optional[int] = None
@@ -132,19 +139,20 @@ class EmployeeContractUpdate(BaseModel):
     other_allowances: Optional[float] = None
     currency: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class EmployeeContractResponse(AuditMixin):
     id: int
     employee_id: int
-    contract_type: str
+    contract_type: str = 'Permanent'
     start_date: date
-    end_date: Optional[date]
-    basic_salary: float
-    housing_allowance: float
-    transport_allowance: float
-    other_allowances: float
-    currency: str
-    is_active: bool
+    end_date: Optional[date] = None
+    basic_salary: float = 0
+    housing_allowance: float = 0
+    transport_allowance: float = 0
+    other_allowances: float = 0
+    currency: str = 'USD'
+    is_active: bool = True
 
 
 class EmployeeDocumentCreate(BaseModel):
@@ -154,6 +162,7 @@ class EmployeeDocumentCreate(BaseModel):
     file_path: Optional[str] = Field(None, max_length=500)
     expiry_date: Optional[date] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class EmployeeDocumentUpdate(BaseModel):
     employee_id: Optional[int] = None
@@ -162,15 +171,16 @@ class EmployeeDocumentUpdate(BaseModel):
     file_path: Optional[str] = Field(None, max_length=500)
     expiry_date: Optional[date] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class EmployeeDocumentResponse(AuditMixin):
     id: int
     employee_id: int
     document_type: str
     document_name: str
-    file_path: Optional[str]
-    expiry_date: Optional[date]
-    is_active: bool
+    file_path: Optional[str] = None
+    expiry_date: Optional[date] = None
+    is_active: bool = True
 
 
 class ShiftCreate(BaseModel):
@@ -180,6 +190,7 @@ class ShiftCreate(BaseModel):
     end_time: str = Field(..., max_length=10)
     grace_minutes: Optional[int] = 0
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ShiftUpdate(BaseModel):
     shift_code: Optional[str] = Field(None, max_length=20)
@@ -188,6 +199,7 @@ class ShiftUpdate(BaseModel):
     end_time: Optional[str] = Field(None, max_length=10)
     grace_minutes: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ShiftResponse(AuditMixin):
     id: int
@@ -195,8 +207,8 @@ class ShiftResponse(AuditMixin):
     shift_name: str
     start_time: str
     end_time: str
-    grace_minutes: Optional[int]
-    is_active: bool
+    grace_minutes: Optional[int] = 0
+    is_active: bool = True
 
 
 class AttendanceCreate(BaseModel):
@@ -207,6 +219,7 @@ class AttendanceCreate(BaseModel):
     clock_out: Optional[datetime] = None
     status: str = 'Present'
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class AttendanceUpdate(BaseModel):
     employee_id: Optional[int] = None
@@ -216,16 +229,17 @@ class AttendanceUpdate(BaseModel):
     clock_out: Optional[datetime] = None
     status: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class AttendanceResponse(AuditMixin):
     id: int
     employee_id: int
     date: date
-    shift_id: Optional[int]
-    clock_in: Optional[datetime]
-    clock_out: Optional[datetime]
-    status: str
-    is_active: bool
+    shift_id: Optional[int] = None
+    clock_in: Optional[datetime] = None
+    clock_out: Optional[datetime] = None
+    status: str = 'Present'
+    is_active: bool = True
 
 
 class LeaveTypeCreate(BaseModel):
@@ -234,6 +248,7 @@ class LeaveTypeCreate(BaseModel):
     days_per_year: float = 0
     is_paid: bool = True
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class LeaveTypeUpdate(BaseModel):
     leave_code: Optional[str] = Field(None, max_length=20)
@@ -241,14 +256,15 @@ class LeaveTypeUpdate(BaseModel):
     days_per_year: Optional[float] = None
     is_paid: Optional[bool] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class LeaveTypeResponse(AuditMixin):
     id: int
     leave_code: str
     leave_name: str
-    days_per_year: float
-    is_paid: bool
-    is_active: bool
+    days_per_year: float = 0
+    is_paid: bool = True
+    is_active: bool = True
 
 
 class LeaveRequestCreate(BaseModel):
@@ -261,6 +277,7 @@ class LeaveRequestCreate(BaseModel):
     status: str = 'Pending'
     approved_by: Optional[int] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class LeaveRequestUpdate(BaseModel):
     employee_id: Optional[int] = None
@@ -272,6 +289,7 @@ class LeaveRequestUpdate(BaseModel):
     status: Optional[str] = None
     approved_by: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class LeaveRequestResponse(AuditMixin):
     id: int
@@ -280,10 +298,10 @@ class LeaveRequestResponse(AuditMixin):
     start_date: date
     end_date: date
     days: float
-    reason: Optional[str]
-    status: str
-    approved_by: Optional[int]
-    is_active: bool
+    reason: Optional[str] = None
+    status: str = 'Pending'
+    approved_by: Optional[int] = None
+    is_active: bool = True
 
 
 class PayrollPeriodCreate(BaseModel):
@@ -293,6 +311,7 @@ class PayrollPeriodCreate(BaseModel):
     end_date: date
     status: str = 'Open'
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class PayrollPeriodUpdate(BaseModel):
     period_code: Optional[str] = Field(None, max_length=20)
@@ -301,6 +320,7 @@ class PayrollPeriodUpdate(BaseModel):
     end_date: Optional[date] = None
     status: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class PayrollPeriodResponse(AuditMixin):
     id: int
@@ -308,8 +328,8 @@ class PayrollPeriodResponse(AuditMixin):
     period_name: str
     start_date: date
     end_date: date
-    status: str
-    is_active: bool
+    status: str = 'Open'
+    is_active: bool = True
 
 
 class PayrollEntryCreate(BaseModel):
@@ -328,6 +348,7 @@ class PayrollEntryCreate(BaseModel):
     payment_date: Optional[date] = None
     notes: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class PayrollEntryUpdate(BaseModel):
     employee_id: Optional[int] = None
@@ -345,24 +366,25 @@ class PayrollEntryUpdate(BaseModel):
     payment_date: Optional[date] = None
     notes: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class PayrollEntryResponse(AuditMixin):
     id: int
     employee_id: int
     payroll_period_id: int
-    basic_salary: float
-    housing_allowance: float
-    transport_allowance: float
-    other_allowances: float
-    overtime: float
-    deductions: float
-    tax: float
-    gross_pay: float
-    net_pay: float
-    status: str
-    payment_date: Optional[date]
-    notes: Optional[str]
-    is_active: bool
+    basic_salary: float = 0
+    housing_allowance: float = 0
+    transport_allowance: float = 0
+    other_allowances: float = 0
+    overtime: float = 0
+    deductions: float = 0
+    tax: float = 0
+    gross_pay: float = 0
+    net_pay: float = 0
+    status: str = 'Draft'
+    payment_date: Optional[date] = None
+    notes: Optional[str] = None
+    is_active: bool = True
 
 
 class JobOpeningCreate(BaseModel):
@@ -377,6 +399,7 @@ class JobOpeningCreate(BaseModel):
     posted_date: Optional[date] = None
     closing_date: Optional[date] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class JobOpeningUpdate(BaseModel):
     job_code: Optional[str] = Field(None, max_length=20)
@@ -390,20 +413,21 @@ class JobOpeningUpdate(BaseModel):
     posted_date: Optional[date] = None
     closing_date: Optional[date] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class JobOpeningResponse(AuditMixin):
     id: int
     job_code: str
     job_title: str
-    department_id: Optional[int]
-    designation_id: Optional[int]
-    openings: int
-    description: Optional[str]
-    requirements: Optional[str]
-    status: str
-    posted_date: Optional[date]
-    closing_date: Optional[date]
-    is_active: bool
+    department_id: Optional[int] = None
+    designation_id: Optional[int] = None
+    openings: int = 1
+    description: Optional[str] = None
+    requirements: Optional[str] = None
+    status: str = 'Draft'
+    posted_date: Optional[date] = None
+    closing_date: Optional[date] = None
+    is_active: bool = True
 
 
 class CandidateCreate(BaseModel):
@@ -417,6 +441,7 @@ class CandidateCreate(BaseModel):
     notes: Optional[str] = None
     applied_date: date = Field(default_factory=date.today)
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class CandidateUpdate(BaseModel):
     candidate_code: Optional[str] = Field(None, max_length=30)
@@ -429,16 +454,17 @@ class CandidateUpdate(BaseModel):
     notes: Optional[str] = None
     applied_date: Optional[date] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class CandidateResponse(AuditMixin):
     id: int
     candidate_code: str
     full_name: str
-    email: Optional[str]
-    phone: Optional[str]
-    job_opening_id: Optional[int]
-    status: str
-    resume_path: Optional[str]
-    notes: Optional[str]
-    applied_date: date
-    is_active: bool
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    job_opening_id: Optional[int] = None
+    status: str = 'Applied'
+    resume_path: Optional[str] = None
+    notes: Optional[str] = None
+    applied_date: date = Field(default_factory=date.today)
+    is_active: bool = True

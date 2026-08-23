@@ -9,6 +9,7 @@ class TenantCreate(BaseModel):
     domain: Optional[str] = Field(None, max_length=255)
     config: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class TenantUpdate(BaseModel):
     tenant_code: Optional[str] = Field(None, max_length=50)
@@ -16,14 +17,15 @@ class TenantUpdate(BaseModel):
     domain: Optional[str] = Field(None, max_length=255)
     config: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class TenantResponse(AuditMixin):
     id: int
     tenant_code: str
     tenant_name: str
-    domain: Optional[str]
-    config: Optional[str]
-    is_active: bool
+    domain: Optional[str] = None
+    config: Optional[str] = None
+    is_active: bool = True
 
 
 class WorkflowDefinitionCreate(BaseModel):
@@ -32,6 +34,7 @@ class WorkflowDefinitionCreate(BaseModel):
     entity_type: Optional[str] = Field(None, max_length=100)
     config: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class WorkflowDefinitionUpdate(BaseModel):
     workflow_code: Optional[str] = Field(None, max_length=50)
@@ -39,14 +42,15 @@ class WorkflowDefinitionUpdate(BaseModel):
     entity_type: Optional[str] = Field(None, max_length=100)
     config: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class WorkflowDefinitionResponse(AuditMixin):
     id: int
     workflow_code: str
     workflow_name: str
-    entity_type: Optional[str]
-    config: Optional[str]
-    is_active: bool
+    entity_type: Optional[str] = None
+    config: Optional[str] = None
+    is_active: bool = True
 
 
 class WorkflowInstanceCreate(BaseModel):
@@ -57,6 +61,7 @@ class WorkflowInstanceCreate(BaseModel):
     current_step: Optional[str] = None
     config: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class WorkflowInstanceUpdate(BaseModel):
     workflow_id: Optional[int] = None
@@ -66,16 +71,17 @@ class WorkflowInstanceUpdate(BaseModel):
     current_step: Optional[str] = None
     config: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class WorkflowInstanceResponse(AuditMixin):
     id: int
     workflow_id: int
-    entity_type: Optional[str]
-    entity_id: Optional[int]
-    status: str
-    current_step: Optional[str]
-    config: Optional[str]
-    is_active: bool
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    status: str = 'Active'
+    current_step: Optional[str] = None
+    config: Optional[str] = None
+    is_active: bool = True
 
 
 class DocumentCreate(BaseModel):
@@ -88,6 +94,7 @@ class DocumentCreate(BaseModel):
     file_size: Optional[int] = None
     version: int = 1
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class DocumentUpdate(BaseModel):
     document_code: Optional[str] = Field(None, max_length=50)
@@ -99,18 +106,19 @@ class DocumentUpdate(BaseModel):
     file_size: Optional[int] = None
     version: Optional[int] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class DocumentResponse(AuditMixin):
     id: int
     document_code: str
     document_name: str
-    entity_type: Optional[str]
-    entity_id: Optional[int]
-    file_path: Optional[str]
-    file_type: Optional[str]
-    file_size: Optional[int]
-    version: int
-    is_active: bool
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    file_path: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+    version: int = 1
+    is_active: bool = True
 
 
 class ComplianceRuleCreate(BaseModel):
@@ -120,6 +128,7 @@ class ComplianceRuleCreate(BaseModel):
     description: Optional[str] = None
     config: Optional[str] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ComplianceRuleUpdate(BaseModel):
     rule_code: Optional[str] = Field(None, max_length=50)
@@ -128,12 +137,13 @@ class ComplianceRuleUpdate(BaseModel):
     description: Optional[str] = None
     config: Optional[str] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ComplianceRuleResponse(AuditMixin):
     id: int
     rule_code: str
     rule_name: str
-    category: Optional[str]
-    description: Optional[str]
-    config: Optional[str]
-    is_active: bool
+    category: Optional[str] = None
+    description: Optional[str] = None
+    config: Optional[str] = None
+    is_active: bool = True

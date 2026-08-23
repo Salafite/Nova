@@ -11,17 +11,20 @@ class StockMovementCreate(BaseModel):
     qty_change: float  # positive = stock in, negative = stock out
     balance_after: float = 0
     description: Optional[str] = None
+    business_id: Optional[int] = None
 
 class StockMovementResponse(BaseModel):
     id: int
     product_id: int
     warehouse_id: int
     movement_type: str
-    reference_type: Optional[str]
-    reference_id: Optional[int]
+    reference_type: Optional[str] = None
+    reference_id: Optional[int] = None
     qty_change: float
     balance_after: float
-    description: Optional[str]
-    movement_date: Optional[datetime]
-    created_by: Optional[int]
-    created_at: Optional[datetime]
+    description: Optional[str] = None
+    movement_date: Optional[datetime] = None
+    created_by: Optional[int] = None
+    created_at: Optional[datetime] = None
+    business_id: Optional[int] = None
+

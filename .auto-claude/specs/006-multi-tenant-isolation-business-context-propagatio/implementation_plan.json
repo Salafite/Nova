@@ -1,0 +1,191 @@
+{
+  "feature": "Multi-Tenant Isolation & Business Context Propagation",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Database Schema Migration & Model Updates",
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "title": "Create SQL migration script adding business_id foreign keys (REFERENCES \"Nova\".t0059(id)) and composite indexes (business_id, id) across all business tables (T0001-T0106).",
+          "description": "Create SQL migration script adding business_id foreign keys (REFERENCES \"Nova\".t0059(id)) and composite indexes (business_id, id) across all business tables (T0001-T0106).",
+          "status": "completed"
+        },
+        {
+          "id": "subtask-1-2",
+          "title": "Update packages/database/schema.sql and verification utilities (verify_schema.py, apply_schema.py) with the tenant foreign keys and indexes.",
+          "description": "Update packages/database/schema.sql and verification utilities (verify_schema.py, apply_schema.py) with the tenant foreign keys and indexes.",
+          "status": "completed"
+        },
+        {
+          "id": "subtask-1-3",
+          "title": "Update Pydantic model factories (modules/core/models/factory.py, base.py) and domain models to support business_id.",
+          "description": "Update Pydantic model factories (modules/core/models/factory.py, base.py) and domain models to support business_id.",
+          "status": "completed"
+        }
+      ],
+      "description": "Add business_id foreign key columns and composite indexes across all business entity tables and update schema definitions and models.",
+      "status": "completed"
+    },
+    {
+      "id": "phase-2",
+      "name": "Tenant Context Management & JWT Claims",
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "title": "Create modules/core/context.py providing contextvars-based get_current_tenant, set_current_tenant, and tenant_context context manager.",
+          "description": "Create modules/core/context.py providing contextvars-based get_current_tenant, set_current_tenant, and tenant_context context manager.",
+          "status": "completed",
+          "completed_at": "2026-08-22T01:55:00.000Z"
+        },
+        {
+          "id": "subtask-2-2",
+          "title": "Update packages/auth/jwt.py and packages/auth/service.py to embed business_id in JWT claims during login, refresh, and signup.",
+          "description": "Update packages/auth/jwt.py and packages/auth/service.py to embed business_id in JWT claims during login, refresh, and signup.",
+          "status": "completed",
+          "completed_at": "2026-08-20T21:16:37.442Z"
+        },
+        {
+          "id": "subtask-2-3",
+          "title": "Update packages/auth/deps.py to extract business_id from validated JWT tokens and automatically populate the tenant contextvar.",
+          "description": "Update packages/auth/deps.py to extract business_id from validated JWT tokens and automatically populate the tenant contextvar.",
+          "status": "completed",
+          "completed_at": "2026-08-21T22:49:32.427Z"
+        }
+      ],
+      "description": "Implement thread-safe contextvars for tenant context propagation and update JWT generation and validation.",
+      "status": "completed"
+    },
+    {
+      "id": "phase-3",
+      "name": "Repository & Service Layer Tenant Scoping",
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "title": "Update CrudRepository (modules/core/repositories/base.py) to automatically apply business_id = %s on list, get, update, delete, count, and auto-inject business_id on create.",
+          "description": "Update CrudRepository (modules/core/repositories/base.py) to automatically apply business_id = %s on list, get, update, delete, count, and auto-inject business_id on create.",
+          "status": "completed",
+          "completed_at": "2026-08-21T22:58:52.439Z"
+        },
+        {
+          "id": "subtask-3-2",
+          "title": "Update CrudService and domain-specific services to honor tenant context and prevent cross-tenant operations.",
+          "description": "Update CrudService and domain-specific services to honor tenant context and prevent cross-tenant operations.",
+          "status": "completed",
+          "completed_at": "2026-08-22T02:18:00.000Z"
+        },
+        {
+          "id": "subtask-3-3",
+          "title": "Write comprehensive unit tests in modules/core/repositories/tests/ for tenant-scoped CRUD operations and isolation.",
+          "description": "Write comprehensive unit tests in modules/core/repositories/tests/ for tenant-scoped CRUD operations and isolation.",
+          "status": "completed",
+          "completed_at": "2026-08-22T02:43:00.000Z"
+        }
+      ],
+      "description": "Enforce automatic tenant filtering in CrudRepository and services based on active tenant context.",
+      "status": "completed"
+    },
+    {
+      "id": "phase-4",
+      "name": "Cross-Tenant Access Protection & Security Audit Logging",
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "title": "Implement security audit event recorder in packages/security/audit.py to log unauthorized access attempts to T0023 and the security logger.",
+          "description": "Implement security audit event recorder in packages/security/audit.py to log unauthorized access attempts to T0023 and the security logger.",
+          "status": "completed",
+          "completed_at": "2026-08-21T23:47:01.028Z"
+        },
+        {
+          "id": "subtask-4-2",
+          "title": "Update base controller router generator (modules/core/controllers/base.py) to check record ownership, raise HTTP 403 on cross-tenant access attempts, and trigger security audit events.",
+          "description": "Update base controller router generator (modules/core/controllers/base.py) to check record ownership, raise HTTP 403 on cross-tenant access attempts, and trigger security audit events.",
+          "status": "completed",
+          "completed_at": "2026-08-22T15:26:43.677Z"
+        },
+        {
+          "id": "subtask-4-3",
+          "title": "Write integration tests verifying that cross-tenant get/update/delete requests return 403 Forbidden and create audit entries in T0023.",
+          "description": "Write integration tests verifying that cross-tenant get/update/delete requests return 403 Forbidden and create audit entries in T0023.",
+          "status": "completed",
+          "completed_at": "2026-08-22T19:18:30.000Z"
+        }
+      ],
+      "description": "Detect cross-tenant access attempts, return HTTP 403 Forbidden, and log security audit events.",
+      "status": "completed"
+    },
+    {
+      "id": "phase-5",
+      "name": "MCP Tool Tenant Isolation & Context Propagation",
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "title": "Update packages/mcp/registry.py, server.py, and stdio.py to set tenant context from user dict or NOVA_TENANT_ID environment variable.",
+          "description": "Update packages/mcp/registry.py, server.py, and stdio.py to set tenant context from user dict or NOVA_TENANT_ID environment variable.",
+          "status": "completed",
+          "completed_at": "2026-08-22T19:50:00.000Z"
+        },
+        {
+          "id": "subtask-5-2",
+          "title": "Update custom SQL queries and handlers across all 15 MCP servers (inventory_mcp, sales_mcp, database_mcp, etc.) to enforce business_id filtering.",
+          "description": "Update custom SQL queries and handlers across all 15 MCP servers (inventory_mcp, sales_mcp, database_mcp, etc.) to enforce business_id filtering.",
+          "status": "completed",
+          "completed_at": "2026-08-22T21:07:30.000Z"
+        },
+        {
+          "id": "subtask-5-3",
+          "title": "Update packages/ai/ service and router to propagate authenticated user tenant context into all MCP tool calls.",
+          "description": "Update packages/ai/ service and router to propagate authenticated user tenant context into all MCP tool calls.",
+          "status": "completed",
+          "completed_at": "2026-08-22T21:35:00.000Z"
+        },
+        {
+          "id": "subtask-5-4",
+          "title": "Write MCP integration tests verifying tenant data isolation for stdio, SSE, and in-app AI tool invocations.",
+          "description": "Write MCP integration tests verifying tenant data isolation for stdio, SSE, and in-app AI tool invocations.",
+          "status": "completed",
+          "completed_at": "2026-08-22T22:20:00.000Z"
+        }
+      ],
+      "description": "Enforce tenant scoping across all 15 MCP servers and AI assistant tool executions.",
+      "status": "completed"
+    },
+    {
+      "id": "phase-6",
+      "name": "End-to-End Testing, Documentation & Validation",
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "title": "Execute full test suite (unit, integration, MCP, AI tests) to guarantee zero regressions and verify all multi-tenant requirements.",
+          "description": "Execute full test suite (unit, integration, MCP, AI tests) to guarantee zero regressions and verify all multi-tenant requirements.",
+          "status": "completed",
+          "completed_at": "2026-08-22T22:33:00.000Z"
+        },
+        {
+          "id": "subtask-6-2",
+          "title": "Update AGENTS.md, docs/MCP_Plan.md, and system documentation reflecting tenant scoping resolution.",
+          "description": "Update AGENTS.md, docs/MCP_Plan.md, and system documentation reflecting tenant scoping resolution.",
+          "status": "completed",
+          "completed_at": "2026-08-22T22:56:00.000Z"
+        }
+      ],
+      "description": "Run full test suite across the platform and update architectural documentation.",
+      "status": "completed"
+    }
+  ],
+  "description": "# Multi-Tenant Isolation & Business Context Propagation\n\nAdd `business_id` columns across all business schema tables, inject tenant context into JWT claims and repository queries, and enforce strict database tenant separation across API and MCP tool calls.\n\n## Rationale\nCurrently, business tables lack `business_id` columns and tenant scoping. In a multi-tenant or SaaS deployment, one business could inadvertently access or modify data belonging to another tenant.\n\n## User Stories\n- As a SaaS distributor customer, I want guaranteed data isolation so that our pricing, customer lists, and financial records are completely inaccessible to other distributors.\n- As an AI assistant user, I want tool calls scoped strictly to my organization's business ID without accidental data leakage.\n\n## Acceptance Criteria\n- [ ] Schema migration adds NOT NULL `business_id` foreign keys and composite indexes to all business entities\n- [ ] FastAPI dependency extracts `business_id` from validated JWT and injects it into every repository query automatically\n- [ ] MCP tool handlers enforce tenant filtering on all queries and mutations\n- [ ] Cross-tenant data access attempts return 403 Forbidden and trigger a security audit event\n",
+  "created_at": "2026-08-19T01:16:58.216Z",
+  "updated_at": "2026-08-22T21:53:47.312Z",
+  "status": "done",
+  "planStatus": "completed",
+  "xstateState": "human_review",
+  "executionPhase": "complete",
+  "lastEvent": {
+    "eventId": "006-multi-tenant-isolation-business-context-propagatio-BUILD_COMPLETE-1787430240987",
+    "sequence": 1787430240987,
+    "type": "BUILD_COMPLETE",
+    "timestamp": "2026-08-22T20:24:00.987Z"
+  },
+  "recoveryNote": "Task recovered from stuck state at 2026-08-22T13:27:22.767Z",
+  "reviewReason": "completed"
+}

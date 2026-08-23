@@ -189,11 +189,12 @@ httpx>=0.27.0
 
 ---
 
-## 9. Known Gaps (Pre-Existing, Deferred)
+## 9. Multi-Tenant Scoping & Business Context Resolution
 
-**Tenant scoping:** No tenant scoping currently exists in any layer (controllers, services, or repositories). Most business tables lack a `business_id` column. Full tenant isolation requires:
-1. Adding `business_id` to all business tables (schema migration)
-2. Injecting tenant context in the service/repository layer
-3. Adding `business_id` to the JWT payload for efficiency
+Multi-tenant data isolation and business context propagation are fully resolved and enforced end-to-end:
 
-Without this, MCP tools operate against all data regardless of tenant.
+1. **Database Schema & Indexes**: Migration `019_add_business_id_multitenancy.sql` added `business_id REFERENCES "Nova".t0059(id)` and composite indexes `(business_id, id)` across all business tables (`t0001`–`t0107`, excluding platform registry `t0059`).
+2. **Contextvars & JWT**: `modules/core/context.py` provides thread-safe `get_current_tenant()` and `tenant_context()`; `packages/auth/jwt.py` embeds `business_id` in token claims; `packages/auth/deps.py` populates the contextvar on authentication.
+3. **Repository & Service Layer**: `CrudRepository` (`modules/core/repositories/base.py`) automatically enforces `business_id = %s` on list/get/update/delete/count and auto-injects `business_id` on create.
+4. **Cross-Tenant Guard & Auditing**: REST controllers verify ownership via `check_record_ownership()`, returning `HTTP 403 Forbidden` on cross-tenant attempts and logging to `t0023` and `security.audit` logger (`packages/security/audit.py`).
+5. **MCP Tool Scoping**: All 15 MCP servers, SSE/stdio transports, and in-app AI chat (`packages/ai`) propagate `business_id` into tool handlers and audit logs (`mcp.audit`).

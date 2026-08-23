@@ -13,6 +13,7 @@ class PaymentTermCreate(BaseModel):
     discount_days: int = Field(default=0, ge=0)
     is_active: bool = True
     is_default: bool = False
+    business_id: Optional[int] = None
 
 
 class PaymentTermUpdate(BaseModel):
@@ -24,18 +25,19 @@ class PaymentTermUpdate(BaseModel):
     discount_days: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
     is_default: Optional[bool] = None
+    business_id: Optional[int] = None
 
 
 class PaymentTermResponse(AuditMixin):
     id: int
     name: str
     code: str
-    description: Optional[str]
-    due_days: int
-    discount_percentage: float
-    discount_days: int
-    is_active: bool
-    is_default: bool
+    description: Optional[str] = None
+    due_days: int = 30
+    discount_percentage: float = 0
+    discount_days: int = 0
+    is_active: bool = True
+    is_default: bool = False
 
 
 # Payment Methods
@@ -45,6 +47,7 @@ class PaymentMethodCreate(BaseModel):
     description: Optional[str] = None
     is_active: bool = True
     is_default: bool = False
+    business_id: Optional[int] = None
 
 
 class PaymentMethodUpdate(BaseModel):
@@ -53,12 +56,13 @@ class PaymentMethodUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[bool] = None
     is_default: Optional[bool] = None
+    business_id: Optional[int] = None
 
 
 class PaymentMethodResponse(AuditMixin):
     id: int
     name: str
     code: str
-    description: Optional[str]
-    is_active: bool
-    is_default: bool
+    description: Optional[str] = None
+    is_active: bool = True
+    is_default: bool = False

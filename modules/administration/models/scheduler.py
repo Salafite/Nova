@@ -11,6 +11,7 @@ class ScheduledTaskCreate(BaseModel):
     description: Optional[str] = None
     config: Optional[dict] = None
     is_active: bool = True
+    business_id: Optional[int] = None
 
 class ScheduledTaskUpdate(BaseModel):
     task_name: Optional[str] = Field(None, max_length=200)
@@ -19,15 +20,16 @@ class ScheduledTaskUpdate(BaseModel):
     description: Optional[str] = None
     config: Optional[dict] = None
     is_active: Optional[bool] = None
+    business_id: Optional[int] = None
 
 class ScheduledTaskResponse(AuditMixin):
     id: int
     task_name: str
     task_type: str
     cron_expression: str
-    description: Optional[str]
-    config: Optional[dict]
-    is_active: bool
-    last_run_at: Optional[datetime]
-    next_run_at: Optional[datetime]
-    status: str
+    description: Optional[str] = None
+    config: Optional[dict] = None
+    is_active: bool = True
+    last_run_at: Optional[datetime] = None
+    next_run_at: Optional[datetime] = None
+    status: str = 'Active'

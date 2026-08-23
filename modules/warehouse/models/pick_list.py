@@ -9,10 +9,12 @@ class PickListCreate(BaseModel):
     warehouse_id: Optional[int] = None
     status: str = 'Pending'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PickListUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PickListResponse(AuditMixin):
     id: int
@@ -35,6 +37,7 @@ class PickListItemCreate(BaseModel):
     expiry_date: Optional[date] = None
     picked_batch_id: Optional[int] = None
     picked_batch_number: Optional[str] = Field(None, max_length=255)
+    business_id: Optional[int] = None
 
 class PickListItemUpdate(BaseModel):
     qty_picked: Optional[float] = Field(None, ge=0)
@@ -43,6 +46,7 @@ class PickListItemUpdate(BaseModel):
     expiry_date: Optional[date] = None
     picked_batch_id: Optional[int] = None
     picked_batch_number: Optional[str] = Field(None, max_length=255)
+    business_id: Optional[int] = None
 
 class PickListItemResponse(AuditMixin):
     id: int

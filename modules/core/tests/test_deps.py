@@ -39,6 +39,46 @@ class TestGetCurrentUser:
         assert exc.value.status_code == 401
         assert 'Invalid token type' in str(exc.value.detail)
 
+    def test_populates_tenant_context_from_token(self, sample_user):
+        from packages.auth.deps import get_current_user
+        from packages.auth.jwt import create_access_token
+        from modules.core.context import get_current_tenant, clear_current_tenant
+
+        clear_current_tenant()
+        assert get_current_tenant() is None
+
+        token = create_access_token(1, business_id=42)
+        creds = MagicMock()
+        creds.credentials = token
+        with patch('packages.auth.deps.get_user_by_id', return_value=sample_user):
+            user = get_current_user(creds)
+            assert user['id'] == 1
+            assert get_current_tenant() == 42
+        clear_current_tenant()
+
+    def test_populates_tenant_context_from_user_dict_fallback(self):
+        from packages.auth.deps import get_current_user
+        from packages.auth.jwt import create_access_token
+        from modules.core.context import get_current_tenant, clear_current_tenant
+
+        clear_current_tenant()
+        assert get_current_tenant() is None
+
+        token = create_access_token(1)  # token without business_id
+        user_with_tenant = {
+            'id': 1,
+            'username': 'tenantuser',
+            'role': 'Admin',
+            'business_id': 77,
+        }
+        creds = MagicMock()
+        creds.credentials = token
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_with_tenant):
+            user = get_current_user(creds)
+            assert user['id'] == 1
+            assert get_current_tenant() == 77
+        clear_current_tenant()
+
 
 class TestRequirePermission:
     def test_admin_wildcard_permission_allowed(self, sample_user):

@@ -11,6 +11,9 @@ _mock_pool.getconn.return_value = _mock_conn
 _pool_patcher = patch('psycopg2.pool.SimpleConnectionPool', return_value=_mock_pool)
 _pool_patcher.start()
 
+import packages.database.connection
+packages.database.connection._pool = _mock_pool
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from modules.core.controllers import all_routers
@@ -28,6 +31,9 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def cursor():
+    packages.database.connection._pool = _mock_pool
+    _mock_pool.getconn.return_value = _mock_conn
+    _mock_conn.cursor.return_value = _mock_cursor
     _mock_cursor.fetchone.return_value = None
     _mock_cursor.fetchall.return_value = []
     _mock_cursor.rowcount = 0

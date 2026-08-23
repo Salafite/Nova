@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 from modules.administration.models import UserCreate, UserUpdate, UserRoleUpdate, UserResponse
 from modules.core.services.user_service import UserService
 from modules.core.repositories.base import CrudRepository
-from modules.core.controllers.base import create_crud_router
+from modules.core.controllers.base import create_crud_router, check_record_ownership
 from packages.auth.deps import get_current_user, require_permission
 
 repo = CrudRepository('T0021', business_columns=['id', 'username', 'password_hash', 'full_name', 'email', 'role', 'permissions', 'status', 'last_login'])
@@ -28,7 +28,9 @@ def _json_safe(obj):
 def update_user_role(id: int, body: UserRoleUpdate, user: dict = Depends(get_current_user)):
     existing = service.get(id)
     if not existing:
+        check_record_ownership(service, id, user, 'T0021', 'PUT')
         raise HTTPException(status.HTTP_404_NOT_FOUND, 'Not found')
+
     result = service.update_role(id, role=body.role, permissions=body.permissions)
     if result:
         audit_repo.create({

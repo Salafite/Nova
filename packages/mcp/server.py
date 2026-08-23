@@ -1,3 +1,4 @@
+import os
 import json
 from decimal import Decimal
 from datetime import datetime, date
@@ -31,6 +32,22 @@ class McpServer:
         method = raw.get("method")
         params = raw.get("params", {})
         req_id = raw.get("id")
+
+        if user is None:
+            env_tenant = os.environ.get("NOVA_TENANT_ID")
+            if env_tenant:
+                try:
+                    user = {"business_id": int(env_tenant)}
+                except (ValueError, TypeError):
+                    pass
+        elif isinstance(user, dict) and "business_id" not in user and "tenant_id" not in user:
+            env_tenant = os.environ.get("NOVA_TENANT_ID")
+            if env_tenant:
+                try:
+                    user = dict(user)
+                    user["business_id"] = int(env_tenant)
+                except (ValueError, TypeError):
+                    pass
 
         try:
             if method == "initialize":
@@ -67,7 +84,7 @@ class McpServer:
                     "resources": [r.model_dump() if hasattr(r, 'model_dump') else r for r in resources]
                 })
             elif method == "resources/read":
-                result = read_resource(params["uri"])
+                result = read_resource(params["uri"], user=user)
                 text = json.dumps(result, default=_json_safe, indent=2)
                 return self._result(req_id, {
                     "contents": [{"uri": params["uri"], "text": text}]

@@ -1,4 +1,4 @@
-from modules.core.models.base import AuditMixin
+from modules.core.models.base import AuditMixin, TenantMixin
 
 # Administration
 from modules.administration.models.system import (
