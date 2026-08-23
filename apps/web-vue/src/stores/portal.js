@@ -53,16 +53,39 @@ export const usePortalStore = defineStore('portal', {
   }),
 
   getters: {
-    cartItemCount: state => state.cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0),
-    cartCount: state => state.cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0),
+    cartItemCount: state => state.cart.reduce((sum, item) => sum + (Number(item.qty ?? item.quantity) || 0), 0),
+    cartCount: state => state.cart.reduce((sum, item) => sum + (Number(item.qty ?? item.quantity) || 0), 0),
     cartUniqueItemCount: state => state.cart.length,
     cartSubtotal: state => {
       const total = state.cart.reduce((sum, item) => {
         const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
-        const qty = Number(item.qty || 0)
+        const qty = Number(item.qty ?? item.quantity ?? 0)
         return sum + (price * qty)
       }, 0)
       return Math.round(total * 100) / 100
+    },
+    cartTaxTotal: state => {
+      const total = state.cart.reduce((sum, item) => {
+        const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
+        const qty = Number(item.qty ?? item.quantity ?? 0)
+        const taxRate = Number(item.tax_rate || 0)
+        return sum + (price * qty * (taxRate / 100))
+      }, 0)
+      return Math.round(total * 100) / 100
+    },
+    cartGrandTotal: state => {
+      const subtotal = state.cart.reduce((sum, item) => {
+        const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
+        const qty = Number(item.qty ?? item.quantity ?? 0)
+        return sum + (price * qty)
+      }, 0)
+      const tax = state.cart.reduce((sum, item) => {
+        const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
+        const qty = Number(item.qty ?? item.quantity ?? 0)
+        const taxRate = Number(item.tax_rate || 0)
+        return sum + (price * qty * (taxRate / 100))
+      }, 0)
+      return Math.round((subtotal + tax) * 100) / 100
     },
     minOrderAmount: state => state.accountSummary?.min_order_amount || 0,
     meetsMinOrder: state => {
@@ -70,7 +93,7 @@ export const usePortalStore = defineStore('portal', {
       if (min <= 0) return true
       const subtotal = state.cart.reduce((sum, item) => {
         const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
-        return sum + (price * (Number(item.qty) || 0))
+        return sum + (price * (Number(item.qty ?? item.quantity) || 0))
       }, 0)
       return subtotal >= min
     },
@@ -79,7 +102,7 @@ export const usePortalStore = defineStore('portal', {
       if (min <= 0) return true
       const subtotal = state.cart.reduce((sum, item) => {
         const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
-        return sum + (price * (Number(item.qty) || 0))
+        return sum + (price * (Number(item.qty ?? item.quantity) || 0))
       }, 0)
       return subtotal >= min
     },
@@ -87,7 +110,7 @@ export const usePortalStore = defineStore('portal', {
       const min = state.accountSummary?.min_order_amount || 0
       const subtotal = state.cart.reduce((sum, item) => {
         const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
-        return sum + (price * (Number(item.qty) || 0))
+        return sum + (price * (Number(item.qty ?? item.quantity) || 0))
       }, 0)
       return Math.max(0, Math.round((min - subtotal) * 100) / 100)
     },
@@ -95,7 +118,7 @@ export const usePortalStore = defineStore('portal', {
       const min = state.accountSummary?.min_order_amount || 0
       const subtotal = state.cart.reduce((sum, item) => {
         const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
-        return sum + (price * (Number(item.qty) || 0))
+        return sum + (price * (Number(item.qty ?? item.quantity) || 0))
       }, 0)
       return Math.max(0, Math.round((min - subtotal) * 100) / 100)
     },
@@ -104,12 +127,13 @@ export const usePortalStore = defineStore('portal', {
       if (min <= 0) return 100
       const subtotal = state.cart.reduce((sum, item) => {
         const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
-        return sum + (price * (Number(item.qty) || 0))
+        return sum + (price * (Number(item.qty ?? item.quantity) || 0))
       }, 0)
       return Math.min(100, Math.round((subtotal / min) * 100))
     },
     isPastCutoff: state => !!state.cutoffStatus?.is_past_cutoff,
     nextDeliveryDate: state => state.cutoffStatus?.next_delivery_date || '',
+    catalogCategories: state => state.categories || [],
     unpaidInvoices: state => state.invoices.filter(inv => inv.status !== 'Paid' && inv.status !== 'Cancelled'),
     paidInvoices: state => state.invoices.filter(inv => inv.status === 'Paid'),
     totalUnpaidBalance: state => {
@@ -210,14 +234,16 @@ export const usePortalStore = defineStore('portal', {
     // Replenishment Cart Actions
     // ----------------------------------------------------------------------
     addToCart(product, qty = 1) {
-      const quantityToAdd = Number(qty) || 1
-      if (quantityToAdd <= 0) return
+      const quantityToAdd = qty === undefined ? 1 : Number(qty)
+      if (isNaN(quantityToAdd) || quantityToAdd <= 0) return
 
       const existingIndex = this.cart.findIndex(i => i.product_id === product.id || i.product_id === product.product_id)
       const unitPrice = Number(product.contracted_price ?? product.unit_price ?? product.base_price ?? 0)
 
       if (existingIndex >= 0) {
-        this.cart[existingIndex].qty = Number(this.cart[existingIndex].qty || 0) + quantityToAdd
+        const newQty = Number(this.cart[existingIndex].qty ?? this.cart[existingIndex].quantity ?? 0) + quantityToAdd
+        this.cart[existingIndex].qty = newQty
+        this.cart[existingIndex].quantity = newQty
         if (unitPrice > 0) {
           this.cart[existingIndex].unit_price = unitPrice
         }
@@ -232,7 +258,9 @@ export const usePortalStore = defineStore('portal', {
           base_price: Number(product.base_price ?? unitPrice),
           is_contracted: !!product.is_contracted,
           discount_percent: Number(product.discount_percent ?? 0),
+          tax_rate: Number(product.tax_rate ?? 0),
           qty: quantityToAdd,
+          quantity: quantityToAdd,
           stock_qty: Number(product.stock_qty ?? 0),
           is_in_stock: product.is_in_stock !== false,
           image_url: product.image_url ?? null,
@@ -251,6 +279,7 @@ export const usePortalStore = defineStore('portal', {
       const item = this.cart.find(i => i.product_id === productId)
       if (item) {
         item.qty = parsedQty
+        item.quantity = parsedQty
         this.saveCart()
       }
     },
@@ -292,9 +321,10 @@ export const usePortalStore = defineStore('portal', {
 
     async submitOrder(payload = {}) {
       try {
-        const items = payload.items || this.cart.map(i => ({
-          product_id: i.product_id,
-          qty: Number(i.qty),
+        const rawItems = payload.items || this.cart
+        const items = rawItems.map(i => ({
+          product_id: i.product_id || i.id,
+          qty: Number(i.qty ?? i.quantity ?? 1),
           notes: i.notes || null,
         }))
 
@@ -555,9 +585,13 @@ export const usePortalStore = defineStore('portal', {
       }
     },
 
-    async fetchPaymentSessionStatus(sessionId) {
+    async fetchPaymentSessionStatus(sessionId, verify = true) {
       try {
-        const res = await api.get(`/portal/settlement/session/${sessionId}`)
+        const params = {}
+        if (verify !== undefined) {
+          params.verify = verify
+        }
+        const res = await api.get(`/portal/settlement/session/${sessionId}`, { params })
         if (res && res.data) {
           this.paymentStatus = res.data
           // Refresh account summary and invoices
