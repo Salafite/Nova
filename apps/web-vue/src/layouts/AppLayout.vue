@@ -95,7 +95,7 @@
       </div>
     </div>
 
-    <AiAssistant v-if="route.name !== 'pos'" />
+    <AiAssistant v-if="route.name !== 'pos' && route.name !== 'field-sales'" />
   </div>
 </template>
 
@@ -178,7 +178,7 @@ const isGrid = computed(() => navStore.navStyle === 'grid')
 const isInventoryRoute = computed(() => inventoryRouteNames.has(route.name))
 const contentClasses = computed(() => ({
   'content-wide': isGrid.value,
-  'content-pos': route.name === 'pos',
+  'content-pos': route.name === 'pos' || route.name === 'field-sales',
 }))
 const activeId = computed(() => route.name)
 const layoutClass = computed(() => {

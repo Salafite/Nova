@@ -94,6 +94,7 @@ class TestPermissionService:
         from modules.core.services.permission_service import derive_permissions
         perms = derive_permissions('Sales Rep')
         assert 'SALES_VIEW' in perms
+        assert 'FIELD_SALES_MOBILE' in perms
         assert 'FINANCE_VIEW' not in perms
         assert 'HR_VIEW' not in perms
 
@@ -101,8 +102,17 @@ class TestPermissionService:
         from modules.core.services.permission_service import derive_permissions
         perms = derive_permissions('Manager')
         assert 'SALES_VIEW' in perms
+        assert 'FIELD_SALES_MOBILE' in perms
         assert 'FINANCE_VIEW' in perms
         assert 'HR_VIEW' in perms
+
+    def test_derive_permissions_sales_manager(self):
+        from modules.core.services.permission_service import derive_permissions
+        perms = derive_permissions('Sales Manager')
+        assert 'SALES_VIEW' in perms
+        assert 'FIELD_SALES_MOBILE' in perms
+        assert 'CRM_VIEW' in perms
+        assert 'HR_VIEW' not in perms
 
     def test_derive_permissions_cashier(self):
         from modules.core.services.permission_service import derive_permissions
@@ -141,6 +151,8 @@ class TestPermissionService:
         assert get_required_permission('/api/admin/users', 'Admin User Preferences') == 'ADMIN_VIEW'
         assert get_required_permission('/api/adjustments', 'Stock Adjustments') == 'INVENTORY_VIEW'
         assert get_required_permission('/api/pos', 'POS') == 'POS_VIEW'
+        assert get_required_permission('/api/sales/mobile', 'Field Sales Mobile') == 'FIELD_SALES_MOBILE'
+        assert get_required_permission('', 'Field Sales') == 'FIELD_SALES_MOBILE'
 
     def test_get_required_permission_fallback_to_admin_view(self):
         from modules.core.services.permission_service import get_required_permission

@@ -349,6 +349,21 @@ COMMENT ON COLUMN "Nova".t0012.freight_amount IS 'Freight / shipping charges app
 COMMENT ON COLUMN "Nova".t0012.discount_amount IS 'Header-level discount amount applied to sales order';
 COMMENT ON COLUMN "Nova".t0012.sales_rep_id IS 'Assigned sales representative (User ID)';
 COMMENT ON COLUMN "Nova".t0012.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+
+ALTER TABLE "Nova".t0012
+    ADD COLUMN IF NOT EXISTS client_order_uuid VARCHAR(64) UNIQUE,
+    ADD COLUMN IF NOT EXISTS is_offline_sync BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS sync_status VARCHAR(30) NOT NULL DEFAULT 'Synced',
+    ADD COLUMN IF NOT EXISTS offline_created_at TIMESTAMPTZ;
+
+COMMENT ON COLUMN "Nova".t0012.client_order_uuid IS 'Client-generated UUID for offline order creation, duplicate prevention, and idempotency';
+COMMENT ON COLUMN "Nova".t0012.is_offline_sync IS 'Flag indicating if order was created offline and synced later';
+COMMENT ON COLUMN "Nova".t0012.sync_status IS 'Synchronization status: Synced, Pending, Conflict, Failed';
+COMMENT ON COLUMN "Nova".t0012.offline_created_at IS 'Device timestamp when order was created while offline';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_t0012_client_order_uuid ON "Nova".t0012(client_order_uuid);
+CREATE INDEX IF NOT EXISTS idx_t0012_sync_status ON "Nova".t0012(sync_status);
+
 CREATE INDEX IF NOT EXISTS idx_t0012_business_id ON "Nova".t0012(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0012_business_id_id ON "Nova".t0012(business_id, id);
 

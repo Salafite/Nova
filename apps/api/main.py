@@ -52,6 +52,7 @@ from packages.mcp.servers.pos_mcp import register_tools as register_pos_mcp
 from modules.administration.controllers.user_preferences import router as user_preferences_router
 from modules.administration.controllers.admin_preferences import router as admin_preferences_router
 from modules.purchasing.controllers.restock_controller import router as restock_router
+from modules.sales.controllers.field_sales_controller import router as field_sales_router
 
 
 from contextlib import asynccontextmanager
@@ -97,6 +98,7 @@ app.include_router(ai_router)
 app.include_router(user_preferences_router)
 app.include_router(admin_preferences_router)
 app.include_router(restock_router)
+app.include_router(field_sales_router)
 
 
 mcp_server = McpServer(name="NovaERP", version="1.0")

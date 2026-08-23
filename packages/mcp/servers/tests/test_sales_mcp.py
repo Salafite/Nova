@@ -25,7 +25,9 @@ def mock_svc():
                         _quotations_svc=MagicMock(),
                         _deliveries_svc=MagicMock(),
                         _price_lists_svc=MagicMock(),
-                        _tax_rates_svc=MagicMock()):
+                        _tax_rates_svc=MagicMock(),
+                        _field_sales_catalog_svc=MagicMock(),
+                        _field_sales_sync_svc=MagicMock()):
         yield
 
 
@@ -130,15 +132,175 @@ class TestPriceListsTaxRates:
         assert sales_mcp._list_tax_rates() == [{"id": 1, "name": "VAT", "rate": 0.15}]
 
 
+class TestFieldSalesTools:
+    def test_get_field_sales_catalog_explicit_args(self, mock_svc):
+        mock_bundle = MagicMock()
+        mock_bundle.model_dump.return_value = {
+            "products": [{"id": 1, "sku": "SKU-001"}],
+            "customers": [{"id": 1, "name": "Acme"}],
+        }
+        sales_mcp._field_sales_catalog_svc.get_mobile_catalog.return_value = mock_bundle
+
+        result = sales_mcp._get_field_sales_catalog(
+            delta_timestamp="2026-08-20T10:00:00Z",
+            warehouse_id=2,
+            sales_rep_id=7,
+        )
+        sales_mcp._field_sales_catalog_svc.get_mobile_catalog.assert_called_with(
+            delta_timestamp="2026-08-20T10:00:00Z",
+            warehouse_id=2,
+            sales_rep_id=7,
+        )
+        assert result["products"][0]["sku"] == "SKU-001"
+
+    def test_get_field_sales_catalog_user_context(self, mock_svc):
+        mock_bundle = MagicMock()
+        mock_bundle.model_dump.return_value = {"products": [], "customers": []}
+        sales_mcp._field_sales_catalog_svc.get_mobile_catalog.return_value = mock_bundle
+
+        with patch("packages.mcp.servers.sales_mcp.get_current_user", return_value={"id": 12, "username": "rep1"}):
+            result = sales_mcp._get_field_sales_catalog()
+            sales_mcp._field_sales_catalog_svc.get_mobile_catalog.assert_called_with(
+                delta_timestamp=None,
+                warehouse_id=None,
+                sales_rep_id=12,
+            )
+            assert result == {"products": [], "customers": []}
+
+    def test_sync_offline_orders(self, mock_svc):
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {
+            "success": True,
+            "synced_count": 1,
+            "conflict_count": 0,
+            "failed_count": 0,
+            "results": [
+                {
+                    "client_order_uuid": "uuid-1234",
+                    "status": "Synced",
+                    "order_number": "FSO-0001",
+                }
+            ],
+        }
+        sales_mcp._field_sales_sync_svc.sync_batch.return_value = mock_response
+
+        orders_payload = [
+            {
+                "client_order_uuid": "uuid-1234",
+                "customer_id": 1,
+                "warehouse_id": 1,
+                "lines": [
+                    {
+                        "product_id": 10,
+                        "product_name": "Widget A",
+                        "qty": 2.0,
+                        "unit_price": 25.0,
+                        "discount_pct": 5.0,
+                    }
+                ],
+            }
+        ]
+
+        result = sales_mcp._sync_offline_orders(
+            orders=orders_payload,
+            device_id="tab-01",
+            client_timestamp="2026-08-20T11:00:00Z",
+        )
+        assert result["success"] is True
+        assert result["synced_count"] == 1
+        sales_mcp._field_sales_sync_svc.sync_batch.assert_called_once()
+        req_arg = sales_mcp._field_sales_sync_svc.sync_batch.call_args[0][0]
+        assert req_arg.device_id == "tab-01"
+        assert len(req_arg.orders) == 1
+        assert req_arg.orders[0].client_order_uuid == "uuid-1234"
+        assert req_arg.orders[0].lines[0].product_id == 10
+
+    def test_sync_offline_orders_with_items_and_discount_percentage(self, mock_svc):
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {"success": True, "results": []}
+        sales_mcp._field_sales_sync_svc.sync_batch.return_value = mock_response
+
+        orders_payload = [
+            {
+                "client_order_uuid": "uuid-5678",
+                "customer_id": 2,
+                "items": [
+                    {
+                        "product_id": 15,
+                        "product_name": "Gadget B",
+                        "qty": 1.0,
+                        "unit_price": 100.0,
+                        "discount_percentage": 10.0,
+                    }
+                ],
+            }
+        ]
+
+        with patch("packages.mcp.servers.sales_mcp.get_current_user", return_value={"id": 99}):
+            result = sales_mcp._sync_offline_orders(orders=orders_payload)
+            assert result["success"] is True
+            req_arg = sales_mcp._field_sales_sync_svc.sync_batch.call_args[0][0]
+            assert req_arg.orders[0].sales_rep_id == 99
+            assert req_arg.orders[0].lines[0].discount_pct == 10.0
+
+    def test_check_offline_order_conflicts(self, mock_svc):
+        mock_val_res = MagicMock()
+        mock_val_res.model_dump.return_value = {
+            "valid": False,
+            "total_orders": 1,
+            "conflicts_found": 1,
+            "results": [
+                {
+                    "client_order_uuid": "uuid-9999",
+                    "status": "Conflict",
+                    "conflicts": [
+                        {
+                            "product_id": 5,
+                            "product_name": "Out of stock item",
+                            "conflict_type": "OUT_OF_STOCK",
+                            "requested_qty": 5.0,
+                            "available_qty": 0.0,
+                            "message": "Stock exhausted",
+                        }
+                    ],
+                }
+            ],
+        }
+        sales_mcp._field_sales_sync_svc.validate_batch.return_value = mock_val_res
+
+        orders_payload = [
+            {
+                "client_order_uuid": "uuid-9999",
+                "customer_id": 3,
+                "lines": [
+                    {
+                        "product_id": 5,
+                        "product_name": "Out of stock item",
+                        "qty": 5.0,
+                        "unit_price": 50.0,
+                    }
+                ],
+            }
+        ]
+
+        result = sales_mcp._check_offline_order_conflicts(orders=orders_payload)
+        assert result["valid"] is False
+        assert result["conflicts_found"] == 1
+        sales_mcp._field_sales_sync_svc.validate_batch.assert_called_once()
+
+
 class TestRegisterTools:
     def test_registers_all_tools(self, clear_registry):
         register_tools()
         from packages.mcp.registry import get_tools, list_resources
         tool_names = [t.name for t in get_tools()]
-        expected = ["list_orders", "get_order", "create_order", "update_order_status",
-                     "confirm_order", "cancel_order", "list_customers", "get_customer_aging",
-                     "list_quotations", "convert_quotation_to_order", "list_deliveries",
-                     "list_price_lists", "list_tax_rates"]
+        expected = [
+            "list_orders", "get_order", "create_order", "update_order_status",
+            "confirm_order", "cancel_order", "list_customers", "get_customer_aging",
+            "list_quotations", "convert_quotation_to_order", "list_deliveries",
+            "list_price_lists", "list_tax_rates",
+            "get_field_sales_catalog", "sync_offline_orders", "check_offline_order_conflicts",
+        ]
         for name in expected:
             assert name in tool_names, f"Missing tool: {name}"
         resource_uris = [r.uri for r in list_resources()]

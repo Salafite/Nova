@@ -5,9 +5,14 @@
         <h1 class="page-title">{{ t('sales-title') }}</h1>
         <p class="page-subtitle">{{ t('sales-sub') }}</p>
       </div>
-      <button class="btn-primary" @click="openAdd">
-        <span class="material-symbols-outlined">add</span> {{ t('new-sales-order') }}
-      </button>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-outline" @click="router.push('/mobile/field-sales')">
+          <span class="material-symbols-outlined">point_of_sale</span> {{ isRTL ? 'مبيعات الميدان' : 'Field Sales' }}
+        </button>
+        <button class="btn-primary" @click="openAdd">
+          <span class="material-symbols-outlined">add</span> {{ t('new-sales-order') }}
+        </button>
+      </div>
     </div>
 
     <SkeletonTable v-if="loading" />

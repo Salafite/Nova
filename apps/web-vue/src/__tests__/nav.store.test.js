@@ -61,6 +61,18 @@ describe('nav store', () => {
     expect(store.navStyle).toBe('horizontal')
   })
 
+  it('includes field-sales in navigation fallback items with correct metadata', () => {
+    const store = useNavStore()
+    const fallback = store.getFallback()
+    const fieldSalesItem = fallback.find(i => i.id === 'field-sales')
+    expect(fieldSalesItem).toBeDefined()
+    expect(fieldSalesItem.label).toBe('Field Sales')
+    expect(fieldSalesItem.label_ar).toBe('مبيعات الميدان')
+    expect(fieldSalesItem.module).toBe('field-sales')
+    expect(fieldSalesItem.permission).toBe('FIELD_SALES_MOBILE')
+    expect(fieldSalesItem.icon).toBe('point_of_sale')
+  })
+
   it('setNavStyle updates the style', () => {
     const store = useNavStore()
     store.setNavStyle('compact')

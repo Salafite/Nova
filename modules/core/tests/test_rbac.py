@@ -179,6 +179,19 @@ class TestCustomRoutersRBAC:
             resp = client.get('/api/admin/users/10/preferences', headers=headers_rep)
             assert resp.status_code == 403
 
+    def test_field_sales_mobile_role_permissions(self):
+        from modules.core.services.permission_service import has_permission, derive_permissions
+
+        # Sales Rep, Sales Manager, Manager, and Admin should all have access to FIELD_SALES_MOBILE
+        assert has_permission(derive_permissions('Sales Rep'), 'FIELD_SALES_MOBILE') is True
+        assert has_permission(derive_permissions('Sales Manager'), 'FIELD_SALES_MOBILE') is True
+        assert has_permission(derive_permissions('Manager'), 'FIELD_SALES_MOBILE') is True
+        assert has_permission(derive_permissions('Admin'), 'FIELD_SALES_MOBILE') is True
+
+        # Cashier and Viewer should NOT have access
+        assert has_permission(derive_permissions('Cashier'), 'FIELD_SALES_MOBILE') is False
+        assert has_permission(derive_permissions('Viewer'), 'FIELD_SALES_MOBILE') is False
+
 
 class TestUnauthenticatedAccess:
     """Test unauthenticated or malformed token requests."""
