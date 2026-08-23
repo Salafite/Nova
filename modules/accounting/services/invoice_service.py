@@ -77,6 +77,40 @@ LINE_REPO = CrudRepository(
     ],
 )
 
+PL_REPO = CrudRepository(
+    'T0101',
+    business_columns=['id', 'pick_list_number', 'sales_order_id', 'warehouse_id', 'status', 'notes'],
+)
+
+PLI_REPO = CrudRepository(
+    'T0102',
+    business_columns=[
+        'id',
+        'pick_list_id',
+        'sales_order_line_id',
+        'product_id',
+        'product_name',
+        'qty_ordered',
+        'qty_picked',
+        'line_number',
+        'batch_id',
+        'batch_number',
+        'expiry_date',
+        'picked_batch_id',
+        'picked_batch_number',
+        'catch_weight_actual',
+        'catch_weight_uom',
+        'nominal_weight',
+        'tolerance_pct',
+        'tolerance_variance_pct',
+        'tolerance_status',
+        'supervisor_approved',
+        'supervisor_approved_by',
+        'supervisor_approved_at',
+        'supervisor_notes',
+    ],
+)
+
 
 class InvoiceService(CrudService):
     def __init__(
@@ -85,15 +119,54 @@ class InvoiceService(CrudService):
         customer_repo: CrudRepository = None,
         order_repo: CrudRepository = None,
         line_repo: CrudRepository = None,
+        pl_repo: CrudRepository = None,
+        pli_repo: CrudRepository = None,
     ):
         super().__init__(repo or INVOICE_REPO)
         self.customer_repo = customer_repo or CUSTOMER_REPO
         self.order_repo = order_repo or ORDER_REPO
         self.line_repo = line_repo or LINE_REPO
+        self.pl_repo = pl_repo or PL_REPO
+        self.pli_repo = pli_repo or PLI_REPO
+
+    def validate_order_tolerance_approvals(self, order_id: int, conn=None):
+        """
+        Validate that all pick list items for the sales order have no unapproved catch-weight tolerance discrepancies.
+        Raises ValueError if unapproved discrepancies are found.
+        """
+        if not order_id or not hasattr(self, 'pl_repo') or not self.pl_repo:
+            return
+        kwargs = {'conn': conn} if conn is not None else {}
+        try:
+            pick_lists = self.pl_repo.list(filters={'sales_order_id': order_id}, **kwargs)
+        except Exception as e:
+            logger.warning(f"Could not check pick lists for order {order_id}: {e}")
+            return
+
+        for pl in pick_lists:
+            if hasattr(self, 'pli_repo') and self.pli_repo:
+                try:
+                    items = self.pli_repo.list(filters={'pick_list_id': pl['id']}, **kwargs)
+                    unapproved = [
+                        it for it in items
+                        if it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
+                    ]
+                    if unapproved:
+                        names = [it.get('product_name') or f"Item #{it.get('id')}" for it in unapproved]
+                        msg = f"Cannot invoice order {order_id}: Unapproved catch-weight tolerance discrepancies exist on pick list #{pl.get('id')} items: {', '.join(names)}"
+                        logger.warning(msg)
+                        raise ValueError(msg)
+                except ValueError:
+                    raise
+                except Exception as e:
+                    logger.warning(f"Could not check pick list items for pick list {pl['id']}: {e}")
 
     def create(self, payload: dict, conn=None):
         if not payload.get('invoice_number') or not str(payload.get('invoice_number')).strip():
             payload['invoice_number'] = generate_invoice_number(conn=conn)
+        sales_order_id = payload.get('sales_order_id')
+        if sales_order_id:
+            self.validate_order_tolerance_approvals(sales_order_id, conn=conn)
         return super().create(payload, conn=conn)
 
     def calculate_catch_weight_summary(self, lines: List[Dict[str, Any]]) -> Dict[str, Any]:

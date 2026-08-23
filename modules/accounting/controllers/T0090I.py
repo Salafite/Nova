@@ -43,7 +43,11 @@ def create_invoice_from_order(order_id: int):
         return service.recalculate_and_invoice_order(order_id)
     except ValueError as e:
         from fastapi import HTTPException
-        raise HTTPException(404, str(e))
+        if 'not found' in str(e).lower():
+            raise HTTPException(404, str(e))
+        raise HTTPException(400, str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         from fastapi import HTTPException
         raise HTTPException(500, f"Failed to create invoice from order: {e}")
