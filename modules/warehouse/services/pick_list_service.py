@@ -34,6 +34,16 @@ PLI_REPO = CrudRepository(
         'expiry_date',
         'picked_batch_id',
         'picked_batch_number',
+        'catch_weight_actual',
+        'catch_weight_uom',
+        'nominal_weight',
+        'tolerance_pct',
+        'tolerance_variance_pct',
+        'tolerance_status',
+        'supervisor_approved',
+        'supervisor_approved_by',
+        'supervisor_approved_at',
+        'supervisor_notes',
     ],
 )
 BATCH_REPO = CrudRepository(
