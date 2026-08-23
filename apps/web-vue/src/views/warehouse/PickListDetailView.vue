@@ -11,11 +11,11 @@
             <h1 class="page-title">{{ t('pick-list', 'Pick List') }} {{ pickList.pick_list_number }}</h1>
             <span class="badge badge-fefo">
               <span class="material-symbols-outlined icon-xs">bolt</span>
-              FEFO Picking
+              {{ t('fefo-picking-badge', 'FEFO Picking') }}
             </span>
             <span v-if="hasCatchWeightItems" class="badge badge-cw">
               <span class="material-symbols-outlined icon-xs">scale</span>
-              Dual UOM / Catch-Weight
+              {{ t('dual-uom-catch-weight', 'Dual UOM / Catch-Weight') }}
             </span>
           </div>
         </div>
@@ -90,15 +90,15 @@
             <span class="info-label">{{ t('tolerance-status', 'Tolerance') }}:</span>
             <span v-if="hasUnapprovedDiscrepancies" class="badge badge-tolerance-out">
               <span class="material-symbols-outlined icon-xs">warning</span>
-              {{ discrepantItems.length }} Discrepancy
+              {{ discrepantItems.length }} {{ t('discrepancy', 'Discrepancy') }}
             </span>
             <span v-else-if="hasApprovedDiscrepancies" class="badge badge-tolerance-approved">
               <span class="material-symbols-outlined icon-xs">verified</span>
-              Approved
+              {{ t('approved', 'Approved') }}
             </span>
             <span v-else class="badge badge-tolerance-within">
               <span class="material-symbols-outlined icon-xs">check_circle</span>
-              Normal
+              {{ t('normal', 'Normal') }}
             </span>
           </div>
         </div>
@@ -197,7 +197,7 @@
                 <td>
                   <div v-if="item.expiry_date" :class="getExpiryClass(item.expiry_date)">
                     <span>{{ formatDate(item.expiry_date) }}</span>
-                    <span v-if="isExpired(item.expiry_date)" class="badge-tag-danger">EXPIRED</span>
+                    <span v-if="isExpired(item.expiry_date)" class="badge-tag-danger">{{ t('expired', 'EXPIRED') }}</span>
                   </div>
                   <span v-else class="text-muted text-xs">-</span>
                 </td>
@@ -252,7 +252,7 @@
                             {{ lineState[item.id]?.selectedBatchNumber === item.batch_number ? 'check_circle' : 'swap_horiz' }}
                           </span>
                           Picked Lot: {{ lineState[item.id]?.selectedBatchNumber }}
-                          <span v-if="lineState[item.id]?.selectedBatchNumber !== item.batch_number" class="override-tag">OVERRIDE</span>
+                          <span v-if="lineState[item.id]?.selectedBatchNumber !== item.batch_number" class="override-tag">{{ t('lot-override', 'OVERRIDE') }}</span>
                         </span>
                       </div>
                     </div>
