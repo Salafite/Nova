@@ -12,11 +12,37 @@ from packages.ws.broadcast import order_status_changed
 
 logger = logging.getLogger(__name__)
 
-repo = CrudRepository('T0012', business_columns=['id', 'order_number', 'customer_id', 'warehouse_id', 'subtotal', 'tax', 'grand_total', 'status', 'order_date', 'notes', 'price_list_id', 'tax_rate_id', 'payment_term_id'])
+repo = CrudRepository(
+    'T0012',
+    business_columns=[
+        'id',
+        'order_number',
+        'customer_id',
+        'warehouse_id',
+        'subtotal',
+        'tax',
+        'grand_total',
+        'freight_amount',
+        'discount_amount',
+        'sales_rep_id',
+        'status',
+        'order_date',
+        'notes',
+        'price_list_id',
+        'tax_rate_id',
+        'payment_term_id',
+    ],
+)
 service = SalesOrderService(repo)
 
-router = create_crud_router('/api/T0012I', 'T0012 - Sales Orders', service,
-                            SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse)
+router = create_crud_router(
+    '/api/T0012I',
+    'T0012 - Sales Orders',
+    service,
+    SalesOrderCreate,
+    SalesOrderUpdate,
+    SalesOrderResponse,
+)
 
 enhanced_service = EnhancedSalesOrderService(repo)
 
@@ -110,3 +136,33 @@ def cancel_order(id: int, user: dict = Depends(get_current_user)):
         raise
     except Exception as e:
         _server_error(e, 'cancel order')
+
+@router.post('/{id}/recalculate-catch-weight')
+def recalculate_order_catch_weight(id: int):
+    """Recalculate sales order lines and totals based on actual catch-weights from warehouse picking."""
+    order = service.get(id)
+    if not order:
+        raise HTTPException(404, 'Order not found')
+    try:
+        result = service.recalculate_order_catch_weight(id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        _server_error(e, 'recalculate order catch weight')
+
+@router.get('/{id}/recalculate-preview')
+def preview_order_catch_weight_recalculation(id: int):
+    """Preview sales order recalculation without persisting changes."""
+    order = service.get(id)
+    if not order:
+        raise HTTPException(404, 'Order not found')
+    try:
+        # Recalculate will return the full breakdown
+        result = service.recalculate_order_catch_weight(id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        _server_error(e, 'preview order recalculation')
+
