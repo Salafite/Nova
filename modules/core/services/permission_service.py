@@ -116,6 +116,14 @@ T_CODE_PERMISSIONS: dict[str, str] = {
 CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/categories': 'PRODUCTS_VIEW',
     '/api/v1/migration': 'ADMIN_VIEW',
+    '/api/v1/migration/connectors/test': 'ADMIN_VIEW',
+    '/api/v1/migration/connectors/discover': 'ADMIN_VIEW',
+    '/api/v1/migration/connectors/preview': 'ADMIN_VIEW',
+    '/api/v1/migration/dry-run': 'ADMIN_VIEW',
+    '/api/v1/migration/commit': 'ADMIN_VIEW',
+    '/api/v1/migration/rollback': 'ADMIN_VIEW',
+    '/api/v1/migration/batches': 'ADMIN_VIEW',
+    '/api/v1/migration/upload': 'ADMIN_VIEW',
     '/api/bi/dashboard': 'BI_VIEW',
     '/api/bi/executive': 'BI_VIEW',
     '/api/bi/executive/export': 'BI_VIEW',
@@ -128,6 +136,9 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/sales/mobile': 'FIELD_SALES_MOBILE',
     'Categories': 'PRODUCTS_VIEW',
     'Migration': 'ADMIN_VIEW',
+    'Data Migration': 'ADMIN_VIEW',
+    'Legacy Migration': 'ADMIN_VIEW',
+    'ADMIN_MIGRATION': 'ADMIN_VIEW',
     'BI Dashboard': 'BI_VIEW',
     'Executive Analytics': 'BI_VIEW',
     'Executive Financial Exports': 'BI_VIEW',
@@ -146,6 +157,9 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
 # Role to granted permissions mapping
 _ROLE_PERMISSIONS: dict[str, list[str]] = {
     'Admin': ['*'],
+    'Administrator': ['*'],
+    'Superadmin': ['*'],
+    'Super Admin': ['*'],
     'Manager': [
         'DASHBOARD_VIEW',
         'SALES_VIEW',
@@ -242,4 +256,8 @@ def has_permission(user_permissions: list[str] | None, required_permission: str 
         return False
     if '*' in user_permissions:
         return True
-    return required_permission in user_permissions
+    if required_permission in user_permissions:
+        return True
+    if required_permission == 'ADMIN_MIGRATION' and 'ADMIN_VIEW' in user_permissions:
+        return True
+    return False
