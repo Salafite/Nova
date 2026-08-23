@@ -114,25 +114,19 @@ def propose_action(tool_name: str, arguments: dict, user: dict | None = None) ->
         raise ValueError(f"Tool not found: {tool_name}")
     action_id = str(uuid.uuid4())
     now = time.time()
-    user = _current_user.get()
+    effective_user = user if user is not None else _current_user.get()
     payload = {
         "action_id": action_id,
         "tool_name": tool_name,
         "arguments": arguments,
         "created_at": now,
         "timestamp": now,
-        "user": user,
-    stored_user = user if user is not None else _current_user.get()
-    _pending_actions[action_id] = {
-        "tool_name": tool_name,
-        "arguments": arguments,
-        "created_at": time.time(),
-        "user": stored_user,
+        "user": effective_user,
     }
+    _pending_actions[action_id] = payload
     client = get_redis_client()
     key = _get_action_key(action_id)
     client.set(key, json.dumps(payload), ex=_ACTION_TTL)
-    _pending_actions[action_id] = payload
     return {
         "action_id": action_id,
         "tool": tool_name,
@@ -172,14 +166,11 @@ def _fetch_and_delete_action(action_id: str) -> dict | None:
     return raw if isinstance(raw, dict) else None
 
 
-def confirm_action(action_id: str) -> dict:
 def confirm_action(action_id: str, user: dict | None = None) -> dict:
     """Confirm and execute a previously proposed action."""
     entry = _fetch_and_delete_action(action_id)
     if not entry:
         raise ValueError(f"Action not found or expired: {action_id}")
-    user = _current_user.get() or entry.get("user")
-    return call_tool(entry["tool_name"], entry["arguments"], user=user)
     exec_user = user if user is not None else (_current_user.get() or entry.get("user"))
     return call_tool(entry["tool_name"], entry["arguments"], user=exec_user)
 
