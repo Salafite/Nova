@@ -46,14 +46,29 @@ def pick_item(id: int, item_id: int, body: dict):
     qty_picked = body.get('qty_picked', 0)
     picked_batch_id = body.get('picked_batch_id')
     picked_batch_number = body.get('picked_batch_number')
+    catch_weight_actual = body.get('catch_weight_actual')
+    catch_weight_uom = body.get('catch_weight_uom')
+    nominal_weight = body.get('nominal_weight')
+    tolerance_pct = body.get('tolerance_pct')
+
+    kwargs = {
+        'item_id': item_id,
+        'qty_picked': qty_picked,
+        'pick_list_id': id,
+        'picked_batch_id': picked_batch_id,
+        'picked_batch_number': picked_batch_number,
+    }
+    if catch_weight_actual is not None:
+        kwargs['catch_weight_actual'] = catch_weight_actual
+    if catch_weight_uom is not None:
+        kwargs['catch_weight_uom'] = catch_weight_uom
+    if nominal_weight is not None:
+        kwargs['nominal_weight'] = nominal_weight
+    if tolerance_pct is not None:
+        kwargs['tolerance_pct'] = tolerance_pct
+
     try:
-        return pl_service.pick_item(
-            item_id=item_id,
-            qty_picked=qty_picked,
-            pick_list_id=id,
-            picked_batch_id=picked_batch_id,
-            picked_batch_number=picked_batch_number
-        )
+        return pl_service.pick_item(**kwargs)
     except ValueError as e:
         raise HTTPException(400, str(e))
 
