@@ -54,6 +54,7 @@ export const usePortalStore = defineStore('portal', {
 
   getters: {
     cartItemCount: state => state.cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0),
+    cartCount: state => state.cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0),
     cartUniqueItemCount: state => state.cart.length,
     cartSubtotal: state => {
       const total = state.cart.reduce((sum, item) => {
@@ -72,6 +73,23 @@ export const usePortalStore = defineStore('portal', {
         return sum + (price * (Number(item.qty) || 0))
       }, 0)
       return subtotal >= min
+    },
+    meetsMinimumOrder: state => {
+      const min = state.accountSummary?.min_order_amount || 0
+      if (min <= 0) return true
+      const subtotal = state.cart.reduce((sum, item) => {
+        const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
+        return sum + (price * (Number(item.qty) || 0))
+      }, 0)
+      return subtotal >= min
+    },
+    minOrderDifference: state => {
+      const min = state.accountSummary?.min_order_amount || 0
+      const subtotal = state.cart.reduce((sum, item) => {
+        const price = Number(item.unit_price ?? item.contracted_price ?? item.base_price ?? 0)
+        return sum + (price * (Number(item.qty) || 0))
+      }, 0)
+      return Math.max(0, Math.round((min - subtotal) * 100) / 100)
     },
     minOrderShortfall: state => {
       const min = state.accountSummary?.min_order_amount || 0
@@ -311,6 +329,7 @@ export const usePortalStore = defineStore('portal', {
           limit: options.limit || this.ordersLimit,
         }
         if (options.status) {
+          params.status = options.status
           params.status_filter = options.status
         }
         const res = await api.get('/portal/orders', { params })
@@ -327,6 +346,40 @@ export const usePortalStore = defineStore('portal', {
       } finally {
         this.ordersLoading = false
       }
+    },
+
+    updateCartQuantity(productId, qty) {
+      return this.updateCartQty(productId, qty)
+    },
+
+    loadOrderToCart(order, replace = false) {
+      if (replace) {
+        this.clearCart()
+      }
+      const lines = order.lines || []
+      let addedCount = 0
+      for (const line of lines) {
+        const itemQty = Number(line.qty ?? line.quantity ?? 0)
+        if (line.product_id && itemQty > 0) {
+          this.addToCart({
+            id: line.product_id,
+            product_id: line.product_id,
+            product_code: line.product_code || '',
+            product_name: line.product_name || '',
+            uom_name: line.uom_name || '',
+            unit_price: Number(line.unit_price || 0),
+            contracted_price: Number(line.unit_price || 0),
+            base_price: Number(line.unit_price || 0),
+            is_contracted: true,
+          }, itemQty)
+          addedCount += 1
+        }
+      }
+      return addedCount
+    },
+
+    async createOrder(payload = {}) {
+      return this.submitOrder(payload)
     },
 
     async fetchOrderDetail(orderId) {
