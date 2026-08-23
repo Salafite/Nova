@@ -37,7 +37,7 @@ All 15 MCP server modules live under `packages/mcp/servers/`. Each module corres
 |--------|--------|-------|
 | database | `packages.mcp.servers.database_mcp` | `list_tables`, `describe_table`, `execute_read_query` |
 | inventory | `packages.mcp.servers.inventory_mcp` | `list_products`, `get_product`, `create_product`, `update_product`, `delete_product`, `search_products`, `check_stock`, `list_categories`, `list_warehouses`, `list_uoms`, `list_brands` |
-| sales | `packages.mcp.servers.sales_mcp` | `list_orders`, `get_order`, `create_order`, `update_order_status`, `confirm_order`, `cancel_order`, `list_customers`, `get_customer_aging`, `list_quotations`, `convert_quotation_to_order`, `list_deliveries`, `list_price_lists`, `list_tax_rates` |
+| sales | `packages.mcp.servers.sales_mcp` | `list_orders`, `get_order`, `create_order`, `update_order_status`, `confirm_order`, `cancel_order`, `list_customers`, `get_customer_aging`, `list_quotations`, `convert_quotation_to_order`, `list_deliveries`, `list_price_lists`, `list_tax_rates`, `get_field_sales_catalog`, `sync_offline_orders`, `check_offline_order_conflicts` |
 | purchasing | `packages.mcp.servers.purchasing_mcp` | `list_purchase_orders`, `get_purchase_order`, `list_purchase_returns`, `list_rfqs`, `calculate_restock_forecast`, `propose_draft_purchase_order` |
 | accounting | `packages.mcp.servers.accounting_mcp` | `list_chart_of_accounts`, `list_invoices`, `get_invoice`, `list_payments`, `list_payment_terms` |
 | admin | `packages.mcp.servers.admin_mcp` | `list_users`, `get_audit_log`, `list_settings`, `get_setting`, `list_notifications`, `list_scheduled_tasks`, `list_modules` |
@@ -135,11 +135,11 @@ Every MCP tool call is logged via `packages/mcp/registry.call_tool()` with:
 
 ## Tool Safety Tiers
 
-All 79 MCP tools are classified into two tiers:
+All 82 MCP tools are classified into two tiers:
 
 | Tier | Policy | Count | Examples |
 |------|--------|-------|---------|
-| **Tier 1** | Direct execution (audit-logged) | 73 | All `list_*`, `get_*`, `check_*`, `search_*`, `create_*`, `update_*`, `calculate_restock_forecast`, `mark_notification_read` |
+| **Tier 1** | Direct execution (audit-logged) | 76 | All `list_*`, `get_*`, `check_*`, `search_*`, `create_*`, `update_*`, `calculate_restock_forecast`, `mark_notification_read`, `get_field_sales_catalog`, `sync_offline_orders`, `check_offline_order_conflicts` |
 | **Tier 2** | Requires propose/confirm | 6 | `delete_product`, `confirm_order`, `cancel_order`, `convert_quotation_to_order`, `propose_draft_purchase_order`, `mark_all_notifications_read` |
 
 **Tier 2 behavior:** When the AI assistant calls a Tier 2 tool, it routes through `propose_action()` which returns an `action_id` and preview instead of executing. The UI shows the preview and requires user confirmation before `confirm_action(action_id)` executes the operation.
@@ -177,7 +177,7 @@ The AI assistant is integrated into the Nova ERP web UI:
 
 - **Endpoint**: `POST /api/ai/chat` (SSE streaming, auth-protected)
 - **LLM**: OpenAI GPT-4o (configurable via `OPENAI_MODEL`)
-- **Tools**: All 77 MCP tools are exposed as OpenAI function definitions (Tier 2 tools marked `[REQUIRES CONFIRMATION]` in descriptions)
+- **Tools**: All 82 MCP tools are exposed as OpenAI function definitions (Tier 2 tools marked `[REQUIRES CONFIRMATION]` in descriptions)
 - **Frontend**: `apps/web-vue/src/components/AiAssistant.vue` — chat panel with FAB toggle
 - **Store**: `apps/web-vue/src/stores/ai.js` — Pinia store with SSE reader
 
