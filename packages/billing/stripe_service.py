@@ -115,15 +115,50 @@ def _update_subscription_status_by_customer(customer_id: str, new_status: str):
 
 
 def _handle_checkout_completed(session):
-    business_id = int(session.get('metadata', {}).get('business_id', 0))
-    if not business_id:
+    metadata = getattr(session, 'metadata', {}) or (session.get('metadata', {}) if isinstance(session, dict) else {})
+    business_id = int(metadata.get('business_id', 0) or 0)
+    if business_id:
+        _save_subscription(business_id, {
+            'stripe_customer_id': getattr(session, 'customer', '') if not isinstance(session, dict) else session.get('customer', ''),
+            'stripe_subscription_id': getattr(session, 'subscription', '') if not isinstance(session, dict) else session.get('subscription', ''),
+            'status': 'active',
+            'updated_at': datetime.now(timezone.utc).isoformat(),
+        })
         return
-    _save_subscription(business_id, {
-        'stripe_customer_id': session.get('customer', ''),
-        'stripe_subscription_id': session.get('subscription', ''),
-        'status': 'active',
-        'updated_at': datetime.now(timezone.utc).isoformat(),
-    })
+
+    # Check if this is a B2B customer portal settlement
+    customer_id = metadata.get('customer_id')
+    settlement_type = metadata.get('settlement_type')
+    if customer_id and (settlement_type or not business_id):
+        from modules.portal.services.stripe_settlement_service import StripeSettlementService
+        session_dict = session if isinstance(session, dict) else {
+            'id': getattr(session, 'id', None),
+            'payment_intent': getattr(session, 'payment_intent', None),
+            'amount_total': getattr(session, 'amount_total', None),
+            'currency': getattr(session, 'currency', 'usd'),
+            'payment_method_types': getattr(session, 'payment_method_types', None),
+            'url': getattr(session, 'url', None),
+            'metadata': metadata,
+        }
+        settlement_svc = StripeSettlementService()
+        settlement_svc.reconcile_checkout_session(session_dict)
+
+
+def _handle_payment_intent_succeeded(payment_intent):
+    metadata = getattr(payment_intent, 'metadata', {}) or (payment_intent.get('metadata', {}) if isinstance(payment_intent, dict) else {})
+    customer_id = metadata.get('customer_id')
+    settlement_type = metadata.get('settlement_type')
+    if customer_id and settlement_type:
+        from modules.portal.services.stripe_settlement_service import StripeSettlementService
+        pi_dict = payment_intent if isinstance(payment_intent, dict) else {
+            'id': getattr(payment_intent, 'id', None),
+            'amount': getattr(payment_intent, 'amount', None),
+            'currency': getattr(payment_intent, 'currency', 'usd'),
+            'payment_method_types': getattr(payment_intent, 'payment_method_types', None),
+            'metadata': metadata,
+        }
+        settlement_svc = StripeSettlementService()
+        settlement_svc.reconcile_payment_intent(pi_dict)
 
 
 def _handle_invoice_paid(invoice):
@@ -132,6 +167,7 @@ def _handle_invoice_paid(invoice):
 
 def _handle_invoice_payment_failed(invoice):
     _update_subscription_status_by_customer(invoice.get('customer', ''), 'past_due')
+
 
 
 def create_settlement_checkout_session(
@@ -259,7 +295,9 @@ def get_checkout_session(session_id: str) -> dict:
 
 _WEBHOOK_HANDLERS = {
     'checkout.session.completed': _handle_checkout_completed,
+    'payment_intent.succeeded': _handle_payment_intent_succeeded,
     'invoice.paid': _handle_invoice_paid,
     'invoice.payment_failed': _handle_invoice_payment_failed,
 }
+
 

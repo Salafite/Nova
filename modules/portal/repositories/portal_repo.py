@@ -1022,4 +1022,474 @@ class PortalRepository:
             if should_release:
                 release_connection(conn)
 
+    def get_payment_by_session_or_intent(
+        self,
+        session_id: Optional[str] = None,
+        payment_intent_id: Optional[str] = None,
+        conn=None
+    ) -> Optional[Dict[str, Any]]:
+        """Check if a payment record already exists for the given Stripe session or payment intent."""
+        if not session_id and not payment_intent_id:
+            return None
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            clauses = []
+            params: List[Any] = []
+            if session_id:
+                clauses.append("stripe_checkout_session_id = %s")
+                params.append(session_id)
+            if payment_intent_id:
+                clauses.append("stripe_payment_intent_id = %s")
+                params.append(payment_intent_id)
+
+            sql = f"""
+                SELECT id, payment_date, invoice_id, partner_id, amount, payment_method, reference, status, notes,
+                       stripe_payment_intent_id, stripe_checkout_session_id, payment_link, created_at
+                FROM "{self.schema}".t0091
+                WHERE {" OR ".join(clauses)}
+                LIMIT 1
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, params)
+                row = cur.fetchone()
+                if not row:
+                    return None
+                res = dict(row)
+                res['amount'] = _to_float(res.get('amount'))
+                return res
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_or_create_coa_account(
+        self,
+        account_code: str,
+        default_name: str,
+        account_type: str = 'Asset',
+        conn=None
+    ) -> int:
+        """Find or create Chart of Accounts entry in T0026, returning account ID."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            # 1. Search by exact code
+            sql_find = f"""
+                SELECT id FROM "{self.schema}".t0026
+                WHERE account_code = %s
+                LIMIT 1
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql_find, (account_code,))
+                row = cur.fetchone()
+                if row:
+                    return int(row['id'])
+
+                # 2. Search by matching name pattern
+                sql_name = f"""
+                    SELECT id FROM "{self.schema}".t0026
+                    WHERE account_name ILIKE %s
+                    LIMIT 1
+                """
+                cur.execute(sql_name, (f"%{default_name}%",))
+                row = cur.fetchone()
+                if row:
+                    return int(row['id'])
+
+                # 3. Create missing COA account
+                sql_insert = f"""
+                    INSERT INTO "{self.schema}".t0026 (
+                        account_code, account_name, account_type, currency, is_active, created_at, updated_at
+                    ) VALUES (%s, %s, %s, 'USD', true, now(), now())
+                    RETURNING id
+                """
+                cur.execute(sql_insert, (account_code, default_name, account_type))
+                inserted = cur.fetchone()
+                if should_release:
+                    conn.commit()
+                return int(inserted['id'])
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def record_settlement_payment(
+        self,
+        customer_id: int,
+        amount: float,
+        payment_method: str = "Stripe Card",
+        invoice_id: Optional[int] = None,
+        reference: Optional[str] = None,
+        notes: Optional[str] = None,
+        stripe_payment_intent_id: Optional[str] = None,
+        stripe_checkout_session_id: Optional[str] = None,
+        payment_link: Optional[str] = None,
+        conn=None
+    ) -> Dict[str, Any]:
+        """Record completed payment record in T0091."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            sql = f"""
+                INSERT INTO "{self.schema}".t0091 (
+                    payment_date, invoice_id, partner_id, amount,
+                    payment_method, reference, status, notes,
+                    stripe_payment_intent_id, stripe_checkout_session_id, payment_link,
+                    created_at, updated_at
+                ) VALUES (
+                    CURRENT_DATE, %s, %s, %s,
+                    %s, %s, 'Completed', %s,
+                    %s, %s, %s,
+                    now(), now()
+                ) RETURNING id, payment_date, invoice_id, partner_id, amount, payment_method, reference, status, notes,
+                            stripe_payment_intent_id, stripe_checkout_session_id, payment_link, created_at
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, (
+                    invoice_id,
+                    customer_id,
+                    amount,
+                    payment_method,
+                    reference or stripe_payment_intent_id or stripe_checkout_session_id or f"PAY-{int(time.time())}",
+                    notes or f"Stripe online settlement for customer #{customer_id}",
+                    stripe_payment_intent_id,
+                    stripe_checkout_session_id,
+                    payment_link,
+                ))
+                row = cur.fetchone()
+                if should_release:
+                    conn.commit()
+                res = dict(row)
+                res['amount'] = _to_float(res.get('amount'))
+                return res
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def create_journal_entry_with_lines(
+        self,
+        entry_date: Any,
+        reference: str,
+        description: str,
+        lines: List[Dict[str, Any]],
+        status: str = 'Posted',
+        conn=None
+    ) -> Dict[str, Any]:
+        """Insert balancing journal entry header (T0027) and detail debit/credit lines (T0089)."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        try:
+            sql_header = f"""
+                INSERT INTO "{self.schema}".t0027 (
+                    entry_date, reference, description, status, created_at, updated_at
+                ) VALUES (%s, %s, %s, %s, now(), now())
+                RETURNING id, entry_date, reference, description, status, created_at
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql_header, (entry_date, reference, description, status))
+                header_row = cur.fetchone()
+                je_id = int(header_row['id'])
+
+                inserted_lines = []
+                sql_line = f"""
+                    INSERT INTO "{self.schema}".t0089 (
+                        journal_entry_id, account_id, debit, credit, description, is_active, created_at, updated_at
+                    ) VALUES (%s, %s, %s, %s, %s, true, now(), now())
+                    RETURNING id, journal_entry_id, account_id, debit, credit, description
+                """
+                for line in lines:
+                    cur.execute(sql_line, (
+                        je_id,
+                        line['account_id'],
+                        line.get('debit', 0.0),
+                        line.get('credit', 0.0),
+                        line.get('description', description),
+                    ))
+                    l_row = cur.fetchone()
+                    ld = dict(l_row)
+                    ld['debit'] = _to_float(ld.get('debit'))
+                    ld['credit'] = _to_float(ld.get('credit'))
+                    inserted_lines.append(ld)
+
+                if should_release:
+                    conn.commit()
+
+                res = dict(header_row)
+                res['lines'] = inserted_lines
+                return res
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def reconcile_settlement_transaction(
+        self,
+        customer_id: int,
+        amount: float,
+        settlement_type: str = 'invoice',
+        invoice_id: Optional[int] = None,
+        invoice_ids: Optional[List[int]] = None,
+        session_id: Optional[str] = None,
+        payment_intent_id: Optional[str] = None,
+        payment_method: str = 'Stripe Card',
+        payment_link: Optional[str] = None,
+        conn=None
+    ) -> Dict[str, Any]:
+        """Perform complete atomic AR reconciliation and journal entry posting for a Stripe settlement."""
+        if amount <= 0:
+            raise ValueError("Settlement amount must be greater than zero.")
+
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            # 1. Idempotency Check: if payment already recorded for session or intent, return existing
+            existing_pmt = self.get_payment_by_session_or_intent(session_id, payment_intent_id, conn=conn)
+            if existing_pmt:
+                logger.info(f"Settlement for session {session_id} / intent {payment_intent_id} already processed (payment ID #{existing_pmt['id']}).")
+                cust = self.get_customer_by_id(customer_id, conn=conn)
+                return {
+                    "reconciled": True,
+                    "already_processed": True,
+                    "payment_id": existing_pmt["id"],
+                    "customer_id": customer_id,
+                    "amount": existing_pmt["amount"],
+                    "invoice_id": existing_pmt.get("invoice_id"),
+                    "invoices_updated": [existing_pmt["invoice_id"]] if existing_pmt.get("invoice_id") else [],
+                    "new_customer_balance": cust.get("balance", 0.0) if cust else 0.0,
+                    "journal_entry_id": None,
+                    "journal_entry_reference": None,
+                    "session_id": session_id,
+                    "payment_intent_id": payment_intent_id,
+                }
+
+            # 2. Verify Customer
+            customer = self.get_customer_by_id(customer_id, conn=conn)
+            if not customer:
+                raise ValueError(f"Customer #{customer_id} does not exist.")
+
+            # 3. Insert Payment Record into T0091
+            payment_rec = self.record_settlement_payment(
+                customer_id=customer_id,
+                amount=amount,
+                payment_method=payment_method,
+                invoice_id=invoice_id,
+                reference=payment_intent_id or session_id,
+                notes=f"Stripe settlement ({settlement_type})" + (f" for Invoice #{invoice_id}" if invoice_id else ""),
+                stripe_payment_intent_id=payment_intent_id,
+                stripe_checkout_session_id=session_id,
+                payment_link=payment_link,
+                conn=conn,
+            )
+            payment_id = payment_rec['id']
+
+            # 4. Update Invoice Statuses in T0090
+            invoices_updated = []
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                if invoice_id is not None:
+                    # Calculate total paid amount on this invoice
+                    cur.execute(
+                        f"""
+                        SELECT total_amount FROM "{self.schema}".t0090
+                        WHERE id = %s AND partner_id = %s
+                        """,
+                        (invoice_id, customer_id)
+                    )
+                    inv_row = cur.fetchone()
+                    if inv_row:
+                        total_inv_amount = _to_float(inv_row['total_amount'])
+                        cur.execute(
+                            f"""
+                            SELECT COALESCE(SUM(amount), 0) AS total_paid
+                            FROM "{self.schema}".t0091
+                            WHERE invoice_id = %s AND status = 'Completed'
+                            """,
+                            (invoice_id,)
+                        )
+                        paid_sum = _to_float(cur.fetchone()['total_paid'])
+                        new_status = 'Paid' if paid_sum >= total_inv_amount else ('Partially Paid' if paid_sum > 0 else 'Unpaid')
+                        
+                        cur.execute(
+                            f"""
+                            UPDATE "{self.schema}".t0090
+                            SET status = %s,
+                                stripe_payment_intent_id = COALESCE(%s, stripe_payment_intent_id),
+                                stripe_checkout_session_id = COALESCE(%s, stripe_checkout_session_id),
+                                updated_at = now()
+                            WHERE id = %s
+                            """,
+                            (new_status, payment_intent_id, session_id, invoice_id)
+                        )
+                        invoices_updated.append(invoice_id)
+                elif settlement_type == 'balance':
+                    # Multi-invoice or general balance allocation
+                    target_invoices = []
+                    if invoice_ids:
+                        for i_id in invoice_ids:
+                            cur.execute(f'SELECT id, total_amount FROM "{self.schema}".t0090 WHERE id = %s AND partner_id = %s', (i_id, customer_id))
+                            i_row = cur.fetchone()
+                            if i_row:
+                                target_invoices.append(dict(i_row))
+                    else:
+                        cur.execute(
+                            f"""
+                            SELECT id, total_amount FROM "{self.schema}".t0090
+                            WHERE partner_id = %s AND status != 'Paid' AND status != 'Cancelled'
+                            ORDER BY issue_date ASC, id ASC
+                            """,
+                            (customer_id,)
+                        )
+                        target_invoices = [dict(r) for r in cur.fetchall()]
+
+                    remaining_alloc = amount
+                    for target_inv in target_invoices:
+                        t_id = target_inv['id']
+                        t_total = _to_float(target_inv['total_amount'])
+                        cur.execute(
+                            f"""
+                            SELECT COALESCE(SUM(amount), 0) AS total_paid
+                            FROM "{self.schema}".t0091
+                            WHERE invoice_id = %s AND status = 'Completed'
+                            """,
+                            (t_id,)
+                        )
+                        t_paid = _to_float(cur.fetchone()['total_paid'])
+                        t_due = max(0.0, t_total - t_paid)
+
+                        if t_due <= remaining_alloc + 0.001:
+                            # Fully paid
+                            cur.execute(
+                                f"""
+                                UPDATE "{self.schema}".t0090
+                                SET status = 'Paid',
+                                    stripe_payment_intent_id = COALESCE(%s, stripe_payment_intent_id),
+                                    stripe_checkout_session_id = COALESCE(%s, stripe_checkout_session_id),
+                                    updated_at = now()
+                                WHERE id = %s
+                                """,
+                                (payment_intent_id, session_id, t_id)
+                            )
+                            remaining_alloc -= t_due
+                            invoices_updated.append(t_id)
+                        elif remaining_alloc > 0:
+                            # Partially paid
+                            cur.execute(
+                                f"""
+                                UPDATE "{self.schema}".t0090
+                                SET status = 'Partially Paid',
+                                    stripe_payment_intent_id = COALESCE(%s, stripe_payment_intent_id),
+                                    stripe_checkout_session_id = COALESCE(%s, stripe_checkout_session_id),
+                                    updated_at = now()
+                                WHERE id = %s
+                                """,
+                                (payment_intent_id, session_id, t_id)
+                            )
+                            remaining_alloc = 0
+                            invoices_updated.append(t_id)
+                            break
+
+                # 5. Decrement Customer Balance in T0010
+                cur.execute(
+                    f"""
+                    UPDATE "{self.schema}".t0010
+                    SET balance = GREATEST(0, balance - %s),
+                        updated_at = now()
+                    WHERE id = %s
+                    RETURNING balance
+                    """,
+                    (amount, customer_id)
+                )
+                bal_row = cur.fetchone()
+                new_balance = _to_float(bal_row['balance']) if bal_row else 0.0
+
+            # 6. Resolve COA accounts (1000 Bank/Cash, 1100 AR)
+            bank_account_id = self.get_or_create_coa_account("1000", "Cash / Bank", account_type="Asset", conn=conn)
+            ar_account_id = self.get_or_create_coa_account("1100", "Accounts Receivable", account_type="Asset", conn=conn)
+
+            # 7. Post Balancing Journal Entry (T0027 / T0089)
+            je_ref = f"JE-STRIPE-{payment_id}"
+            je_desc = f"Stripe online settlement receipt from Customer #{customer_id}" + (f" (Invoice #{invoice_id})" if invoice_id else f" ({settlement_type})")
+            
+            lines = [
+                {
+                    "account_id": bank_account_id,
+                    "debit": amount,
+                    "credit": 0.0,
+                    "description": f"Stripe receipt - Cust #{customer_id}" + (f", Inv #{invoice_id}" if invoice_id else ""),
+                },
+                {
+                    "account_id": ar_account_id,
+                    "debit": 0.0,
+                    "credit": amount,
+                    "description": f"AR clearance - Cust #{customer_id}" + (f", Inv #{invoice_id}" if invoice_id else ""),
+                },
+            ]
+
+            je = self.create_journal_entry_with_lines(
+                entry_date=date.today(),
+                reference=je_ref,
+                description=je_desc,
+                lines=lines,
+                status="Posted",
+                conn=conn,
+            )
+
+            if should_release:
+                conn.commit()
+
+            return {
+                "reconciled": True,
+                "already_processed": False,
+                "payment_id": payment_id,
+                "customer_id": customer_id,
+                "amount": amount,
+                "invoice_id": invoice_id,
+                "invoices_updated": invoices_updated,
+                "new_customer_balance": new_balance,
+                "journal_entry_id": je["id"],
+                "journal_entry_reference": je["reference"],
+                "session_id": session_id,
+                "payment_intent_id": payment_intent_id,
+            }
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+
 

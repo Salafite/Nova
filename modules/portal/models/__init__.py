@@ -18,6 +18,7 @@ from modules.portal.models.portal import (
     BalanceSettlementCheckoutRequest,
     PortalCheckoutSessionResponse,
     PaymentSessionStatusResponse,
+    SettlementReconciliationResult,
 )
 
 __all__ = [
@@ -40,4 +41,6 @@ __all__ = [
     "BalanceSettlementCheckoutRequest",
     "PortalCheckoutSessionResponse",
     "PaymentSessionStatusResponse",
+    "SettlementReconciliationResult",
 ]
+

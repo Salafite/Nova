@@ -266,3 +266,20 @@ class PaymentSessionStatusResponse(BaseModel):
     customer_id: Optional[int] = None
     invoice_id: Optional[int] = None
     customer_email: Optional[str] = None
+
+
+class SettlementReconciliationResult(BaseModel):
+    """Result of AR reconciliation after online Stripe payment."""
+    reconciled: bool
+    already_processed: bool = False
+    payment_id: Optional[int] = None
+    customer_id: int
+    amount: float
+    invoice_id: Optional[int] = None
+    invoices_updated: List[int] = Field(default_factory=list)
+    new_customer_balance: Optional[float] = None
+    journal_entry_id: Optional[int] = None
+    journal_entry_reference: Optional[str] = None
+    session_id: Optional[str] = None
+    payment_intent_id: Optional[str] = None
+

@@ -217,3 +217,158 @@ class StripeSettlementService:
             invoice_id=invoice_id_val,
             customer_email=result.get("customer_email"),
         )
+
+    def reconcile_checkout_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Reconcile a completed Stripe Checkout Session for B2B portal settlement."""
+        session_id = session_data.get("id") or session_data.get("session_id")
+        payment_intent_id = session_data.get("payment_intent") or session_data.get("payment_intent_id")
+        if isinstance(payment_intent_id, dict):
+            payment_intent_id = payment_intent_id.get("id")
+
+        metadata = session_data.get("metadata") or {}
+        customer_id_str = metadata.get("customer_id")
+        if not customer_id_str:
+            logger.info(f"Skipping checkout session {session_id} reconciliation - no customer_id in metadata.")
+            return {"skipped": True, "reason": "No customer_id in metadata"}
+
+        customer_id = int(customer_id_str)
+        settlement_type = metadata.get("settlement_type", "invoice")
+
+        invoice_id = None
+        if metadata.get("invoice_id"):
+            try:
+                invoice_id = int(metadata["invoice_id"])
+            except (ValueError, TypeError):
+                pass
+
+        invoice_ids = None
+        if metadata.get("invoice_ids"):
+            try:
+                invoice_ids = [int(i.strip()) for i in str(metadata["invoice_ids"]).split(",") if i.strip().isdigit()]
+            except Exception:
+                pass
+
+        # Determine settlement amount
+        amount = 0.0
+        raw_total = session_data.get("amount_total")
+        if raw_total is not None:
+            amount = float(raw_total) / 100.0 if float(raw_total) > 1000 and metadata.get("amount") and float(raw_total) == float(metadata.get("amount_cents", 0)) else float(raw_total) if float(raw_total) < 1000 and not metadata.get("amount_cents") else float(raw_total) / 100.0
+        if amount <= 0:
+            if metadata.get("amount_cents"):
+                amount = float(metadata["amount_cents"]) / 100.0
+            elif metadata.get("amount"):
+                amount = float(metadata["amount"])
+
+        # Determine payment method
+        payment_methods = session_data.get("payment_method_types") or []
+        if isinstance(payment_methods, str):
+            payment_methods = [payment_methods]
+        
+        if "us_bank_account" in payment_methods:
+            method_name = "Stripe ACH"
+        elif "card" in payment_methods:
+            method_name = "Stripe Card"
+        else:
+            method_name = "Stripe Online"
+
+        checkout_url = session_data.get("url")
+
+        logger.info(f"Reconciling Stripe settlement for customer #{customer_id}, session {session_id}, amount ${amount:.2f}")
+        return self.portal_repo.reconcile_settlement_transaction(
+            customer_id=customer_id,
+            amount=amount,
+            settlement_type=settlement_type,
+            invoice_id=invoice_id,
+            invoice_ids=invoice_ids,
+            session_id=session_id,
+            payment_intent_id=payment_intent_id,
+            payment_method=method_name,
+            payment_link=checkout_url,
+        )
+
+    def reconcile_payment_intent(self, payment_intent_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Reconcile a succeeded payment intent for B2B portal settlement."""
+        payment_intent_id = payment_intent_data.get("id")
+        metadata = payment_intent_data.get("metadata") or {}
+        customer_id_str = metadata.get("customer_id")
+        if not customer_id_str:
+            logger.info(f"Skipping payment intent {payment_intent_id} reconciliation - no customer_id in metadata.")
+            return {"skipped": True, "reason": "No customer_id in metadata"}
+
+        customer_id = int(customer_id_str)
+        settlement_type = metadata.get("settlement_type", "invoice")
+
+        invoice_id = None
+        if metadata.get("invoice_id"):
+            try:
+                invoice_id = int(metadata["invoice_id"])
+            except (ValueError, TypeError):
+                pass
+
+        invoice_ids = None
+        if metadata.get("invoice_ids"):
+            try:
+                invoice_ids = [int(i.strip()) for i in str(metadata["invoice_ids"]).split(",") if i.strip().isdigit()]
+            except Exception:
+                pass
+
+        amount = 0.0
+        raw_amount = payment_intent_data.get("amount")
+        if raw_amount is not None:
+            amount = float(raw_amount) / 100.0
+        elif metadata.get("amount_cents"):
+            amount = float(metadata["amount_cents"]) / 100.0
+        elif metadata.get("amount"):
+            amount = float(metadata["amount"])
+
+        payment_methods = payment_intent_data.get("payment_method_types") or []
+        if isinstance(payment_methods, str):
+            payment_methods = [payment_methods]
+
+        if "us_bank_account" in payment_methods:
+            method_name = "Stripe ACH"
+        elif "card" in payment_methods:
+            method_name = "Stripe Card"
+        else:
+            method_name = "Stripe Online"
+
+        return self.portal_repo.reconcile_settlement_transaction(
+            customer_id=customer_id,
+            amount=amount,
+            settlement_type=settlement_type,
+            invoice_id=invoice_id,
+            invoice_ids=invoice_ids,
+            session_id=None,
+            payment_intent_id=payment_intent_id,
+            payment_method=method_name,
+            payment_link=None,
+        )
+
+    def verify_and_reconcile_session(
+        self,
+        session_id: str,
+        customer_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Verify checkout session status via Stripe and reconcile if paid."""
+        session_info = get_checkout_session(session_id)
+        if "error" in session_info:
+            raise ValueError(session_info["error"])
+
+        metadata = session_info.get("metadata", {})
+        session_customer_id = metadata.get("customer_id")
+        if customer_id is not None and session_customer_id and session_customer_id != str(customer_id):
+            raise ValueError("Checkout session does not belong to the authenticated customer.")
+
+        payment_status = session_info.get("payment_status")
+        session_status = session_info.get("status")
+
+        if payment_status in ("paid", "no_payment_required") or session_status == "complete":
+            return self.reconcile_checkout_session(session_info)
+
+        return {
+            "reconciled": False,
+            "session_id": session_id,
+            "status": session_status,
+            "payment_status": payment_status,
+        }
+

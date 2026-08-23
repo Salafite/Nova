@@ -165,3 +165,33 @@ def test_handle_invoice_payment_failed():
     with patch('packages.billing.stripe_service._update_subscription_status_by_customer') as mock_update:
         _handle_invoice_payment_failed({'customer': 'cus_42'})
     mock_update.assert_called_once_with('cus_42', 'past_due')
+
+
+def test_handle_checkout_completed_settlement():
+    from packages.billing.stripe_service import _handle_checkout_completed
+    session = {
+        'id': 'cs_test_settle',
+        'metadata': {'customer_id': '10', 'settlement_type': 'invoice', 'invoice_id': '5', 'amount': '250.00'},
+        'amount_total': 25000,
+        'payment_intent': 'pi_test_123',
+    }
+    with patch('modules.portal.services.stripe_settlement_service.StripeSettlementService.reconcile_checkout_session') as mock_reconcile:
+        _handle_checkout_completed(session)
+        mock_reconcile.assert_called_once()
+        call_arg = mock_reconcile.call_args[0][0]
+        assert call_arg['metadata']['customer_id'] == '10'
+
+
+def test_handle_payment_intent_succeeded_settlement():
+    from packages.billing.stripe_service import _handle_payment_intent_succeeded
+    pi = {
+        'id': 'pi_test_settle_456',
+        'metadata': {'customer_id': '10', 'settlement_type': 'invoice', 'invoice_id': '5', 'amount': '250.00'},
+        'amount': 25000,
+    }
+    with patch('modules.portal.services.stripe_settlement_service.StripeSettlementService.reconcile_payment_intent') as mock_reconcile:
+        _handle_payment_intent_succeeded(pi)
+        mock_reconcile.assert_called_once()
+        call_arg = mock_reconcile.call_args[0][0]
+        assert call_arg['id'] == 'pi_test_settle_456'
+

@@ -10,7 +10,6 @@ class COACreate(BaseModel):
     account_type: str = Field(..., max_length=50) # Asset, Liability, Equity, Revenue, Expense
     currency: str = 'USD'
     is_active: bool = True
-    business_id: Optional[int] = None
 
 class COAUpdate(BaseModel):
     account_code: Optional[str] = Field(None, max_length=20)
@@ -18,15 +17,14 @@ class COAUpdate(BaseModel):
     account_type: Optional[str] = Field(None, max_length=50)
     currency: Optional[str] = None
     is_active: Optional[bool] = None
-    business_id: Optional[int] = None
 
 class COAResponse(AuditMixin):
     id: int
     account_code: str
     account_name: str
     account_type: str
-    currency: str = 'USD'
-    is_active: bool = True
+    currency: str
+    is_active: bool
 
 
 # Journal Entry
@@ -35,21 +33,19 @@ class JournalEntryCreate(BaseModel):
     reference: Optional[str] = Field(None, max_length=100)
     description: str = Field(..., max_length=255)
     status: str = 'Draft' # Draft, Posted, Cancelled
-    business_id: Optional[int] = None
 
 class JournalEntryUpdate(BaseModel):
     entry_date: Optional[date] = None
     reference: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, max_length=255)
     status: Optional[str] = None
-    business_id: Optional[int] = None
 
 class JournalEntryResponse(AuditMixin):
     id: int
     entry_date: date
-    reference: Optional[str] = None
+    reference: Optional[str]
     description: str
-    status: str = 'Draft'
+    status: str
 
 
 # Journal Line
@@ -59,7 +55,6 @@ class JournalLineCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=255)
     debit: float = Field(default=0, ge=0)
     credit: float = Field(default=0, ge=0)
-    business_id: Optional[int] = None
 
 class JournalLineUpdate(BaseModel):
     journal_entry_id: Optional[int] = None
@@ -67,15 +62,14 @@ class JournalLineUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=255)
     debit: Optional[float] = Field(None, ge=0)
     credit: Optional[float] = Field(None, ge=0)
-    business_id: Optional[int] = None
 
 class JournalLineResponse(AuditMixin):
     id: int
     journal_entry_id: int
     account_id: int
-    description: Optional[str] = None
-    debit: float = 0
-    credit: float = 0
+    description: Optional[str]
+    debit: float
+    credit: float
 
 
 # Invoice (Accounts Receivable / Payable)
@@ -84,30 +78,25 @@ class InvoiceCreate(BaseModel):
     invoice_type: str = 'Sales'
     partner_id: int
     sales_order_id: Optional[int] = None
-    sales_rep_id: Optional[int] = None
     issue_date: date
     due_date: date
-    freight_amount: float = 0
-    discount_amount: float = 0
     total_amount: float = Field(..., ge=0)
     status: str = 'Unpaid'
     notes: Optional[str] = None
-    business_id: Optional[int] = None
 
 class InvoiceUpdate(BaseModel):
     invoice_number: Optional[str] = Field(None, max_length=50)
     invoice_type: Optional[str] = None
     partner_id: Optional[int] = None
     sales_order_id: Optional[int] = None
-    sales_rep_id: Optional[int] = None
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
-    freight_amount: Optional[float] = None
-    discount_amount: Optional[float] = None
     total_amount: Optional[float] = Field(None, ge=0)
     status: Optional[str] = None
     notes: Optional[str] = None
-    business_id: Optional[int] = None
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 class InvoiceResponse(AuditMixin):
     id: int
@@ -115,14 +104,14 @@ class InvoiceResponse(AuditMixin):
     invoice_type: str
     partner_id: int
     sales_order_id: Optional[int] = None
-    sales_rep_id: Optional[int] = None
     issue_date: date
     due_date: date
-    freight_amount: float = 0
-    discount_amount: float = 0
     total_amount: float
-    status: str = 'Unpaid'
+    status: str
     notes: Optional[str] = None
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 
 # Payment
@@ -134,7 +123,9 @@ class PaymentCreate(BaseModel):
     payment_method: str = Field(..., max_length=50) # Cash, Bank Transfer, Card
     reference: Optional[str] = Field(None, max_length=100)
     status: str = 'Completed'
-    business_id: Optional[int] = None
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 class PaymentUpdate(BaseModel):
     payment_date: Optional[date] = None
@@ -144,14 +135,20 @@ class PaymentUpdate(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = None
-    business_id: Optional[int] = None
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 class PaymentResponse(AuditMixin):
     id: int
     payment_date: date
-    invoice_id: Optional[int] = None
+    invoice_id: Optional[int]
     partner_id: int
     amount: float
     payment_method: str
-    reference: Optional[str] = None
-    status: str = 'Completed'
+    reference: Optional[str]
+    status: str
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
+
