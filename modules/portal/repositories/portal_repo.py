@@ -1272,6 +1272,12 @@ class PortalRepository:
             should_release = True
 
         try:
+            # Serialize concurrent webhook deliveries for the same settlement key.
+            lock_key = session_id or payment_intent_id
+            if lock_key:
+                with conn.cursor() as lock_cur:
+                    lock_cur.execute('SELECT pg_advisory_xact_lock(hashtext(%s))', (lock_key,))
+
             # 1. Idempotency Check: if payment already recorded for session or intent, return existing
             existing_pmt = self.get_payment_by_session_or_intent(session_id, payment_intent_id, conn=conn)
             if existing_pmt:

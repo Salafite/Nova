@@ -12,6 +12,7 @@ class UserCreate(BaseModel):
     email: Optional[str] = Field(None, max_length=200)
     status: str = 'Active'
     customer_id: Optional[int] = None
+    business_id: Optional[int] = None
 
 class UserUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -21,6 +22,7 @@ class UserUpdate(BaseModel):
     email: Optional[str] = Field(None, max_length=200)
     status: Optional[str] = None
     customer_id: Optional[int] = None
+    business_id: Optional[int] = None
 
 class UserRoleUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -84,9 +86,10 @@ class AuditLogResponse(BaseModel):
     table_name: str
     record_id: int
     action: str
-    changed_data: Optional[dict]
-    changed_by: Optional[int]
-    changed_at: Optional[datetime]
+    changed_data: Optional[dict] = None
+    changed_by: Optional[int] = None
+    changed_at: Optional[datetime] = None
+    business_id: Optional[int] = None
 
 class SettingCreate(BaseModel):
     setting_key: str = Field(..., max_length=100)
