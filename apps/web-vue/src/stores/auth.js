@@ -79,7 +79,19 @@ export const useAuthStore = defineStore('auth', {
     },
     hasPermission(p) {
       if (!p) return true
-      return this.permissions.includes('*') || this.permissions.includes(p)
+      if (this.permissions.includes('*')) return true
+      if (p.toLowerCase() === 'portal' && (
+        this.permissions.includes('PORTAL_VIEW') ||
+        this.permissions.includes('PORTAL_ORDER') ||
+        this.permissions.includes('PORTAL_PAY') ||
+        this.permissions.includes('portal') ||
+        this.role === 'Customer'
+      )) {
+        return true
+      }
+      return this.permissions.includes(p) ||
+        this.permissions.includes(p.toUpperCase()) ||
+        this.permissions.includes(p.toLowerCase())
     }
   }
 })

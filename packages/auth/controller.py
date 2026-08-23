@@ -50,6 +50,7 @@ def me_endpoint(user: dict = Depends(get_current_user)):
         'role': user['role'],
         'permissions': perms,
         'business_id': user.get('business_id'),
+        'customer_id': user.get('customer_id'),
     }
 
 
@@ -69,7 +70,7 @@ def invite_endpoint(body: InviteRequest, user: dict = Depends(get_current_user))
     business_id = user.get('business_id')
     if not business_id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, 'User is not associated with a business')
-    result = invite_user(body.email, body.role, body.full_name, business_id, user['id'])
+    result = invite_user(body.email, body.role, body.full_name, business_id, user['id'], customer_id=body.customer_id)
     if not result:
         raise HTTPException(status.HTTP_409_CONFLICT, 'User with this email already exists in this business')
     return result

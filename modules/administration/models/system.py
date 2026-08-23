@@ -11,6 +11,7 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = Field(None, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
     status: str = 'Active'
+    customer_id: Optional[int] = None
     business_id: Optional[int] = None
 
 class UserUpdate(BaseModel):
@@ -20,6 +21,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, max_length=200)
     email: Optional[str] = Field(None, max_length=200)
     status: Optional[str] = None
+    customer_id: Optional[int] = None
     business_id: Optional[int] = None
 
 class UserRoleUpdate(BaseModel):
@@ -31,12 +33,13 @@ class UserRoleUpdate(BaseModel):
 class UserResponse(AuditMixin):
     id: int
     username: str
-    full_name: Optional[str] = None
-    email: Optional[str] = None
+    full_name: Optional[str]
+    email: Optional[str]
     role: str
     permissions: list[str]
     status: str
-    last_login: Optional[datetime] = None
+    last_login: Optional[datetime]
+    customer_id: Optional[int] = None
 
 
 class NavPermissionCreate(BaseModel):
@@ -48,7 +51,6 @@ class NavPermissionCreate(BaseModel):
     permission_key: Optional[str] = Field(None, max_length=50)
     sort_order: int = 0
     is_active: bool = True
-    business_id: Optional[int] = None
 
 class NavPermissionUpdate(BaseModel):
     module_key: Optional[str] = Field(None, max_length=50)
@@ -59,18 +61,17 @@ class NavPermissionUpdate(BaseModel):
     permission_key: Optional[str] = Field(None, max_length=50)
     sort_order: Optional[int] = None
     is_active: Optional[bool] = None
-    business_id: Optional[int] = None
 
 class NavPermissionResponse(AuditMixin):
     id: int
     module_key: str
     label: str
-    label_ar: Optional[str] = None
-    icon: Optional[str] = None
-    section: Optional[str] = None
-    permission_key: Optional[str] = None
-    sort_order: int = 0
-    is_active: bool = True
+    label_ar: Optional[str]
+    icon: Optional[str]
+    section: Optional[str]
+    permission_key: Optional[str]
+    sort_order: int
+    is_active: bool
 
 
 class AuditLogCreate(BaseModel):
@@ -79,7 +80,6 @@ class AuditLogCreate(BaseModel):
     action: str
     changed_data: Optional[dict] = None
     changed_by: Optional[int] = None
-    business_id: Optional[int] = None
 
 class AuditLogResponse(BaseModel):
     id: int
@@ -97,7 +97,6 @@ class SettingCreate(BaseModel):
     description: Optional[str] = None
     setting_group: Optional[str] = Field(None, max_length=50)
     is_active: bool = True
-    business_id: Optional[int] = None
 
 class SettingUpdate(BaseModel):
     setting_key: Optional[str] = Field(None, max_length=100)
@@ -105,13 +104,11 @@ class SettingUpdate(BaseModel):
     description: Optional[str] = None
     setting_group: Optional[str] = Field(None, max_length=50)
     is_active: Optional[bool] = None
-    business_id: Optional[int] = None
 
 class SettingResponse(AuditMixin):
     id: int
     setting_key: str
-    setting_value: Optional[str] = None
-    description: Optional[str] = None
-    setting_group: Optional[str] = None
-    is_active: bool = True
-
+    setting_value: Optional[str]
+    description: Optional[str]
+    setting_group: Optional[str]
+    is_active: bool

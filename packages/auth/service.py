@@ -43,6 +43,7 @@ def _build_user_dict(user: dict) -> dict:
         'role': user['role'],
         'permissions': perms,
         'business_id': user.get('business_id'),
+        'customer_id': user.get('customer_id'),
     }
 
 
@@ -51,10 +52,9 @@ def login(username: str, password: str) -> dict | None:
     if not user:
         return None
     update_last_login(user['id'])
-    business_id = user.get('business_id')
     return {
-        'access_token': create_access_token(user['id'], business_id=business_id),
-        'refresh_token': create_refresh_token(user['id'], business_id=business_id),
+        'access_token': create_access_token(user['id'], customer_id=user.get('customer_id')),
+        'refresh_token': create_refresh_token(user['id'], customer_id=user.get('customer_id')),
         'token_type': 'bearer',
         'user': _build_user_dict(user),
     }
@@ -71,10 +71,9 @@ def refresh(token: str) -> dict | None:
     user = get_user_by_id(user_id)
     if not user:
         return None
-    business_id = user.get('business_id') if user else payload.get('business_id')
     return {
-        'access_token': create_access_token(user['id'], business_id=business_id),
-        'refresh_token': create_refresh_token(user['id'], business_id=business_id),
+        'access_token': create_access_token(user['id'], customer_id=user.get('customer_id')),
+        'refresh_token': create_refresh_token(user['id'], customer_id=user.get('customer_id')),
         'token_type': 'bearer',
     }
 
@@ -88,21 +87,20 @@ def signup(business_name: str, username: str, password: str,
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     business = create_business(business_name, 0)
     user = create_user(username, password_hash, full_name, email, 'Admin', business['id'])
-    business_id = business['id']
     return {
-        'access_token': create_access_token(user['id'], business_id=business_id),
-        'refresh_token': create_refresh_token(user['id'], business_id=business_id),
+        'access_token': create_access_token(user['id'], customer_id=user.get('customer_id')),
+        'refresh_token': create_refresh_token(user['id'], customer_id=user.get('customer_id')),
         'token_type': 'bearer',
         'user': _build_user_dict(user),
     }
 
 
 def invite_user(email: str, role: str, full_name: str | None,
-                business_id: int, invited_by: int) -> dict | None:
+                business_id: int, invited_by: int, customer_id: int | None = None) -> dict | None:
     existing = get_user_by_email(email)
     if existing:
         return None
-    user = create_invited_user(email, role, full_name, business_id, invited_by)
+    user = create_invited_user(email, role, full_name, business_id, invited_by, customer_id=customer_id)
     invite_link = f'/accept-invite?token={user["invite_token"]}'
     return {
         'user_id': user['id'],

@@ -13,6 +13,15 @@ def test_create_access_token_contains_user_id():
     payload = decode_token(token)
     assert payload['sub'] == '42'
     assert payload['type'] == 'access'
+    assert 'customer_id' not in payload
+
+
+def test_create_access_token_with_customer_id():
+    token = create_access_token(42, customer_id=105)
+    payload = decode_token(token)
+    assert payload['sub'] == '42'
+    assert payload['type'] == 'access'
+    assert payload['customer_id'] == 105
 
 
 def test_create_refresh_token_contains_user_id():
@@ -20,6 +29,15 @@ def test_create_refresh_token_contains_user_id():
     payload = decode_token(token)
     assert payload['sub'] == '42'
     assert payload['type'] == 'refresh'
+    assert 'customer_id' not in payload
+
+
+def test_create_refresh_token_with_customer_id():
+    token = create_refresh_token(42, customer_id=105)
+    payload = decode_token(token)
+    assert payload['sub'] == '42'
+    assert payload['type'] == 'refresh'
+    assert payload['customer_id'] == 105
 
 
 def test_access_token_expires_in_default_window():
