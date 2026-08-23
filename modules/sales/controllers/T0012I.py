@@ -58,8 +58,6 @@ def create_order_with_lines(body: dict):
         _server_error(e, 'create order with lines')
 
 @router.post('/{id}/confirm')
-def confirm_order(id: int):
-    """Confirm a pending order: reserves stock, creates pick list, and updates status atomically."""
 def confirm_order(id: int, user: dict = Depends(get_current_user)):
     """Confirm a pending order: reserves stock and updates status."""
     order = service.get(id)
@@ -78,10 +76,11 @@ def confirm_order(id: int, user: dict = Depends(get_current_user)):
         _server_error(e, 'confirm order')
 
 @router.post('/{id}/deliver')
-def deliver_order(id: int):
+def deliver_order(id: int, user: dict = Depends(get_current_user)):
     """Mark an order as delivered: creates invoice, updates customer balance, and updates status atomically."""
     order = service.get(id)
     if not order:
+        check_record_ownership(service, id, user, 'T0012', 'POST')
         raise HTTPException(404, 'Order not found')
     if order.get('status') != 'Shipped':
         raise HTTPException(400, f'Only Shipped orders can be marked as delivered. Current status: {order.get("status")}')
@@ -95,8 +94,6 @@ def deliver_order(id: int):
         _server_error(e, 'deliver order')
 
 @router.post('/{id}/cancel')
-def cancel_order(id: int):
-    """Cancel an order: releases reserved stock and updates status atomically."""
 def cancel_order(id: int, user: dict = Depends(get_current_user)):
     """Cancel an order: releases reserved stock."""
     order = service.get(id)
