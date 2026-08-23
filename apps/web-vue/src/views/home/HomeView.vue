@@ -120,6 +120,7 @@ const MODULE_COLORS = {
   customers: '#EC4899',
   suppliers: '#F59E0B',
   sales: '#22C55E',
+  'field-sales': '#059669',
   purchasing: '#F97316',
   finance: '#5C6BC0',
   uom: '#8B5CF6',

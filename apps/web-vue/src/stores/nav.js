@@ -53,6 +53,7 @@ export const useNavStore = defineStore('nav', {
           { id: 'opportunities', icon: 'trending_up', label: 'Opportunities', label_ar: 'الفرص', permission: 'CRM_VIEW', module: 'opportunities' },
           { id: 'customers', icon: 'group', label: 'Customers', label_ar: 'العملاء', permission: 'CRM_VIEW', module: 'customers' },
           { id: 'sales', icon: 'payments', label: 'Sales Orders', label_ar: 'أوامر البيع', permission: 'SALES_VIEW', module: 'sales' },
+          { id: 'field-sales', icon: 'point_of_sale', label: 'Field Sales', label_ar: 'مبيعات الميدان', permission: 'FIELD_SALES_MOBILE', module: 'field-sales' },
           { id: 'sales-quotations', icon: 'request_quote', label: 'Quotations', label_ar: 'عروض الأسعار', permission: 'SALES_VIEW', module: 'sales-quotations' },
           { id: 'sales-deliveries', icon: 'local_shipping', label: 'Deliveries', label_ar: 'التسليمات', permission: 'SALES_VIEW', module: 'sales-deliveries' },
           { id: 'sales-returns', icon: 'assignment_return', label: 'Returns', label_ar: 'المرتجعات', permission: 'SALES_VIEW', module: 'sales-returns' },
