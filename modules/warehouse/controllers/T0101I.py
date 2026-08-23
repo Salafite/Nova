@@ -72,9 +72,55 @@ def pick_item(id: int, item_id: int, body: dict):
     except ValueError as e:
         raise HTTPException(400, str(e))
 
+@router.get('/{id}/discrepancies')
+def get_pick_list_discrepancies(id: int):
+    try:
+        return pl_service.check_pick_list_discrepancies(id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+@router.post('/{id}/approve-tolerance')
+def approve_tolerance(id: int, body: dict = None):
+    body = body or {}
+    item_id = body.get('item_id')
+    item_ids = body.get('item_ids')
+    supervisor_id = body.get('supervisor_id') or body.get('supervisor_approved_by') or body.get('approved_by')
+    supervisor_notes = body.get('supervisor_notes') or body.get('notes')
+
+    try:
+        return pl_service.approve_tolerance(
+            pick_list_id=id,
+            item_id=item_id,
+            item_ids=item_ids,
+            supervisor_id=supervisor_id,
+            supervisor_notes=supervisor_notes,
+        )
+    except ValueError as e:
+        if 'not found' in str(e).lower():
+            raise HTTPException(404, str(e))
+        raise HTTPException(400, str(e))
+
+@router.post('/{id}/items/{item_id}/approve-tolerance')
+def approve_item_tolerance(id: int, item_id: int, body: dict = None):
+    body = body or {}
+    supervisor_id = body.get('supervisor_id') or body.get('supervisor_approved_by') or body.get('approved_by')
+    supervisor_notes = body.get('supervisor_notes') or body.get('notes')
+
+    try:
+        return pl_service.approve_item_tolerance(
+            pick_list_id=id,
+            item_id=item_id,
+            supervisor_id=supervisor_id,
+            supervisor_notes=supervisor_notes,
+        )
+    except ValueError as e:
+        if 'not found' in str(e).lower():
+            raise HTTPException(404, str(e))
+        raise HTTPException(400, str(e))
+
 @router.post('/{id}/complete')
 def complete_picking(id: int):
     try:
         return pl_service.complete_picking(id)
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(400, str(e))

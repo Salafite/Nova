@@ -1,9 +1,12 @@
 import logging
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.sequence import generate_pick_list_number
 from packages.database.connection import get_connection, release_connection
 from modules.warehouse.services.batch_number_service import BatchNumberService
+
 
 logger = logging.getLogger(__name__)
 
@@ -353,7 +356,22 @@ class PickListService(CrudService):
         items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, order_by='line_number', **_conn_kwargs(conn))
         pl['items'] = items
         pl['progress_pct'] = self._calc_progress(items)
+        pl['has_discrepancies'] = any(
+            it.get('tolerance_status') == 'Out of Tolerance' or (
+                it.get('tolerance_status') not in ('Within Tolerance', 'Not Applicable', 'Approved')
+                and not it.get('supervisor_approved')
+            )
+            for it in items
+        )
+        pl['discrepancy_count'] = sum(
+            1 for it in items
+            if it.get('tolerance_status') == 'Out of Tolerance' or (
+                it.get('tolerance_status') not in ('Within Tolerance', 'Not Applicable', 'Approved')
+                and not it.get('supervisor_approved')
+            )
+        )
         return pl
+
 
     def get_available_batches_for_item(self, pick_list_id, item_id, conn=None):
         pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
@@ -560,6 +578,109 @@ class PickListService(CrudService):
             raise RuntimeError(f"Failed to update status for pick list {pick_list_id}: {e}") from e
         return self.repo.get(pick_list_id, **_conn_kwargs(conn))
 
+    def approve_tolerance(
+        self,
+        pick_list_id: int,
+        item_id: Optional[int] = None,
+        item_ids: Optional[list] = None,
+        supervisor_id: Optional[int] = None,
+        supervisor_notes: Optional[str] = None,
+        notes: Optional[str] = None,
+        conn=None,
+    ):
+        """
+        Approve catch-weight tolerance discrepancies for items in a pick list.
+        - If item_id is specified: approves that specific item.
+        - If item_ids is specified: approves the specified items.
+        - If neither is specified: approves all out-of-tolerance items in the pick list.
+        """
+        pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
+        if not pl:
+            logger.error(f"Cannot approve tolerance: Pick list {pick_list_id} not found")
+            raise ValueError(f"Pick list {pick_list_id} not found")
+
+        if item_id is not None:
+            item = self.pli_repo.get(item_id, **_conn_kwargs(conn))
+            if not item:
+                raise ValueError(f"Pick list item {item_id} not found")
+            if item.get('pick_list_id') != pick_list_id:
+                raise ValueError(f"Pick list item {item_id} does not belong to pick list {pick_list_id}")
+            target_items = [item]
+        elif item_ids:
+            target_items = []
+            for iid in item_ids:
+                item = self.pli_repo.get(iid, **_conn_kwargs(conn))
+                if not item:
+                    raise ValueError(f"Pick list item {iid} not found")
+                if item.get('pick_list_id') != pick_list_id:
+                    raise ValueError(f"Pick list item {iid} does not belong to pick list {pick_list_id}")
+                target_items.append(item)
+        else:
+            all_items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
+            target_items = [
+                it for it in all_items
+                if it.get('tolerance_status') == 'Out of Tolerance' or (
+                    it.get('tolerance_status') not in ('Within Tolerance', 'Not Applicable', 'Approved')
+                    and not it.get('supervisor_approved')
+                )
+            ]
+
+        approval_notes = supervisor_notes if supervisor_notes is not None else notes
+        now = datetime.now()
+
+        approved_item_ids = []
+        for item in target_items:
+            iid = item['id']
+            cw_act = item.get('catch_weight_actual')
+            nom_w = item.get('nominal_weight')
+            tol_p = item.get('tolerance_pct')
+
+            if cw_act is not None and nom_w is not None:
+                var_pct, tol_status = self.evaluate_tolerance(
+                    nominal_weight=nom_w,
+                    actual_weight=cw_act,
+                    tolerance_pct=tol_p,
+                    supervisor_approved=True,
+                )
+            else:
+                var_pct = item.get('tolerance_variance_pct')
+                tol_status = 'Approved'
+
+            update_data = {
+                'supervisor_approved': True,
+                'supervisor_approved_by': supervisor_id,
+                'supervisor_approved_at': now,
+                'tolerance_status': tol_status,
+            }
+            if var_pct is not None:
+                update_data['tolerance_variance_pct'] = var_pct
+            if approval_notes is not None:
+                update_data['supervisor_notes'] = approval_notes
+
+            self.pli_repo.update(iid, update_data, **_conn_kwargs(conn))
+            approved_item_ids.append(iid)
+
+        logger.info(f"Approved tolerance for {len(approved_item_ids)} item(s) in pick list {pick_list_id}")
+        return self.get_with_items(pick_list_id, conn=conn)
+
+    def approve_item_tolerance(
+        self,
+        pick_list_id: int,
+        item_id: int,
+        supervisor_id: Optional[int] = None,
+        supervisor_notes: Optional[str] = None,
+        notes: Optional[str] = None,
+        conn=None,
+    ):
+        return self.approve_tolerance(
+            pick_list_id=pick_list_id,
+            item_id=item_id,
+            supervisor_id=supervisor_id,
+            supervisor_notes=supervisor_notes,
+            notes=notes,
+            conn=conn,
+        )
+
     def complete_picking(self, pick_list_id, conn=None):
         pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
         if not pl:
@@ -573,6 +694,14 @@ class PickListService(CrudService):
                 unpicked.append(f"Item {label} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
         if unpicked:
             msg = f"Cannot complete pick list {pick_list_id}: {'; '.join(unpicked)}"
+            logger.warning(msg)
+            raise ValueError(msg)
+
+        # Check for unapproved catch-weight tolerance discrepancies
+        unapproved = self.check_pick_list_discrepancies(pick_list_id, conn=conn)
+        if unapproved:
+            names = [it.get('product_name') or f"Item #{it.get('id')}" for it in unapproved]
+            msg = f"Cannot complete pick list {pick_list_id}: Unapproved catch-weight tolerance discrepancies exist on items: {', '.join(names)}"
             logger.warning(msg)
             raise ValueError(msg)
 
@@ -599,6 +728,7 @@ class PickListService(CrudService):
         logger.info(f"Completed pick list {pick_list_id} and updated sales order {pl['sales_order_id']} to Shipped")
 
         return self.get_with_items(pick_list_id, **_conn_kwargs(conn))
+
 
     def _calc_progress(self, items):
         if not items:

@@ -88,3 +88,14 @@ class PickListItemResponse(AuditMixin):
     supervisor_approved_by: Optional[int] = None
     supervisor_approved_at: Optional[datetime] = None
     supervisor_notes: Optional[str] = None
+
+
+class ToleranceApprovalRequest(BaseModel):
+    item_id: Optional[int] = None
+    item_ids: Optional[list[int]] = None
+    supervisor_id: Optional[int] = None
+    supervisor_approved_by: Optional[int] = None
+    approved_by: Optional[int] = None
+    supervisor_notes: Optional[str] = None
+    notes: Optional[str] = None
+
