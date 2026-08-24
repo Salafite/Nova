@@ -241,6 +241,9 @@ CREATE TABLE T0090 (
     discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
     sales_rep_id    INT REFERENCES T0021(id),
     status          VARCHAR(20) NOT NULL DEFAULT 'Draft',   -- Draft, Unpaid, Paid, Cancelled
+    stripe_payment_intent_id VARCHAR(255),
+    stripe_checkout_session_id VARCHAR(255),
+    payment_link    TEXT,
     notes           TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT REFERENCES T0021(id),
@@ -260,6 +263,9 @@ COMMENT ON COLUMN T0090.freight_amount IS 'Freight / shipping charges billed on 
 COMMENT ON COLUMN T0090.discount_amount IS 'Customer discount deducted on invoice';
 COMMENT ON COLUMN T0090.sales_rep_id IS 'Assigned sales representative (FK to T0021)';
 COMMENT ON COLUMN T0090.status IS 'Invoice status: Draft, Unpaid, Paid, Cancelled';
+COMMENT ON COLUMN T0090.stripe_payment_intent_id IS 'Stripe PaymentIntent ID for online settlement';
+COMMENT ON COLUMN T0090.stripe_checkout_session_id IS 'Stripe Checkout Session ID for hosted payment';
+COMMENT ON COLUMN T0090.payment_link IS 'Direct hosted Stripe payment URL';
 COMMENT ON COLUMN T0090.notes IS 'Free-text notes or comments';
 COMMENT ON COLUMN T0090.created_at IS 'Record creation timestamp';
 COMMENT ON COLUMN T0090.created_by IS 'User who created this record (FK to T0021)';
@@ -269,6 +275,8 @@ COMMENT ON COLUMN T0090.update_number IS 'Version counter incremented on each up
 CREATE INDEX idx_T0090_partner ON T0090(partner_id);
 CREATE INDEX idx_T0090_status ON T0090(status);
 CREATE INDEX idx_T0090_sales_rep ON T0090(sales_rep_id);
+CREATE INDEX idx_T0090_stripe_session ON T0090(stripe_checkout_session_id);
+CREATE INDEX idx_T0090_stripe_intent ON T0090(stripe_payment_intent_id);
 
 -- T0091 - Payments
 COMMENT ON TABLE T0091 IS 'Payments — received from customers or made to suppliers';
@@ -281,6 +289,9 @@ CREATE TABLE T0091 (
     payment_method    VARCHAR(50) NOT NULL DEFAULT 'Bank Transfer',  -- Cash, Bank Transfer, Card, Check
     reference         VARCHAR(100),
     status            VARCHAR(20) NOT NULL DEFAULT 'Completed',
+    stripe_payment_intent_id VARCHAR(255),
+    stripe_checkout_session_id VARCHAR(255),
+    payment_link      TEXT,
     notes             TEXT,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by        INT REFERENCES T0021(id),
@@ -296,6 +307,9 @@ COMMENT ON COLUMN T0091.amount IS 'Payment amount (must be > 0)';
 COMMENT ON COLUMN T0091.payment_method IS 'Payment method: Cash, Bank Transfer, Card, Check';
 COMMENT ON COLUMN T0091.reference IS 'External payment reference or transaction ID';
 COMMENT ON COLUMN T0091.status IS 'Payment status (Completed, Pending, Failed, Refunded)';
+COMMENT ON COLUMN T0091.stripe_payment_intent_id IS 'Stripe PaymentIntent ID for online payment';
+COMMENT ON COLUMN T0091.stripe_checkout_session_id IS 'Stripe Checkout Session ID for online payment';
+COMMENT ON COLUMN T0091.payment_link IS 'Stripe hosted payment receipt or session link';
 COMMENT ON COLUMN T0091.notes IS 'Free-text notes or comments';
 COMMENT ON COLUMN T0091.created_at IS 'Record creation timestamp';
 COMMENT ON COLUMN T0091.created_by IS 'User who created this record (FK to T0021)';
@@ -305,6 +319,8 @@ COMMENT ON COLUMN T0091.update_number IS 'Version counter incremented on each up
 CREATE INDEX idx_T0091_invoice ON T0091(invoice_id);
 CREATE INDEX idx_T0091_partner ON T0091(partner_id);
 CREATE INDEX idx_T0091_date ON T0091(payment_date);
+CREATE INDEX idx_T0091_stripe_session ON T0091(stripe_checkout_session_id);
+CREATE INDEX idx_T0091_stripe_intent ON T0091(stripe_payment_intent_id);
 
 -- ============================================================
 -- VIEWS
