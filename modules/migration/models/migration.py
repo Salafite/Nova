@@ -216,6 +216,7 @@ class CleansingSummary(BaseModel):
     contacts_sanitized: int = 0
     lookups_auto_created: int = 0
     clamped_numeric_values: int = 0
+    discovered_lookups: Dict[str, List[str]] = Field(default_factory=dict)
     logs_sample: List[CleansingLogItem] = Field(default_factory=list)
 
 
