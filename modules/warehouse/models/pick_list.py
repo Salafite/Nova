@@ -9,10 +9,12 @@ class PickListCreate(BaseModel):
     warehouse_id: Optional[int] = None
     status: str = 'Pending'
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PickListUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PickListResponse(AuditMixin):
     id: int
