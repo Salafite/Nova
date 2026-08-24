@@ -17,7 +17,7 @@ class EnhancedSalesOrderService(CrudService):
         super().__init__(repo)
         self.line_repo = CrudRepository(
             'T0013',
-            [
+            business_columns=[
                 'id',
                 'sales_order_id',
                 'product_id',
@@ -37,8 +37,8 @@ class EnhancedSalesOrderService(CrudService):
                 'recalculated_total',
             ],
         )
-        self.price_list_item_repo = CrudRepository('T0084', ['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
-        self.tax_rate_repo = CrudRepository('T0085', ['id', 'name', 'code', 'rate', 'type'])
+        self.price_list_item_repo = CrudRepository('T0084', business_columns=['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
+        self.tax_rate_repo = CrudRepository('T0085', business_columns=['id', 'name', 'code', 'rate', 'type'])
 
     def create_with_lines(self, order_data, lines, conn=None):
         should_release = False
@@ -61,10 +61,16 @@ class EnhancedSalesOrderService(CrudService):
                     'sales_order_id': order['id'],
                     'product_id': line_data.get('product_id'),
                     'product_name': line_data.get('product_name', ''),
-                    'qty': qty,
-                    'unit_price': unit_price,
-                    'line_total': line_total,
+                    'qty': float(qty),
+                    'unit_price': float(unit_price),
+                    'line_total': float(line_total),
                     'line_number': line_data.get('line_number', 1),
+                    'is_catch_weight': line_data.get('is_catch_weight', False),
+                    'pricing_uom_id': line_data.get('pricing_uom_id'),
+                    'unit_price_pricing_uom': line_data.get('unit_price_pricing_uom'),
+                    'nominal_weight': line_data.get('nominal_weight'),
+                    'catch_weight_actual': line_data.get('catch_weight_actual'),
+                    'recalculated_total': line_data.get('recalculated_total'),
                 }, conn=conn)
 
             tax_amount = subtotal * tax_rate_pct / Decimal(100)

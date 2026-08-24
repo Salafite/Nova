@@ -174,6 +174,25 @@ class SalesOrderService(CrudService):
         self.pli_repo = pli_repo or PLI_REPO
         self.product_repo = product_repo or PRODUCT_REPO
 
+    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None):
+        if filters and 'is_catch_weight' in filters:
+            filters_copy = dict(filters)
+            is_cw_filter = filters_copy.pop('is_catch_weight')
+            orders = super().list(filters=filters_copy or None, order_by=order_by, conn=conn)
+            filtered_orders = []
+            for order in orders:
+                order_id = order.get('id')
+                lines = self.line_repo.list(filters={'sales_order_id': order_id}, conn=conn)
+                has_cw = any(bool(line.get('is_catch_weight')) for line in lines)
+                if has_cw == bool(is_cw_filter):
+                    filtered_orders.append(order)
+            if offset:
+                filtered_orders = filtered_orders[offset:]
+            if limit:
+                filtered_orders = filtered_orders[:limit]
+            return filtered_orders
+        return super().list(filters=filters, order_by=order_by, limit=limit, offset=offset, conn=conn)
+
     def create(self, payload: dict, conn=None):
         if not payload.get('grand_total') and payload.get('subtotal') is not None:
             payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
@@ -193,33 +212,57 @@ class SalesOrderService(CrudService):
         return super().create(payload, conn=conn)
 
     def update(self, id_val, payload: dict, conn=None):
-        existing_order = self.repo.get(id_val, conn=conn)
-        if not existing_order:
-            logger.error(f"Cannot update sales order {id_val}: not found")
-            raise ValueError(f"Sales order {id_val} not found")
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
 
-        new_status = payload.get('status')
-        old_status = existing_order.get('status')
+        try:
+            existing_order = self.repo.get(id_val, conn=conn)
+            if not existing_order:
+                logger.error(f"Cannot update sales order {id_val}: not found")
+                raise ValueError(f"Sales order {id_val} not found")
 
-        if new_status and new_status != old_status:
-            if old_status in VALID_SALES_STATUS_TRANSITIONS:
-                allowed = VALID_SALES_STATUS_TRANSITIONS[old_status]
-                if new_status not in allowed:
-                    from fastapi import HTTPException
-                    raise HTTPException(
-                        400,
-                        f"Cannot transition order status from {old_status} to {new_status}. Allowed: {allowed}"
-                    )
+            new_status = payload.get('status')
+            old_status = existing_order.get('status')
 
-            if new_status == 'Confirmed':
-                self._reserve_order_stock(id_val, conn=conn)
-            elif new_status == 'Delivered':
-                self._validate_delivery_tolerance_approvals(id_val, conn=conn)
-                self._create_invoice_from_order(id_val, conn=conn)
-            elif new_status == 'Cancelled':
-                self._release_order_stock(id_val, conn=conn)
+            if new_status and new_status != old_status:
+                if old_status in VALID_SALES_STATUS_TRANSITIONS:
+                    allowed = VALID_SALES_STATUS_TRANSITIONS[old_status]
+                    if new_status not in allowed:
+                        from fastapi import HTTPException
+                        logger.warning(
+                            f"Rejected status transition for sales order {id_val}: "
+                            f"{old_status} -> {new_status} (allowed: {allowed})"
+                        )
+                        raise HTTPException(
+                            400,
+                            f"Invalid status transition: {old_status} -> {new_status}. Allowed: {allowed}"
+                        )
 
-        return super().update(id_val, payload, conn=conn)
+                if new_status == 'Confirmed':
+                    self._reserve_order_stock(id_val, conn=conn)
+                elif new_status == 'Delivered':
+                    self._validate_delivery_tolerance_approvals(id_val, conn=conn)
+                    self._create_invoice_from_order(id_val, conn=conn)
+                elif new_status == 'Cancelled':
+                    self._release_order_stock(id_val, conn=conn)
+
+            result = super().update(id_val, payload, conn=conn)
+            if should_release:
+                conn.commit()
+            return result
+        except Exception as e:
+            if should_release:
+                try:
+                    conn.rollback()
+                    logger.info(f"Transaction rolled back for sales order {id_val} update: {e}")
+                except Exception as rb_err:
+                    logger.error(f"Error during transaction rollback for sales order {id_val}: {rb_err}")
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
 
     def _validate_delivery_tolerance_approvals(self, order_id: int, conn=None):
         """
