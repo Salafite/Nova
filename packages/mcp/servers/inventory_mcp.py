@@ -7,10 +7,15 @@ from packages.mcp.registry import register_tool, register_resource
 from packages.mcp.types import Tool, Resource
 
 
-_products_repo = CrudRepository('T0005', business_columns=['id', 'name', 'sku', 'price', 'cost_price', 'category', 'brand', 'tax_rate', 'image_url', 'is_active'])
+_products_repo = CrudRepository('T0003', business_columns=[
+    'id', 'name', 'sku', 'barcode', 'description', 'type', 'price', 'cost_price',
+    'category', 'brand', 'tax_rate', 'weight', 'volume', 'image_url',
+    'is_purchasable', 'is_saleable', 'is_active',
+    'is_catch_weight', 'pricing_uom_id', 'nominal_weight', 'tolerance_pct', 'pricing_basis'
+])
 _products_svc = CrudService(_products_repo)
 
-_categories_repo = CrudRepository('T0003', business_columns=['id', 'name', 'is_active'])
+_categories_repo = CrudRepository('T0005', business_columns=['id', 'attribute_name', 'is_active'])
 _categories_svc = CrudService(_categories_repo)
 
 _warehouses_repo = CrudRepository('T0008', business_columns=['id', 'name', 'location', 'is_active'])
@@ -33,6 +38,7 @@ def register_tools():
             "properties": {
                 "category": {"type": "string", "description": "Filter by category"},
                 "brand": {"type": "string", "description": "Filter by brand"},
+                "is_catch_weight": {"type": "boolean", "description": "Filter by catch weight products"},
                 "limit": {"type": "integer", "description": "Max results (default 50)"},
                 "offset": {"type": "integer", "description": "Offset for pagination"},
             },
@@ -67,6 +73,11 @@ def register_tools():
                 "is_purchasable": {"type": "boolean", "description": "Can be purchased (default true)"},
                 "is_saleable": {"type": "boolean", "description": "Can be sold (default true)"},
                 "is_active": {"type": "boolean", "description": "Active status (default true)"},
+                "is_catch_weight": {"type": "boolean", "description": "Flag indicating product is priced by catch-weight (variable weight)"},
+                "pricing_uom_id": {"type": "integer", "description": "Pricing unit of measure ID (e.g. kg/lbs)"},
+                "nominal_weight": {"type": "number", "description": "Expected nominal weight per stocking unit"},
+                "tolerance_pct": {"type": "number", "description": "Allowable weight variance percentage (+/- %)"},
+                "pricing_basis": {"type": "string", "description": "Pricing basis: 'weight' or 'unit' (default weight)"},
             },
             "required": ["name", "sku"],
         }),
@@ -93,6 +104,11 @@ def register_tools():
                 "is_purchasable": {"type": "boolean"},
                 "is_saleable": {"type": "boolean"},
                 "is_active": {"type": "boolean"},
+                "is_catch_weight": {"type": "boolean", "description": "Flag indicating product is priced by catch-weight"},
+                "pricing_uom_id": {"type": "integer", "description": "Pricing unit of measure ID"},
+                "nominal_weight": {"type": "number", "description": "Expected nominal weight per stocking unit"},
+                "tolerance_pct": {"type": "number", "description": "Allowable weight variance percentage (+/- %)"},
+                "pricing_basis": {"type": "string", "description": "Pricing basis: 'weight' or 'unit'"},
             },
             "required": ["id"],
         }),
@@ -158,12 +174,14 @@ def register_tools():
     )
 
 
-def _list_products(category: str = None, brand: str = None, limit: int = 50, offset: int = 0):
+def _list_products(category: str = None, brand: str = None, is_catch_weight: bool = None, limit: int = 50, offset: int = 0):
     filters = {}
     if category:
         filters["category"] = category
     if brand:
         filters["brand"] = brand
+    if is_catch_weight is not None:
+        filters["is_catch_weight"] = is_catch_weight
     return _products_svc.list(filters=filters or None, limit=limit, offset=offset)
 
 
@@ -171,14 +189,51 @@ def _get_product(id: int):
     return _products_svc.get(id)
 
 
-def _create_product(name: str, sku: str, barcode: str = None, description: str = None, type: str = "stockable", price: float = 0, cost_price: float = 0, category: str = None, brand: str = None, tax_rate: float = 0.05, weight: float = 0, volume: float = 0, image_url: str = None, is_purchasable: bool = True, is_saleable: bool = True, is_active: bool = True):
+def _create_product(
+    name: str,
+    sku: str,
+    barcode: str = None,
+    description: str = None,
+    type: str = "stockable",
+    price: float = 0,
+    cost_price: float = 0,
+    category: str = None,
+    brand: str = None,
+    tax_rate: float = 0.05,
+    weight: float = 0,
+    volume: float = 0,
+    image_url: str = None,
+    is_purchasable: bool = True,
+    is_saleable: bool = True,
+    is_active: bool = True,
+    is_catch_weight: bool = False,
+    pricing_uom_id: int = None,
+    nominal_weight: float = None,
+    tolerance_pct: float = None,
+    pricing_basis: str = "weight",
+):
     return _products_svc.create({
-        "name": name, "sku": sku, "barcode": barcode, "description": description,
-        "type": type, "price": price, "cost_price": cost_price,
-        "category": category, "brand": brand, "tax_rate": tax_rate,
-        "weight": weight, "volume": volume, "image_url": image_url,
-        "is_purchasable": is_purchasable, "is_saleable": is_saleable,
+        "name": name,
+        "sku": sku,
+        "barcode": barcode,
+        "description": description,
+        "type": type,
+        "price": price,
+        "cost_price": cost_price,
+        "category": category,
+        "brand": brand,
+        "tax_rate": tax_rate,
+        "weight": weight,
+        "volume": volume,
+        "image_url": image_url,
+        "is_purchasable": is_purchasable,
+        "is_saleable": is_saleable,
         "is_active": is_active,
+        "is_catch_weight": is_catch_weight,
+        "pricing_uom_id": pricing_uom_id,
+        "nominal_weight": nominal_weight,
+        "tolerance_pct": tolerance_pct,
+        "pricing_basis": pricing_basis,
     })
 
 

@@ -40,6 +40,11 @@ class TestListProducts:
         inventory_mcp._list_products(category="Beverages")
         inventory_mcp._products_svc.list.assert_called_with(filters={"category": "Beverages"}, limit=50, offset=0)
 
+    def test_with_catch_weight_filter(self, mock_svc):
+        inventory_mcp._products_svc.list.return_value = [MOCK_PRODUCT]
+        inventory_mcp._list_products(is_catch_weight=True)
+        inventory_mcp._products_svc.list.assert_called_with(filters={"is_catch_weight": True}, limit=50, offset=0)
+
 
 class TestGetProduct:
     def test_found(self, mock_svc):
@@ -61,8 +66,41 @@ class TestCreateProduct:
             "category": None, "brand": None, "tax_rate": 0.05,
             "weight": 0, "volume": 0, "image_url": None,
             "is_purchasable": True, "is_saleable": True, "is_active": True,
+            "is_catch_weight": False, "pricing_uom_id": None,
+            "nominal_weight": None, "tolerance_pct": None, "pricing_basis": "weight",
         })
         assert result == MOCK_PRODUCT
+
+    def test_creates_catch_weight_product(self, mock_svc):
+        cw_product = {
+            **MOCK_PRODUCT,
+            "is_catch_weight": True,
+            "pricing_uom_id": 2,
+            "nominal_weight": 10.0,
+            "tolerance_pct": 5.0,
+            "pricing_basis": "weight",
+        }
+        inventory_mcp._products_svc.create.return_value = cw_product
+        result = inventory_mcp._create_product(
+            name="Cheddar Cheese Block",
+            sku="CW-CHD-001",
+            price=45.0,
+            is_catch_weight=True,
+            pricing_uom_id=2,
+            nominal_weight=10.0,
+            tolerance_pct=5.0,
+            pricing_basis="weight",
+        )
+        inventory_mcp._products_svc.create.assert_called_with({
+            "name": "Cheddar Cheese Block", "sku": "CW-CHD-001", "barcode": None, "description": None,
+            "type": "stockable", "price": 45.0, "cost_price": 0,
+            "category": None, "brand": None, "tax_rate": 0.05,
+            "weight": 0, "volume": 0, "image_url": None,
+            "is_purchasable": True, "is_saleable": True, "is_active": True,
+            "is_catch_weight": True, "pricing_uom_id": 2,
+            "nominal_weight": 10.0, "tolerance_pct": 5.0, "pricing_basis": "weight",
+        })
+        assert result == cw_product
 
 
 class TestUpdateProduct:
@@ -70,6 +108,33 @@ class TestUpdateProduct:
         inventory_mcp._products_svc.update.return_value = MOCK_PRODUCT
         inventory_mcp._update_product(id=1, name="Updated", price=15.0)
         inventory_mcp._products_svc.update.assert_called_with(1, {"name": "Updated", "price": 15.0})
+
+    def test_updates_catch_weight_fields(self, mock_svc):
+        cw_updated = {
+            **MOCK_PRODUCT,
+            "is_catch_weight": True,
+            "pricing_uom_id": 2,
+            "nominal_weight": 12.5,
+            "tolerance_pct": 7.5,
+            "pricing_basis": "weight",
+        }
+        inventory_mcp._products_svc.update.return_value = cw_updated
+        result = inventory_mcp._update_product(
+            id=1,
+            is_catch_weight=True,
+            pricing_uom_id=2,
+            nominal_weight=12.5,
+            tolerance_pct=7.5,
+            pricing_basis="weight",
+        )
+        inventory_mcp._products_svc.update.assert_called_with(1, {
+            "is_catch_weight": True,
+            "pricing_uom_id": 2,
+            "nominal_weight": 12.5,
+            "tolerance_pct": 7.5,
+            "pricing_basis": "weight",
+        })
+        assert result == cw_updated
 
 
 class TestDeleteProduct:
