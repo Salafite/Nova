@@ -673,52 +673,71 @@ class PickListService(CrudService):
         )
 
     def complete_picking(self, pick_list_id, conn=None):
-        pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
-        if not pl:
-            logger.error(f"Cannot complete picking: Pick list {pick_list_id} not found")
-            raise ValueError(f"Pick list {pick_list_id} not found")
-        items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
-        unpicked = []
-        for item in items:
-            if item.get('qty_picked', 0) < item.get('qty_ordered', 0):
-                label = item.get('product_name') or item.get('product_id') or f"id {item.get('id')}"
-                unpicked.append(f"Item {label} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
-        if unpicked:
-            msg = f"Cannot complete pick list {pick_list_id}: {'; '.join(unpicked)}"
-            logger.warning(msg)
-            raise ValueError(msg)
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
 
-        # Check for unapproved catch-weight tolerance discrepancies
-        unapproved = self.check_pick_list_discrepancies(pick_list_id, conn=conn)
-        if unapproved:
-            names = [it.get('product_name') or f"Item #{it.get('id')}" for it in unapproved]
-            msg = f"Cannot complete pick list {pick_list_id}: Unapproved catch-weight tolerance discrepancies exist on items: {', '.join(names)}"
-            logger.warning(msg)
-            raise ValueError(msg)
+        try:
+            pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
+            if not pl:
+                logger.error(f"Cannot complete picking: Pick list {pick_list_id} not found")
+                raise ValueError(f"Pick list {pick_list_id} not found")
+            items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
+            unpicked = []
+            for item in items:
+                if item.get('qty_picked', 0) < item.get('qty_ordered', 0):
+                    label = item.get('product_name') or item.get('product_id') or f"id {item.get('id')}"
+                    unpicked.append(f"Item {label} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
+            if unpicked:
+                msg = f"Cannot complete pick list {pick_list_id}: {'; '.join(unpicked)}"
+                logger.warning(msg)
+                raise ValueError(msg)
 
-        for item in items:
-            picked_qty = float(item.get('qty_picked', 0) or 0)
-            if picked_qty <= 0:
-                continue
+            # Check for unapproved catch-weight tolerance discrepancies
+            unapproved = self.check_pick_list_discrepancies(pick_list_id, conn=conn)
+            if unapproved:
+                names = [it.get('product_name') or f"Item #{it.get('id')}" for it in unapproved]
+                msg = f"Cannot complete pick list {pick_list_id}: Unapproved catch-weight tolerance discrepancies exist on items: {', '.join(names)}"
+                logger.warning(msg)
+                raise ValueError(msg)
 
-            batch_id = item.get('picked_batch_id') or item.get('batch_id')
-            if not batch_id and (item.get('picked_batch_number') or item.get('batch_number')):
-                batch_num = item.get('picked_batch_number') or item.get('batch_number')
-                batches = self.batch_service.repo.list(filters={
-                    'batch_number': batch_num,
-                    'product_id': item.get('product_id')
-                }, **_conn_kwargs(conn))
-                if batches:
-                    batch_id = batches[0]['id']
+            for item in items:
+                picked_qty = float(item.get('qty_picked', 0) or 0)
+                if picked_qty <= 0:
+                    continue
 
-            if batch_id:
-                self.batch_service.adjustQuantity(batch_id, -picked_qty, **_conn_kwargs(conn))
+                batch_id = item.get('picked_batch_id') or item.get('batch_id')
+                if not batch_id and (item.get('picked_batch_number') or item.get('batch_number')):
+                    batch_num = item.get('picked_batch_number') or item.get('batch_number')
+                    batches = self.batch_service.repo.list(filters={
+                        'batch_number': batch_num,
+                        'product_id': item.get('product_id')
+                    }, **_conn_kwargs(conn))
+                    if batches:
+                        batch_id = batches[0]['id']
 
-        self.repo.update(pick_list_id, {'status': 'Completed'}, **_conn_kwargs(conn))
-        self.order_repo.update(pl['sales_order_id'], {'status': 'Shipped'}, **_conn_kwargs(conn))
-        logger.info(f"Completed pick list {pick_list_id} and updated sales order {pl['sales_order_id']} to Shipped")
+                if batch_id:
+                    self.batch_service.adjustQuantity(batch_id, -picked_qty, **_conn_kwargs(conn))
 
-        return self.get_with_items(pick_list_id, **_conn_kwargs(conn))
+            self.repo.update(pick_list_id, {'status': 'Completed'}, **_conn_kwargs(conn))
+            self.order_repo.update(pl['sales_order_id'], {'status': 'Shipped'}, **_conn_kwargs(conn))
+            logger.info(f"Completed pick list {pick_list_id} and updated sales order {pl['sales_order_id']} to Shipped")
+
+            if should_release:
+                conn.commit()
+            return self.get_with_items(pick_list_id, **_conn_kwargs(conn))
+        except Exception as e:
+            if should_release:
+                try:
+                    conn.rollback()
+                    logger.info(f"Transaction rolled back for pick list {pick_list_id} complete: {e}")
+                except Exception as rb_err:
+                    logger.error(f"Error during transaction rollback for pick list {pick_list_id}: {rb_err}")
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
 
 
     def _calc_progress(self, items):

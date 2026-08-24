@@ -625,8 +625,10 @@ class TestPickListCompletePickingCatchWeightGating:
 
         result = self.service.complete_picking(pick_list_id=1)
 
-        self.mock_pl_repo.update.assert_called_once_with(1, {'status': 'Completed'})
-        self.mock_order_repo.update.assert_called_once_with(100, {'status': 'Shipped'})
+        assert self.mock_pl_repo.update.call_count == 1
+        assert self.mock_pl_repo.update.call_args[0] == (1, {'status': 'Completed'})
+        assert self.mock_order_repo.update.call_count == 1
+        assert self.mock_order_repo.update.call_args[0] == (100, {'status': 'Shipped'})
         assert result['has_discrepancies'] is False
         assert result['discrepancy_count'] == 0
 

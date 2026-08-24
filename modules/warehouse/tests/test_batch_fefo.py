@@ -455,12 +455,14 @@ class TestPickerLotSelectionAndDepletion:
         self.service.complete_picking(100)
 
         # Should deduct 10 from batch 1 (default suggested lot)
-        self.mock_batch_service.adjustQuantity.assert_any_call(1, -10.0)
+        assert any(c[0] == (1, -10.0) for c in self.mock_batch_service.adjustQuantity.call_args_list)
         # Should deduct 5 from batch 3 (overridden lot)
-        self.mock_batch_service.adjustQuantity.assert_any_call(3, -5.0)
+        assert any(c[0] == (3, -5.0) for c in self.mock_batch_service.adjustQuantity.call_args_list)
 
-        self.mock_pl_repo.update.assert_called_once_with(100, {'status': 'Completed'})
-        self.mock_order_repo.update.assert_called_once_with(10, {'status': 'Shipped'})
+        assert self.mock_pl_repo.update.call_count == 1
+        assert self.mock_pl_repo.update.call_args[0] == (100, {'status': 'Completed'})
+        assert self.mock_order_repo.update.call_count == 1
+        assert self.mock_order_repo.update.call_args[0] == (10, {'status': 'Shipped'})
 
 
 class TestPickListControllerEndpoints:

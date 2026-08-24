@@ -232,8 +232,8 @@ class SalesOrderService(CrudService):
                     if new_status not in allowed:
                         from fastapi import HTTPException
                         logger.warning(
-                            f"Rejected status transition for sales order {id_val}: "
-                            f"{old_status} -> {new_status} (allowed: {allowed})"
+                            f"Invalid status transition attempted for sales order {id_val}: "
+                            f"{old_status} -> {new_status}"
                         )
                         raise HTTPException(
                             400,
