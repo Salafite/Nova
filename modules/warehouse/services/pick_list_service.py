@@ -1,9 +1,12 @@
 import logging
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.sequence import generate_pick_list_number
 from packages.database.connection import get_connection, release_connection
 from modules.warehouse.services.batch_number_service import BatchNumberService
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,16 @@ PLI_REPO = CrudRepository(
         'expiry_date',
         'picked_batch_id',
         'picked_batch_number',
+        'catch_weight_actual',
+        'catch_weight_uom',
+        'nominal_weight',
+        'tolerance_pct',
+        'tolerance_variance_pct',
+        'tolerance_status',
+        'supervisor_approved',
+        'supervisor_approved_by',
+        'supervisor_approved_at',
+        'supervisor_notes',
     ],
 )
 BATCH_REPO = CrudRepository(
@@ -59,7 +72,8 @@ def _conn_kwargs(conn):
 
 class PickListService(CrudService):
     def __init__(self, repo: CrudRepository = None, pl_repo=None, pli_repo=None,
-                 batch_service=None, order_repo=None, line_repo=None, wh_repo=None):
+                 batch_service=None, order_repo=None, line_repo=None, wh_repo=None,
+                 product_repo=None, uom_repo=None):
         super().__init__(repo or pl_repo or PL_REPO)
         self.pl_repo = self.repo
         self.pli_repo = pli_repo or PLI_REPO
@@ -68,11 +82,76 @@ class PickListService(CrudService):
             'T0012', business_columns=['id', 'order_number', 'warehouse_id', 'customer_id', 'status']
         )
         self.line_repo = line_repo or CrudRepository(
-            'T0013', business_columns=['id', 'sales_order_id', 'product_id', 'product_name', 'qty', 'unit_price', 'line_total', 'line_number']
+            'T0013', business_columns=[
+                'id', 'sales_order_id', 'product_id', 'product_name', 'qty', 'unit_price',
+                'line_total', 'line_number', 'is_catch_weight', 'pricing_uom_id',
+                'unit_price_pricing_uom', 'nominal_weight', 'catch_weight_actual', 'recalculated_total'
+            ]
         )
         self.wh_repo = wh_repo or CrudRepository(
             'T0008', business_columns=['id', 'name', 'is_active']
         )
+        self.product_repo = product_repo or CrudRepository(
+            'T0003', business_columns=[
+                'id', 'name', 'sku', 'barcode', 'description', 'type', 'price', 'cost_price',
+                'category', 'brand', 'tax_rate', 'weight', 'volume', 'image_url',
+                'is_purchasable', 'is_saleable', 'is_phantom', 'last_transaction_date', 'is_active',
+                'is_catch_weight', 'pricing_uom_id', 'nominal_weight', 'tolerance_pct', 'pricing_basis'
+            ]
+        )
+        self.uom_repo = uom_repo or CrudRepository(
+            'T0001', business_columns=['id', 'uom_code', 'uom_name', 'category', 'is_base_unit', 'is_active']
+        )
+
+    def calculate_weight_variance(self, nominal_weight, actual_weight):
+        """
+        Calculate variance percentage between nominal expected weight and actual scale weight.
+        Returns: round(((actual - nominal) / nominal) * 100, 2) or None if nominal <= 0 or actual is None.
+        """
+        if actual_weight is None:
+            return None
+        if nominal_weight is None or float(nominal_weight) <= 0:
+            return None
+        actual_val = float(actual_weight)
+        nom_val = float(nominal_weight)
+        return round(((actual_val - nom_val) / nom_val) * 100.0, 2)
+
+    def evaluate_tolerance(self, nominal_weight, actual_weight, tolerance_pct, supervisor_approved=False):
+        """
+        Evaluate weight variance and determine tolerance status.
+        Tolerance status values:
+          - 'Not Applicable' (if actual_weight is None)
+          - 'Within Tolerance' (if abs(variance_pct) <= tolerance_pct)
+          - 'Out of Tolerance' (if abs(variance_pct) > tolerance_pct and not supervisor_approved)
+          - 'Approved' (if abs(variance_pct) > tolerance_pct and supervisor_approved)
+        Returns: tuple(tolerance_variance_pct, tolerance_status)
+        """
+        if actual_weight is None:
+            return None, 'Not Applicable'
+
+        variance_pct = self.calculate_weight_variance(nominal_weight, actual_weight)
+        if variance_pct is None:
+            status = 'Approved' if supervisor_approved else 'Within Tolerance'
+            return None, status
+
+        limit = float(tolerance_pct) if tolerance_pct is not None else 0.0
+        if abs(variance_pct) <= (limit + 1e-6):
+            return variance_pct, 'Within Tolerance'
+        else:
+            return variance_pct, 'Approved' if supervisor_approved else 'Out of Tolerance'
+
+    def check_pick_list_discrepancies(self, pick_list_id, conn=None):
+        """
+        Retrieve all items in a pick list that have unapproved catch weight tolerance discrepancies.
+        """
+        items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
+        discrepancies = []
+        for item in items:
+            status = item.get('tolerance_status')
+            approved = item.get('supervisor_approved', False)
+            if status == 'Out of Tolerance' and not approved:
+                discrepancies.append(item)
+        return discrepancies
 
     def create(self, payload, conn=None):
         if not payload.get('pick_list_number') or not str(payload.get('pick_list_number')).strip():
@@ -127,14 +206,45 @@ class PickListService(CrudService):
             product_name = line.get('product_name', '')
             order_line_id = line.get('id')
 
+            # Fetch product dual UOM info if available
+            product = None
+            if product_id and hasattr(self, 'product_repo') and self.product_repo:
+                try:
+                    product = self.product_repo.get(product_id, **_conn_kwargs(conn))
+                except Exception:
+                    product = None
+
+            is_cw = bool((product and product.get('is_catch_weight')) or line.get('is_catch_weight'))
+            cw_uom = None
+            tol_pct = None
+            nom_unit_wt = 0.0
+
+            if is_cw:
+                tol_pct = float(product.get('tolerance_pct')) if (product and product.get('tolerance_pct') is not None) else (float(line.get('tolerance_pct')) if line.get('tolerance_pct') is not None else None)
+                if product and product.get('nominal_weight') is not None:
+                    nom_unit_wt = float(product.get('nominal_weight'))
+                elif line.get('nominal_weight') is not None and qty_ordered > 0:
+                    nom_unit_wt = float(line.get('nominal_weight')) / qty_ordered
+
+                pricing_uom_id = (product.get('pricing_uom_id') if product else None) or line.get('pricing_uom_id')
+                if pricing_uom_id and hasattr(self, 'uom_repo') and self.uom_repo:
+                    try:
+                        uom_obj = self.uom_repo.get(pricing_uom_id, **_conn_kwargs(conn))
+                        cw_uom = uom_obj.get('uom_code') if uom_obj else 'kg'
+                    except Exception:
+                        cw_uom = 'kg'
+                else:
+                    cw_uom = 'kg'
+
             allocations = []
+            alloc_kwargs = {'conn': conn} if conn is not None else {}
             if product_id and qty_ordered > 0:
                 try:
                     allocations = self.batch_service.allocate_fefo_lots(
                         product_id=product_id,
                         warehouse_id=wh_id,
                         qty_needed=qty_ordered,
-                        conn=conn
+                        **alloc_kwargs
                     )
                 except Exception:
                     allocations = []
@@ -145,6 +255,7 @@ class PickListService(CrudService):
                     alloc_qty = float(alloc.get('quantity') or alloc.get('allocated_qty') or 0)
                     if alloc_qty <= 0:
                         continue
+                    item_nominal = round(nom_unit_wt * alloc_qty, 4) if nom_unit_wt > 0 else None
                     try:
                         self.pli_repo.create({
                             'pick_list_id': pl['id'],
@@ -157,6 +268,16 @@ class PickListService(CrudService):
                             'batch_id': alloc.get('batch_id'),
                             'batch_number': alloc.get('batch_number'),
                             'expiry_date': alloc.get('expiry_date'),
+                            'catch_weight_actual': None,
+                            'catch_weight_uom': cw_uom if is_cw else None,
+                            'nominal_weight': item_nominal,
+                            'tolerance_pct': tol_pct,
+                            'tolerance_variance_pct': None,
+                            'tolerance_status': 'Not Applicable',
+                            'supervisor_approved': False,
+                            'supervisor_approved_by': None,
+                            'supervisor_approved_at': None,
+                            'supervisor_notes': None,
                         }, **_conn_kwargs(conn))
                     except Exception as e:
                         logger.error(f"Failed to create pick list item for sales order line {order_line_id} in pick list {pl['id']}: {e}")
@@ -166,6 +287,7 @@ class PickListService(CrudService):
 
                 remaining_qty = qty_ordered - total_allocated
                 if remaining_qty > 0:
+                    rem_nominal = round(nom_unit_wt * remaining_qty, 4) if nom_unit_wt > 0 else None
                     try:
                         self.pli_repo.create({
                             'pick_list_id': pl['id'],
@@ -178,12 +300,23 @@ class PickListService(CrudService):
                             'batch_id': None,
                             'batch_number': None,
                             'expiry_date': None,
+                            'catch_weight_actual': None,
+                            'catch_weight_uom': cw_uom if is_cw else None,
+                            'nominal_weight': rem_nominal,
+                            'tolerance_pct': tol_pct,
+                            'tolerance_variance_pct': None,
+                            'tolerance_status': 'Not Applicable',
+                            'supervisor_approved': False,
+                            'supervisor_approved_by': None,
+                            'supervisor_approved_at': None,
+                            'supervisor_notes': None,
                         }, **_conn_kwargs(conn))
                     except Exception as e:
                         logger.error(f"Failed to create pick list item for sales order line {order_line_id} in pick list {pl['id']}: {e}")
                         raise RuntimeError(f"Failed to create pick list item for sales order line {order_line_id}: {e}") from e
                     item_line_num += 1
             else:
+                line_nominal = round(nom_unit_wt * qty_ordered, 4) if nom_unit_wt > 0 else None
                 try:
                     self.pli_repo.create({
                         'pick_list_id': pl['id'],
@@ -196,6 +329,16 @@ class PickListService(CrudService):
                         'batch_id': None,
                         'batch_number': None,
                         'expiry_date': None,
+                        'catch_weight_actual': None,
+                        'catch_weight_uom': cw_uom if is_cw else None,
+                        'nominal_weight': line_nominal,
+                        'tolerance_pct': tol_pct,
+                        'tolerance_variance_pct': None,
+                        'tolerance_status': 'Not Applicable',
+                        'supervisor_approved': False,
+                        'supervisor_approved_by': None,
+                        'supervisor_approved_at': None,
+                        'supervisor_notes': None,
                     }, **_conn_kwargs(conn))
                 except Exception as e:
                     logger.error(f"Failed to create pick list item for sales order line {order_line_id} in pick list {pl['id']}: {e}")
@@ -213,7 +356,16 @@ class PickListService(CrudService):
         items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, order_by='line_number', **_conn_kwargs(conn))
         pl['items'] = items
         pl['progress_pct'] = self._calc_progress(items)
+        pl['has_discrepancies'] = any(
+            it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
+            for it in items
+        )
+        pl['discrepancy_count'] = sum(
+            1 for it in items
+            if it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
+        )
         return pl
+
 
     def get_available_batches_for_item(self, pick_list_id, item_id, conn=None):
         pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
@@ -265,7 +417,9 @@ class PickListService(CrudService):
         if qty is not None and qty_picked > float(qty or 0):
             raise ValueError(f"Batch {batch_label} has insufficient quantity ({qty}) for {qty_picked} picked")
 
-    def pick_item(self, item_id, qty_picked, pick_list_id=None, picked_batch_id=None, picked_batch_number=None, conn=None):
+    def pick_item(self, item_id, qty_picked, pick_list_id=None, picked_batch_id=None,
+                  picked_batch_number=None, catch_weight_actual=None, catch_weight_uom=None,
+                  nominal_weight=None, tolerance_pct=None, conn=None):
         item = self.pli_repo.get(item_id, **_conn_kwargs(conn))
         if not item:
             logger.error(f"Cannot pick item: Pick list item {item_id} not found")
@@ -309,6 +463,91 @@ class PickListService(CrudService):
             self._validate_batch_for_item(batches[0], item, qty_picked, warehouse_id=warehouse_id)
             update_data['picked_batch_id'] = batches[0]['id']
 
+        # Dual UOM & Catch-weight scale weight handling
+        if catch_weight_actual is not None:
+            try:
+                cw_act = float(catch_weight_actual)
+            except (ValueError, TypeError):
+                raise ValueError(f"Invalid catch_weight_actual: {catch_weight_actual}")
+            if cw_act < 0:
+                raise ValueError(f"Catch weight cannot be negative: {catch_weight_actual}")
+            update_data['catch_weight_actual'] = cw_act
+
+            # Catch weight UOM
+            if catch_weight_uom is not None and str(catch_weight_uom).strip():
+                update_data['catch_weight_uom'] = str(catch_weight_uom).strip()
+            elif not item.get('catch_weight_uom') and item.get('product_id') and hasattr(self, 'product_repo') and self.product_repo:
+                try:
+                    prod = self.product_repo.get(item.get('product_id'), **_conn_kwargs(conn))
+                    if prod and prod.get('pricing_uom_id') and hasattr(self, 'uom_repo') and self.uom_repo:
+                        uom_obj = self.uom_repo.get(prod.get('pricing_uom_id'), **_conn_kwargs(conn))
+                        if uom_obj and uom_obj.get('uom_code'):
+                            update_data['catch_weight_uom'] = uom_obj.get('uom_code')
+                except Exception:
+                    pass
+
+            # Nominal weight
+            if nominal_weight is not None:
+                try:
+                    nom_w = float(nominal_weight)
+                except (ValueError, TypeError):
+                    raise ValueError(f"Invalid nominal_weight: {nominal_weight}")
+                if nom_w < 0:
+                    raise ValueError(f"Nominal weight cannot be negative: {nominal_weight}")
+                update_data['nominal_weight'] = nom_w
+            elif item.get('nominal_weight') is not None:
+                nom_w = float(item.get('nominal_weight'))
+            else:
+                nom_w = None
+                if item.get('product_id') and hasattr(self, 'product_repo') and self.product_repo:
+                    try:
+                        prod = self.product_repo.get(item.get('product_id'), **_conn_kwargs(conn))
+                        if prod and prod.get('nominal_weight') is not None:
+                            unit_nominal = float(prod.get('nominal_weight'))
+                            nom_w = round(unit_nominal * (qty_picked if qty_picked > 0 else ordered), 4)
+                            update_data['nominal_weight'] = nom_w
+                    except Exception:
+                        pass
+
+            # Tolerance percentage
+            if tolerance_pct is not None:
+                try:
+                    tol_p = float(tolerance_pct)
+                except (ValueError, TypeError):
+                    raise ValueError(f"Invalid tolerance_pct: {tolerance_pct}")
+                if tol_p < 0 or tol_p > 100:
+                    raise ValueError(f"Tolerance percentage must be between 0 and 100: {tolerance_pct}")
+                update_data['tolerance_pct'] = tol_p
+            elif item.get('tolerance_pct') is not None:
+                tol_p = float(item.get('tolerance_pct'))
+            else:
+                tol_p = None
+                if item.get('product_id') and hasattr(self, 'product_repo') and self.product_repo:
+                    try:
+                        prod = self.product_repo.get(item.get('product_id'), **_conn_kwargs(conn))
+                        if prod and prod.get('tolerance_pct') is not None:
+                            tol_p = float(prod.get('tolerance_pct'))
+                            update_data['tolerance_pct'] = tol_p
+                    except Exception:
+                        pass
+
+            supervisor_approved = item.get('supervisor_approved', False)
+            variance_pct, tol_status = self.evaluate_tolerance(
+                nominal_weight=nom_w,
+                actual_weight=cw_act,
+                tolerance_pct=tol_p,
+                supervisor_approved=supervisor_approved
+            )
+            update_data['tolerance_variance_pct'] = variance_pct
+            update_data['tolerance_status'] = tol_status
+        else:
+            if catch_weight_uom is not None:
+                update_data['catch_weight_uom'] = str(catch_weight_uom).strip()
+            if nominal_weight is not None:
+                update_data['nominal_weight'] = float(nominal_weight)
+            if tolerance_pct is not None:
+                update_data['tolerance_pct'] = float(tolerance_pct)
+
         try:
             self.pli_repo.update(item_id, update_data, **_conn_kwargs(conn))
             logger.info(f"Updated pick list item {item_id} qty_picked to {qty_picked}")
@@ -333,6 +572,106 @@ class PickListService(CrudService):
             raise RuntimeError(f"Failed to update status for pick list {pick_list_id}: {e}") from e
         return self.repo.get(pick_list_id, **_conn_kwargs(conn))
 
+    def approve_tolerance(
+        self,
+        pick_list_id: int,
+        item_id: Optional[int] = None,
+        item_ids: Optional[list] = None,
+        supervisor_id: Optional[int] = None,
+        supervisor_notes: Optional[str] = None,
+        notes: Optional[str] = None,
+        conn=None,
+    ):
+        """
+        Approve catch-weight tolerance discrepancies for items in a pick list.
+        - If item_id is specified: approves that specific item.
+        - If item_ids is specified: approves the specified items.
+        - If neither is specified: approves all out-of-tolerance items in the pick list.
+        """
+        pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
+        if not pl:
+            logger.error(f"Cannot approve tolerance: Pick list {pick_list_id} not found")
+            raise ValueError(f"Pick list {pick_list_id} not found")
+
+        if item_id is not None:
+            item = self.pli_repo.get(item_id, **_conn_kwargs(conn))
+            if not item:
+                raise ValueError(f"Pick list item {item_id} not found")
+            if item.get('pick_list_id') != pick_list_id:
+                raise ValueError(f"Pick list item {item_id} does not belong to pick list {pick_list_id}")
+            target_items = [item]
+        elif item_ids:
+            target_items = []
+            for iid in item_ids:
+                item = self.pli_repo.get(iid, **_conn_kwargs(conn))
+                if not item:
+                    raise ValueError(f"Pick list item {iid} not found")
+                if item.get('pick_list_id') != pick_list_id:
+                    raise ValueError(f"Pick list item {iid} does not belong to pick list {pick_list_id}")
+                target_items.append(item)
+        else:
+            all_items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
+            target_items = [
+                it for it in all_items
+                if it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
+            ]
+
+        approval_notes = supervisor_notes if supervisor_notes is not None else notes
+        now = datetime.now()
+
+        approved_item_ids = []
+        for item in target_items:
+            iid = item['id']
+            cw_act = item.get('catch_weight_actual')
+            nom_w = item.get('nominal_weight')
+            tol_p = item.get('tolerance_pct')
+
+            if cw_act is not None and nom_w is not None:
+                var_pct, tol_status = self.evaluate_tolerance(
+                    nominal_weight=nom_w,
+                    actual_weight=cw_act,
+                    tolerance_pct=tol_p,
+                    supervisor_approved=True,
+                )
+            else:
+                var_pct = item.get('tolerance_variance_pct')
+                tol_status = 'Approved'
+
+            update_data = {
+                'supervisor_approved': True,
+                'supervisor_approved_by': supervisor_id,
+                'supervisor_approved_at': now,
+                'tolerance_status': tol_status,
+            }
+            if var_pct is not None:
+                update_data['tolerance_variance_pct'] = var_pct
+            if approval_notes is not None:
+                update_data['supervisor_notes'] = approval_notes
+
+            self.pli_repo.update(iid, update_data, **_conn_kwargs(conn))
+            approved_item_ids.append(iid)
+
+        logger.info(f"Approved tolerance for {len(approved_item_ids)} item(s) in pick list {pick_list_id}")
+        return self.get_with_items(pick_list_id, conn=conn)
+
+    def approve_item_tolerance(
+        self,
+        pick_list_id: int,
+        item_id: int,
+        supervisor_id: Optional[int] = None,
+        supervisor_notes: Optional[str] = None,
+        notes: Optional[str] = None,
+        conn=None,
+    ):
+        return self.approve_tolerance(
+            pick_list_id=pick_list_id,
+            item_id=item_id,
+            supervisor_id=supervisor_id,
+            supervisor_notes=supervisor_notes,
+            notes=notes,
+            conn=conn,
+        )
+
     def complete_picking(self, pick_list_id, conn=None):
         should_release = False
         if conn is None:
@@ -340,11 +679,11 @@ class PickListService(CrudService):
             should_release = True
 
         try:
-            pl = self.repo.get(pick_list_id, conn=conn)
+            pl = self.repo.get(pick_list_id, **_conn_kwargs(conn))
             if not pl:
                 logger.error(f"Cannot complete picking: Pick list {pick_list_id} not found")
                 raise ValueError(f"Pick list {pick_list_id} not found")
-            items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, conn=conn)
+            items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
             unpicked = []
             for item in items:
                 if item.get('qty_picked', 0) < item.get('qty_ordered', 0):
@@ -352,6 +691,14 @@ class PickListService(CrudService):
                     unpicked.append(f"Item {label} has {item.get('qty_picked', 0)} picked of {item.get('qty_ordered', 0)} ordered")
             if unpicked:
                 msg = f"Cannot complete pick list {pick_list_id}: {'; '.join(unpicked)}"
+                logger.warning(msg)
+                raise ValueError(msg)
+
+            # Check for unapproved catch-weight tolerance discrepancies
+            unapproved = self.check_pick_list_discrepancies(pick_list_id, conn=conn)
+            if unapproved:
+                names = [it.get('product_name') or f"Item #{it.get('id')}" for it in unapproved]
+                msg = f"Cannot complete pick list {pick_list_id}: Unapproved catch-weight tolerance discrepancies exist on items: {', '.join(names)}"
                 logger.warning(msg)
                 raise ValueError(msg)
 
@@ -366,20 +713,20 @@ class PickListService(CrudService):
                     batches = self.batch_service.repo.list(filters={
                         'batch_number': batch_num,
                         'product_id': item.get('product_id')
-                    }, conn=conn)
+                    }, **_conn_kwargs(conn))
                     if batches:
                         batch_id = batches[0]['id']
 
                 if batch_id:
-                    self.batch_service.adjustQuantity(batch_id, -picked_qty, conn=conn)
+                    self.batch_service.adjustQuantity(batch_id, -picked_qty, **_conn_kwargs(conn))
 
-            self.repo.update(pick_list_id, {'status': 'Completed'}, conn=conn)
-            self.order_repo.update(pl['sales_order_id'], {'status': 'Shipped'}, conn=conn)
+            self.repo.update(pick_list_id, {'status': 'Completed'}, **_conn_kwargs(conn))
+            self.order_repo.update(pl['sales_order_id'], {'status': 'Shipped'}, **_conn_kwargs(conn))
             logger.info(f"Completed pick list {pick_list_id} and updated sales order {pl['sales_order_id']} to Shipped")
 
             if should_release:
                 conn.commit()
-            return self.get_with_items(pick_list_id, conn=conn)
+            return self.get_with_items(pick_list_id, **_conn_kwargs(conn))
         except Exception as e:
             if should_release:
                 try:
@@ -391,6 +738,7 @@ class PickListService(CrudService):
         finally:
             if should_release:
                 release_connection(conn)
+
 
     def _calc_progress(self, items):
         if not items:

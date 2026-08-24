@@ -17,16 +17,188 @@ VALID_SALES_STATUS_TRANSITIONS = {
     'Cancelled': [],
 }
 
-LINE_REPO = CrudRepository('T0013', business_columns=['id', 'sales_order_id', 'product_id', 'product_name', 'qty', 'unit_price', 'line_total', 'line_number'])
+LINE_REPO = CrudRepository(
+    'T0013',
+    business_columns=[
+        'id',
+        'sales_order_id',
+        'product_id',
+        'product_name',
+        'uom_id',
+        'qty',
+        'unit_price',
+        'cost_price',
+        'discount',
+        'line_total',
+        'line_number',
+        'is_catch_weight',
+        'pricing_uom_id',
+        'unit_price_pricing_uom',
+        'nominal_weight',
+        'catch_weight_actual',
+        'recalculated_total',
+    ],
+)
+
+ORDER_REPO = CrudRepository(
+    'T0012',
+    business_columns=[
+        'id',
+        'order_number',
+        'customer_id',
+        'warehouse_id',
+        'subtotal',
+        'tax',
+        'grand_total',
+        'freight_amount',
+        'discount_amount',
+        'sales_rep_id',
+        'status',
+        'order_date',
+        'notes',
+        'price_list_id',
+        'tax_rate_id',
+        'payment_term_id',
+    ],
+)
+
+INVOICE_REPO = CrudRepository(
+    'T0090',
+    business_columns=[
+        'id',
+        'invoice_number',
+        'invoice_type',
+        'partner_id',
+        'sales_order_id',
+        'sales_rep_id',
+        'issue_date',
+        'due_date',
+        'total_amount',
+        'freight_amount',
+        'discount_amount',
+        'status',
+        'notes',
+        'is_catch_weight',
+        'nominal_total_weight',
+        'actual_total_weight',
+        'weight_adjustment_amount',
+    ],
+)
+
+CUSTOMER_REPO = CrudRepository(
+    'T0010',
+    business_columns=['id', 'name', 'credit_limit', 'balance'],
+)
+
+PL_REPO = CrudRepository(
+    'T0101',
+    business_columns=['id', 'pick_list_number', 'sales_order_id', 'warehouse_id', 'status', 'notes'],
+)
+
+PLI_REPO = CrudRepository(
+    'T0102',
+    business_columns=[
+        'id',
+        'pick_list_id',
+        'sales_order_line_id',
+        'product_id',
+        'product_name',
+        'qty_ordered',
+        'qty_picked',
+        'line_number',
+        'batch_id',
+        'batch_number',
+        'expiry_date',
+        'picked_batch_id',
+        'picked_batch_number',
+        'catch_weight_actual',
+        'catch_weight_uom',
+        'nominal_weight',
+        'tolerance_pct',
+        'tolerance_variance_pct',
+        'tolerance_status',
+        'supervisor_approved',
+        'supervisor_approved_by',
+        'supervisor_approved_at',
+        'supervisor_notes',
+    ],
+)
+
+PRODUCT_REPO = CrudRepository(
+    'T0003',
+    business_columns=[
+        'id',
+        'name',
+        'sku',
+        'barcode',
+        'description',
+        'type',
+        'price',
+        'cost_price',
+        'category',
+        'brand',
+        'tax_rate',
+        'weight',
+        'volume',
+        'image_url',
+        'is_purchasable',
+        'is_saleable',
+        'is_phantom',
+        'last_transaction_date',
+        'is_active',
+        'is_catch_weight',
+        'pricing_uom_id',
+        'nominal_weight',
+        'tolerance_pct',
+        'pricing_basis',
+    ],
+)
+
 
 class SalesOrderService(CrudService):
+    def __init__(
+        self,
+        repo: CrudRepository = None,
+        line_repo: CrudRepository = None,
+        customer_repo: CrudRepository = None,
+        inv_repo: CrudRepository = None,
+        pl_repo: CrudRepository = None,
+        pli_repo: CrudRepository = None,
+        product_repo: CrudRepository = None,
+    ):
+        super().__init__(repo or ORDER_REPO)
+        self.line_repo = line_repo or LINE_REPO
+        self.customer_repo = customer_repo or CUSTOMER_REPO
+        self.inv_repo = inv_repo or INVOICE_REPO
+        self.pl_repo = pl_repo or PL_REPO
+        self.pli_repo = pli_repo or PLI_REPO
+        self.product_repo = product_repo or PRODUCT_REPO
+
+    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None):
+        if filters and 'is_catch_weight' in filters:
+            filters_copy = dict(filters)
+            is_cw_filter = filters_copy.pop('is_catch_weight')
+            orders = super().list(filters=filters_copy or None, order_by=order_by, conn=conn)
+            filtered_orders = []
+            for order in orders:
+                order_id = order.get('id')
+                lines = self.line_repo.list(filters={'sales_order_id': order_id}, conn=conn)
+                has_cw = any(bool(line.get('is_catch_weight')) for line in lines)
+                if has_cw == bool(is_cw_filter):
+                    filtered_orders.append(order)
+            if offset:
+                filtered_orders = filtered_orders[offset:]
+            if limit:
+                filtered_orders = filtered_orders[:limit]
+            return filtered_orders
+        return super().list(filters=filters, order_by=order_by, limit=limit, offset=offset, conn=conn)
+
     def create(self, payload: dict, conn=None):
         if not payload.get('grand_total') and payload.get('subtotal') is not None:
             payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
         customer_id = payload.get('customer_id')
         if customer_id:
-            customer_repo = CrudRepository('T0010', business_columns=['id', 'name', 'credit_limit', 'balance'])
-            customer = customer_repo.get(customer_id, conn=conn)
+            customer = self.customer_repo.get(customer_id, conn=conn)
             if customer:
                 new_balance = customer.get('balance', 0) + payload.get('grand_total', 0)
                 credit_limit = customer.get('credit_limit', 0)
@@ -39,9 +211,6 @@ class SalesOrderService(CrudService):
                     raise HTTPException(400, f'Order would exceed credit limit ({customer.get("name")}: limit={credit_limit}, new balance={new_balance})')
         return super().create(payload, conn=conn)
 
-    def _generate_invoice_number(self, conn=None):
-        return generate_invoice_number(conn=conn)
-
     def update(self, id_val, payload: dict, conn=None):
         should_release = False
         if conn is None:
@@ -49,23 +218,36 @@ class SalesOrderService(CrudService):
             should_release = True
 
         try:
-            old = self.repo.get(id_val, conn=conn)
-            if old and 'status' in payload:
-                old_status = old.get('status')
-                new_status = payload['status']
-                if old_status != new_status:
-                    allowed = VALID_SALES_STATUS_TRANSITIONS.get(old_status, [])
+            existing_order = self.repo.get(id_val, conn=conn)
+            if not existing_order:
+                logger.error(f"Cannot update sales order {id_val}: not found")
+                raise ValueError(f"Sales order {id_val} not found")
+
+            new_status = payload.get('status')
+            old_status = existing_order.get('status')
+
+            if new_status and new_status != old_status:
+                if old_status in VALID_SALES_STATUS_TRANSITIONS:
+                    allowed = VALID_SALES_STATUS_TRANSITIONS[old_status]
                     if new_status not in allowed:
-                        logger.warning(f"Invalid status transition attempted for sales order {id_val}: {old_status} -> {new_status}")
                         from fastapi import HTTPException
-                        raise HTTPException(400, f'Invalid status transition: {old_status} -> {new_status}. Allowed: {allowed}')
-                    logger.info(f"Sales order {id_val} transition requested: {old_status} -> {new_status}")
-                    if new_status == 'Confirmed' and old_status in ('Draft', 'Pending'):
-                        self._reserve_order_stock(id_val, conn=conn)
-                    elif new_status == 'Delivered' and old_status == 'Shipped':
-                        self._create_invoice_from_order(id_val, conn=conn)
-                    elif new_status == 'Cancelled' and old_status in ('Draft', 'Pending', 'Confirmed'):
-                        self._release_order_stock(id_val, conn=conn)
+                        logger.warning(
+                            f"Invalid status transition attempted for sales order {id_val}: "
+                            f"{old_status} -> {new_status}"
+                        )
+                        raise HTTPException(
+                            400,
+                            f"Invalid status transition: {old_status} -> {new_status}. Allowed: {allowed}"
+                        )
+
+                if new_status == 'Confirmed':
+                    self._reserve_order_stock(id_val, conn=conn)
+                elif new_status == 'Delivered':
+                    self._validate_delivery_tolerance_approvals(id_val, conn=conn)
+                    self._create_invoice_from_order(id_val, conn=conn)
+                elif new_status == 'Cancelled':
+                    self._release_order_stock(id_val, conn=conn)
+
             result = super().update(id_val, payload, conn=conn)
             if should_release:
                 conn.commit()
@@ -82,24 +264,244 @@ class SalesOrderService(CrudService):
             if should_release:
                 release_connection(conn)
 
+    def _validate_delivery_tolerance_approvals(self, order_id: int, conn=None):
+        """
+        Validate that all pick list items for the sales order have no unapproved catch-weight tolerance discrepancies.
+        """
+        if not hasattr(self, 'pl_repo') or not self.pl_repo:
+            return
+        try:
+            pick_lists = self.pl_repo.list(filters={'sales_order_id': order_id}, conn=conn)
+        except Exception as e:
+            logger.warning(f"Could not check pick lists for order {order_id}: {e}")
+            return
+
+        for pl in pick_lists:
+            if hasattr(self, 'pli_repo') and self.pli_repo:
+                try:
+                    items = self.pli_repo.list(filters={'pick_list_id': pl['id']}, conn=conn)
+                    unapproved = [
+                        it for it in items
+                        if it.get('tolerance_status') == 'Out of Tolerance' and not it.get('supervisor_approved')
+                    ]
+                    if unapproved:
+                        names = [it.get('product_name') or f"Item #{it.get('id')}" for it in unapproved]
+                        from fastapi import HTTPException
+                        msg = f"Cannot deliver order {order_id}: Unapproved catch-weight tolerance discrepancies exist on pick list #{pl.get('id')} items: {', '.join(names)}"
+                        logger.warning(msg)
+                        raise HTTPException(400, msg)
+                except HTTPException:
+                    raise
+                except Exception as e:
+                    logger.warning(f"Could not check pick list items for pick list {pl['id']}: {e}")
+
+    def _generate_invoice_number(self, conn=None):
+        return generate_invoice_number(conn=conn)
+
+    def recalculate_order_catch_weight(self, order_id: int, conn=None) -> dict:
+        """
+        Recalculate sales order lines and order totals based on actual weighed catch-weights.
+        - Sourced from pick list items (T0102) if not already set on sales lines (T0013).
+        - Computes line recalculated total using unit_price_pricing_uom (or price/weight ratio).
+        - Updates sales order lines with actual weights and recalculated totals.
+        - Recalculates order subtotal, proportional tax, and grand total.
+        - Updates order header T0012 with recalculated amounts.
+        - Returns a detailed recalculation summary.
+        """
+        order = self.repo.get(order_id, conn=conn)
+        if not order:
+            logger.error(f"Cannot recalculate catch-weight: Sales order {order_id} not found")
+            raise ValueError(f"Sales order {order_id} not found")
+
+        lines = self.line_repo.list(filters={'sales_order_id': order_id}, conn=conn)
+        if not lines:
+            return {
+                'order_id': order_id,
+                'is_catch_weight': False,
+                'original_subtotal': float(order.get('subtotal', 0) or 0),
+                'recalculated_subtotal': float(order.get('subtotal', 0) or 0),
+                'weight_adjustment_amount': 0.0,
+                'nominal_total_weight': None,
+                'actual_total_weight': None,
+                'tax': float(order.get('tax', 0) or 0),
+                'grand_total': float(order.get('grand_total', 0) or 0),
+                'lines': [],
+            }
+
+        # Gather pick list items linked to this sales order
+        all_pli_items = []
+        try:
+            pick_lists = self.pl_repo.list(filters={'sales_order_id': order_id}, conn=conn)
+            for pl in pick_lists:
+                pli_items = self.pli_repo.list(filters={'pick_list_id': pl['id']}, conn=conn)
+                all_pli_items.extend(pli_items)
+        except Exception as e:
+            logger.warning(f"Could not load pick lists for order {order_id} during recalculation: {e}")
+
+        has_catch_weight = False
+        has_any_nominal = False
+        has_any_actual = False
+        total_nominal_weight = 0.0
+        total_actual_weight = 0.0
+        original_subtotal = 0.0
+        recalculated_subtotal = 0.0
+        updated_lines = []
+
+        for line in lines:
+            line_id = line.get('id')
+            line_orig_total = float(line.get('line_total', 0) or 0)
+            original_subtotal += line_orig_total
+
+            is_cw = bool(line.get('is_catch_weight'))
+            if not is_cw and line.get('product_id') and hasattr(self, 'product_repo') and self.product_repo:
+                try:
+                    prod = self.product_repo.get(line['product_id'], conn=conn)
+                    if prod and prod.get('is_catch_weight'):
+                        is_cw = True
+                except Exception:
+                    pass
+
+            if is_cw:
+                has_catch_weight = True
+
+                # Determine actual scale weight
+                actual_wt = line.get('catch_weight_actual')
+                if actual_wt is None and all_pli_items:
+                    matching_pli = [
+                        it for it in all_pli_items
+                        if it.get('sales_order_line_id') == line_id
+                        and it.get('catch_weight_actual') is not None
+                    ]
+                    if matching_pli:
+                        actual_wt = sum(float(it.get('catch_weight_actual', 0) or 0) for it in matching_pli)
+
+                # Determine nominal weight
+                nominal_wt = line.get('nominal_weight')
+                if nominal_wt is None and all_pli_items:
+                    matching_pli = [
+                        it for it in all_pli_items
+                        if it.get('sales_order_line_id') == line_id
+                        and it.get('nominal_weight') is not None
+                    ]
+                    if matching_pli:
+                        nominal_wt = sum(float(it.get('nominal_weight', 0) or 0) for it in matching_pli)
+
+                if nominal_wt is not None:
+                    nom_val = float(nominal_wt)
+                    total_nominal_weight += nom_val
+                    has_any_nominal = True
+                else:
+                    nom_val = None
+
+                if actual_wt is not None:
+                    act_val = float(actual_wt)
+                    total_actual_weight += act_val
+                    has_any_actual = True
+
+                    # Determine rate per weight unit
+                    unit_price_pricing = line.get('unit_price_pricing_uom')
+                    if unit_price_pricing is not None and float(unit_price_pricing) > 0:
+                        rate_per_weight = float(unit_price_pricing)
+                    elif nom_val and nom_val > 0 and line_orig_total > 0:
+                        rate_per_weight = line_orig_total / nom_val
+                    elif line.get('unit_price') is not None:
+                        rate_per_weight = float(line.get('unit_price', 0))
+                    else:
+                        rate_per_weight = 0.0
+
+                    discount = float(line.get('discount', 0) or 0)
+                    recalculated_line_total = round(max(0.0, (act_val * rate_per_weight) - discount), 2)
+
+                    line_update = {
+                        'is_catch_weight': True,
+                        'catch_weight_actual': act_val,
+                        'recalculated_total': recalculated_line_total,
+                    }
+                    if nominal_wt is not None and line.get('nominal_weight') is None:
+                        line_update['nominal_weight'] = nom_val
+
+                    self.line_repo.update(line_id, line_update, conn=conn)
+                    updated_line = dict(line, **line_update)
+                    updated_lines.append(updated_line)
+                    recalculated_subtotal += recalculated_line_total
+                else:
+                    if line.get('recalculated_total') is not None:
+                        recalculated_subtotal += float(line['recalculated_total'])
+                    else:
+                        recalculated_subtotal += line_orig_total
+                    updated_lines.append(line)
+            else:
+                recalculated_subtotal += line_orig_total
+                updated_lines.append(line)
+
+        original_subtotal = round(original_subtotal, 2)
+        recalculated_subtotal = round(recalculated_subtotal, 2)
+        weight_adj = round(recalculated_subtotal - original_subtotal, 2)
+
+        # Tax recalculation
+        orig_tax = float(order.get('tax', 0) or 0)
+        orig_sub = float(order.get('subtotal', 0) or 0)
+        if has_catch_weight and orig_sub > 0 and orig_tax > 0:
+            tax_rate = orig_tax / orig_sub
+            new_tax = round(recalculated_subtotal * tax_rate, 2)
+        else:
+            new_tax = orig_tax
+
+        freight = float(order.get('freight_amount', 0) or 0)
+        hdr_discount = float(order.get('discount_amount', 0) or 0)
+        new_grand_total = round(max(0.0, recalculated_subtotal + new_tax + freight - hdr_discount), 2)
+
+        if has_catch_weight:
+            self.repo.update(order_id, {
+                'subtotal': recalculated_subtotal,
+                'tax': new_tax,
+                'grand_total': new_grand_total,
+            }, conn=conn)
+
+        return {
+            'order_id': order_id,
+            'is_catch_weight': has_catch_weight,
+            'original_subtotal': original_subtotal,
+            'recalculated_subtotal': recalculated_subtotal,
+            'weight_adjustment_amount': weight_adj,
+            'nominal_total_weight': round(total_nominal_weight, 4) if has_any_nominal else None,
+            'actual_total_weight': round(total_actual_weight, 4) if has_any_actual else None,
+            'tax': new_tax,
+            'grand_total': new_grand_total,
+            'lines': updated_lines,
+        }
+
     def _create_invoice_from_order(self, order_id, conn=None):
+        recalc = self.recalculate_order_catch_weight(order_id, conn=conn)
         order = self.repo.get(order_id, conn=conn)
         if not order:
             logger.error(f"Cannot create invoice: Sales order {order_id} not found")
             raise ValueError(f"Sales order {order_id} not found")
-        inv_repo = CrudRepository('T0090', business_columns=['id', 'invoice_number', 'invoice_type', 'partner_id', 'sales_order_id', 'issue_date', 'due_date', 'total_amount', 'status', 'notes'])
+
         try:
             invoice_number = self._generate_invoice_number(conn=conn)
-            inv_repo.create({
+            notes = f'Auto-generated from order {order.get("order_number")}'
+            if recalc.get('is_catch_weight') and recalc.get('weight_adjustment_amount') != 0:
+                adj = recalc.get('weight_adjustment_amount')
+                notes += f" (Catch-weight adjustment: {'+' if adj > 0 else ''}{adj:.2f})"
+
+            self.inv_repo.create({
                 'invoice_number': invoice_number,
                 'invoice_type': 'Sales',
                 'partner_id': order.get('customer_id'),
                 'sales_order_id': order_id,
+                'sales_rep_id': order.get('sales_rep_id'),
                 'issue_date': order.get('order_date'),
                 'due_date': order.get('order_date'),
                 'total_amount': order.get('grand_total', 0),
+                'freight_amount': order.get('freight_amount', 0) or 0,
+                'discount_amount': order.get('discount_amount', 0) or 0,
                 'status': 'Unpaid',
-                'notes': f'Auto-generated from order {order.get("order_number")}',
+                'notes': notes,
+                'is_catch_weight': recalc.get('is_catch_weight', False),
+                'nominal_total_weight': recalc.get('nominal_total_weight'),
+                'actual_total_weight': recalc.get('actual_total_weight'),
+                'weight_adjustment_amount': recalc.get('weight_adjustment_amount', 0.0),
             }, conn=conn)
             logger.info(f"Successfully created invoice {invoice_number} for sales order {order_id}")
         except Exception as e:
@@ -109,8 +511,7 @@ class SalesOrderService(CrudService):
         customer_id = order.get('customer_id')
         if customer_id:
             try:
-                customer_repo = CrudRepository('T0010', business_columns=['id', 'name', 'balance', 'credit_limit'])
-                customer = customer_repo.get(customer_id, conn=conn)
+                customer = self.customer_repo.get(customer_id, conn=conn)
                 if customer:
                     # NOTE: This read-modify-write is not atomic.  Concurrent orders
                     # for the same customer can lose increments.  A fix requires raw SQL:
@@ -119,7 +520,7 @@ class SalesOrderService(CrudService):
                     # The in-memory mock test store does not serialize concurrent access,
                     # so the concurrent balance assertion was already removed in PR #5.
                     new_balance = customer.get('balance', 0) + order.get('grand_total', 0)
-                    customer_repo.update(customer_id, {'balance': new_balance}, conn=conn)
+                    self.customer_repo.update(customer_id, {'balance': new_balance}, conn=conn)
                     logger.info(f"Updated customer {customer_id} balance to {new_balance}")
             except Exception as e:
                 logger.error(f"Failed to update customer balance for customer {customer_id}: {e}")

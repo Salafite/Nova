@@ -78,25 +78,36 @@ class InvoiceCreate(BaseModel):
     invoice_type: str = 'Sales'
     partner_id: int
     sales_order_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
     issue_date: date
     due_date: date
+    freight_amount: float = 0
+    discount_amount: float = 0
     total_amount: float = Field(..., ge=0)
     status: str = 'Unpaid'
     notes: Optional[str] = None
+    is_catch_weight: bool = False
+    nominal_total_weight: Optional[float] = Field(None, ge=0)
+    actual_total_weight: Optional[float] = Field(None, ge=0)
+    weight_adjustment_amount: float = 0
 
 class InvoiceUpdate(BaseModel):
     invoice_number: Optional[str] = Field(None, max_length=50)
     invoice_type: Optional[str] = None
     partner_id: Optional[int] = None
     sales_order_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
+    freight_amount: Optional[float] = None
+    discount_amount: Optional[float] = None
     total_amount: Optional[float] = Field(None, ge=0)
     status: Optional[str] = None
     notes: Optional[str] = None
-    stripe_payment_intent_id: Optional[str] = None
-    stripe_checkout_session_id: Optional[str] = None
-    payment_link: Optional[str] = None
+    is_catch_weight: Optional[bool] = None
+    nominal_total_weight: Optional[float] = Field(None, ge=0)
+    actual_total_weight: Optional[float] = Field(None, ge=0)
+    weight_adjustment_amount: Optional[float] = None
 
 class InvoiceResponse(AuditMixin):
     id: int
@@ -104,14 +115,18 @@ class InvoiceResponse(AuditMixin):
     invoice_type: str
     partner_id: int
     sales_order_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
     issue_date: date
     due_date: date
+    freight_amount: float = 0
+    discount_amount: float = 0
     total_amount: float
     status: str
     notes: Optional[str] = None
-    stripe_payment_intent_id: Optional[str] = None
-    stripe_checkout_session_id: Optional[str] = None
-    payment_link: Optional[str] = None
+    is_catch_weight: bool = False
+    nominal_total_weight: Optional[float] = None
+    actual_total_weight: Optional[float] = None
+    weight_adjustment_amount: float = 0
 
 
 # Payment
@@ -123,9 +138,6 @@ class PaymentCreate(BaseModel):
     payment_method: str = Field(..., max_length=50) # Cash, Bank Transfer, Card
     reference: Optional[str] = Field(None, max_length=100)
     status: str = 'Completed'
-    stripe_payment_intent_id: Optional[str] = None
-    stripe_checkout_session_id: Optional[str] = None
-    payment_link: Optional[str] = None
 
 class PaymentUpdate(BaseModel):
     payment_date: Optional[date] = None
@@ -135,9 +147,6 @@ class PaymentUpdate(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = None
-    stripe_payment_intent_id: Optional[str] = None
-    stripe_checkout_session_id: Optional[str] = None
-    payment_link: Optional[str] = None
 
 class PaymentResponse(AuditMixin):
     id: int
@@ -148,7 +157,3 @@ class PaymentResponse(AuditMixin):
     payment_method: str
     reference: Optional[str]
     status: str
-    stripe_payment_intent_id: Optional[str] = None
-    stripe_checkout_session_id: Optional[str] = None
-    payment_link: Optional[str] = None
-

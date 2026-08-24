@@ -72,6 +72,12 @@ class SalesLineCreate(BaseModel):
     unit_price: float = Field(..., ge=0)
     line_total: float = Field(..., ge=0)
     line_number: int = 0
+    is_catch_weight: bool = False
+    pricing_uom_id: Optional[int] = None
+    unit_price_pricing_uom: Optional[float] = Field(None, ge=0)
+    nominal_weight: Optional[float] = Field(None, ge=0)
+    catch_weight_actual: Optional[float] = Field(None, ge=0)
+    recalculated_total: Optional[float] = Field(None, ge=0)
 
 class SalesLineUpdate(BaseModel):
     sales_order_id: Optional[int] = None
@@ -82,6 +88,12 @@ class SalesLineUpdate(BaseModel):
     unit_price: Optional[float] = Field(None, ge=0)
     line_total: Optional[float] = Field(None, ge=0)
     line_number: Optional[int] = None
+    is_catch_weight: Optional[bool] = None
+    pricing_uom_id: Optional[int] = None
+    unit_price_pricing_uom: Optional[float] = Field(None, ge=0)
+    nominal_weight: Optional[float] = Field(None, ge=0)
+    catch_weight_actual: Optional[float] = Field(None, ge=0)
+    recalculated_total: Optional[float] = Field(None, ge=0)
 
 class SalesLineResponse(AuditMixin):
     id: int
@@ -93,6 +105,12 @@ class SalesLineResponse(AuditMixin):
     unit_price: float
     line_total: float
     line_number: int
+    is_catch_weight: bool = False
+    pricing_uom_id: Optional[int] = None
+    unit_price_pricing_uom: Optional[float] = None
+    nominal_weight: Optional[float] = None
+    catch_weight_actual: Optional[float] = None
+    recalculated_total: Optional[float] = None
 
 
 class InstallmentPlanCreate(BaseModel):

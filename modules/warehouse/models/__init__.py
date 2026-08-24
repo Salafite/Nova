@@ -11,4 +11,6 @@ from modules.warehouse.models.serial_batch import (
 from modules.warehouse.models.pick_list import (
     PickListCreate, PickListUpdate, PickListResponse,
     PickListItemCreate, PickListItemUpdate, PickListItemResponse,
+    ToleranceApprovalRequest,
 )
+

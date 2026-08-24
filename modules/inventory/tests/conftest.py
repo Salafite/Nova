@@ -5,6 +5,7 @@ import pytest
 _mock_pool = MagicMock()
 _mock_conn = MagicMock()
 _mock_cursor = MagicMock()
+_mock_cursor.__enter__.return_value = _mock_cursor
 _mock_conn.cursor.return_value = _mock_cursor
 _mock_pool.getconn.return_value = _mock_conn
 

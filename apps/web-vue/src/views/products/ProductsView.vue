@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">{{ t('products-title', 'Products') }}</h1>
-        <p class="page-subtitle">{{ t('products-sub', 'Manage your product catalog') }}</p>
+        <p class="page-subtitle">{{ t('products-sub', 'Manage your product catalog and dual unit-of-measure configurations') }}</p>
       </div>
       <div class="page-actions">
         <button class="btn-outline" @click="scanPhantoms" :disabled="scanning">
@@ -18,15 +18,19 @@
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-num">{{ items.length }}</div>
-        <div class="stat-lbl">{{ t('total') }}</div>
+        <div class="stat-lbl">{{ t('total', 'Total') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-num active">{{ activeCount }}</div>
-        <div class="stat-lbl">{{ t('active') }}</div>
+        <div class="stat-lbl">{{ t('active', 'Active') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-num inactive">{{ inactiveCount }}</div>
-        <div class="stat-lbl">{{ t('inactive') }}</div>
+        <div class="stat-lbl">{{ t('inactive', 'Inactive') }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num cw">{{ catchWeightCount }}</div>
+        <div class="stat-lbl">{{ t('catch-weight', 'Catch-Weight') }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-num categories">{{ categoryCount }}</div>
@@ -48,31 +52,38 @@
           <thead>
             <tr>
               <th>{{ t('prod-sku', 'SKU') }}</th>
-              <th>{{ t('name') }}</th>
+              <th>{{ t('name', 'Name') }}</th>
               <th>{{ t('prod-type', 'Type') }}</th>
-              <th>{{ t('category') }}</th>
-              <th class="col-price">{{ t('price') }}</th>
-              <th>{{ t('status') }}</th>
-              <th class="col-actions">{{ t('actions') }}</th>
+              <th>{{ t('category', 'Category') }}</th>
+              <th class="col-price">{{ t('price', 'Price') }}</th>
+              <th>{{ t('status', 'Status') }}</th>
+              <th class="col-actions">{{ t('actions', 'Actions') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in items" :key="item.id" :class="{ 'row-inactive': !item.is_active }">
               <td class="cell-sku">{{ item.sku || '-' }}</td>
-              <td class="cell-name"><router-link :to="`/products/${item.id}`" class="product-link">{{ item.name }}</router-link></td>
+              <td class="cell-name">
+                <div class="flex items-center gap-2">
+                  <router-link :to="`/products/${item.id}`" class="product-link">{{ item.name }}</router-link>
+                  <span v-if="item.is_catch_weight" class="badge badge-cw" :title="t('catch-weight', 'Catch-Weight Dual UOM')">
+                    <span class="material-symbols-outlined icon-xs">scale</span> CW
+                  </span>
+                </div>
+              </td>
               <td class="cell-type"><span class="badge badge-type">{{ item.type || 'stockable' }}</span></td>
               <td class="cell-category">{{ item.category || '-' }}</td>
               <td class="cell-price">${{ (item.price || 0).toFixed(2) }}</td>
               <td>
                 <span :class="item.is_active ? 'badge badge-active' : 'badge badge-inactive'">
-                  {{ item.is_active ? t('active') : t('inactive') }}
+                  {{ item.is_active ? t('active', 'Active') : t('inactive', 'Inactive') }}
                 </span>
               </td>
               <td class="cell-actions">
-                <button class="btn-icon" @click="openEdit(item)" :title="t('edit')" :aria-label="t('edit')">
+                <button class="btn-icon" @click="openEdit(item)" :title="t('edit', 'Edit')" :aria-label="t('edit')">
                   <span class="material-symbols-outlined">edit</span>
                 </button>
-                <button class="btn-icon btn-icon-danger" @click="confirmDelete(item)" :title="t('delete')" :aria-label="t('delete')">
+                <button class="btn-icon btn-icon-danger" @click="confirmDelete(item)" :title="t('delete', 'Delete')" :aria-label="t('delete')">
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </td>
@@ -82,6 +93,7 @@
       </div>
     </div>
 
+    <!-- Product Create/Edit Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal-content modal-wide">
         <div class="modal-header">
@@ -93,13 +105,18 @@
             <button type="button" class="tab-btn" :class="{ active: activeTab === 'general' }" @click="activeTab = 'general'">{{ t('tab-general', 'General') }}</button>
             <button type="button" class="tab-btn" :class="{ active: activeTab === 'sales' }" @click="activeTab = 'sales'">{{ t('tab-sales', 'Sales') }}</button>
             <button type="button" class="tab-btn" :class="{ active: activeTab === 'inventory' }" @click="activeTab = 'inventory'">{{ t('tab-inventory', 'Inventory') }}</button>
+            <button type="button" class="tab-btn" :class="{ active: activeTab === 'dual-uom' }" @click="activeTab = 'dual-uom'">
+              <span class="material-symbols-outlined icon-xs tab-icon">scale</span>
+              {{ t('tab-dual-uom', 'Dual UOM & Catch-Weight') }}
+            </button>
             <button type="button" v-if="isEditing" class="tab-btn" :class="{ active: activeTab === 'suppliers' }" @click="activeTab = 'suppliers'">{{ t('tab-suppliers', 'Suppliers') }}</button>
           </div>
 
+          <!-- General Tab -->
           <div v-show="activeTab === 'general'" class="tab-content">
             <div class="form-row">
               <div class="form-group">
-                <label>{{ t('name') }} <span class="required">*</span></label>
+                <label>{{ t('name', 'Name') }} <span class="required">*</span></label>
                 <input type="text" v-model="form.name" @blur="fv.touch('name'); fv.validate('name', form.name)" class="form-input" :class="{ 'input-error': fv.touched.name && fv.errors.name }" />
                 <FormFieldError :message="fv.touched.name ? fv.errors.name : ''" />
               </div>
@@ -144,15 +161,16 @@
             <div class="form-group">
               <label class="checkbox-label">
                 <input type="checkbox" v-model="form.is_active" />
-                {{ t('active') }}
+                {{ t('active', 'Active') }}
               </label>
             </div>
           </div>
 
+          <!-- Sales Tab -->
           <div v-show="activeTab === 'sales'" class="tab-content">
             <div class="form-row">
               <div class="form-group">
-                <label>{{ t('price') }}</label>
+                <label>{{ t('price', 'Base Selling Price') }}</label>
                 <div class="input-prefix">
                   <span class="prefix">$</span>
                   <input type="number" step="0.01" min="0" v-model.number="form.price" @blur="fv.touch('price'); fv.validate('price', form.price)" class="form-input" :class="{ 'input-error': fv.touched.price && fv.errors.price }" />
@@ -179,10 +197,11 @@
             </div>
           </div>
 
+          <!-- Inventory Tab -->
           <div v-show="activeTab === 'inventory'" class="tab-content">
             <div class="form-row">
               <div class="form-group">
-                <label>{{ t('category') }}</label>
+                <label>{{ t('category', 'Category') }}</label>
                 <input type="text" v-model="form.category" class="form-input" list="category-list" />
                 <datalist id="category-list">
                   <option v-for="c in allCategories" :key="c" :value="c" />
@@ -202,7 +221,7 @@
                 <input type="number" step="0.001" min="0" v-model.number="form.weight" class="form-input" />
               </div>
               <div class="form-group">
-                <label>{{ t('volume', 'Volume (m\u00B3)') }}</label>
+                <label>{{ t('volume', 'Volume (m³)') }}</label>
                 <input type="number" step="0.001" min="0" v-model.number="form.volume" class="form-input" />
               </div>
             </div>
@@ -212,6 +231,55 @@
             </div>
           </div>
 
+          <!-- Dual UOM & Catch-Weight Tab -->
+          <div v-show="activeTab === 'dual-uom'" class="tab-content">
+            <div class="form-group">
+              <label class="checkbox-label font-semibold">
+                <input type="checkbox" v-model="form.is_catch_weight" />
+                {{ t('enable-catch-weight', 'Enable Catch-Weight & Dual Unit-of-Measure (UOM)') }}
+              </label>
+              <p class="field-hint">
+                {{ t('catch-weight-desc', 'Allows selling/inventorying by stocking units (e.g. Cases/Packs) while pricing and invoicing based on exact physical scale weight.') }}
+              </p>
+            </div>
+
+            <div v-if="form.is_catch_weight" class="cw-box">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ t('pricing-uom', 'Pricing Unit of Measure (UOM)') }} <span class="required">*</span></label>
+                  <select v-model.number="form.pricing_uom_id" class="form-input">
+                    <option :value="null">{{ t('select-uom', '-- Select Pricing UOM --') }}</option>
+                    <option v-for="uom in uoms" :key="uom.id" :value="uom.id">
+                      {{ uom.uom_code }} - {{ uom.uom_name }} ({{ uom.category }})
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{ t('nominal-weight', 'Nominal Weight per Stocking Unit') }}</label>
+                  <input type="number" step="0.001" min="0" v-model.number="form.nominal_weight" class="form-input" placeholder="e.g. 20.0" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ t('tolerance-pct', 'Allowed Weight Tolerance Percentage (±%)') }}</label>
+                  <div class="input-suffix">
+                    <input type="number" step="0.1" min="0" max="100" v-model.number="form.tolerance_pct" class="form-input" placeholder="e.g. 5.0" />
+                    <span class="suffix">%</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>{{ t('pricing-basis', 'Pricing Basis') }}</label>
+                  <select v-model="form.pricing_basis" class="form-input">
+                    <option value="weight">{{ t('basis-weight', 'Physical Scale Weight (Catch-Weight)') }}</option>
+                    <option value="quantity">{{ t('basis-quantity', 'Fixed Unit Quantity') }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Suppliers Tab -->
           <div v-show="activeTab === 'suppliers'" class="tab-content">
             <div class="supplier-section">
               <h4 class="section-title">{{ t('linked-suppliers', 'Linked Suppliers') }}</h4>
@@ -238,26 +306,27 @@
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="btn-outline" @click="closeModal">{{ t('cancel') }}</button>
+            <button type="button" class="btn-outline" @click="closeModal">{{ t('cancel', 'Cancel') }}</button>
             <button type="submit" class="btn-primary" :disabled="saving">
-              {{ saving ? t('saving') : t('save') }}
+              {{ saving ? t('saving', 'Saving...') : t('save', 'Save') }}
             </button>
           </div>
         </form>
       </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
     <div v-if="showDelete" class="modal-overlay" @click.self="showDelete = false">
       <div class="modal-content modal-sm">
         <div class="modal-header">
-          <h3>{{ t('confirm-delete') }}</h3>
+          <h3>{{ t('confirm-delete', 'Confirm Delete') }}</h3>
           <button class="btn-icon" @click="showDelete = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
-          <p>{{ t('confirm-delete-msg') }} <strong>{{ deletingItem?.name }}</strong>?</p>
+          <p>{{ t('confirm-delete-msg', 'Are you sure you want to delete') }} <strong>{{ deletingItem?.name }}</strong>?</p>
           <div class="modal-actions">
-            <button class="btn-outline" @click="showDelete = false">{{ t('cancel') }}</button>
-            <button class="btn-danger" @click="doDelete">{{ t('delete') }}</button>
+            <button class="btn-outline" @click="showDelete = false">{{ t('cancel', 'Cancel') }}</button>
+            <button class="btn-danger" @click="doDelete">{{ t('delete', 'Delete') }}</button>
           </div>
         </div>
       </div>
@@ -292,6 +361,7 @@ const deletingItem = ref(null)
 const editingId = ref(null)
 const suppliers = ref([])
 const supplierLinks = ref([])
+const uoms = ref([])
 const newSupplier = ref({ supplier_id: null, unit_cost: 0, lead_time_days: 0 })
 const activeTab = ref('general')
 
@@ -313,7 +383,12 @@ const form = reactive({
   name: '', sku: '', barcode: '', description: '', type: 'stockable',
   price: 0, cost_price: null, tax_rate: 0.05,
   category: '', brand: '', weight: 0, volume: 0,
-  image_url: '', is_purchasable: true, is_saleable: true, is_active: true
+  image_url: '', is_purchasable: true, is_saleable: true, is_active: true,
+  is_catch_weight: false,
+  pricing_uom_id: null,
+  nominal_weight: null,
+  tolerance_pct: null,
+  pricing_basis: 'weight'
 })
 
 const allCategories = computed(() => {
@@ -326,6 +401,7 @@ const allBrands = computed(() => {
 
 const activeCount = computed(() => items.value.filter(p => p.is_active).length)
 const inactiveCount = computed(() => items.value.filter(p => !p.is_active).length)
+const catchWeightCount = computed(() => items.value.filter(p => p.is_catch_weight).length)
 const categoryCount = computed(() => {
   const cats = new Set(items.value.map(p => p.category).filter(Boolean))
   return cats.size
@@ -348,6 +424,11 @@ function resetForm() {
   form.is_purchasable = true
   form.is_saleable = true
   form.is_active = true
+  form.is_catch_weight = false
+  form.pricing_uom_id = null
+  form.nominal_weight = null
+  form.tolerance_pct = null
+  form.pricing_basis = 'weight'
   activeTab.value = 'general'
   fv.reset()
 }
@@ -378,6 +459,11 @@ function openEdit(item) {
   form.is_purchasable = item.is_purchasable ?? true
   form.is_saleable = item.is_saleable ?? true
   form.is_active = item.is_active
+  form.is_catch_weight = item.is_catch_weight ?? false
+  form.pricing_uom_id = item.pricing_uom_id ?? null
+  form.nominal_weight = item.nominal_weight ?? null
+  form.tolerance_pct = item.tolerance_pct ?? null
+  form.pricing_basis = item.pricing_basis || 'weight'
   activeTab.value = 'general'
   loadSupplierLinks(item.id)
   showModal.value = true
@@ -395,15 +481,27 @@ async function save() {
   saving.value = true
   try {
     const payload = {
-      name: form.name, sku: form.sku,
-      barcode: form.barcode || null, description: form.description || null,
+      name: form.name,
+      sku: form.sku,
+      barcode: form.barcode || null,
+      description: form.description || null,
       type: form.type,
-      price: form.price, cost_price: form.cost_price || 0,
-      category: form.category || null, brand: form.brand || null,
-      tax_rate: form.tax_rate, weight: form.weight || 0, volume: form.volume || 0,
+      price: form.price,
+      cost_price: form.cost_price || 0,
+      category: form.category || null,
+      brand: form.brand || null,
+      tax_rate: form.tax_rate,
+      weight: form.weight || 0,
+      volume: form.volume || 0,
       image_url: form.image_url || null,
-      is_purchasable: form.is_purchasable, is_saleable: form.is_saleable,
-      is_active: form.is_active
+      is_purchasable: form.is_purchasable,
+      is_saleable: form.is_saleable,
+      is_active: form.is_active,
+      is_catch_weight: form.is_catch_weight,
+      pricing_uom_id: form.pricing_uom_id ? Number(form.pricing_uom_id) : null,
+      nominal_weight: form.nominal_weight !== null && form.nominal_weight !== '' ? Number(form.nominal_weight) : null,
+      tolerance_pct: form.tolerance_pct !== null && form.tolerance_pct !== '' ? Number(form.tolerance_pct) : null,
+      pricing_basis: form.pricing_basis || 'weight'
     }
     if (isEditing.value) {
       await api.put(`/T0003I/${editingId.value}`, payload)
@@ -498,8 +596,12 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/T0003I/')
+    const [res, uomsRes] = await Promise.all([
+      api.get('/T0003I/'),
+      api.get('/T0001I/').catch(() => ({ data: [] }))
+    ])
     items.value = res.data || []
+    uoms.value = uomsRes.data || []
   } catch {
     error.value = 'Failed to load products.'
   } finally {
@@ -514,11 +616,12 @@ onMounted(load)
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
 .page-actions { display: flex; align-items: center; gap: 8px; }
 
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
 .stat-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 10px; padding: 16px; text-align: center; }
 .stat-num { font-size: 24px; font-weight: 700; color: var(--color-primary); }
 .stat-num.active { color: var(--color-success); }
 .stat-num.inactive { color: var(--text-muted); }
+.stat-num.cw { color: #7e22ce; }
 .stat-num.categories { color: #0891b2; }
 .stat-lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
@@ -536,7 +639,15 @@ onMounted(load)
 .cell-actions { text-align: right; white-space: nowrap; }
 .cell-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-subtle); }
 
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-active { background: #dcfce7; color: #16a34a; }
 .badge-inactive { background: var(--bg-surface-hover); color: var(--text-faint); }
+.badge-cw { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+.icon-xs { font-size: 13px; }
+.tab-icon { margin-right: 4px; }
+
+.cw-box { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 14px 16px; margin-top: 10px; }
+.field-hint { font-size: 12px; color: #6b7280; margin-top: 4px; margin-left: 24px; }
 
 .btn-danger { display: inline-flex; align-items: center; gap: 6px; background: var(--color-error); color: #fff; padding: 8px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-danger:hover { background: #b91c1c; }
@@ -552,7 +663,7 @@ onMounted(load)
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border-light); }
 
 .form-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-light); padding: 0 24px; background: var(--bg-surface-hover); }
-.tab-btn { padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.tab-btn { display: inline-flex; align-items: center; padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
 .tab-btn:hover { color: var(--text-primary); }
 .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); background: var(--bg-surface); }
 
@@ -577,7 +688,6 @@ onMounted(load)
 .prefix { border-right: none; border-radius: 6px 0 0 6px; }
 .suffix { border-left: none; border-radius: 0 6px 6px 0; }
 
-.supplier-section { }
 .section-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 0 0 10px; }
 .supplier-name { flex: 1; }
 .supplier-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border-light); }
@@ -587,6 +697,10 @@ onMounted(load)
 .btn-xs { padding: 4px 12px !important; font-size: 12px !important; }
 .badge-sm { font-size: 10px !important; padding: 1px 6px !important; }
 .empty-section { font-size: 12px; color: var(--text-faint); padding: 8px 0; }
+
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-2 { gap: 8px; }
 
 [dir="rtl"] .page-actions { flex-direction: row-reverse; }
 [dir="rtl"] .data-table th { text-align: right; }

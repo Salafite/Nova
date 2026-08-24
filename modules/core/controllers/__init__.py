@@ -12,7 +12,9 @@ for f in sorted(modules_dir.rglob('controllers/T*I.py')):
         module_path = f.relative_to(modules_dir.parent).with_suffix('').parts
         import_path = '.'.join(module_path)
         module = importlib.import_module(import_path)
-        all_routers.append(module.router)
+        if hasattr(module, 'router'):
+            all_routers.append(module.router)
+
 
 from modules.purchasing.controllers.restock_controller import router as restock_router
 

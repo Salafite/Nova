@@ -14,7 +14,10 @@ pl_service = service
 pli_repo = CrudRepository('T0102', business_columns=[
     'id', 'pick_list_id', 'sales_order_line_id', 'product_id', 'product_name',
     'qty_ordered', 'qty_picked', 'line_number',
-    'batch_id', 'batch_number', 'expiry_date', 'picked_batch_id', 'picked_batch_number'
+    'batch_id', 'batch_number', 'expiry_date', 'picked_batch_id', 'picked_batch_number',
+    'catch_weight_actual', 'catch_weight_uom', 'nominal_weight', 'tolerance_pct',
+    'tolerance_variance_pct', 'tolerance_status', 'supervisor_approved',
+    'supervisor_approved_by', 'supervisor_approved_at', 'supervisor_notes'
 ])
 
 @router.get('/{id}/detail')
@@ -43,15 +46,76 @@ def pick_item(id: int, item_id: int, body: dict):
     qty_picked = body.get('qty_picked', 0)
     picked_batch_id = body.get('picked_batch_id')
     picked_batch_number = body.get('picked_batch_number')
+    catch_weight_actual = body.get('catch_weight_actual')
+    catch_weight_uom = body.get('catch_weight_uom')
+    nominal_weight = body.get('nominal_weight')
+    tolerance_pct = body.get('tolerance_pct')
+
+    kwargs = {
+        'item_id': item_id,
+        'qty_picked': qty_picked,
+        'pick_list_id': id,
+        'picked_batch_id': picked_batch_id,
+        'picked_batch_number': picked_batch_number,
+    }
+    if catch_weight_actual is not None:
+        kwargs['catch_weight_actual'] = catch_weight_actual
+    if catch_weight_uom is not None:
+        kwargs['catch_weight_uom'] = catch_weight_uom
+    if nominal_weight is not None:
+        kwargs['nominal_weight'] = nominal_weight
+    if tolerance_pct is not None:
+        kwargs['tolerance_pct'] = tolerance_pct
+
     try:
-        return pl_service.pick_item(
-            item_id=item_id,
-            qty_picked=qty_picked,
+        return pl_service.pick_item(**kwargs)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+@router.get('/{id}/discrepancies')
+def get_pick_list_discrepancies(id: int):
+    try:
+        return pl_service.check_pick_list_discrepancies(id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+@router.post('/{id}/approve-tolerance')
+def approve_tolerance(id: int, body: dict = None):
+    body = body or {}
+    item_id = body.get('item_id')
+    item_ids = body.get('item_ids')
+    supervisor_id = body.get('supervisor_id') or body.get('supervisor_approved_by') or body.get('approved_by')
+    supervisor_notes = body.get('supervisor_notes') or body.get('notes')
+
+    try:
+        return pl_service.approve_tolerance(
             pick_list_id=id,
-            picked_batch_id=picked_batch_id,
-            picked_batch_number=picked_batch_number
+            item_id=item_id,
+            item_ids=item_ids,
+            supervisor_id=supervisor_id,
+            supervisor_notes=supervisor_notes,
         )
     except ValueError as e:
+        if 'not found' in str(e).lower():
+            raise HTTPException(404, str(e))
+        raise HTTPException(400, str(e))
+
+@router.post('/{id}/items/{item_id}/approve-tolerance')
+def approve_item_tolerance(id: int, item_id: int, body: dict = None):
+    body = body or {}
+    supervisor_id = body.get('supervisor_id') or body.get('supervisor_approved_by') or body.get('approved_by')
+    supervisor_notes = body.get('supervisor_notes') or body.get('notes')
+
+    try:
+        return pl_service.approve_item_tolerance(
+            pick_list_id=id,
+            item_id=item_id,
+            supervisor_id=supervisor_id,
+            supervisor_notes=supervisor_notes,
+        )
+    except ValueError as e:
+        if 'not found' in str(e).lower():
+            raise HTTPException(404, str(e))
         raise HTTPException(400, str(e))
 
 @router.post('/{id}/complete')
@@ -59,4 +123,4 @@ def complete_picking(id: int):
     try:
         return pl_service.complete_picking(id)
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(400, str(e))
