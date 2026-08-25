@@ -24,7 +24,7 @@ print('[1/5] Schema nova_erp ready')
 
 # --- Step 2: Create types ---
 types = [
-    "CREATE TYPE order_status AS ENUM ('Pending','Paid','Shipped','Cancelled')",
+    "CREATE TYPE order_status AS ENUM ('Draft','Pending','Credit Hold','Confirmed','Processing','Shipped','Delivered','Invoiced','Paid','Cancelled')",
     "CREATE TYPE po_status AS ENUM ('Pending','Approved','Received','Cancelled')",
     "CREATE TYPE mfg_status AS ENUM ('Pending','In Progress','Completed','On Hold')",
     "CREATE TYPE qc_result AS ENUM ('Pending','Pass','Fail')",
@@ -147,6 +147,8 @@ TABLES = {
         status order_status NOT NULL DEFAULT 'Pending',
         order_date DATE NOT NULL DEFAULT CURRENT_DATE, notes TEXT,
         price_list_id INT, tax_rate_id INT, payment_term_id INT,
+        hold_reason TEXT, hold_released_by INT REFERENCES nova_erp.t0021(id),
+        hold_released_at TIMESTAMPTZ, hold_release_reason TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(), created_by INT,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_by INT,
         update_number INT NOT NULL DEFAULT 1

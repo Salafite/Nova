@@ -159,7 +159,32 @@ def verify_schema(conn=None) -> dict:
     if missing_comp_idx:
         errors.append(f"Missing composite index idx_tXXXX_business_id_id ({len(missing_comp_idx)}): {missing_comp_idx}")
 
-    # 7. Seed Data Check (optional / non-fatal)
+    # 7. Enum types verification (order_status)
+    cur.execute("""
+        SELECT e.enumlabel
+        FROM pg_type t
+        JOIN pg_enum e ON t.oid = e.enumtypid
+        WHERE t.typname = 'order_status'
+        ORDER BY e.enumsortorder
+    """)
+    order_status_enums = [r[0] for r in cur.fetchall()]
+    credit_hold_enum_present = 'Credit Hold' in order_status_enums
+    if order_status_enums and not credit_hold_enum_present:
+        errors.append("Missing 'Credit Hold' in order_status enum")
+
+    # 8. Sales order credit hold columns verification (T0012)
+    cur.execute("""
+        SELECT LOWER(column_name)
+        FROM information_schema.columns
+        WHERE table_schema='Nova' AND LOWER(table_name)='t0012'
+    """)
+    t0012_cols = {r[0] for r in cur.fetchall()}
+    expected_hold_cols = ['hold_reason', 'hold_released_by', 'hold_released_at', 'hold_release_reason']
+    missing_hold_cols = [c for c in expected_hold_cols if c not in t0012_cols]
+    if missing_hold_cols and 't0012' in tables:
+        errors.append(f"Missing credit hold columns in t0012 ({len(missing_hold_cols)}): {missing_hold_cols}")
+
+    # 9. Seed Data Check (optional / non-fatal)
     seed_counts = {}
     for tcode, label in [('t0003', 'Products'), ('t0010', 'Customers'), ('t0011', 'Suppliers'), ('t0021', 'Users'), ('t0059', 'Tenants')]:
         if tcode in tables:
@@ -186,6 +211,10 @@ def verify_schema(conn=None) -> dict:
         "missing_single_indexes": missing_single_idx,
         "tenant_composite_indexes_count": len(tables_with_comp_idx),
         "missing_composite_indexes": missing_comp_idx,
+        "order_status_enums": order_status_enums,
+        "credit_hold_enum_present": credit_hold_enum_present,
+        "t0012_hold_columns_present": [c for c in expected_hold_cols if c in t0012_cols],
+        "missing_hold_columns": missing_hold_cols,
         "total_columns": total_cols,
         "total_primary_keys": total_pks,
         "total_indexes": total_indexes,
@@ -219,6 +248,10 @@ def print_verification_report(results: dict):
     print(f"  - Tenant Foreign Keys:      {results['tenant_fks_count']}/{results['business_tables_count']} referencing T0059")
     print(f"  - Single Indexes:           {results['tenant_single_indexes_count']}/{results['business_tables_count']} on business_id")
     print(f"  - Composite Indexes:        {results['tenant_composite_indexes_count']}/{results['business_tables_count']} on (business_id, id)")
+    print("------------------------------------------------------------")
+    print(" Credit Hold Workflow Status:")
+    print(f"  - 'Credit Hold' in order_status enum: {'YES' if results.get('credit_hold_enum_present') else 'NO'}")
+    print(f"  - T0012 hold metadata columns:        {len(results.get('t0012_hold_columns_present', []))}/4 present")
     print("------------------------------------------------------------")
     if results['seed_data']:
         print(" Seed Data:")
