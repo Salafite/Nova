@@ -407,8 +407,17 @@ class SQLServerConnector(BaseConnector):
             try:
                 cursor.execute("SELECT @@VERSION, DB_NAME()")
                 row = cursor.fetchone()
-                version = row[0] if row else "Unknown"
-                db_name = row[1] if row and len(row) > 1 else self.database
+                if row:
+                    if isinstance(row, dict):
+                        vals = list(row.values())
+                        version = vals[0] if len(vals) > 0 else "Unknown"
+                        db_name = vals[1] if len(vals) > 1 else self.database
+                    else:
+                        version = row[0]
+                        db_name = row[1] if len(row) > 1 else self.database
+                else:
+                    version = "Unknown"
+                    db_name = self.database
 
                 tables = self.get_tables()
 

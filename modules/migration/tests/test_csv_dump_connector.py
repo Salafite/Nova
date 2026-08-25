@@ -448,3 +448,99 @@ def test_csv_dump_connector_context_manager():
         assert conn.is_connected is True
         assert "test" in conn.get_tables()
     assert conn.is_connected is False
+
+
+def test_csv_dump_connector_discover_schema_with_filter():
+    """Verify discover_schema respects table_filter and returns schemas."""
+    files = {
+        "products.csv": "id,sku,name\n1,P1,Product 1\n",
+        "customers.csv": "id,name,phone\n1,Cust 1,0501234567\n",
+        "warehouses.csv": "id,code,name\n1,WH1,Main Warehouse\n",
+    }
+    connector = CsvDumpConnector(in_memory_files=files)
+
+    # Discover all
+    res_all = connector.discover_schema()
+    assert res_all["success"] is True
+    assert res_all["tables_count"] == 3
+    assert "products" in res_all["schemas"]
+    assert "customers" in res_all["schemas"]
+    assert "warehouses" in res_all["schemas"]
+
+    # Filtered
+    res_filtered = connector.discover_schema(table_filter=["products", "warehouses"])
+    assert res_filtered["success"] is True
+    assert res_filtered["tables_count"] == 2
+    assert "products" in res_filtered["schemas"]
+    assert "warehouses" in res_filtered["schemas"]
+    assert "customers" not in res_filtered["schemas"]
+
+
+def test_csv_dump_connector_no_header_dataset():
+    """Verify handling of CSV files with no header (has_header=False)."""
+    csv_no_header = (
+        "1001,Shawarma Wrap,15.50,Food\n"
+        "1002,Orange Juice,8.00,Beverage\n"
+    )
+    connector = CsvDumpConnector(
+        in_memory_files={"menu_items.csv": csv_no_header},
+        has_header=False,
+    )
+
+    schema = connector.get_table_schema("menu_items")
+    assert schema.table_name == "menu_items"
+    assert len(schema.columns) == 4
+    assert schema.columns[0].name == "column_1"
+    assert schema.columns[1].name == "column_2"
+
+    rows = connector.preview_table("menu_items", limit=2)
+    assert len(rows) == 2
+    assert rows[0]["column_1"] == 1001
+    assert rows[0]["column_2"] == "Shawarma Wrap"
+    assert rows[0]["column_3"] == 15.5
+    assert rows[0]["column_4"] == "Food"
+
+
+def test_csv_dump_connector_cp1252_encoding():
+    """Verify handling of Western European CP1252 character sets with accented characters."""
+    french_text = "id,name,description\n1,Café au Lait,Crème fraîche et café\n2,Naïve,Produit spécial\n"
+    raw_bytes = french_text.encode("cp1252")
+
+    connector = CsvDumpConnector(
+        in_memory_files={"menu_french.csv": raw_bytes},
+        encoding="cp1252",
+    )
+
+    test_res = connector.test_connection()
+    assert test_res.success is True
+
+    rows = connector.preview_table("menu_french", limit=5)
+    assert len(rows) == 2
+    assert "Café au Lait" in rows[0]["name"]
+    assert "Crème fraîche" in rows[0]["description"]
+
+
+def test_csv_dump_connector_missing_table_raises():
+    """Verify get_table_schema and preview_table raise KeyError for unknown tables."""
+    connector = CsvDumpConnector(
+        in_memory_files={"items.csv": "id,name\n1,Item\n"}
+    )
+    with pytest.raises(KeyError):
+        connector.get_table_schema("non_existent_table")
+
+    with pytest.raises(KeyError):
+        connector.preview_table("non_existent_table")
+
+
+def test_csv_dump_connector_non_existent_paths():
+    """Verify test_connection returns clean failure when pointing to non-existent disk paths."""
+    connector_dir = CsvDumpConnector(dump_path="C:/non_existent_path_directory_12345")
+    res_dir = connector_dir.test_connection()
+    assert res_dir.success is False
+    assert "does not exist" in res_dir.message or "not found" in str(res_dir.error).lower()
+
+    connector_zip = CsvDumpConnector(zip_file_path="C:/non_existent_path_archive_12345.zip")
+    res_zip = connector_zip.test_connection()
+    assert res_zip.success is False
+    assert "does not exist" in res_zip.message or "not found" in str(res_zip.error).lower()
+

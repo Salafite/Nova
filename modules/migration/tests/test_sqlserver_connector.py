@@ -309,3 +309,129 @@ def test_sqlserver_connector_context_manager():
         tables = conn.get_tables()
         assert "demo" in tables
     assert conn.is_connected is False
+
+
+def test_sqlserver_connector_discover_schema_with_filter():
+    """Verify discover_schema respects table_filter and returns all schemas."""
+    mock_data = {
+        "tbl_Products": [{"id": 1, "name": "Item A"}],
+        "tbl_Customers": [{"custcode": "C1", "name": "Cust A"}],
+        "tbl_Orders": [{"order_id": 101, "total": 50.0}],
+    }
+    connector = SQLServerConnector(mock_data=mock_data)
+
+    # Discover all
+    all_discovery = connector.discover_schema()
+    assert all_discovery["success"] is True
+    assert all_discovery["tables_count"] == 3
+    assert len(all_discovery["schemas"]) == 3
+    assert "tbl_Products" in all_discovery["schemas"]
+
+    # Discover filtered
+    filtered_discovery = connector.discover_schema(table_filter=["tbl_products", "tbl_orders"])
+    assert filtered_discovery["success"] is True
+    assert filtered_discovery["tables_count"] == 2
+    assert "tbl_Products" in filtered_discovery["schemas"]
+    assert "tbl_Orders" in filtered_discovery["schemas"]
+    assert "tbl_Customers" not in filtered_discovery["schemas"]
+
+
+def test_sqlserver_connector_filtering_and_projection():
+    """Verify extract_chunks and preview_table support filter conditions and column projection."""
+    mock_data = {
+        "items": [
+            {"id": 1, "sku": "A101", "name": "Item 1", "price": Decimal("10.00"), "category": "Food"},
+            {"id": 2, "sku": "A102", "name": "Item 2", "price": Decimal("20.00"), "category": "Drink"},
+            {"id": 3, "sku": "A103", "name": "Item 3", "price": Decimal("30.00"), "category": "Food"},
+            {"id": 4, "sku": "A104", "name": "Item 4", "price": Decimal("40.00"), "category": "Drink"},
+        ]
+    }
+    connector = SQLServerConnector(mock_data=mock_data)
+
+    # Dict filter
+    food_chunks = list(connector.extract_chunks("items", filter_condition={"category": "Food"}, columns=["sku", "price"]))
+    assert len(food_chunks) == 1
+    assert len(food_chunks[0]) == 2
+    assert food_chunks[0][0] == {"sku": "A101", "price": 10.0}
+    assert food_chunks[0][1] == {"sku": "A103", "price": 30.0}
+
+    # Callable filter
+    expensive_chunks = list(connector.extract_chunks("items", filter_condition=lambda r: r.get("price", 0) > 25))
+    assert len(expensive_chunks) == 1
+    assert len(expensive_chunks[0]) == 2
+    assert expensive_chunks[0][0]["id"] == 3
+    assert expensive_chunks[0][1]["id"] == 4
+
+    # Preview with column projection
+    preview = connector.preview_table("items", limit=2, columns=["sku", "name"])
+    assert len(preview) == 2
+    assert list(preview[0].keys()) == ["sku", "name"]
+    assert preview[0]["sku"] == "A101"
+
+
+def test_sqlserver_connector_pymssql_driver_mock():
+    """Verify connector fallback to pymssql when pyodbc is not installed."""
+    mock_pymssql = MagicMock()
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchone.return_value = {"": "Microsoft SQL Server 2019", "database": "LegacyDB"}
+    mock_cursor.fetchall.return_value = [{"TABLE_NAME": "tbl_Items"}]
+    mock_conn.cursor.return_value = mock_cursor
+    mock_pymssql.connect.return_value = mock_conn
+
+    with patch.dict("sys.modules", {"pyodbc": None, "pymssql": mock_pymssql}):
+        connector = SQLServerConnector(
+            host="sql.local",
+            database="LegacyDB",
+            user="sa",
+            password="pwd",
+        )
+        res = connector.test_connection()
+        assert res.success is True
+        assert res.details.get("driver") == "pymssql"
+        assert "tbl_Items" in res.tables
+
+
+def test_sqlserver_connector_foreign_key_discovery():
+    """Verify foreign key relationships are captured in TableSchema."""
+    mock_schemas = {
+        "order_items": TableSchema(
+            table_name="order_items",
+            columns=[
+                ColumnSchema(name="id", data_type="INTEGER", is_primary_key=True),
+                ColumnSchema(
+                    name="order_id",
+                    data_type="INTEGER",
+                    is_foreign_key=True,
+                    foreign_table="orders",
+                    foreign_column="id",
+                ),
+                ColumnSchema(
+                    name="product_id",
+                    data_type="INTEGER",
+                    is_foreign_key=True,
+                    foreign_table="products",
+                    foreign_column="id",
+                ),
+            ],
+            primary_key=["id"],
+            foreign_keys=[
+                {"from_column": "order_id", "to_table": "orders", "to_column": "id"},
+                {"from_column": "product_id", "to_table": "products", "to_column": "id"},
+            ],
+            row_count_estimate=50,
+        )
+    }
+
+    connector = SQLServerConnector(
+        database="StoreDB",
+        mock_schemas=mock_schemas,
+    )
+
+    schema = connector.get_table_schema("order_items")
+    assert schema.table_name == "order_items"
+    assert len(schema.foreign_keys) == 2
+    assert schema.get_column("order_id").is_foreign_key is True
+    assert schema.get_column("order_id").foreign_table == "orders"
+    assert schema.get_column("product_id").foreign_column == "id"
+
