@@ -154,6 +154,13 @@ class PickListService(CrudService):
         return discrepancies
 
     def create(self, payload, conn=None):
+        sales_order_id = payload.get('sales_order_id')
+        if sales_order_id:
+            order = self.order_repo.get(sales_order_id, **_conn_kwargs(conn))
+            if order and order.get('status') == 'Credit Hold':
+                logger.warning(f"Cannot generate pick list for sales order {sales_order_id}: Order is on Credit Hold")
+                raise ValueError(f"Cannot generate pick list for sales order {sales_order_id}: Order is on Credit Hold")
+
         if not payload.get('pick_list_number') or not str(payload.get('pick_list_number')).strip():
             try:
                 payload['pick_list_number'] = generate_pick_list_number(**_conn_kwargs(conn))
@@ -175,6 +182,9 @@ class PickListService(CrudService):
         if not order:
             logger.error(f"Cannot create pick list: Sales order {sales_order_id} not found")
             raise ValueError(f"Sales order {sales_order_id} not found")
+        if order.get('status') == 'Credit Hold':
+            logger.warning(f"Cannot generate pick list for sales order {sales_order_id}: Order is on Credit Hold")
+            raise ValueError(f"Cannot generate pick list for sales order {sales_order_id}: Order is on Credit Hold")
 
         wh_id = warehouse_id or order.get('warehouse_id')
         if not wh_id:
@@ -561,6 +571,11 @@ class PickListService(CrudService):
         if not pl:
             logger.error(f"Cannot start picking: Pick list {pick_list_id} not found")
             raise ValueError(f"Pick list {pick_list_id} not found")
+        if pl.get('sales_order_id'):
+            order = self.order_repo.get(pl['sales_order_id'], **_conn_kwargs(conn))
+            if order and order.get('status') == 'Credit Hold':
+                logger.warning(f"Cannot start picking for pick list {pick_list_id}: Sales order {pl['sales_order_id']} is on Credit Hold")
+                raise ValueError(f"Cannot process pick list {pick_list_id}: Sales order {pl['sales_order_id']} is on Credit Hold")
         if pl['status'] != 'Pending':
             logger.warning(f"Cannot start picking: Pick list {pick_list_id} status is {pl['status']}, expected Pending")
             raise ValueError(f"Pick list status is {pl['status']}, expected Pending")
@@ -683,6 +698,11 @@ class PickListService(CrudService):
             if not pl:
                 logger.error(f"Cannot complete picking: Pick list {pick_list_id} not found")
                 raise ValueError(f"Pick list {pick_list_id} not found")
+            if pl.get('sales_order_id'):
+                order = self.order_repo.get(pl['sales_order_id'], **_conn_kwargs(conn))
+                if order and order.get('status') == 'Credit Hold':
+                    logger.warning(f"Cannot complete pick list {pick_list_id}: Sales order {pl['sales_order_id']} is on Credit Hold")
+                    raise ValueError(f"Cannot complete pick list {pick_list_id}: Sales order {pl['sales_order_id']} is on Credit Hold")
             items = self.pli_repo.list(filters={'pick_list_id': pick_list_id}, **_conn_kwargs(conn))
             unpicked = []
             for item in items:
