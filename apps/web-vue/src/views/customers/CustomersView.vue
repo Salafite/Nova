@@ -70,6 +70,7 @@
                 <th class="col-name">{{ t('name') }}</th>
                 <th class="col-group">{{ t('customer-group') }}</th>
                 <th class="col-contact">{{ t('customer-phone') }}</th>
+                <th class="col-term">{{ t('payment-terms') }}</th>
                 <th class="col-num">{{ t('customer-credit') }}</th>
                 <th class="col-num">{{ t('customer-balance') }}</th>
                 <th class="col-usage">{{ t('credit-usage') }}</th>
@@ -92,6 +93,7 @@
                 </td>
                 <td class="col-group"><span class="group-tag">{{ item.group_name || '-' }}</span></td>
                 <td class="col-contact cell-mono">{{ item.phone || '-' }}</td>
+                <td class="col-term"><span class="term-tag">{{ getTermName(item.payment_term_id) }}</span></td>
                 <td class="col-num cell-mono">{{ formatNum(item.credit_limit) }}</td>
                 <td class="col-num cell-mono" :class="{ 'text-danger font-bold': isOverLimit(item), 'text-warning': isNearLimit(item) }">{{ formatNum(item.balance) }}</td>
                 <td class="col-usage">
@@ -160,19 +162,30 @@
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>{{ t('payment-terms') }}</label>
+            <select v-model="form.payment_term_id" class="form-input">
+              <option :value="null">{{ t('no-term') }}</option>
+              <option v-for="pt in paymentTerms" :key="pt.id" :value="pt.id">
+                {{ pt.name }} ({{ pt.due_days }} {{ t('days') }})
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>{{ t('customer-credit') }}</label>
             <input type="number" step="0.01" min="0" v-model.number="form.credit_limit" class="form-input" />
           </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label>{{ t('customer-balance') }}</label>
             <input type="number" step="0.01" min="0" v-model.number="form.balance" class="form-input" />
           </div>
-        </div>
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="form.is_active" />
-            <span>{{ t('active') }}</span>
-          </label>
+          <div class="form-group checkbox-group" style="align-self: center; margin-top: 18px;">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="form.is_active" />
+              <span>{{ t('active') }}</span>
+            </label>
+          </div>
         </div>
       </div>
       <div class="panel-footer">
@@ -204,6 +217,7 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const items = ref([])
+const paymentTerms = ref([])
 const searchQuery = ref('')
 const groupFilter = ref('')
 const creditFilter = ref('')
@@ -212,7 +226,7 @@ const editing = ref(false)
 const saving = ref(false)
 const editId = ref(null)
 const confirmTarget = ref(null)
-const form = ref({ name: '', group_name: 'Retail', phone: '', email: '', credit_limit: 0, balance: 0, is_active: true })
+const form = ref({ name: '', group_name: 'Retail', phone: '', email: '', payment_term_id: null, credit_limit: 0, balance: 0, is_active: true })
 
 function isOverLimit(item) {
   const cl = item?.credit_limit || 0
@@ -283,6 +297,12 @@ function formatNum(val) {
   return val ? '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '$0.00'
 }
 
+function getTermName(termId) {
+  if (!termId) return '-'
+  const pt = paymentTerms.value.find(t => t.id === termId)
+  return pt ? pt.name : `Term #${termId}`
+}
+
 function utilPct(item) {
   const cl = item.credit_limit || 0
   const bal = item.balance || 0
@@ -309,8 +329,12 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/T0010I/')
+    const [res, termsRes] = await Promise.all([
+      api.get('/T0010I/'),
+      api.get('/T0096I/').catch(() => ({ data: [] })),
+    ])
     items.value = res.data || []
+    paymentTerms.value = termsRes.data || []
   } catch {
     error.value = t('failed-load')
   } finally {
@@ -327,6 +351,7 @@ function openPanel(item) {
       group_name: item.group_name || 'Retail',
       phone: item.phone || '',
       email: item.email || '',
+      payment_term_id: item.payment_term_id ?? null,
       credit_limit: item.credit_limit || 0,
       balance: item.balance || 0,
       is_active: item.is_active,
@@ -334,7 +359,7 @@ function openPanel(item) {
   } else {
     editing.value = false
     editId.value = null
-    form.value = { name: '', group_name: 'Retail', phone: '', email: '', credit_limit: 0, balance: 0, is_active: true }
+    form.value = { name: '', group_name: 'Retail', phone: '', email: '', payment_term_id: null, credit_limit: 0, balance: 0, is_active: true }
   }
   panelOpen.value = true
 }
@@ -350,6 +375,7 @@ async function saveItem() {
       ...form.value,
       phone: form.value.phone || null,
       email: form.value.email || null,
+      payment_term_id: form.value.payment_term_id ? Number(form.value.payment_term_id) : null,
     }
     if (editing.value) {
       await api.put(`/T0010I/${editId.value}`, payload)
@@ -408,6 +434,7 @@ onMounted(load)
 .col-name { min-width: 150px; }
 .col-group { width: 110px; }
 .col-contact { width: 130px; }
+.col-term { width: 140px; }
 .col-num { width: 120px; text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
 .col-usage { width: 130px; }
 .col-actions { width: 80px; }
@@ -417,6 +444,7 @@ onMounted(load)
 
 .cell-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 .group-tag { display: inline-block; padding: 2px 8px; background: var(--bg-surface-low); border-radius: 4px; font-size: 12px; color: var(--text-muted); }
+.term-tag { display: inline-block; padding: 2px 8px; background: var(--bg-surface-low); border-radius: 4px; font-size: 12px; color: var(--color-primary); font-weight: 500; }
 
 .util-container { display: flex; flex-direction: column; gap: 3px; min-width: 100px; }
 .util-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 2px; }
