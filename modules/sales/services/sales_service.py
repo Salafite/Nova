@@ -1,6 +1,7 @@
 import logging
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
+from modules.sales.services.credit_service import CreditService
 from packages.database.sequence import generate_invoice_number
 from packages.database.connection import get_connection, release_connection
 
@@ -173,6 +174,7 @@ class SalesOrderService(CrudService):
         pl_repo: CrudRepository = None,
         pli_repo: CrudRepository = None,
         product_repo: CrudRepository = None,
+        credit_service: CreditService = None,
     ):
         super().__init__(repo or ORDER_REPO)
         self.line_repo = line_repo or LINE_REPO
@@ -181,6 +183,11 @@ class SalesOrderService(CrudService):
         self.pl_repo = pl_repo or PL_REPO
         self.pli_repo = pli_repo or PLI_REPO
         self.product_repo = product_repo or PRODUCT_REPO
+        self.credit_service = credit_service or CreditService(
+            customer_repo=self.customer_repo,
+            invoice_repo=self.inv_repo,
+            order_repo=self.repo,
+        )
 
     def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None):
         if filters and 'is_catch_weight' in filters:
@@ -202,21 +209,28 @@ class SalesOrderService(CrudService):
         return super().list(filters=filters, order_by=order_by, limit=limit, offset=offset, conn=conn)
 
     def create(self, payload: dict, conn=None):
+        payload = dict(payload)
         if not payload.get('grand_total') and payload.get('subtotal') is not None:
             payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
         customer_id = payload.get('customer_id')
-        if customer_id:
-            customer = self.customer_repo.get(customer_id, conn=conn)
-            if customer:
-                new_balance = customer.get('balance', 0) + payload.get('grand_total', 0)
-                credit_limit = customer.get('credit_limit', 0)
-                if credit_limit > 0 and new_balance > credit_limit:
-                    from fastapi import HTTPException
-                    logger.warning(
-                        f"Order creation rejected for customer {customer.get('name')} (id {customer_id}): "
-                        f"credit limit {credit_limit} exceeded by new balance {new_balance}"
-                    )
-                    raise HTTPException(400, f'Order would exceed credit limit ({customer.get("name")}: limit={credit_limit}, new balance={new_balance})')
+        if customer_id and self.credit_service:
+            order_amount = float(payload.get('grand_total', 0) or 0)
+            eval_result = self.credit_service.evaluate_order_credit(
+                customer_id=customer_id,
+                order_amount=order_amount,
+                conn=conn,
+            )
+            if eval_result.get('is_hold_required'):
+                payload['status'] = 'Credit Hold'
+                payload['hold_reason'] = eval_result.get('hold_reason')
+                logger.warning(
+                    f"Order creation placed on Credit Hold for customer {eval_result.get('customer_name')} "
+                    f"(id {customer_id}): {eval_result.get('hold_reason')}"
+                )
+            elif not payload.get('status'):
+                payload['status'] = 'Pending'
+        elif not payload.get('status'):
+            payload['status'] = 'Pending'
         return super().create(payload, conn=conn)
 
     def update(self, id_val, payload: dict, conn=None):

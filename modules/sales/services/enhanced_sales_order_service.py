@@ -1,7 +1,12 @@
 from decimal import Decimal
+import logging
+from typing import Optional
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
+from modules.sales.services.credit_service import CreditService
 from packages.database.connection import get_connection, release_connection
+
+logger = logging.getLogger(__name__)
 
 
 def _to_decimal(value) -> Decimal:
@@ -13,9 +18,47 @@ def _to_decimal(value) -> Decimal:
 
 
 class EnhancedSalesOrderService(CrudService):
-    def __init__(self, repo):
-        super().__init__(repo)
-        self.line_repo = CrudRepository(
+    def __init__(
+        self,
+        repo: Optional[CrudRepository] = None,
+        line_repo: Optional[CrudRepository] = None,
+        price_list_item_repo: Optional[CrudRepository] = None,
+        tax_rate_repo: Optional[CrudRepository] = None,
+        customer_repo: Optional[CrudRepository] = None,
+        inv_repo: Optional[CrudRepository] = None,
+        credit_service: Optional[CreditService] = None,
+    ):
+        order_repo = repo or CrudRepository(
+            'T0012',
+            business_columns=[
+                'id',
+                'order_number',
+                'customer_id',
+                'warehouse_id',
+                'subtotal',
+                'tax',
+                'grand_total',
+                'freight_amount',
+                'discount_amount',
+                'sales_rep_id',
+                'status',
+                'order_date',
+                'notes',
+                'price_list_id',
+                'tax_rate_id',
+                'payment_term_id',
+                'client_order_uuid',
+                'is_offline_sync',
+                'sync_status',
+                'offline_created_at',
+                'hold_reason',
+                'hold_released_by',
+                'hold_released_at',
+                'hold_release_reason',
+            ],
+        )
+        super().__init__(order_repo)
+        self.line_repo = line_repo or CrudRepository(
             'T0013',
             business_columns=[
                 'id',
@@ -37,8 +80,63 @@ class EnhancedSalesOrderService(CrudService):
                 'recalculated_total',
             ],
         )
-        self.price_list_item_repo = CrudRepository('T0084', business_columns=['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
-        self.tax_rate_repo = CrudRepository('T0085', business_columns=['id', 'name', 'code', 'rate', 'type'])
+        self.price_list_item_repo = price_list_item_repo or CrudRepository(
+            'T0084', business_columns=['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty']
+        )
+        self.tax_rate_repo = tax_rate_repo or CrudRepository(
+            'T0085', business_columns=['id', 'name', 'code', 'rate', 'type']
+        )
+        self.customer_repo = customer_repo or CrudRepository(
+            'T0010', business_columns=['id', 'name', 'credit_limit', 'balance']
+        )
+        self.inv_repo = inv_repo or CrudRepository(
+            'T0090',
+            business_columns=[
+                'id',
+                'invoice_number',
+                'invoice_type',
+                'partner_id',
+                'sales_order_id',
+                'sales_rep_id',
+                'issue_date',
+                'due_date',
+                'total_amount',
+                'freight_amount',
+                'discount_amount',
+                'status',
+                'notes',
+            ],
+        )
+        self.credit_service = credit_service or CreditService(
+            customer_repo=self.customer_repo,
+            invoice_repo=self.inv_repo,
+            order_repo=self.repo,
+        )
+
+    def create(self, payload: dict, conn=None):
+        payload = dict(payload)
+        if not payload.get('grand_total') and payload.get('subtotal') is not None:
+            payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
+        customer_id = payload.get('customer_id')
+        if customer_id and self.credit_service:
+            order_amount = float(payload.get('grand_total', 0) or 0)
+            eval_result = self.credit_service.evaluate_order_credit(
+                customer_id=customer_id,
+                order_amount=order_amount,
+                conn=conn,
+            )
+            if eval_result.get('is_hold_required'):
+                payload['status'] = 'Credit Hold'
+                payload['hold_reason'] = eval_result.get('hold_reason')
+                logger.warning(
+                    f"EnhancedSalesOrderService: Order placed on Credit Hold for customer {eval_result.get('customer_name')} "
+                    f"(id {customer_id}): {eval_result.get('hold_reason')}"
+                )
+            elif not payload.get('status'):
+                payload['status'] = 'Pending'
+        elif not payload.get('status'):
+            payload['status'] = 'Pending'
+        return super().create(payload, conn=conn)
 
     def create_with_lines(self, order_data, lines, conn=None):
         should_release = False
@@ -47,10 +145,11 @@ class EnhancedSalesOrderService(CrudService):
             should_release = True
 
         try:
-            order = super().create(order_data, conn=conn)
+            order_payload = dict(order_data)
+            order = super().create(order_payload, conn=conn)
             subtotal = Decimal(0)
-            tax_rate_pct = _to_decimal(self._lookup_tax_rate(order_data.get('tax_rate_id'), conn=conn))
-            price_list_id = order_data.get('price_list_id')
+            tax_rate_pct = _to_decimal(self._lookup_tax_rate(order_payload.get('tax_rate_id'), conn=conn))
+            price_list_id = order_payload.get('price_list_id')
 
             for line_data in lines:
                 unit_price = _to_decimal(self._resolve_unit_price(line_data, price_list_id, conn=conn))
@@ -74,11 +173,38 @@ class EnhancedSalesOrderService(CrudService):
                 }, conn=conn)
 
             tax_amount = subtotal * tax_rate_pct / Decimal(100)
-            result = super().update(order['id'], {
-                'subtotal': subtotal,
-                'tax': tax_amount,
-                'grand_total': subtotal + tax_amount,
-            }, conn=conn)
+            grand_total = subtotal + tax_amount
+
+            update_payload = {
+                'subtotal': float(subtotal),
+                'tax': float(tax_amount),
+                'grand_total': float(grand_total),
+            }
+
+            customer_id = order_payload.get('customer_id')
+            if customer_id and self.credit_service:
+                eval_result = self.credit_service.evaluate_order_credit(
+                    customer_id=customer_id,
+                    order_amount=float(grand_total),
+                    conn=conn,
+                )
+                if eval_result.get('is_hold_required'):
+                    update_payload['status'] = 'Credit Hold'
+                    update_payload['hold_reason'] = eval_result.get('hold_reason')
+                    logger.warning(
+                        f"EnhancedSalesOrderService.create_with_lines: Order {order['id']} placed on Credit Hold: "
+                        f"{eval_result.get('hold_reason')}"
+                    )
+                elif order_payload.get('status'):
+                    update_payload['status'] = order_payload.get('status')
+                else:
+                    update_payload['status'] = order.get('status') or 'Pending'
+            elif order_payload.get('status'):
+                update_payload['status'] = order_payload.get('status')
+            else:
+                update_payload['status'] = order.get('status') or 'Pending'
+
+            result = super().update(order['id'], update_payload, conn=conn)
             if should_release:
                 conn.commit()
             return result
