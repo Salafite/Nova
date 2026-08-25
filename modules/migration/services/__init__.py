@@ -19,6 +19,7 @@ from .reconciliation_service import (
     reconciliation_service,
 )
 from .commit_service import CommitService, commit_service
+from .rollback_service import RollbackService, rollback_service
 
 migration_service = MigrationService()
 
@@ -44,6 +45,8 @@ __all__ = [
     "EntityCountReconciler",
     "CommitService",
     "commit_service",
+    "RollbackService",
+    "rollback_service",
 ]
 
 
