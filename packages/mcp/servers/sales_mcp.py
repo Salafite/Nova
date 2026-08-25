@@ -364,6 +364,25 @@ def _list_tax_rates():
     return _tax_rates_svc.list()
 
 
+def _check_customer_credit(customer_id: int, order_amount: float = 0.0, as_of_date: str = None):
+    if order_amount and float(order_amount) > 0:
+        return _credit_svc.evaluate_order_credit(customer_id, order_amount=float(order_amount), as_of_date=as_of_date)
+    return _credit_svc.get_customer_credit_status(customer_id, as_of_date=as_of_date)
+
+
+def _override_credit_hold(id: int, reason: str = "", target_status: str = "Confirmed"):
+    user = get_current_user() or {}
+    user_id = user.get("id") or user.get("user_id") or 1
+    user_name = user.get("username") or user.get("name") or "Financial Manager"
+    return _orders_svc.override_credit_hold(
+        order_id=id,
+        user_id=user_id,
+        user_name=user_name,
+        reason=reason,
+        target_status=target_status,
+    )
+
+
 def main():
     register_tools()
     from packages.mcp.server import McpServer
