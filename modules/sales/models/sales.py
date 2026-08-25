@@ -81,6 +81,19 @@ class SalesOrderResponse(AuditMixin):
     hold_release_reason: Optional[str] = None
 
 
+class CreditHoldOverrideRequest(BaseModel):
+    reason: Optional[str] = None
+    release_reason: Optional[str] = None
+    notes: Optional[str] = None
+    target_status: Optional[str] = 'Confirmed'
+
+
+class CreditHoldRejectRequest(BaseModel):
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+
+
+
 class SalesLineCreate(BaseModel):
     sales_order_id: int
     product_id: Optional[int] = None

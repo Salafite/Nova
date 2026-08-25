@@ -1,5 +1,6 @@
 from modules.sales.models.sales import (
     SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse,
+    CreditHoldOverrideRequest, CreditHoldRejectRequest,
     SalesLineCreate, SalesLineUpdate, SalesLineResponse,
     InstallmentPlanCreate, InstallmentPlanUpdate, InstallmentPlanResponse,
     InstallPaymentCreate, InstallPaymentUpdate, InstallPaymentResponse,

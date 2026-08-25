@@ -1,4 +1,6 @@
+from datetime import datetime, timezone
 import logging
+from typing import Optional, Union, Dict, Any, List
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.core.context import get_current_tenant
@@ -755,5 +757,172 @@ class SalesOrderService(CrudService):
             error_msg = f'Stock release partial failure: {"; ".join(errors)}'
             logger.error(f"Sales order {order_id} stock release failed: {error_msg}")
             raise RuntimeError(error_msg)
+
+    def override_credit_hold(
+        self,
+        order_id: int,
+        user_id: Optional[int] = None,
+        user_name: Optional[str] = None,
+        reason: str = "",
+        target_status: str = "Confirmed",
+        conn=None,
+    ) -> dict:
+        """
+        Override a Credit Hold on a sales order, transitioning it to target_status (default 'Confirmed').
+        Sets hold release tracking metadata, reserves stock if target is Confirmed, and notifies sales rep.
+        """
+        order = self.repo.get(order_id, conn=conn)
+        if not order:
+            logger.error(f"Cannot override credit hold: Sales order {order_id} not found")
+            raise ValueError(f"Sales order {order_id} not found")
+
+        current_status = order.get('status')
+        if current_status != 'Credit Hold':
+            from fastapi import HTTPException
+            raise HTTPException(
+                400,
+                f"Cannot override credit hold: Sales order {order_id} is in '{current_status}' status, expected 'Credit Hold'."
+            )
+
+        if target_status not in ('Confirmed', 'Pending', 'Draft'):
+            from fastapi import HTTPException
+            raise HTTPException(
+                400,
+                f"Invalid target status '{target_status}' for credit hold override. Allowed: Confirmed, Pending, Draft"
+            )
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        rel_reason = reason or "Credit hold override approved by financial manager"
+        rel_by_id = None
+        if user_id is not None:
+            try:
+                rel_by_id = int(user_id)
+            except (ValueError, TypeError):
+                rel_by_id = None
+
+        update_payload = {
+            'status': target_status,
+            'hold_released_by': rel_by_id,
+            'hold_released_at': now_iso,
+            'hold_release_reason': rel_reason,
+        }
+
+        updated = self.update(order_id, update_payload, conn=conn)
+
+        # Notify sales rep if assigned
+        sales_rep_id = order.get('sales_rep_id')
+        order_num = order.get('order_number') or str(order_id)
+        mgr_label = user_name or (f"User #{user_id}" if user_id else "Financial Manager")
+
+        if self.notification_service:
+            try:
+                notif_title = f"Credit Hold Approved: Order #{order_num}"
+                notif_msg = (
+                    f"Credit hold on Sales Order #{order_num} has been approved and overridden by {mgr_label}. "
+                    f"Status updated to '{target_status}'. Reason: {rel_reason}"
+                )
+                if sales_rep_id:
+                    self.notification_service.create_notification(
+                        user_id=sales_rep_id,
+                        title=notif_title,
+                        message=notif_msg,
+                        notification_type='Credit Hold Override',
+                        reference_type='SalesOrder',
+                        reference_id=order_id,
+                        conn=conn,
+                    )
+                self.notification_service.notify_roles(
+                    roles=['sales_rep', 'sales_manager', 'sales'],
+                    title=notif_title,
+                    message=notif_msg,
+                    notification_type='Credit Hold Override',
+                    reference_type='SalesOrder',
+                    reference_id=order_id,
+                    conn=conn,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to dispatch sales rep notification for credit hold override on order {order_id}: {e}")
+
+        return updated
+
+    def reject_credit_hold(
+        self,
+        order_id: int,
+        user_id: Optional[int] = None,
+        user_name: Optional[str] = None,
+        reason: str = "",
+        conn=None,
+    ) -> dict:
+        """
+        Reject a credit hold for a sales order, transitioning it to 'Cancelled'.
+        Sets hold release tracking metadata and notifies sales rep.
+        """
+        order = self.repo.get(order_id, conn=conn)
+        if not order:
+            logger.error(f"Cannot reject credit hold: Sales order {order_id} not found")
+            raise ValueError(f"Sales order {order_id} not found")
+
+        current_status = order.get('status')
+        if current_status != 'Credit Hold':
+            from fastapi import HTTPException
+            raise HTTPException(
+                400,
+                f"Cannot reject credit hold: Sales order {order_id} is in '{current_status}' status, expected 'Credit Hold'."
+            )
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        rej_reason = f"Rejected: {reason}" if reason else "Credit hold override rejected by financial manager"
+        rel_by_id = None
+        if user_id is not None:
+            try:
+                rel_by_id = int(user_id)
+            except (ValueError, TypeError):
+                rel_by_id = None
+
+        update_payload = {
+            'status': 'Cancelled',
+            'hold_released_by': rel_by_id,
+            'hold_released_at': now_iso,
+            'hold_release_reason': rej_reason,
+        }
+
+        updated = self.update(order_id, update_payload, conn=conn)
+
+        # Notify sales rep if assigned
+        sales_rep_id = order.get('sales_rep_id')
+        order_num = order.get('order_number') or str(order_id)
+        mgr_label = user_name or (f"User #{user_id}" if user_id else "Financial Manager")
+
+        if self.notification_service:
+            try:
+                notif_title = f"Credit Hold Rejected: Order #{order_num}"
+                notif_msg = (
+                    f"Sales Order #{order_num} has been rejected by {mgr_label} and cancelled due to credit hold. "
+                    f"Reason: {reason or 'Credit limit policy violation'}"
+                )
+                if sales_rep_id:
+                    self.notification_service.create_notification(
+                        user_id=sales_rep_id,
+                        title=notif_title,
+                        message=notif_msg,
+                        notification_type='Credit Hold Rejected',
+                        reference_type='SalesOrder',
+                        reference_id=order_id,
+                        conn=conn,
+                    )
+                self.notification_service.notify_roles(
+                    roles=['sales_rep', 'sales_manager', 'sales'],
+                    title=notif_title,
+                    message=notif_msg,
+                    notification_type='Credit Hold Rejected',
+                    reference_type='SalesOrder',
+                    reference_id=order_id,
+                    conn=conn,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to dispatch sales rep notification for credit hold rejection on order {order_id}: {e}")
+
+        return updated
+
 
 
