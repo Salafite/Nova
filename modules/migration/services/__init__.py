@@ -1,4 +1,4 @@
-from .migration_service import MigrationService
+from .migration_service import MigrationService, migration_service
 from .mapping_engine import MappingEngine, mapping_engine
 from .cleansing_service import (
     CleansingService,
@@ -20,8 +20,6 @@ from .reconciliation_service import (
 )
 from .commit_service import CommitService, commit_service
 from .rollback_service import RollbackService, rollback_service
-
-migration_service = MigrationService()
 
 __all__ = [
     "MigrationService",
