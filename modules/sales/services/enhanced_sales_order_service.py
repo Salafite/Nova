@@ -3,7 +3,9 @@ import logging
 from typing import Optional
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
+from modules.core.context import get_current_tenant
 from modules.sales.services.credit_service import CreditService
+from modules.administration.services.notification_service import NotificationService
 from packages.database.connection import get_connection, release_connection
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ class EnhancedSalesOrderService(CrudService):
         customer_repo: Optional[CrudRepository] = None,
         inv_repo: Optional[CrudRepository] = None,
         credit_service: Optional[CreditService] = None,
+        notification_service: Optional[NotificationService] = None,
     ):
         order_repo = repo or CrudRepository(
             'T0012',
@@ -112,12 +115,129 @@ class EnhancedSalesOrderService(CrudService):
             invoice_repo=self.inv_repo,
             order_repo=self.repo,
         )
+        self.notification_service = notification_service or NotificationService()
+
+    def _notify_credit_hold(
+        self,
+        order: dict,
+        hold_reason: str,
+        customer_name: str = None,
+        conn=None,
+    ):
+        """Dispatch instant manager notifications and WebSocket broadcast when an order is placed on Credit Hold."""
+        if not order:
+            return
+        order_id = order.get('id')
+        order_number = order.get('order_number') or str(order_id)
+        if not customer_name:
+            customer_id = order.get('customer_id')
+            if customer_id and self.customer_repo:
+                try:
+                    cust = self.customer_repo.get(customer_id, conn=conn)
+                    customer_name = cust.get('name') if cust else f"Customer #{customer_id}"
+                except Exception as e:
+                    logger.warning(f"Failed to fetch customer for credit hold notification: {e}")
+                    customer_name = f"Customer #{customer_id}"
+            else:
+                customer_name = "Customer"
+
+        # 1. Send in-app notifications to financial managers & credit controllers
+        if self.notification_service:
+            try:
+                title = f"Credit Hold: Sales Order #{order_number}"
+                msg = (
+                    f"Sales Order #{order_number} for customer {customer_name} has been placed on Credit Hold. "
+                    f"Reason: {hold_reason}"
+                )
+                self.notification_service.notify_roles(
+                    roles=['admin', 'financial_manager', 'finance', 'manager', 'credit_controller', 'accounting'],
+                    title=title,
+                    message=msg,
+                    notification_type='Credit Hold',
+                    reference_type='SalesOrder',
+                    reference_id=order_id,
+                    conn=conn,
+                )
+                logger.info(f"Dispatched credit hold notification for order #{order_number} (id: {order_id})")
+            except Exception as e:
+                logger.warning(f"Failed to dispatch credit hold notification for order {order_id}: {e}")
+
+        # 2. Trigger WebSocket broadcast
+        try:
+            business_id = get_current_tenant() or order.get('business_id') or 1
+            self._dispatch_ws_broadcast(
+                business_id=business_id,
+                order_id=order_id,
+                order_number=order_number,
+                status='Credit Hold',
+                hold_reason=hold_reason,
+                customer_name=customer_name,
+                customer_id=order.get('customer_id'),
+                grand_total=float(order.get('grand_total', 0) or 0),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to trigger credit hold WebSocket broadcast for order {order_id}: {e}")
+
+    def _dispatch_ws_broadcast(
+        self,
+        business_id: int,
+        order_id: int,
+        order_number: str,
+        status: str,
+        hold_reason: str = None,
+        customer_name: str = None,
+        customer_id: int = None,
+        grand_total: float = None,
+    ):
+        """Dispatch WebSocket broadcast safely across sync and async contexts."""
+        try:
+            import asyncio
+            from packages.ws.broadcast import order_status_changed, order_credit_hold_placed
+
+            async def _do_broadcast():
+                try:
+                    await order_status_changed(
+                        business_id,
+                        order_id,
+                        order_number,
+                        status,
+                        hold_reason=hold_reason,
+                        customer_name=customer_name,
+                    )
+                    if status == 'Credit Hold':
+                        await order_credit_hold_placed(
+                            business_id=business_id,
+                            order_id=order_id,
+                            order_number=order_number,
+                            customer_id=customer_id,
+                            customer_name=customer_name,
+                            hold_reason=hold_reason,
+                            grand_total=grand_total,
+                        )
+                except Exception as b_err:
+                    logger.warning(f"Error during websocket broadcast execution: {b_err}")
+
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    loop.create_task(_do_broadcast())
+                else:
+                    loop.run_until_complete(_do_broadcast())
+            except RuntimeError:
+                try:
+                    asyncio.run(_do_broadcast())
+                except Exception as sync_err:
+                    logger.warning(f"Failed to execute websocket broadcast on fresh event loop: {sync_err}")
+        except Exception as e:
+            logger.warning(f"Failed to dispatch websocket broadcast: {e}")
 
     def create(self, payload: dict, conn=None):
         payload = dict(payload)
         if not payload.get('grand_total') and payload.get('subtotal') is not None:
             payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
         customer_id = payload.get('customer_id')
+        is_hold = False
+        eval_result = None
         if customer_id and self.credit_service:
             order_amount = float(payload.get('grand_total', 0) or 0)
             eval_result = self.credit_service.evaluate_order_credit(
@@ -128,6 +248,7 @@ class EnhancedSalesOrderService(CrudService):
             if eval_result.get('is_hold_required'):
                 payload['status'] = 'Credit Hold'
                 payload['hold_reason'] = eval_result.get('hold_reason')
+                is_hold = True
                 logger.warning(
                     f"EnhancedSalesOrderService: Order placed on Credit Hold for customer {eval_result.get('customer_name')} "
                     f"(id {customer_id}): {eval_result.get('hold_reason')}"
@@ -136,7 +257,16 @@ class EnhancedSalesOrderService(CrudService):
                 payload['status'] = 'Pending'
         elif not payload.get('status'):
             payload['status'] = 'Pending'
-        return super().create(payload, conn=conn)
+        
+        created = super().create(payload, conn=conn)
+        if is_hold and created:
+            self._notify_credit_hold(
+                created,
+                hold_reason=eval_result.get('hold_reason', '') if eval_result else payload.get('hold_reason', ''),
+                customer_name=eval_result.get('customer_name') if eval_result else None,
+                conn=conn,
+            )
+        return created
 
     def create_with_lines(self, order_data, lines, conn=None):
         should_release = False
@@ -182,6 +312,8 @@ class EnhancedSalesOrderService(CrudService):
             }
 
             customer_id = order_payload.get('customer_id')
+            is_hold = False
+            eval_result = None
             if customer_id and self.credit_service:
                 eval_result = self.credit_service.evaluate_order_credit(
                     customer_id=customer_id,
@@ -191,6 +323,7 @@ class EnhancedSalesOrderService(CrudService):
                 if eval_result.get('is_hold_required'):
                     update_payload['status'] = 'Credit Hold'
                     update_payload['hold_reason'] = eval_result.get('hold_reason')
+                    is_hold = True
                     logger.warning(
                         f"EnhancedSalesOrderService.create_with_lines: Order {order['id']} placed on Credit Hold: "
                         f"{eval_result.get('hold_reason')}"
@@ -205,6 +338,13 @@ class EnhancedSalesOrderService(CrudService):
                 update_payload['status'] = order.get('status') or 'Pending'
 
             result = super().update(order['id'], update_payload, conn=conn)
+            if is_hold and result:
+                self._notify_credit_hold(
+                    result,
+                    hold_reason=eval_result.get('hold_reason', '') if eval_result else update_payload.get('hold_reason', ''),
+                    customer_name=eval_result.get('customer_name') if eval_result else None,
+                    conn=conn,
+                )
             if should_release:
                 conn.commit()
             return result
