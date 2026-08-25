@@ -29,7 +29,8 @@ def mock_svc():
                         _price_lists_svc=MagicMock(),
                         _tax_rates_svc=MagicMock(),
                         _lines_svc=MagicMock(),
-                        _lines_repo=MagicMock()):
+                        _lines_repo=MagicMock(),
+                        _aging_svc=MagicMock()):
         yield
 
 
@@ -239,9 +240,43 @@ class TestCustomers:
         assert result == [MOCK_CUSTOMER]
 
     def test_aging(self, mock_svc):
-        sales_mcp._customers_svc.get.return_value = MOCK_CUSTOMER
+        mock_aging = {
+            "customer_id": 1,
+            "customer_name": "Acme Corp",
+            "balance": 1500.0,
+            "as_of_date": "2026-08-25",
+            "aging": {
+                "current": 500.0,
+                "1_30": 1000.0,
+                "31_60": 0.0,
+                "61_90": 0.0,
+                "90_plus": 0.0,
+                "30": 1000.0,
+                "60": 0.0,
+                "90": 0.0,
+                "total_outstanding": 1500.0,
+                "total_paid": 0.0,
+            },
+            "invoices_count": 2,
+            "open_invoices_count": 2,
+            "paid_invoices_count": 0,
+        }
+        sales_mcp._aging_svc.get_customer_aging.return_value = mock_aging
+        result = sales_mcp._get_customer_aging(id=1, as_of_date="2026-08-25")
+        assert result == mock_aging
+        sales_mcp._aging_svc.get_customer_aging.assert_called_with(1, as_of_date="2026-08-25")
+
+    def test_aging_default_as_of_date(self, mock_svc):
+        mock_aging = {
+            "customer_id": 1,
+            "customer_name": "Acme Corp",
+            "balance": 0.0,
+            "aging": {"current": 0.0, "1_30": 0.0, "31_60": 0.0, "61_90": 0.0, "90_plus": 0.0},
+        }
+        sales_mcp._aging_svc.get_customer_aging.return_value = mock_aging
         result = sales_mcp._get_customer_aging(id=1)
-        assert result == MOCK_CUSTOMER
+        assert result == mock_aging
+        sales_mcp._aging_svc.get_customer_aging.assert_called_with(1, as_of_date=None)
 
 
 class TestQuotations:
