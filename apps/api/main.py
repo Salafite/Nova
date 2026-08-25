@@ -49,6 +49,7 @@ from packages.mcp.servers.manufacturing_mcp import register_tools as register_ma
 from packages.mcp.servers.maintenance_mcp import register_tools as register_maintenance_mcp
 from packages.mcp.servers.notifications_mcp import register_tools as register_notifications_mcp
 from packages.mcp.servers.pos_mcp import register_tools as register_pos_mcp
+from packages.mcp.servers.migration_mcp import register_tools as register_migration_mcp
 from modules.administration.controllers.user_preferences import router as user_preferences_router
 from modules.administration.controllers.admin_preferences import router as admin_preferences_router
 from modules.purchasing.controllers.restock_controller import router as restock_router
@@ -117,6 +118,7 @@ register_manufacturing_mcp()
 register_maintenance_mcp()
 register_notifications_mcp()
 register_pos_mcp()
+register_migration_mcp()
 app.include_router(create_mcp_router(mcp_server))
 
 
