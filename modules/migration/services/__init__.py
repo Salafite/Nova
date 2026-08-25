@@ -18,6 +18,7 @@ from .reconciliation_service import (
     ReconciliationService,
     reconciliation_service,
 )
+from .commit_service import CommitService, commit_service
 
 migration_service = MigrationService()
 
@@ -41,6 +42,8 @@ __all__ = [
     "CustomerBalanceReconciler",
     "InventoryReconciler",
     "EntityCountReconciler",
+    "CommitService",
+    "commit_service",
 ]
 
 
