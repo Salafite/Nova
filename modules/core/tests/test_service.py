@@ -146,7 +146,7 @@ class TestPermissionService:
     def test_get_required_permission_custom_routes(self):
         from modules.core.services.permission_service import get_required_permission
         assert get_required_permission('/api/categories', 'Categories') == 'PRODUCTS_VIEW'
-        assert get_required_permission('/api/v1/migration', 'Migration') == 'ADMIN_VIEW'
+        assert get_required_permission('/api/v1/migration', 'Migration') == 'ADMIN_MIGRATION'
         assert get_required_permission('/api/bi/dashboard', 'BI Dashboard') == 'BI_VIEW'
         assert get_required_permission('/api/admin/users', 'Admin User Preferences') == 'ADMIN_VIEW'
         assert get_required_permission('/api/adjustments', 'Stock Adjustments') == 'INVENTORY_VIEW'

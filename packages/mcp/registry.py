@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import time
 import uuid
@@ -21,6 +21,7 @@ _prompts: dict[str, dict] = {}
 _pending_actions: dict[str, dict] = {}
 _ACTION_TTL = 300
 _ACTION_KEY_PREFIX = "nova:mcp:action:"
+_CONFIRM_ACTION_REGISTERED: bool = False
 
 # Context variable for the current user, set before handler execution
 _current_user: contextvars.ContextVar[dict | None] = contextvars.ContextVar("current_user", default=None)

@@ -105,7 +105,7 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0100': 'ADMIN_VIEW',         # Module Registry
     'T0101': 'WAREHOUSE_VIEW',     # Pick Lists
     'T0103': 'PURCHASING_VIEW',    # Product Suppliers
-    'T0104': 'ADMIN_VIEW',         # Data Migration
+    'T0104': 'ADMIN_MIGRATION',     # Data Migration
     'T0105': 'INVENTORY_VIEW',     # Inventory Counts
     'T0106': 'INVENTORY_VIEW',     # Inventory Count Items
     'T0109': 'SALES_VIEW',         # Commission Rules
@@ -115,7 +115,15 @@ T_CODE_PERMISSIONS: dict[str, str] = {
 # Non-T-code custom route and tag mappings
 CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/categories': 'PRODUCTS_VIEW',
-    '/api/v1/migration': 'ADMIN_VIEW',
+    '/api/v1/migration': 'ADMIN_MIGRATION',
+    '/api/v1/migration/connectors/test': 'ADMIN_MIGRATION',
+    '/api/v1/migration/connectors/discover': 'ADMIN_MIGRATION',
+    '/api/v1/migration/connectors/preview': 'ADMIN_MIGRATION',
+    '/api/v1/migration/dry-run': 'ADMIN_MIGRATION',
+    '/api/v1/migration/commit': 'ADMIN_MIGRATION',
+    '/api/v1/migration/rollback': 'ADMIN_MIGRATION',
+    '/api/v1/migration/batches': 'ADMIN_MIGRATION',
+    '/api/v1/migration/upload': 'ADMIN_MIGRATION',
     '/api/bi/dashboard': 'BI_VIEW',
     '/api/bi/executive': 'BI_VIEW',
     '/api/bi/executive/export': 'BI_VIEW',
@@ -128,9 +136,15 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/portal/invoices': 'PORTAL_PAY',
     '/api/T0025I': 'ADMIN_VIEW',
     '/api/T0100I': 'ADMIN_VIEW',
+    '/api/T0104I': 'ADMIN_MIGRATION',
     '/api/sales/mobile': 'FIELD_SALES_MOBILE',
     'Categories': 'PRODUCTS_VIEW',
-    'Migration': 'ADMIN_VIEW',
+    'Migration': 'ADMIN_MIGRATION',
+    'Data Migration': 'ADMIN_MIGRATION',
+    'Legacy Migration': 'ADMIN_MIGRATION',
+    'T0104 - Data Migration': 'ADMIN_MIGRATION',
+    'T0104 - Legacy Migration': 'ADMIN_MIGRATION',
+    'ADMIN_MIGRATION': 'ADMIN_MIGRATION',
     'BI Dashboard': 'BI_VIEW',
     'Executive Analytics': 'BI_VIEW',
     'Executive Financial Exports': 'BI_VIEW',
@@ -152,6 +166,9 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
 # Role to granted permissions mapping
 _ROLE_PERMISSIONS: dict[str, list[str]] = {
     'Admin': ['*'],
+    'Administrator': ['*'],
+    'Superadmin': ['*'],
+    'Super Admin': ['*'],
     'Manager': [
         'DASHBOARD_VIEW',
         'SALES_VIEW',
@@ -234,6 +251,10 @@ def get_required_permission(prefix: str = '', tag: str = '') -> str:
     if tag in CUSTOM_ROUTE_PERMISSIONS:
         return CUSTOM_ROUTE_PERMISSIONS[tag]
 
+    # Prefix hierarchy check for migration routes
+    if prefix.startswith('/api/v1/migration'):
+        return 'ADMIN_MIGRATION'
+
     # 2. Extract T-code from prefix (e.g. /api/T0001I -> T0001) or tag (e.g. T0001 - UOM)
     match = re.search(r'T(\d{4})', prefix) or re.search(r'T(\d{4})', tag)
     if match:
@@ -253,4 +274,8 @@ def has_permission(user_permissions: list[str] | None, required_permission: str 
         return False
     if '*' in user_permissions:
         return True
-    return required_permission in user_permissions
+    if required_permission in user_permissions:
+        return True
+    if required_permission == 'ADMIN_MIGRATION' and 'ADMIN_VIEW' in user_permissions:
+        return True
+    return False
