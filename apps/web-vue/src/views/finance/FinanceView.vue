@@ -22,23 +22,41 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>{{ t('invoices-number') }}</th>
-              <th>{{ t('invoices-type') }}</th>
-              <th>{{ t('invoices-partner') }}</th>
-              <th>{{ t('invoices-issue-date') }}</th>
-              <th>{{ t('invoices-due-date') }}</th>
-              <th class="col-num">{{ t('invoices-total') }}</th>
-              <th class="text-center">{{ t('status') }}</th>
-              <th class="text-center">{{ t('actions') }}</th>
+              <th>{{ t('invoices-number', 'Invoice #') }}</th>
+              <th>{{ t('invoices-type', 'Type') }}</th>
+              <th>{{ t('invoices-partner', 'Partner / Customer') }}</th>
+              <th>{{ t('payment-terms', 'Payment Terms') }}</th>
+              <th>{{ t('invoices-issue-date', 'Issue Date') }}</th>
+              <th>{{ t('invoices-due-date', 'Due Date') }}</th>
+              <th>{{ t('discount-due-date', 'Discount Deadline') }}</th>
+              <th class="col-num">{{ t('invoices-total', 'Total') }}</th>
+              <th class="text-center">{{ t('status', 'Status') }}</th>
+              <th class="text-center">{{ t('actions', 'Actions') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in items" :key="item.id">
               <td class="cell-mono"><a class="inv-link" @click="router.push(`/finance/${item.id}`)">{{ item.invoice_number }}</a></td>
               <td><span :class="'inv-type inv-' + item.invoice_type.toLowerCase()">{{ item.invoice_type }}</span></td>
-              <td>{{ item.partner_id }}</td>
+              <td>{{ getPartnerName(item.partner_id) }}</td>
+              <td>
+                <span class="font-medium text-primary">{{ getPaymentTermName(item.payment_term_id) }}</span>
+              </td>
               <td class="cell-mono">{{ item.issue_date }}</td>
-              <td class="cell-mono">{{ item.due_date }}</td>
+              <td class="cell-mono">
+                <span :class="isOverdue(item) ? 'text-danger font-bold' : ''">{{ item.due_date }}</span>
+              </td>
+              <td>
+                <div v-if="item.discount_due_date || item.discount_percentage > 0" class="flex items-center gap-1">
+                  <span class="cell-mono" :class="isDiscountExpired(item) ? 'strike text-muted' : 'text-success font-medium'">
+                    {{ item.discount_due_date || '-' }}
+                  </span>
+                  <span v-if="item.discount_percentage > 0" class="badge badge-discount-xs">
+                    {{ item.discount_percentage }}%
+                  </span>
+                </div>
+                <span v-else class="text-muted">-</span>
+              </td>
               <td class="col-num">${{ (item.total_amount || 0).toFixed(2) }}</td>
               <td class="text-center">
                 <span :class="statusBadge(item.status)">{{ item.status }}</span>
@@ -60,17 +78,17 @@
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>{{ editing ? t('edit-invoice') : t('new-invoice') }}</h3>
+          <h3>{{ editing ? t('edit-invoice', 'Edit Invoice') : t('new-invoice', 'New Invoice') }}</h3>
           <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group">
-              <label>{{ t('invoices-number') }} <span class="required">*</span></label>
+              <label>{{ t('invoices-number', 'Invoice #') }} <span class="required">*</span></label>
               <input type="text" v-model="form.invoice_number" class="form-input" maxlength="50" />
             </div>
             <div class="form-group">
-              <label>{{ t('invoices-type') }} <span class="required">*</span></label>
+              <label>{{ t('invoices-type', 'Type') }} <span class="required">*</span></label>
               <select v-model="form.invoice_type" class="form-input">
                 <option value="Sales">Sales</option>
                 <option value="Purchase">Purchase</option>
@@ -79,27 +97,52 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>{{ t('invoices-partner') }} (ID) <span class="required">*</span></label>
+              <label>{{ t('invoices-partner', 'Partner') }} (ID) <span class="required">*</span></label>
               <input type="number" min="1" v-model.number="form.partner_id" class="form-input" />
             </div>
             <div class="form-group">
-              <label>{{ t('invoices-total') }} <span class="required">*</span></label>
-              <input type="number" step="0.01" min="0" v-model.number="form.total_amount" class="form-input" />
+              <label>{{ t('payment-terms', 'Payment Terms') }}</label>
+              <select v-model="form.payment_term_id" @change="onPaymentTermChange" class="form-input">
+                <option :value="null">{{ t('no-term', 'None (No Term)') }}</option>
+                <option v-for="pt in paymentTerms" :key="pt.id" :value="pt.id">
+                  {{ pt.name }} (Net {{ pt.due_days }}d{{ pt.discount_percentage > 0 ? `, ${pt.discount_percentage}% / ${pt.discount_days}d` : '' }})
+                </option>
+              </select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>{{ t('invoices-issue-date') }} <span class="required">*</span></label>
-              <input type="date" v-model="form.issue_date" class="form-input" />
+              <label>{{ t('invoices-total', 'Total Amount') }} <span class="required">*</span></label>
+              <input type="number" step="0.01" min="0" v-model.number="form.total_amount" @input="recalcDiscountAmount" class="form-input" />
             </div>
             <div class="form-group">
-              <label>{{ t('invoices-due-date') }} <span class="required">*</span></label>
+              <label>{{ t('invoices-issue-date', 'Issue Date') }} <span class="required">*</span></label>
+              <input type="date" v-model="form.issue_date" @change="onIssueDateChange" class="form-input" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('invoices-due-date', 'Due Date') }} <span class="required">*</span></label>
               <input type="date" v-model="form.due_date" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>{{ t('discount-due-date', 'Discount Deadline') }}</label>
+              <input type="date" v-model="form.discount_due_date" class="form-input" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('discount-percentage', 'Discount %') }}</label>
+              <input type="number" step="0.01" min="0" max="100" v-model.number="form.discount_percentage" @input="recalcDiscountAmount" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>{{ t('early-discount-amount', 'Early Discount Amount') }}</label>
+              <input type="number" step="0.01" min="0" v-model.number="form.early_discount_amount" class="form-input" />
             </div>
           </div>
           <div class="form-row" v-if="!editing">
             <div class="form-group">
-              <label>{{ t('status') }}</label>
+              <label>{{ t('status', 'Status') }}</label>
               <select v-model="form.status" class="form-input">
                 <option value="Draft">Draft</option>
                 <option value="Unpaid">Unpaid</option>
@@ -153,14 +196,64 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const items = ref([])
+const paymentTerms = ref([])
+const customers = ref([])
 const showModal = ref(false)
 const editing = ref(false)
 const saving = ref(false)
 const showDelete = ref(false)
 const deleting = ref(false)
 const deleteTarget = ref(null)
-const form = ref({ invoice_number: '', invoice_type: 'Sales', partner_id: null, issue_date: '', due_date: '', total_amount: 0, status: 'Draft' })
 const editId = ref(null)
+
+const form = ref({
+  invoice_number: '',
+  invoice_type: 'Sales',
+  partner_id: null,
+  payment_term_id: null,
+  issue_date: '',
+  due_date: '',
+  discount_due_date: '',
+  discount_percentage: 0,
+  discount_days: 0,
+  early_discount_amount: 0,
+  total_amount: 0,
+  status: 'Draft'
+})
+
+function today() {
+  return new Date().toISOString().split('T')[0]
+}
+
+function addDays(dateStr, days) {
+  if (!dateStr || days === undefined || days === null) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  d.setDate(d.getDate() + Number(days))
+  return d.toISOString().split('T')[0]
+}
+
+function getPartnerName(partnerId) {
+  if (!partnerId) return '-'
+  const c = customers.value.find(x => x.id === partnerId)
+  return c ? c.name : `#${partnerId}`
+}
+
+function getPaymentTermName(termId) {
+  if (!termId) return '-'
+  const term = paymentTerms.value.find(x => x.id === termId)
+  return term ? term.name : `#${termId}`
+}
+
+function isOverdue(item) {
+  if (!item || item.status === 'Paid' || item.status === 'Cancelled' || !item.due_date) return false
+  return today() > item.due_date
+}
+
+function isDiscountExpired(item) {
+  if (!item || item.status === 'Paid' || item.status === 'Cancelled' || !item.discount_due_date) return false
+  return today() > item.discount_due_date
+}
 
 function statusBadge(status) {
   if (status === 'Paid') return 'badge badge-active'
@@ -169,14 +262,63 @@ function statusBadge(status) {
   return 'badge badge-inactive'
 }
 
+function onPaymentTermChange() {
+  const issue = form.value.issue_date || today()
+  if (!form.value.payment_term_id) {
+    if (!form.value.due_date) form.value.due_date = issue
+    form.value.discount_due_date = ''
+    form.value.discount_percentage = 0
+    form.value.discount_days = 0
+    form.value.early_discount_amount = 0
+    return
+  }
+  const term = paymentTerms.value.find(p => p.id === form.value.payment_term_id)
+  if (term) {
+    form.value.due_date = addDays(issue, term.due_days || 0)
+    if (term.discount_percentage > 0 && term.discount_days > 0) {
+      form.value.discount_due_date = addDays(issue, term.discount_days)
+      form.value.discount_percentage = term.discount_percentage
+      form.value.discount_days = term.discount_days
+      form.value.early_discount_amount = Number(((form.value.total_amount || 0) * (term.discount_percentage / 100)).toFixed(2))
+    } else {
+      form.value.discount_due_date = ''
+      form.value.discount_percentage = 0
+      form.value.discount_days = 0
+      form.value.early_discount_amount = 0
+    }
+  }
+}
+
+function onIssueDateChange() {
+  if (form.value.payment_term_id) {
+    onPaymentTermChange()
+  }
+}
+
+function recalcDiscountAmount() {
+  const pct = Number(form.value.discount_percentage || 0)
+  const tot = Number(form.value.total_amount || 0)
+  if (pct > 0 && tot > 0) {
+    form.value.early_discount_amount = Number(((tot * pct) / 100).toFixed(2))
+  } else {
+    form.value.early_discount_amount = 0
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/T0090I/')
-    items.value = res.data || []
+    const [invRes, termsRes, custRes] = await Promise.all([
+      api.get('/T0090I/'),
+      api.get('/T0096I/').catch(() => ({ data: [] })),
+      api.get('/T0010I/').catch(() => ({ data: [] }))
+    ])
+    items.value = invRes.data || []
+    paymentTerms.value = termsRes.data || []
+    customers.value = custRes.data || []
   } catch {
-    error.value = t('failed-load')
+    error.value = t('failed-load', 'Failed to load invoices')
   } finally {
     loading.value = false
   }
@@ -185,8 +327,21 @@ async function load() {
 function openAdd() {
   editing.value = false
   editId.value = null
-  const today = new Date().toISOString().split('T')[0]
-  form.value = { invoice_number: '', invoice_type: 'Sales', partner_id: null, issue_date: today, due_date: today, total_amount: 0, status: 'Draft' }
+  const curDate = today()
+  form.value = {
+    invoice_number: '',
+    invoice_type: 'Sales',
+    partner_id: null,
+    payment_term_id: null,
+    issue_date: curDate,
+    due_date: curDate,
+    discount_due_date: '',
+    discount_percentage: 0,
+    discount_days: 0,
+    early_discount_amount: 0,
+    total_amount: 0,
+    status: 'Draft'
+  }
   showModal.value = true
 }
 
@@ -197,8 +352,13 @@ function editItem(item) {
     invoice_number: item.invoice_number,
     invoice_type: item.invoice_type,
     partner_id: item.partner_id,
+    payment_term_id: item.payment_term_id ?? null,
     issue_date: item.issue_date,
     due_date: item.due_date,
+    discount_due_date: item.discount_due_date || '',
+    discount_percentage: item.discount_percentage || 0,
+    discount_days: item.discount_days || 0,
+    early_discount_amount: item.early_discount_amount || 0,
     total_amount: item.total_amount,
     status: item.status,
   }
@@ -211,17 +371,25 @@ async function saveItem() {
   if (!form.value.invoice_number || !form.value.partner_id || !form.value.issue_date || !form.value.due_date) return
   saving.value = true
   try {
+    const payload = {
+      ...form.value,
+      payment_term_id: form.value.payment_term_id ? Number(form.value.payment_term_id) : null,
+      discount_due_date: form.value.discount_due_date || null,
+      discount_percentage: Number(form.value.discount_percentage || 0),
+      discount_days: Number(form.value.discount_days || 0),
+      early_discount_amount: Number(form.value.early_discount_amount || 0),
+    }
     if (editing.value) {
-      await api.put(`/T0090I/${editId.value}`, form.value)
-      toast('Invoice ' + t('saved-ok'), 'success')
+      await api.put(`/T0090I/${editId.value}`, payload)
+      toast('Invoice ' + t('saved-ok', 'saved successfully'), 'success')
     } else {
-      await api.post('/T0090I/', form.value)
-      toast('Invoice ' + t('saved-ok'), 'success')
+      await api.post('/T0090I/', payload)
+      toast('Invoice ' + t('saved-ok', 'saved successfully'), 'success')
     }
     closeModal()
     await load()
   } catch {
-    toast(t('failed-save') + ' Invoice', 'error')
+    toast(t('failed-save', 'Failed to save') + ' Invoice', 'error')
   } finally {
     saving.value = false
   }
@@ -240,7 +408,7 @@ async function confirmDelete() {
     toast('Invoice deleted', 'success')
     showDelete.value = false
   } catch {
-    toast(t('failed-save') + ' Invoice', 'error')
+    toast(t('failed-save', 'Failed to save') + ' Invoice', 'error')
   } finally {
     deleting.value = false
   }
@@ -259,11 +427,11 @@ onMounted(load)
 .data-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.data-table th { background: #f9fafb; padding: 10px 14px; text-align: left; font-weight: 600; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e0e0e0; }
+.data-table th { background: #f9fafb; padding: 10px 14px; text-align: left; font-weight: 600; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
 .data-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
 .data-table tbody tr:hover { background: #fafaff; }
 .cell-mono { font-family: monospace; font-size: 12px; color: #888; }
-.inv-link { color: #5d3fd3; cursor: pointer; }
+.inv-link { color: #5d3fd3; cursor: pointer; font-weight: 600; }
 .inv-link:hover { text-decoration: underline; }
 .col-num { text-align: right; font-family: monospace; font-weight: 600; }
 .text-center { text-align: center; }
@@ -272,6 +440,7 @@ onMounted(load)
 .badge-active { background: #dcfce7; color: #16a34a; }
 .badge-warning { background: #fef3c7; color: #d97706; }
 .badge-inactive { background: #f3f4f6; color: #888; }
+.badge-discount-xs { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 1px 6px; font-size: 10px; font-weight: 600; border-radius: 12px; }
 
 .inv-type { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 .inv-sales { background: #dbeafe; color: #2563eb; }
@@ -291,6 +460,17 @@ onMounted(load)
 .btn-icon .material-symbols-outlined { font-size: 18px; }
 .btn-primary .material-symbols-outlined { font-size: 18px; }
 .mb-6 { margin-bottom: 24px; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-1 { gap: 4px; }
+
+.text-success { color: #16a34a; }
+.text-danger { color: #dc2626; }
+.text-primary { color: #5d3fd3; }
+.text-muted { color: #94a3b8; }
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 700; }
+.strike { text-decoration: line-through; opacity: 0.6; }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .modal-content { background: #fff; border-radius: 12px; width: 580px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
