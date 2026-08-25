@@ -10,6 +10,14 @@ from .cleansing_service import (
     NumericBoundsClamper,
     TextSanitizer,
 )
+from .dry_run_service import DryRunService, dry_run_service
+from .reconciliation_service import (
+    CustomerBalanceReconciler,
+    EntityCountReconciler,
+    InventoryReconciler,
+    ReconciliationService,
+    reconciliation_service,
+)
 
 migration_service = MigrationService()
 
@@ -26,5 +34,13 @@ __all__ = [
     "LookupValidator",
     "NumericBoundsClamper",
     "TextSanitizer",
+    "DryRunService",
+    "dry_run_service",
+    "ReconciliationService",
+    "reconciliation_service",
+    "CustomerBalanceReconciler",
+    "InventoryReconciler",
+    "EntityCountReconciler",
 ]
+
 

@@ -1260,12 +1260,23 @@ class MappingEngine:
                 table_columns_map[tbl] = []
         elif isinstance(discovered_tables, dict):
             for tbl, val in discovered_tables.items():
-                if isinstance(val, TableMetadata):
-                    table_columns_map[tbl] = val.column_names
+                if hasattr(val, "column_names"):
+                    table_columns_map[tbl] = list(val.column_names)
                 elif isinstance(val, list):
-                    table_columns_map[tbl] = val
+                    table_columns_map[tbl] = [str(c.name if hasattr(c, "name") else c) for c in val]
+                elif isinstance(val, dict):
+                    if "column_names" in val:
+                        table_columns_map[tbl] = list(val["column_names"])
+                    elif "columns" in val:
+                        table_columns_map[tbl] = [
+                            c.get("name") if isinstance(c, dict) else str(c)
+                            for c in val["columns"]
+                        ]
+                    else:
+                        table_columns_map[tbl] = []
                 else:
                     table_columns_map[tbl] = []
+
 
         table_names = list(table_columns_map.keys())
         entity_matches = self.match_discovered_tables(table_names) if auto_fuzzy else {}
