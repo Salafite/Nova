@@ -1,8 +1,16 @@
 import logging
-from typing import Optional, List, Dict, Any
+from datetime import date, datetime
+from typing import Optional, List, Dict, Any, Union
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.sequence import generate_invoice_number
+from modules.accounting.services.payment_term_service import (
+    calculate_due_date,
+    calculate_discount_deadline,
+    calculate_max_early_discount,
+    resolve_effective_term,
+    PAYMENT_TERM_REPO,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +45,7 @@ INVOICE_REPO = CrudRepository(
 
 CUSTOMER_REPO = CrudRepository(
     'T0010',
-    business_columns=['id', 'name', 'credit_limit', 'balance'],
+    business_columns=['id', 'name', 'credit_limit', 'balance', 'payment_term_id'],
 )
 
 ORDER_REPO = CrudRepository(
@@ -53,6 +61,7 @@ ORDER_REPO = CrudRepository(
         'freight_amount',
         'discount_amount',
         'sales_rep_id',
+        'payment_term_id',
         'status',
         'order_date',
         'notes',
@@ -126,6 +135,7 @@ class InvoiceService(CrudService):
         line_repo: CrudRepository = None,
         pl_repo: CrudRepository = None,
         pli_repo: CrudRepository = None,
+        payment_term_repo: CrudRepository = None,
     ):
         super().__init__(repo or INVOICE_REPO)
         self.customer_repo = customer_repo or CUSTOMER_REPO
@@ -133,6 +143,7 @@ class InvoiceService(CrudService):
         self.line_repo = line_repo or LINE_REPO
         self.pl_repo = pl_repo or PL_REPO
         self.pli_repo = pli_repo or PLI_REPO
+        self.payment_term_repo = payment_term_repo or PAYMENT_TERM_REPO
 
     def validate_order_tolerance_approvals(self, order_id: int, conn=None):
         """
@@ -172,6 +183,72 @@ class InvoiceService(CrudService):
         sales_order_id = payload.get('sales_order_id')
         if sales_order_id:
             self.validate_order_tolerance_approvals(sales_order_id, conn=conn)
+
+        # Ensure issue_date is populated
+        issue_date = payload.get('issue_date') or date.today()
+        if not payload.get('issue_date'):
+            payload['issue_date'] = issue_date
+
+        # Resolve effective payment term
+        order_term_id = None
+        if not payload.get('payment_term_id') and sales_order_id and hasattr(self, 'order_repo') and self.order_repo:
+            try:
+                order_rec = self.order_repo.get(sales_order_id, conn=conn)
+                if order_rec and order_rec.get('payment_term_id'):
+                    order_term_id = order_rec.get('payment_term_id')
+            except Exception as e:
+                logger.warning(f"Could not fetch order {sales_order_id} for payment term resolution: {e}")
+
+        effective_term_id = payload.get('payment_term_id') or order_term_id
+        term = resolve_effective_term(
+            payment_term_id=effective_term_id,
+            customer_id=payload.get('partner_id'),
+            customer_repo=self.customer_repo if hasattr(self, 'customer_repo') else None,
+            term_repo=self.payment_term_repo if hasattr(self, 'payment_term_repo') else None,
+            conn=conn,
+        )
+
+        if not payload.get('payment_term_id'):
+            if isinstance(term, dict) and term.get('id'):
+                payload['payment_term_id'] = term.get('id')
+            elif hasattr(term, 'id') and getattr(term, 'id', None):
+                payload['payment_term_id'] = getattr(term, 'id')
+
+        # Dynamically compute due_date if omitted
+        if not payload.get('due_date'):
+            payload['due_date'] = calculate_due_date(base_date=issue_date, term=term)
+
+        # Dynamically compute discount cutoff if omitted
+        if payload.get('discount_due_date') is None:
+            payload['discount_due_date'] = calculate_discount_deadline(base_date=issue_date, term=term)
+
+        # Dynamically populate discount percentage & discount days if omitted
+        if payload.get('discount_percentage') is None:
+            term_pct = (
+                float(term.get('discount_percentage', 0.0) or 0.0)
+                if isinstance(term, dict)
+                else float(getattr(term, 'discount_percentage', 0.0) or 0.0)
+            )
+            payload['discount_percentage'] = term_pct
+
+        if payload.get('discount_days') is None:
+            term_days = (
+                int(term.get('discount_days', 0) or 0)
+                if isinstance(term, dict)
+                else int(getattr(term, 'discount_days', 0) or 0)
+            )
+            payload['discount_days'] = term_days
+
+        # Compute early discount amount if eligible
+        if payload.get('early_discount_amount') is None:
+            pct = float(payload.get('discount_percentage', 0.0) or 0.0)
+            days = int(payload.get('discount_days', 0) or 0)
+            total = float(payload.get('total_amount', 0.0) or 0.0)
+            if pct > 0 and days > 0 and total > 0:
+                payload['early_discount_amount'] = calculate_max_early_discount(total, pct)
+            else:
+                payload['early_discount_amount'] = 0.0
+
         return super().create(payload, conn=conn)
 
     def calculate_catch_weight_summary(self, lines: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -252,7 +329,8 @@ class InvoiceService(CrudService):
         conn=None,
     ) -> dict:
         """
-        Create a sales invoice from an order record, incorporating catch-weight aggregates and customer balance updates.
+        Create a sales invoice from an order record, incorporating catch-weight aggregates,
+        dynamic payment terms due date & discount calculations, and customer balance updates.
         """
         recalc = recalculation_summary or {}
         is_cw = recalc.get('is_catch_weight', order.get('is_catch_weight', False))
@@ -262,14 +340,55 @@ class InvoiceService(CrudService):
         if is_cw and weight_adj != 0:
             notes += f" (Catch-weight adjustment: {'+' if weight_adj > 0 else ''}{weight_adj:.2f})"
 
+        # Resolve effective payment terms (Order term -> Customer term -> Default term -> Fallback)
+        term = resolve_effective_term(
+            payment_term_id=order.get('payment_term_id'),
+            customer_id=order.get('customer_id'),
+            customer_repo=self.customer_repo if hasattr(self, 'customer_repo') else None,
+            term_repo=self.payment_term_repo if hasattr(self, 'payment_term_repo') else None,
+            conn=conn,
+        )
+
+        term_id = order.get('payment_term_id')
+        if not term_id and isinstance(term, dict):
+            term_id = term.get('id')
+        elif not term_id and hasattr(term, 'id'):
+            term_id = getattr(term, 'id', None)
+
+        issue_date = order.get('order_date') or date.today()
+        due_date = calculate_due_date(base_date=issue_date, term=term)
+        discount_due_date = calculate_discount_deadline(base_date=issue_date, term=term)
+
+        discount_percentage = (
+            float(term.get('discount_percentage', 0.0) or 0.0)
+            if isinstance(term, dict)
+            else float(getattr(term, 'discount_percentage', 0.0) or 0.0)
+        )
+        discount_days = (
+            int(term.get('discount_days', 0) or 0)
+            if isinstance(term, dict)
+            else int(getattr(term, 'discount_days', 0) or 0)
+        )
+        grand_total = float(order.get('grand_total', 0) or 0)
+        early_discount_amount = (
+            calculate_max_early_discount(grand_total, discount_percentage)
+            if (discount_percentage > 0 and discount_days > 0)
+            else 0.0
+        )
+
         invoice_payload = {
             'invoice_type': 'Sales',
             'partner_id': order.get('customer_id'),
             'sales_order_id': order.get('id'),
             'sales_rep_id': order.get('sales_rep_id'),
-            'issue_date': order.get('order_date'),
-            'due_date': order.get('order_date'),
-            'total_amount': order.get('grand_total', 0),
+            'payment_term_id': term_id,
+            'issue_date': issue_date,
+            'due_date': due_date,
+            'discount_due_date': discount_due_date,
+            'discount_percentage': discount_percentage,
+            'discount_days': discount_days,
+            'early_discount_amount': early_discount_amount,
+            'total_amount': grand_total,
             'freight_amount': order.get('freight_amount', 0) or 0,
             'discount_amount': order.get('discount_amount', 0) or 0,
             'status': 'Unpaid',
