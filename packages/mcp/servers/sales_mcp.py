@@ -1,7 +1,8 @@
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.sales.services.sales_service import SalesOrderService, ORDER_REPO, LINE_REPO
-from packages.mcp.registry import register_tool, register_resource
+from modules.sales.services.credit_service import CreditService
+from packages.mcp.registry import register_tool, register_resource, get_current_user
 from packages.mcp.types import Tool, Resource
 
 
@@ -10,6 +11,7 @@ _orders_svc = SalesOrderService(_orders_repo, line_repo=LINE_REPO)
 
 _customers_repo = CrudRepository('T0010', business_columns=['id', 'name', 'phone', 'email', 'credit_limit', 'balance', 'is_active'])
 _customers_svc = CrudService(_customers_repo)
+_credit_svc = CreditService()
 
 _quotations_repo = CrudRepository('T0067', business_columns=['id', 'quote_number', 'customer_id', 'quote_date', 'valid_until', 'subtotal', 'tax', 'grand_total', 'status', 'notes', 'converted_order_id'])
 _quotations_svc = CrudService(_quotations_repo)
@@ -192,6 +194,30 @@ def register_tools():
             "type": "object", "properties": {},
         }),
         _list_tax_rates,
+    )
+    register_tool(
+        Tool(name="check_customer_credit", description="Check customer credit standing, credit limit, balance, available credit, and overdue invoices (>30 days)", input_schema={
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer", "description": "Customer ID to evaluate credit for"},
+                "order_amount": {"type": "number", "description": "Optional proposed order amount to evaluate total credit exposure and hold requirement"},
+                "as_of_date": {"type": "string", "description": "Optional reference date for overdue aging evaluation (YYYY-MM-DD)"},
+            },
+            "required": ["customer_id"],
+        }),
+        _check_customer_credit,
+    )
+    register_tool(
+        Tool(name="override_credit_hold", description="Override a credit hold on a sales order to approve order processing (requires financial manager confirmation)", tier="tier2", input_schema={
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "Sales order ID on Credit Hold"},
+                "reason": {"type": "string", "description": "Reason for approving the credit hold override"},
+                "target_status": {"type": "string", "description": "Target status after override (Confirmed, Pending, Draft; default Confirmed)"},
+            },
+            "required": ["id"],
+        }),
+        _override_credit_hold,
     )
     register_resource(
         Resource(uri="nova://sales/orders", name="All Orders", description="List of all sales orders"),
