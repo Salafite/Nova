@@ -59,6 +59,14 @@ ORDER_REPO = CrudRepository(
         'price_list_id',
         'tax_rate_id',
         'payment_term_id',
+        'client_order_uuid',
+        'is_offline_sync',
+        'sync_status',
+        'offline_created_at',
+        'hold_reason',
+        'hold_released_by',
+        'hold_released_at',
+        'hold_release_reason',
     ],
 )
 

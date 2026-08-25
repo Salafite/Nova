@@ -11,6 +11,8 @@ class SalesOrderCreate(BaseModel):
     subtotal: float = 0
     tax: float = 0
     grand_total: float = 0
+    freight_amount: float = 0
+    discount_amount: float = 0
     status: str = 'Pending'
     order_date: date = Field(default_factory=date.today)
     price_list_id: Optional[int] = None
@@ -22,6 +24,10 @@ class SalesOrderCreate(BaseModel):
     sync_status: str = 'Synced'
     offline_created_at: Optional[datetime] = None
     sales_rep_id: Optional[int] = None
+    hold_reason: Optional[str] = None
+    hold_released_by: Optional[int] = None
+    hold_released_at: Optional[datetime] = None
+    hold_release_reason: Optional[str] = None
 
 class SalesOrderUpdate(BaseModel):
     order_number: Optional[str] = Field(None, max_length=30)
@@ -30,6 +36,8 @@ class SalesOrderUpdate(BaseModel):
     subtotal: Optional[float] = None
     tax: Optional[float] = None
     grand_total: Optional[float] = None
+    freight_amount: Optional[float] = None
+    discount_amount: Optional[float] = None
     status: Optional[str] = None
     order_date: Optional[date] = None
     price_list_id: Optional[int] = None
@@ -41,6 +49,10 @@ class SalesOrderUpdate(BaseModel):
     sync_status: Optional[str] = None
     offline_created_at: Optional[datetime] = None
     sales_rep_id: Optional[int] = None
+    hold_reason: Optional[str] = None
+    hold_released_by: Optional[int] = None
+    hold_released_at: Optional[datetime] = None
+    hold_release_reason: Optional[str] = None
 
 class SalesOrderResponse(AuditMixin):
     id: int
@@ -50,6 +62,8 @@ class SalesOrderResponse(AuditMixin):
     subtotal: float
     tax: float
     grand_total: float
+    freight_amount: float = 0.0
+    discount_amount: float = 0.0
     status: str
     order_date: date
     price_list_id: Optional[int] = None
@@ -61,6 +75,10 @@ class SalesOrderResponse(AuditMixin):
     sync_status: str = 'Synced'
     offline_created_at: Optional[datetime] = None
     sales_rep_id: Optional[int] = None
+    hold_reason: Optional[str] = None
+    hold_released_by: Optional[int] = None
+    hold_released_at: Optional[datetime] = None
+    hold_release_reason: Optional[str] = None
 
 
 class SalesLineCreate(BaseModel):
