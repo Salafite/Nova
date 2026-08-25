@@ -278,8 +278,7 @@ def test_portal_repo_reconcile_settlement_transaction_unit():
         None,  # idempotency: no existing payment
         {"id": 10, "name": "Acme", "balance": 1500.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
         {"id": 55, "payment_date": date(2026, 8, 23), "invoice_id": 42, "partner_id": 10, "amount": 500.0, "payment_method": "Stripe Card", "reference": "pi_123", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": "pi_123", "stripe_checkout_session_id": "cs_123", "payment_link": None, "created_at": None},  # payment
-        {"total_amount": 500.0},  # invoice total
-        {"total_paid": 500.0},    # invoice paid sum
+        {"id": 42, "total_amount": 500.0, "paid_amount": 500.0, "status": "Paid"},  # updated invoice
         {"balance": 1000.0},      # updated customer balance
         {"id": 1},                # COA bank account
         {"id": 2},                # COA AR account

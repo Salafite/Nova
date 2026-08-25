@@ -444,3 +444,780 @@ class PortalRepository:
         finally:
             if should_release:
                 release_connection(conn)
+
+    def get_customer_by_id(self, customer_id: int, conn=None) -> Optional[Dict[str, Any]]:
+        """Alias for get_customer."""
+        return self.get_customer(customer_id, conn=conn)
+
+    def get_active_warehouse(self, conn=None) -> Optional[Dict[str, Any]]:
+        """Fetch first active warehouse from T0008."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+            query = f"""
+                SELECT id, name, is_active, business_id
+                FROM {self._get_table("t0008")}
+                WHERE is_active = true
+            """
+            params: List[Any] = []
+            if tenant_id is not None:
+                query += " AND (business_id = %s OR business_id IS NULL)"
+                params.append(tenant_id)
+            query += " ORDER BY id ASC LIMIT 1"
+
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, params)
+                row = cur.fetchone()
+                return dict(row) if row else None
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_tax_rate(self, tax_rate_id: Optional[int], conn=None) -> Optional[Dict[str, Any]]:
+        """Fetch tax rate details from T0085."""
+        if not tax_rate_id:
+            return None
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            query = f"""
+                SELECT id, name, code, rate, type
+                FROM {self._get_table("t0085")}
+                WHERE id = %s
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, (tax_rate_id,))
+                row = cur.fetchone()
+                return dict(row) if row else None
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def create_order(
+        self,
+        order_data: Dict[str, Any],
+        lines: List[Dict[str, Any]],
+        conn=None,
+    ) -> Dict[str, Any]:
+        """Atomically create a sales order header (T0012) and lines (T0013)."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+            if tenant_id is not None and "business_id" not in order_data:
+                order_data["business_id"] = tenant_id
+
+            order_date = order_data.get("order_date")
+            if isinstance(order_date, (datetime, date)):
+                date_str = order_date.strftime("%Y%m%d")
+            else:
+                date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+
+            order_number = order_data.get("order_number")
+            if not order_number:
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(f"SELECT nextval('{self.schema}.seq_sales_order_number')")
+                        row = cur.fetchone()
+                        seq_val = int(row[0]) if row else 1
+                        order_number = f"SO-{date_str}-{seq_val:05d}"
+                except Exception:
+                    try:
+                        with conn.cursor() as cur:
+                            cur.execute(f"SELECT COALESCE(MAX(id), 0) + 1 FROM {self._get_table('t0012')}")
+                            seq_val = int(cur.fetchone()[0])
+                            order_number = f"SO-{date_str}-{seq_val:05d}"
+                    except Exception:
+                        order_number = f"SO-{date_str}-{int(datetime.now().timestamp() * 1000) % 100000:05d}"
+
+            order_data["order_number"] = order_number
+
+            insert_order_query = f"""
+                INSERT INTO {self._get_table("t0012")} (
+                    customer_id, warehouse_id, order_number, subtotal, tax, grand_total,
+                    status, order_date, notes, price_list_id, tax_rate_id, payment_term_id,
+                    created_by, updated_by, business_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, customer_id, warehouse_id, order_number, subtotal, tax, grand_total,
+                          status, order_date, notes, price_list_id, tax_rate_id, payment_term_id,
+                          created_at, created_by, updated_at, updated_by, update_number, business_id
+            """
+            order_params = [
+                order_data.get("customer_id"),
+                order_data.get("warehouse_id"),
+                order_number,
+                order_data.get("subtotal", 0.0),
+                order_data.get("tax", 0.0),
+                order_data.get("grand_total", 0.0),
+                order_data.get("status", "Confirmed"),
+                order_data.get("order_date") or datetime.now(timezone.utc).date(),
+                order_data.get("notes"),
+                order_data.get("price_list_id"),
+                order_data.get("tax_rate_id"),
+                order_data.get("payment_term_id"),
+                order_data.get("created_by"),
+                order_data.get("updated_by"),
+                order_data.get("business_id", tenant_id),
+            ]
+
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(insert_order_query, order_params)
+                order_row = cur.fetchone()
+                order_id = order_row["id"]
+
+                inserted_lines = []
+                for idx, line in enumerate(lines, start=1):
+                    qty = _to_float(line.get("qty", 1.0))
+                    unit_price = _to_float(line.get("unit_price", 0.0))
+                    line_total = _to_float(line.get("line_total", qty * unit_price))
+                    line_num = int(line.get("line_number") or idx)
+
+                    insert_line_query = f"""
+                        INSERT INTO {self._get_table("t0013")} (
+                            sales_order_id, product_id, product_name, qty, unit_price,
+                            line_total, line_number, business_id
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id, sales_order_id, product_id, product_name, qty,
+                                  unit_price, line_total, line_number
+                    """
+                    cur.execute(
+                        insert_line_query,
+                        [
+                            order_id,
+                            line.get("product_id"),
+                            line.get("product_name", ""),
+                            qty,
+                            unit_price,
+                            line_total,
+                            line_num,
+                            order_data.get("business_id", tenant_id),
+                        ],
+                    )
+                    line_row = cur.fetchone()
+                    line_dict = dict(line_row)
+                    line_dict["product_code"] = line.get("product_code")
+                    line_dict["uom_name"] = line.get("uom_name")
+                    inserted_lines.append(line_dict)
+
+            if should_release:
+                conn.commit()
+
+            res = dict(order_row)
+            res["lines"] = inserted_lines
+            return res
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_order_lines(self, order_id: int, conn=None) -> List[Dict[str, Any]]:
+        """Fetch line items for a sales order with product sku and uom details."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            query = f"""
+                SELECT l.id, l.sales_order_id, l.product_id, l.product_name,
+                       l.qty, l.unit_price, l.line_total, l.line_number,
+                       p.sku as product_code, u.uom_name
+                FROM {self._get_table("t0013")} l
+                LEFT JOIN {self._get_table("t0003")} p ON p.id = l.product_id
+                LEFT JOIN {self._get_table("t0007")} pu ON pu.product_id = p.id
+                LEFT JOIN {self._get_table("t0001")} u ON u.id = pu.base_uom_id
+                WHERE l.sales_order_id = %s
+                ORDER BY l.line_number ASC, l.id ASC
+            """
+            lines = []
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, (order_id,))
+                for r in cur.fetchall():
+                    l_dict = dict(r)
+                    l_dict["qty"] = _to_float(l_dict.get("qty"))
+                    l_dict["unit_price"] = _to_float(l_dict.get("unit_price"))
+                    l_dict["line_total"] = _to_float(l_dict.get("line_total"))
+                    lines.append(l_dict)
+            return lines
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_orders(
+        self,
+        customer_id: int,
+        status: Optional[str] = None,
+        page: int = 1,
+        limit: int = 50,
+        conn=None,
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """Fetch customer orders with pagination and line item details."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+            count_query = f"""
+                SELECT COUNT(*)
+                FROM {self._get_table("t0012")} o
+                WHERE o.customer_id = %s
+            """
+            params: List[Any] = [customer_id]
+            if tenant_id is not None:
+                count_query += " AND o.business_id = %s"
+                params.append(tenant_id)
+            if status:
+                count_query += " AND o.status = %s"
+                params.append(status)
+
+            with conn.cursor() as cur:
+                cur.execute(count_query, params)
+                total = int(cur.fetchone()[0])
+
+            query = f"""
+                SELECT o.id, o.order_number, o.customer_id, c.name as customer_name,
+                       o.warehouse_id, o.subtotal, o.tax, o.grand_total, o.status,
+                       o.order_date, o.notes, o.created_at, o.created_by, o.updated_at,
+                       o.updated_by, o.update_number
+                FROM {self._get_table("t0012")} o
+                LEFT JOIN {self._get_table("t0010")} c ON c.id = o.customer_id
+                WHERE o.customer_id = %s
+            """
+            list_params: List[Any] = [customer_id]
+            if tenant_id is not None:
+                query += " AND o.business_id = %s"
+                list_params.append(tenant_id)
+            if status:
+                query += " AND o.status = %s"
+                list_params.append(status)
+
+            query += " ORDER BY o.order_date DESC, o.id DESC"
+            query += " LIMIT %s OFFSET %s"
+            offset = max(0, (page - 1) * limit)
+            list_params.extend([limit, offset])
+
+            orders = []
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, list_params)
+                for r in cur.fetchall():
+                    o_dict = dict(r)
+                    o_dict["subtotal"] = _to_float(o_dict.get("subtotal"))
+                    o_dict["tax"] = _to_float(o_dict.get("tax"))
+                    o_dict["grand_total"] = _to_float(o_dict.get("grand_total"))
+                    o_dict["lines"] = self.get_order_lines(o_dict["id"], conn=conn)
+                    orders.append(o_dict)
+
+            return orders, total
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_order_by_id(
+        self,
+        order_id: int,
+        customer_id: Optional[int] = None,
+        conn=None,
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch single order by id with lines, scoped to customer_id if provided."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+            query = f"""
+                SELECT o.id, o.order_number, o.customer_id, c.name as customer_name,
+                       o.warehouse_id, o.subtotal, o.tax, o.grand_total, o.status,
+                       o.order_date, o.notes, o.created_at, o.created_by, o.updated_at,
+                       o.updated_by, o.update_number
+                FROM {self._get_table("t0012")} o
+                LEFT JOIN {self._get_table("t0010")} c ON c.id = o.customer_id
+                WHERE o.id = %s
+            """
+            params: List[Any] = [order_id]
+            if customer_id is not None:
+                query += " AND o.customer_id = %s"
+                params.append(customer_id)
+            if tenant_id is not None:
+                query += " AND o.business_id = %s"
+                params.append(tenant_id)
+
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, params)
+                row = cur.fetchone()
+                if not row:
+                    return None
+                o_dict = dict(row)
+                o_dict["subtotal"] = _to_float(o_dict.get("subtotal"))
+                o_dict["tax"] = _to_float(o_dict.get("tax"))
+                o_dict["grand_total"] = _to_float(o_dict.get("grand_total"))
+                o_dict["lines"] = self.get_order_lines(order_id, conn=conn)
+                return o_dict
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def update_order_status(
+        self,
+        order_id: int,
+        status: str,
+        notes: Optional[str] = None,
+        customer_id: Optional[int] = None,
+        conn=None,
+    ) -> Optional[Dict[str, Any]]:
+        """Update order status and optional notes."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+            query = f"""
+                UPDATE {self._get_table("t0012")}
+                SET status = %s,
+                    notes = COALESCE(%s, notes),
+                    updated_at = NOW(),
+                    update_number = COALESCE(update_number, 0) + 1
+                WHERE id = %s
+            """
+            params: List[Any] = [status, notes, order_id]
+            if customer_id is not None:
+                query += " AND customer_id = %s"
+                params.append(customer_id)
+            if tenant_id is not None:
+                query += " AND business_id = %s"
+                params.append(tenant_id)
+            query += " RETURNING id, status, notes"
+
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, params)
+                row = cur.fetchone()
+                if should_release:
+                    conn.commit()
+                return dict(row) if row else None
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_invoices(
+        self,
+        customer_id: int,
+        status: Optional[str] = None,
+        page: int = 1,
+        limit: int = 50,
+        conn=None,
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """Fetch customer invoices from T0090."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+            count_query = f"""
+                SELECT COUNT(*)
+                FROM {self._get_table("t0090")} i
+                WHERE i.partner_id = %s
+            """
+            params: List[Any] = [customer_id]
+            if tenant_id is not None:
+                count_query += " AND i.business_id = %s"
+                params.append(tenant_id)
+            if status:
+                count_query += " AND i.status = %s"
+                params.append(status)
+
+            with conn.cursor() as cur:
+                cur.execute(count_query, params)
+                total = int(cur.fetchone()[0])
+
+            query = f"""
+                SELECT i.id, i.invoice_number, i.invoice_type, i.partner_id, c.name as customer_name,
+                       i.sales_order_id, o.order_number as sales_order_number,
+                       i.issue_date, i.due_date, i.total_amount, i.paid_amount,
+                       i.status, i.notes, i.stripe_payment_intent_id, i.stripe_checkout_session_id,
+                       i.payment_link, i.created_at, i.created_by, i.updated_at, i.updated_by,
+                       i.update_number
+                FROM {self._get_table("t0090")} i
+                LEFT JOIN {self._get_table("t0010")} c ON c.id = i.partner_id
+                LEFT JOIN {self._get_table("t0012")} o ON o.id = i.sales_order_id
+                WHERE i.partner_id = %s
+            """
+            list_params: List[Any] = [customer_id]
+            if tenant_id is not None:
+                query += " AND i.business_id = %s"
+                list_params.append(tenant_id)
+            if status:
+                query += " AND i.status = %s"
+                list_params.append(status)
+
+            query += " ORDER BY i.issue_date DESC, i.id DESC"
+            query += " LIMIT %s OFFSET %s"
+            offset = max(0, (page - 1) * limit)
+            list_params.extend([limit, offset])
+
+            invoices = []
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, list_params)
+                for r in cur.fetchall():
+                    inv = dict(r)
+                    tot = _to_float(inv.get("total_amount"))
+                    paid = _to_float(inv.get("paid_amount"))
+                    inv["total_amount"] = tot
+                    inv["paid_amount"] = paid
+                    inv["balance_due"] = max(0.0, round(tot - paid, 2))
+                    invoices.append(inv)
+
+            return invoices, total
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def get_invoice_by_id(
+        self,
+        invoice_id: int,
+        customer_id: Optional[int] = None,
+        conn=None,
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch single invoice from T0090, verified against customer_id if provided."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+            query = f"""
+                SELECT i.id, i.invoice_number, i.invoice_type, i.partner_id, c.name as customer_name,
+                       i.sales_order_id, o.order_number as sales_order_number,
+                       i.issue_date, i.due_date, i.total_amount, i.paid_amount,
+                       i.status, i.notes, i.stripe_payment_intent_id, i.stripe_checkout_session_id,
+                       i.payment_link, i.created_at, i.created_by, i.updated_at, i.updated_by,
+                       i.update_number
+                FROM {self._get_table("t0090")} i
+                LEFT JOIN {self._get_table("t0010")} c ON c.id = i.partner_id
+                LEFT JOIN {self._get_table("t0012")} o ON o.id = i.sales_order_id
+                WHERE i.id = %s
+            """
+            params: List[Any] = [invoice_id]
+            if customer_id is not None:
+                query += " AND i.partner_id = %s"
+                params.append(customer_id)
+            if tenant_id is not None:
+                query += " AND i.business_id = %s"
+                params.append(tenant_id)
+
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, params)
+                row = cur.fetchone()
+                if not row:
+                    return None
+                inv = dict(row)
+                tot = _to_float(inv.get("total_amount"))
+                paid = _to_float(inv.get("paid_amount"))
+                inv["total_amount"] = tot
+                inv["paid_amount"] = paid
+                inv["balance_due"] = max(0.0, round(tot - paid, 2))
+                return inv
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def update_invoice_stripe_session(
+        self,
+        invoice_id: int,
+        session_id: str,
+        payment_link: Optional[str] = None,
+        conn=None,
+    ) -> Optional[Dict[str, Any]]:
+        """Store Stripe session id and hosted payment URL in invoice T0090."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            query = f"""
+                UPDATE {self._get_table("t0090")}
+                SET stripe_checkout_session_id = %s,
+                    payment_link = COALESCE(%s, payment_link),
+                    updated_at = NOW(),
+                    update_number = COALESCE(update_number, 0) + 1
+                WHERE id = %s
+                RETURNING id, stripe_checkout_session_id, payment_link
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(query, (session_id, payment_link, invoice_id))
+                row = cur.fetchone()
+                if should_release:
+                    conn.commit()
+                return dict(row) if row else None
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)
+
+    def reconcile_settlement_transaction(
+        self,
+        customer_id: int,
+        amount: float,
+        settlement_type: str = "invoice",
+        invoice_id: Optional[int] = None,
+        invoice_ids: Optional[List[int]] = None,
+        session_id: Optional[str] = None,
+        payment_intent_id: Optional[str] = None,
+        payment_method: str = "Stripe Card",
+        payment_link: Optional[str] = None,
+        conn=None,
+    ) -> Dict[str, Any]:
+        """Reconcile online Stripe payment: create payment, update invoices, decrement balance, post journal entry."""
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+
+        try:
+            tenant_id = get_current_tenant()
+
+            # 1. Idempotency Check: see if payment record already exists
+            check_payment_query = f"""
+                SELECT id, payment_date, invoice_id, partner_id, amount, payment_method,
+                       reference, status, notes, stripe_payment_intent_id, stripe_checkout_session_id,
+                       payment_link, created_at
+                FROM {self._get_table("t0091")}
+                WHERE (stripe_payment_intent_id IS NOT NULL AND stripe_payment_intent_id = %s)
+                   OR (stripe_checkout_session_id IS NOT NULL AND stripe_checkout_session_id = %s)
+                LIMIT 1
+            """
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(check_payment_query, (payment_intent_id, session_id))
+                existing_payment = cur.fetchone()
+
+            if existing_payment:
+                customer = self.get_customer(customer_id, conn=conn)
+                cust_bal = _to_float(customer.get("balance", 0.0)) if customer else 0.0
+                return {
+                    "reconciled": True,
+                    "already_processed": True,
+                    "payment_id": existing_payment["id"],
+                    "customer_id": customer_id,
+                    "amount": _to_float(existing_payment.get("amount")),
+                    "invoice_id": existing_payment.get("invoice_id"),
+                    "invoices_updated": [existing_payment["invoice_id"]] if existing_payment.get("invoice_id") else [],
+                    "new_customer_balance": cust_bal,
+                    "journal_entry_id": None,
+                    "session_id": session_id,
+                    "payment_intent_id": payment_intent_id,
+                }
+
+            # 2. Lookup customer
+            customer = self.get_customer(customer_id, conn=conn)
+            if not customer:
+                raise ValueError(f"Customer with ID {customer_id} does not exist.")
+
+            # 3. Create payment record in T0091
+            insert_payment_query = f"""
+                INSERT INTO {self._get_table("t0091")} (
+                    payment_date, invoice_id, partner_id, amount, payment_method,
+                    reference, status, notes, stripe_payment_intent_id,
+                    stripe_checkout_session_id, payment_link, business_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, payment_date, invoice_id, partner_id, amount, payment_method,
+                          reference, status, notes, stripe_payment_intent_id,
+                          stripe_checkout_session_id, payment_link, created_at
+            """
+            reference = payment_intent_id or session_id or "Stripe Settlement"
+            payment_params = [
+                datetime.now(timezone.utc).date(),
+                invoice_id,
+                customer_id,
+                amount,
+                payment_method,
+                reference,
+                "Completed",
+                f"Online settlement via {payment_method}",
+                payment_intent_id,
+                session_id,
+                payment_link,
+                customer.get("business_id", tenant_id),
+            ]
+
+            invoices_updated = []
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(insert_payment_query, payment_params)
+                payment_row = cur.fetchone()
+                payment_id = payment_row["id"]
+
+                # 4. Update Invoices
+                if invoice_id:
+                    update_inv_query = f"""
+                        UPDATE {self._get_table("t0090")}
+                        SET paid_amount = COALESCE(paid_amount, 0) + %s,
+                            status = CASE
+                                WHEN (COALESCE(paid_amount, 0) + %s) >= total_amount THEN 'Paid'
+                                ELSE 'Partially Paid'
+                            END,
+                            updated_at = NOW(),
+                            update_number = COALESCE(update_number, 0) + 1
+                        WHERE id = %s
+                        RETURNING id, total_amount, paid_amount, status
+                    """
+                    cur.execute(update_inv_query, (amount, amount, invoice_id))
+                    inv_res = cur.fetchone()
+                    if inv_res:
+                        res_id = inv_res.get("id", invoice_id) if isinstance(inv_res, dict) else invoice_id
+                        invoices_updated.append(res_id)
+                elif invoice_ids:
+                    for inv_id in invoice_ids:
+                        cur.execute(
+                            f"""
+                            UPDATE {self._get_table("t0090")}
+                            SET paid_amount = total_amount,
+                                status = 'Paid',
+                                updated_at = NOW(),
+                                update_number = COALESCE(update_number, 0) + 1
+                            WHERE id = %s
+                            RETURNING id
+                            """,
+                            (inv_id,),
+                        )
+                        inv_res = cur.fetchone()
+                        if inv_res:
+                            res_id = inv_res.get("id", inv_id) if isinstance(inv_res, dict) else inv_id
+                            invoices_updated.append(res_id)
+
+                # 5. Decrement Customer Balance in T0010
+                update_cust_query = f"""
+                    UPDATE {self._get_table("t0010")}
+                    SET balance = GREATEST(0.0, balance - %s),
+                        updated_at = NOW(),
+                        update_number = COALESCE(update_number, 0) + 1
+                    WHERE id = %s
+                    RETURNING balance
+                """
+                cur.execute(update_cust_query, (amount, customer_id))
+                cust_row = cur.fetchone()
+                new_balance = _to_float(cust_row["balance"]) if cust_row else 0.0
+
+                # 6. Post balancing General Ledger Journal Entry (T0027 and T0089)
+                cur.execute(
+                    f"""
+                    SELECT id FROM {self._get_table("t0026")}
+                    WHERE (code = '1000' OR type = 'Asset' OR name ILIKE '%Bank%' OR name ILIKE '%Cash%')
+                    ORDER BY id ASC LIMIT 1
+                    """
+                )
+                bank_acc = cur.fetchone()
+                bank_acc_id = bank_acc["id"] if bank_acc else 1
+
+                cur.execute(
+                    f"""
+                    SELECT id FROM {self._get_table("t0026")}
+                    WHERE (code = '1200' OR name ILIKE '%Receivable%' OR type = 'Asset')
+                    ORDER BY id ASC LIMIT 1
+                    """
+                )
+                ar_acc = cur.fetchone()
+                ar_acc_id = ar_acc["id"] if ar_acc else 2
+
+                je_ref = f"JE-STRIPE-{payment_id}"
+                insert_je_query = f"""
+                    INSERT INTO {self._get_table("t0027")} (
+                        entry_date, reference, description, status, business_id
+                    ) VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id, entry_date, reference, description, status, created_at
+                """
+                je_params = [
+                    datetime.now(timezone.utc).date(),
+                    je_ref,
+                    f"Stripe settlement for customer {customer.get('name')}",
+                    "Posted",
+                    customer.get("business_id", tenant_id),
+                ]
+                cur.execute(insert_je_query, je_params)
+                je_row = cur.fetchone()
+                je_id = je_row["id"]
+
+                # Debit Bank
+                cur.execute(
+                    f"""
+                    INSERT INTO {self._get_table("t0089")} (
+                        journal_entry_id, account_id, debit, credit, description, business_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id, journal_entry_id, account_id, debit, credit, description
+                    """,
+                    (je_id, bank_acc_id, amount, 0.0, "Stripe settlement deposit", customer.get("business_id", tenant_id)),
+                )
+
+                # Credit AR
+                cur.execute(
+                    f"""
+                    INSERT INTO {self._get_table("t0089")} (
+                        journal_entry_id, account_id, debit, credit, description, business_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id, journal_entry_id, account_id, debit, credit, description
+                    """,
+                    (je_id, ar_acc_id, 0.0, amount, "Accounts receivable reduction", customer.get("business_id", tenant_id)),
+                )
+
+            if should_release:
+                conn.commit()
+
+            return {
+                "reconciled": True,
+                "already_processed": False,
+                "payment_id": payment_id,
+                "customer_id": customer_id,
+                "amount": amount,
+                "invoice_id": invoice_id,
+                "invoices_updated": invoices_updated,
+                "new_customer_balance": new_balance,
+                "journal_entry_id": je_id,
+                "journal_entry_reference": je_ref,
+                "session_id": session_id,
+                "payment_intent_id": payment_intent_id,
+            }
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if should_release:
+                release_connection(conn)

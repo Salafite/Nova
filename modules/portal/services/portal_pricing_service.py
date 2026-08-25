@@ -20,6 +20,57 @@ class PortalPricingService:
 
     def __init__(self, repo: Optional[PortalRepository] = None):
         self.repo = repo or PortalRepository()
+        self.portal_repo = self.repo
+
+    def resolve_line_items_pricing(
+        self,
+        customer_id: int,
+        items: List[Any],
+        conn=None,
+    ) -> List[Dict[str, Any]]:
+        """Resolve contracted pricing, base prices, line totals, and product metadata for order lines."""
+        resolved = []
+        for idx, item in enumerate(items, start=1):
+            if hasattr(item, "product_id"):
+                product_id = item.product_id
+                qty = float(getattr(item, "qty", 1.0))
+                notes = getattr(item, "notes", None)
+            elif isinstance(item, dict):
+                product_id = item.get("product_id")
+                qty = float(item.get("qty", 1.0))
+                notes = item.get("notes")
+            else:
+                continue
+
+            product = self.repo.get_product(product_id, conn=conn) if product_id else None
+            pricing = self.repo.resolve_contracted_price(
+                customer_id=customer_id,
+                product_id=product_id,
+                qty=qty,
+                conn=conn,
+            ) if product_id else {}
+
+            unit_price = float(pricing.get("unit_price") or 0.0)
+            base_price = float(pricing.get("base_price") or 0.0)
+            line_total = round(qty * unit_price, 2)
+            product_code = product.get("sku") if product else pricing.get("product_code")
+            product_name = product.get("name") if product else pricing.get("product_name") or f"Product #{product_id}"
+            uom_name = product.get("uom_name") or product.get("uom_code") if product else None
+
+            resolved.append({
+                "line_number": idx,
+                "product_id": product_id,
+                "product_code": product_code,
+                "product_name": product_name,
+                "uom_name": uom_name,
+                "qty": qty,
+                "unit_price": unit_price,
+                "base_price": base_price,
+                "line_total": line_total,
+                "is_contracted": bool(pricing.get("is_contracted", False)),
+                "notes": notes,
+            })
+        return resolved
 
     def get_catalog(
         self,
