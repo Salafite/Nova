@@ -8,8 +8,9 @@ from packages.database.connection import get_connection, release_connection
 logger = logging.getLogger(__name__)
 
 VALID_SALES_STATUS_TRANSITIONS = {
-    'Draft': ['Confirmed', 'Cancelled'],
-    'Pending': ['Confirmed', 'Cancelled'],
+    'Draft': ['Pending', 'Confirmed', 'Credit Hold', 'Cancelled'],
+    'Pending': ['Confirmed', 'Credit Hold', 'Cancelled'],
+    'Credit Hold': ['Draft', 'Pending', 'Confirmed', 'Cancelled'],
     'Confirmed': ['Shipped', 'Cancelled'],
     'Shipped': ['Delivered', 'Cancelled'],
     'Delivered': ['Invoiced'],
