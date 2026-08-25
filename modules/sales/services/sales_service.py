@@ -1,8 +1,16 @@
 import logging
+from datetime import date
+from typing import Optional, Union, Dict, Any, List
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.sequence import generate_invoice_number
 from packages.database.connection import get_connection, release_connection
+from modules.accounting.services.payment_term_service import (
+    resolve_effective_term,
+    calculate_due_date,
+    calculate_discount_deadline,
+    calculate_max_early_discount,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +172,22 @@ PRODUCT_REPO = CrudRepository(
 )
 
 
+PAYMENT_TERM_REPO = CrudRepository(
+    'T0096',
+    business_columns=[
+        'id',
+        'name',
+        'code',
+        'description',
+        'due_days',
+        'discount_percentage',
+        'discount_days',
+        'is_active',
+        'is_default',
+    ],
+)
+
+
 class SalesOrderService(CrudService):
     def __init__(
         self,
@@ -174,6 +198,7 @@ class SalesOrderService(CrudService):
         pl_repo: CrudRepository = None,
         pli_repo: CrudRepository = None,
         product_repo: CrudRepository = None,
+        payment_term_repo: CrudRepository = None,
     ):
         super().__init__(repo or ORDER_REPO)
         self.line_repo = line_repo or LINE_REPO
@@ -182,6 +207,7 @@ class SalesOrderService(CrudService):
         self.pl_repo = pl_repo or PL_REPO
         self.pli_repo = pli_repo or PLI_REPO
         self.product_repo = product_repo or PRODUCT_REPO
+        self.payment_term_repo = payment_term_repo or PAYMENT_TERM_REPO
 
     def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None):
         if filters and 'is_catch_weight' in filters:
@@ -207,8 +233,12 @@ class SalesOrderService(CrudService):
             payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
         customer_id = payload.get('customer_id')
         if customer_id:
-            customer = self.customer_repo.get(customer_id, conn=conn)
+            customer = self.customer_repo.get(customer_id, conn=conn) if self.customer_repo else None
             if customer:
+                # Inherit customer payment terms by default if not explicitly provided in order payload
+                if not payload.get('payment_term_id') and customer.get('payment_term_id'):
+                    payload['payment_term_id'] = customer.get('payment_term_id')
+
                 new_balance = customer.get('balance', 0) + payload.get('grand_total', 0)
                 credit_limit = customer.get('credit_limit', 0)
                 if credit_limit > 0 and new_balance > credit_limit:
@@ -218,6 +248,16 @@ class SalesOrderService(CrudService):
                         f"credit limit {credit_limit} exceeded by new balance {new_balance}"
                     )
                     raise HTTPException(400, f'Order would exceed credit limit ({customer.get("name")}: limit={credit_limit}, new balance={new_balance})')
+
+        # If payment_term_id is still not set, resolve default active payment term if available
+        if not payload.get('payment_term_id') and hasattr(self, 'payment_term_repo') and self.payment_term_repo:
+            try:
+                default_terms = self.payment_term_repo.list(filters={'is_default': True, 'is_active': True}, limit=1, conn=conn)
+                if default_terms and default_terms[0].get('id'):
+                    payload['payment_term_id'] = default_terms[0]['id']
+            except Exception as e:
+                logger.warning(f"Could not resolve default payment term for order: {e}")
+
         return super().create(payload, conn=conn)
 
     def update(self, id_val, payload: dict, conn=None):
@@ -494,15 +534,42 @@ class SalesOrderService(CrudService):
                 adj = recalc.get('weight_adjustment_amount')
                 notes += f" (Catch-weight adjustment: {'+' if adj > 0 else ''}{adj:.2f})"
 
+            # Resolve effective payment terms (Order term -> Customer term -> Default term -> Fallback)
+            term = resolve_effective_term(
+                payment_term_id=order.get('payment_term_id'),
+                customer_id=order.get('customer_id'),
+                customer_repo=self.customer_repo if hasattr(self, 'customer_repo') else None,
+                term_repo=self.payment_term_repo if hasattr(self, 'payment_term_repo') else None,
+                conn=conn,
+            )
+
+            term_id = order.get('payment_term_id')
+            if not term_id and isinstance(term, dict):
+                term_id = term.get('id')
+
+            issue_date = order.get('order_date') or date.today()
+            due_date = calculate_due_date(base_date=issue_date, term=term)
+            discount_due_date = calculate_discount_deadline(base_date=issue_date, term=term)
+
+            discount_percentage = float(term.get('discount_percentage', 0.0) or 0.0) if isinstance(term, dict) else float(getattr(term, 'discount_percentage', 0.0) or 0.0)
+            discount_days = int(term.get('discount_days', 0) or 0) if isinstance(term, dict) else int(getattr(term, 'discount_days', 0) or 0)
+            grand_total = float(order.get('grand_total', 0) or 0)
+            early_discount_amount = calculate_max_early_discount(grand_total, discount_percentage) if (discount_percentage > 0 and discount_days > 0) else 0.0
+
             self.inv_repo.create({
                 'invoice_number': invoice_number,
                 'invoice_type': 'Sales',
                 'partner_id': order.get('customer_id'),
                 'sales_order_id': order_id,
                 'sales_rep_id': order.get('sales_rep_id'),
-                'issue_date': order.get('order_date'),
-                'due_date': order.get('order_date'),
-                'total_amount': order.get('grand_total', 0),
+                'payment_term_id': term_id,
+                'issue_date': issue_date,
+                'due_date': due_date,
+                'discount_due_date': discount_due_date,
+                'discount_percentage': discount_percentage,
+                'discount_days': discount_days,
+                'early_discount_amount': early_discount_amount,
+                'total_amount': grand_total,
                 'freight_amount': order.get('freight_amount', 0) or 0,
                 'discount_amount': order.get('discount_amount', 0) or 0,
                 'status': 'Unpaid',
