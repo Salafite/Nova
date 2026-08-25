@@ -22,3 +22,16 @@ def get_default_payment_term():
     if not term:
         raise HTTPException(404, "No default payment term found")
     return term
+
+
+@router.get('/standard-terms', response_model=list[PaymentTermCreate])
+def get_standard_payment_terms():
+    """Get standard predefined payment term templates (Net 30, COD, Net 15, Net 60, 2/10 Net 30, Due on Receipt)."""
+    return service.get_standard_terms()
+
+
+@router.post('/seed-standard', response_model=list[PaymentTermResponse])
+def seed_standard_payment_terms():
+    """Seed standard payment terms into the database for the active tenant."""
+    return service.seed_standard_terms()
+

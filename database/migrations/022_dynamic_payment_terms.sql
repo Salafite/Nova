@@ -25,4 +25,16 @@ CREATE INDEX IF NOT EXISTS idx_t0090_due_date ON "Nova".t0090(due_date);
 CREATE INDEX IF NOT EXISTS idx_t0010_payment_term_id ON "Nova".t0010(payment_term_id);
 CREATE INDEX IF NOT EXISTS idx_t0012_payment_term_id ON "Nova".t0012(payment_term_id);
 
+-- 3. Seed Standard Payment Terms (COD, Net 15, Net 30, Net 60, 2/10 Net 30, Due on Receipt)
+INSERT INTO "Nova".t0096 (name, code, description, due_days, discount_percentage, discount_days, is_active, is_default)
+VALUES
+    ('Net 30', 'NET_30', 'Payment due within 30 days', 30, 0.00, 0, true, true),
+    ('Cash on Delivery (COD)', 'COD', 'Payment due immediately upon delivery', 0, 0.00, 0, true, false),
+    ('Net 15', 'NET_15', 'Payment due within 15 days', 15, 0.00, 0, true, false),
+    ('Net 60', 'NET_60', 'Payment due within 60 days', 60, 0.00, 0, true, false),
+    ('2/10 Net 30', '2_10_NET_30', '2% discount if paid within 10 days, net due in 30 days', 30, 2.00, 10, true, false),
+    ('Due on Receipt', 'DUE_ON_RECEIPT', 'Payment due immediately upon receipt', 0, 0.00, 0, true, false)
+ON CONFLICT (code) DO NOTHING;
+
 COMMIT;
+

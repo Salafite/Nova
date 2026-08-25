@@ -26,18 +26,147 @@ CUSTOMER_REPO = CrudRepository(
     business_columns=['id', 'name', 'credit_limit', 'balance', 'payment_term_id'],
 )
 
-# Standard Fallback Term when no terms are configured in database
-FALLBACK_NET_30_TERM: Dict[str, Any] = {
-    'id': None,
-    'name': 'Net 30',
-    'code': 'NET_30',
-    'description': 'Payment due within 30 days',
-    'due_days': 30,
-    'discount_percentage': 0.0,
-    'discount_days': 0,
-    'is_active': True,
-    'is_default': True,
+# Standard Common Payment Terms Templates
+STANDARD_PAYMENT_TERMS: List[Dict[str, Any]] = [
+    {
+        'name': 'Net 30',
+        'code': 'NET_30',
+        'description': 'Payment due within 30 days',
+        'due_days': 30,
+        'discount_percentage': 0.0,
+        'discount_days': 0,
+        'is_active': True,
+        'is_default': True,
+    },
+    {
+        'name': 'Cash on Delivery (COD)',
+        'code': 'COD',
+        'description': 'Payment due immediately upon delivery',
+        'due_days': 0,
+        'discount_percentage': 0.0,
+        'discount_days': 0,
+        'is_active': True,
+        'is_default': False,
+    },
+    {
+        'name': 'Net 15',
+        'code': 'NET_15',
+        'description': 'Payment due within 15 days',
+        'due_days': 15,
+        'discount_percentage': 0.0,
+        'discount_days': 0,
+        'is_active': True,
+        'is_default': False,
+    },
+    {
+        'name': 'Net 60',
+        'code': 'NET_60',
+        'description': 'Payment due within 60 days',
+        'due_days': 60,
+        'discount_percentage': 0.0,
+        'discount_days': 0,
+        'is_active': True,
+        'is_default': False,
+    },
+    {
+        'name': '2/10 Net 30',
+        'code': '2_10_NET_30',
+        'description': '2% discount if paid within 10 days, net due in 30 days',
+        'due_days': 30,
+        'discount_percentage': 2.0,
+        'discount_days': 10,
+        'is_active': True,
+        'is_default': False,
+    },
+    {
+        'name': 'Due on Receipt',
+        'code': 'DUE_ON_RECEIPT',
+        'description': 'Payment due immediately upon receipt',
+        'due_days': 0,
+        'discount_percentage': 0.0,
+        'discount_days': 0,
+        'is_active': True,
+        'is_default': False,
+    },
+]
+
+# Named Standard Term Constants
+TERM_NET_30: Dict[str, Any] = STANDARD_PAYMENT_TERMS[0]
+TERM_COD: Dict[str, Any] = STANDARD_PAYMENT_TERMS[1]
+TERM_NET_15: Dict[str, Any] = STANDARD_PAYMENT_TERMS[2]
+TERM_NET_60: Dict[str, Any] = STANDARD_PAYMENT_TERMS[3]
+TERM_2_10_NET_30: Dict[str, Any] = STANDARD_PAYMENT_TERMS[4]
+TERM_DUE_ON_RECEIPT: Dict[str, Any] = STANDARD_PAYMENT_TERMS[5]
+
+COMMON_PAYMENT_TERMS: Dict[str, Dict[str, Any]] = {
+    'NET_30': TERM_NET_30,
+    'COD': TERM_COD,
+    'NET_15': TERM_NET_15,
+    'NET_60': TERM_NET_60,
+    '2_10_NET_30': TERM_2_10_NET_30,
+    'DUE_ON_RECEIPT': TERM_DUE_ON_RECEIPT,
 }
+
+STANDARD_PAYMENT_TERMS_BY_CODE: Dict[str, Dict[str, Any]] = {
+    term['code']: term for term in STANDARD_PAYMENT_TERMS
+}
+
+# Standard Fallback Term when no terms are configured in database
+FALLBACK_NET_30_TERM: Dict[str, Any] = dict(STANDARD_PAYMENT_TERMS[0])
+
+
+def get_standard_payment_terms() -> List[Dict[str, Any]]:
+    """Return a list of standard predefined payment term configurations."""
+    return [dict(t) for t in STANDARD_PAYMENT_TERMS]
+
+
+def get_standard_payment_term(identifier: Union[str, int]) -> Optional[Dict[str, Any]]:
+    """
+    Look up a standard payment term definition by code, name, or alias.
+    Examples: 'COD', 'NET_30', 'Net 30', '2_10_NET_30', '2/10 Net 30', 'NET_15', 'Net 15', 'NET_60', 'Net 60'.
+    """
+    if not identifier:
+        return None
+    raw = str(identifier).strip()
+    norm = raw.upper().replace(' ', '_').replace('/', '_').replace('-', '_').replace(',', '_').replace('__', '_')
+
+    # Direct match on code
+    if raw in STANDARD_PAYMENT_TERMS_BY_CODE:
+        return dict(STANDARD_PAYMENT_TERMS_BY_CODE[raw])
+    if norm in STANDARD_PAYMENT_TERMS_BY_CODE:
+        return dict(STANDARD_PAYMENT_TERMS_BY_CODE[norm])
+
+    # Search through standard terms by name or normalized code
+    for term in STANDARD_PAYMENT_TERMS:
+        term_norm = term['code'].upper().replace(' ', '_').replace('/', '_').replace('-', '_')
+        if norm == term_norm or raw.lower() == term['name'].lower():
+            return dict(term)
+
+    # Common aliases
+    alias_map = {
+        'CASH_ON_DELIVERY': 'COD',
+        'CASHONDELIVERY': 'COD',
+        '2_10_NET30': '2_10_NET_30',
+        '2_10_NET_30': '2_10_NET_30',
+        '2_10_NET_30_DAYS': '2_10_NET_30',
+        '2_10_N30': '2_10_NET_30',
+        'NET15': 'NET_15',
+        'NET_15': 'NET_15',
+        'NET15DAYS': 'NET_15',
+        'NET30': 'NET_30',
+        'NET_30': 'NET_30',
+        'NET30DAYS': 'NET_30',
+        'NET60': 'NET_60',
+        'NET_60': 'NET_60',
+        'NET60DAYS': 'NET_60',
+        'DUE_UPON_RECEIPT': 'DUE_ON_RECEIPT',
+        'DUE_RECEIPT': 'DUE_ON_RECEIPT',
+    }
+    mapped_code = alias_map.get(norm)
+    if mapped_code and mapped_code in STANDARD_PAYMENT_TERMS_BY_CODE:
+        return dict(STANDARD_PAYMENT_TERMS_BY_CODE[mapped_code])
+
+    return None
 
 
 def _parse_date(d: Optional[Union[date, datetime, str]]) -> date:
@@ -435,6 +564,57 @@ class PaymentTermService(CrudService):
             term_repo=self.repo,
             conn=conn,
         )
+
+    def get_standard_terms(self) -> List[Dict[str, Any]]:
+        """Return the standard predefined payment term templates."""
+        return get_standard_payment_terms()
+
+    def get_standard_term(self, identifier: Union[str, int]) -> Optional[Dict[str, Any]]:
+        """Look up a standard payment term definition by code, name, or alias."""
+        return get_standard_payment_term(identifier)
+
+    def seed_standard_terms(
+        self,
+        business_id: Optional[int] = None,
+        conn=None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Seed standard payment terms (COD, Net 15, Net 30, Net 60, 2/10 Net 30, Due on Receipt)
+        into the database if they don't already exist for the current tenant.
+        Ensures active and default term configurations are properly set.
+
+        Returns:
+            List of all standard terms (existing or newly created).
+        """
+        kwargs = {'conn': conn} if conn is not None else {}
+        results = []
+        try:
+            existing_terms = self.repo.list(**kwargs)
+            existing_by_code = {
+                t.get('code', '').strip().upper(): t for t in existing_terms if t.get('code')
+            }
+            has_default = any(t.get('is_default') and t.get('is_active', True) for t in existing_terms)
+
+            for std in STANDARD_PAYMENT_TERMS:
+                code_key = std['code'].strip().upper()
+                if code_key in existing_by_code:
+                    results.append(existing_by_code[code_key])
+                else:
+                    payload = dict(std)
+                    if business_id is not None:
+                        payload['business_id'] = business_id
+                    # If a default already exists, do not duplicate default flag
+                    if has_default and payload.get('is_default'):
+                        payload['is_default'] = False
+                    elif payload.get('is_default'):
+                        has_default = True
+                    created = self.create(payload, conn=conn)
+                    results.append(created)
+        except Exception as e:
+            logger.error(f"Error seeding standard payment terms: {e}", exc_info=True)
+            return get_standard_payment_terms()
+
+        return results
 
 
 # Module-level default repository and service instances

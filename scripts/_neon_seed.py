@@ -125,7 +125,8 @@ TABLES = {
         id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, group_name VARCHAR(100),
         email VARCHAR(255), phone VARCHAR(50), credit_limit NUMERIC(12,2) DEFAULT 0,
         balance NUMERIC(12,2) DEFAULT 0, default_price_list_id INT,
-        default_tax_rate_id INT, is_active BOOLEAN NOT NULL DEFAULT true,
+        default_tax_rate_id INT, payment_term_id INT REFERENCES nova_erp.t0096(id),
+        is_active BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(), created_by INT,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_by INT,
         update_number INT NOT NULL DEFAULT 1
@@ -202,16 +203,41 @@ TABLES = {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_by INT,
         update_number INT NOT NULL DEFAULT 1
     ''',
+    't0096': '''
+        id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, code VARCHAR(20) NOT NULL UNIQUE,
+        description TEXT, due_days INT NOT NULL DEFAULT 30,
+        discount_percentage NUMERIC(5,2) NOT NULL DEFAULT 0,
+        discount_days INT NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT true, is_default BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(), created_by INT,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_by INT,
+        update_number INT NOT NULL DEFAULT 1
+    ''',
 }
 
 # Create tables in dependency order
-table_order = ['t0001','t0008','t0003','t0004','t0007','t0010','t0011','t0083','t0085','t0009','t0012','t0013','t0014','t0015']
+table_order = ['t0001','t0008','t0003','t0004','t0007','t0096','t0010','t0011','t0083','t0085','t0009','t0012','t0013','t0014','t0015']
 for tname in table_order:
     cur.execute('CREATE TABLE IF NOT EXISTS nova_erp.%s (%s)' % (tname, TABLES[tname]))
 print('[3/5] Tables created (%d)' % len(table_order))
 
 now_ = datetime.now()
 today_ = date.today()
+
+# --- Payment Terms ---
+SEED_TERMS = [
+    ('Net 30', 'NET_30', 'Payment due within 30 days', 30, 0.0, 0, True, True),
+    ('Cash on Delivery (COD)', 'COD', 'Payment due immediately upon delivery', 0, 0.0, 0, True, False),
+    ('Net 15', 'NET_15', 'Payment due within 15 days', 15, 0.0, 0, True, False),
+    ('Net 60', 'NET_60', 'Payment due within 60 days', 60, 0.0, 0, True, False),
+    ('2/10 Net 30', '2_10_NET_30', '2% discount if paid within 10 days, net due in 30 days', 30, 2.0, 10, True, False),
+    ('Due on Receipt', 'DUE_ON_RECEIPT', 'Payment due immediately upon receipt', 0, 0.0, 0, True, False),
+]
+for name, code, desc, due_d, disc_p, disc_d, act, defl in SEED_TERMS:
+    if not gid('t0096', 'code', code):
+        ins('t0096', ['name','code','description','due_days','discount_percentage','discount_days','is_active','is_default','created_at','created_by'],
+            [(name, code, desc, due_d, disc_p, disc_d, act, defl, now_, 1)])
+print('  Payment terms seeded')
 
 # --- UOM ---
 uid = gid('t0001', 'uom_code', 'pcs')
@@ -342,22 +368,24 @@ for sku, qty, reorder in INITIAL_STOCK:
             [(pid, wid, qty, reorder, now_, 1)])
 
 # --- Customers ---
+term_ids = {code: gid('t0096', 'code', code) for _, code, _, _, _, _, _, _ in SEED_TERMS}
+
 CUSTOMERS = [
-    ('TechCorp Solutions', 'Wholesale', 'orders@techcorp.com', 50000, 7500),
-    ('Digital Frontier LLC', 'Wholesale', 'procurement@digitalfrontier.io', 35000, 4200),
-    ('Apex Retail Group', 'Retail Chain', 'buy@apexretail.com', 25000, 3100),
-    ('Dr. Emily Chen', 'Professional', 'emily.chen@example.com', 8000, 1200),
-    ('James Wilson', 'Retail', 'jwilson@example.com', 5000, 899),
-    ('Sofia Martinez', 'Retail', 'sofia.m@example.com', 3000, 450),
-    ('NorthStar IT Services', 'Corporate', 'it@northstarit.com', 75000, 12500),
-    ('Greenfield Academy', 'Education', 'admin@greenfield.edu', 20000, 0),
+    ('TechCorp Solutions', 'Wholesale', 'orders@techcorp.com', 50000, 7500, term_ids.get('2_10_NET_30')),
+    ('Digital Frontier LLC', 'Wholesale', 'procurement@digitalfrontier.io', 35000, 4200, term_ids.get('NET_30')),
+    ('Apex Retail Group', 'Retail Chain', 'buy@apexretail.com', 25000, 3100, term_ids.get('NET_15')),
+    ('Dr. Emily Chen', 'Professional', 'emily.chen@example.com', 8000, 1200, term_ids.get('NET_30')),
+    ('James Wilson', 'Retail', 'jwilson@example.com', 5000, 899, term_ids.get('COD')),
+    ('Sofia Martinez', 'Retail', 'sofia.m@example.com', 3000, 450, term_ids.get('COD')),
+    ('NorthStar IT Services', 'Corporate', 'it@northstarit.com', 75000, 12500, term_ids.get('NET_60')),
+    ('Greenfield Academy', 'Education', 'admin@greenfield.edu', 20000, 0, term_ids.get('NET_30')),
 ]
 ec = gids('t0010', 'name', [c[0] for c in CUSTOMERS])
 new_custs = [c for c in CUSTOMERS if c[0] not in ec]
 if new_custs:
     cids = ins('t0010',
-        ['name','group_name','email','credit_limit','balance','default_price_list_id','default_tax_rate_id','is_active','created_at','created_by'],
-        [(n,g,em,cl,bl,pl_id,tx_id,True,now_,1) for n,g,em,cl,bl in new_custs])
+        ['name','group_name','email','credit_limit','balance','default_price_list_id','default_tax_rate_id','payment_term_id','is_active','created_at','created_by'],
+        [(n,g,em,cl,bl,pl_id,tx_id,ptid,True,now_,1) for n,g,em,cl,bl,ptid in new_custs])
     for cid, c in zip(cids, new_custs):
         ec[c[0]] = cid
 print('  Customers: %d' % len(ec))
@@ -410,9 +438,12 @@ for cust_name, order_num, status, order_date, lines in sales_data:
     subtotal = sum(q*up for _,q,up in lines)
     tax = round(subtotal*0.08,2)
     grand = subtotal+tax
+    cur.execute('SELECT payment_term_id FROM nova_erp.t0010 WHERE id = %s', (cust_id,))
+    pt_row = cur.fetchone()
+    cust_pt_id = pt_row[0] if pt_row else None
     so_id = ins('t0012',
-        ['order_number','customer_id','subtotal','tax','grand_total','status','order_date','price_list_id','tax_rate_id','created_at','created_by'],
-        [(order_num, cust_id, subtotal, tax, grand, status, order_date, pl_id, tx_id, now_, 1)])[0]
+        ['order_number','customer_id','subtotal','tax','grand_total','status','order_date','price_list_id','tax_rate_id','payment_term_id','created_at','created_by'],
+        [(order_num, cust_id, subtotal, tax, grand, status, order_date, pl_id, tx_id, cust_pt_id, now_, 1)])[0]
     for ln, (sku, qty, uprice) in enumerate(lines, 1):
         pid = existing.get(sku)
         if not pid:
