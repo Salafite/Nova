@@ -597,3 +597,36 @@ class TestCleansingService:
         assert len(phantoms) == 1
         assert phantoms[0]["sku"] == "A2"
         assert summary.phantom_products_detected == 1
+
+    def test_custom_inactivity_thresholds(self):
+        svc = CleansingService()
+        ref_date = date(2026, 8, 1)
+
+        # Product inactive for 8 months (since 2025-12-01)
+        product = {
+            "sku": "MID-001",
+            "name": "Mid-Inactivity Item",
+            "last_transaction_date": "2025-12-01",
+            "stock_quantity": 0,
+        }
+
+        # Threshold 6 months -> should be phantom
+        cfg_6m = DataCleansingConfig(enable_phantom_detection=True, phantom_inactivity_months=6)
+        is_phantom, reason, _ = PhantomProductDetector.evaluate_product(
+            product, config=cfg_6m, reference_date=ref_date
+        )
+        assert is_phantom is True
+
+        # Threshold 12 months -> should NOT be phantom (only 8 months inactive)
+        cfg_12m = DataCleansingConfig(enable_phantom_detection=True, phantom_inactivity_months=12)
+        is_phantom_12, _, _ = PhantomProductDetector.evaluate_product(
+            product, config=cfg_12m, reference_date=ref_date
+        )
+        assert is_phantom_12 is False
+
+    def test_cleanse_empty_batch(self):
+        svc = CleansingService()
+        cleaned_batch, summary = svc.cleanse_batch({})
+        assert cleaned_batch == {}
+        assert summary.total_records_processed == 0
+

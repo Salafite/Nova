@@ -432,3 +432,31 @@ class TestReconciliationServiceFacade:
         assert report.overall_status == "PassedWithWarnings"
         assert report.unresolved_errors_count == 0
         assert any("Phantom Products: Detected 1 inactive/ghost" in r for r in report.recommendations)
+
+    def test_customer_balance_tolerance_thresholds(self):
+        legacy = [{"customer_key": "C1", "name": "Client A", "balance": 100.05}]
+        nova = [{"partner_id": "C1", "name": "Client A", "total_amount": 100.00}]
+
+        # Under tolerance of 0.10 -> should be reconciled
+        res_tol = self.service.reconcile_customer_balances(legacy, nova, tolerance=0.10)
+        assert res_tol.is_reconciled is True
+        assert res_tol.matched_count == 1
+        assert res_tol.mismatched_count == 0
+
+        # Strict tolerance of 0.01 -> should fail reconciliation
+        res_strict = self.service.reconcile_customer_balances(legacy, nova, tolerance=0.01)
+        assert res_strict.is_reconciled is False
+        assert res_strict.mismatched_count == 1
+
+
+    def test_empty_dataset_reconciliation_report(self):
+        report = self.service.generate_reconciliation_report(
+            batch_key="EMPTY_BATCH",
+            extracted_by_entity={},
+            staged_by_entity={},
+        )
+        assert report.overall_status == "Passed"
+        assert report.customer_balance is None
+        assert report.inventory is None
+        assert report.unresolved_errors_count == 0
+
