@@ -9,7 +9,7 @@ from packages.mcp.types import Tool, Resource
 _orders_repo = ORDER_REPO
 _orders_svc = SalesOrderService(_orders_repo, line_repo=LINE_REPO)
 
-_customers_repo = CrudRepository('T0010', business_columns=['id', 'name', 'phone', 'email', 'credit_limit', 'balance', 'is_active'])
+_customers_repo = CrudRepository('T0010', business_columns=['id', 'name', 'phone', 'email', 'credit_limit', 'balance', 'payment_term_id', 'is_active'])
 _customers_svc = CrudService(_customers_repo)
 _credit_svc = CreditService()
 

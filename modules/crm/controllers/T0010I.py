@@ -7,7 +7,25 @@ from modules.crm.models import CustomerCreate, CustomerUpdate, CustomerResponse
 from packages.auth.deps import get_current_user
 from modules.sales.services.credit_service import CreditService
 
-repo = CrudRepository('T0010', business_columns=['id', 'name', 'group_name', 'phone', 'email', 'credit_limit', 'balance', 'default_price_list_id', 'default_tax_rate_id', 'payment_term_id', 'is_active'])
+repo = CrudRepository(
+    'T0010',
+    business_columns=[
+        'id',
+        'name',
+        'group_name',
+        'phone',
+        'email',
+        'credit_limit',
+        'balance',
+        'default_price_list_id',
+        'default_tax_rate_id',
+        'payment_term_id',
+        'min_order_amount',
+        'order_cutoff_time',
+        'allow_reorders',
+        'is_active',
+    ],
+)
 service = CustomerService(repo)
 credit_service = CreditService(customer_repo=repo)
 router = create_crud_router('/api/T0010I', 'T0010 - Customers', service,
