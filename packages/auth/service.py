@@ -53,8 +53,8 @@ def login(username: str, password: str) -> dict | None:
         return None
     update_last_login(user['id'])
     return {
-        'access_token': create_access_token(user['id'], customer_id=user.get('customer_id')),
-        'refresh_token': create_refresh_token(user['id'], customer_id=user.get('customer_id')),
+        'access_token': create_access_token(user['id'], business_id=user.get('business_id'), customer_id=user.get('customer_id')),
+        'refresh_token': create_refresh_token(user['id'], business_id=user.get('business_id'), customer_id=user.get('customer_id')),
         'token_type': 'bearer',
         'user': _build_user_dict(user),
     }
@@ -72,8 +72,8 @@ def refresh(token: str) -> dict | None:
     if not user:
         return None
     return {
-        'access_token': create_access_token(user['id'], customer_id=user.get('customer_id')),
-        'refresh_token': create_refresh_token(user['id'], customer_id=user.get('customer_id')),
+        'access_token': create_access_token(user['id'], business_id=user.get('business_id'), customer_id=user.get('customer_id')),
+        'refresh_token': create_refresh_token(user['id'], business_id=user.get('business_id'), customer_id=user.get('customer_id')),
         'token_type': 'bearer',
     }
 
@@ -88,8 +88,8 @@ def signup(business_name: str, username: str, password: str,
     business = create_business(business_name, 0)
     user = create_user(username, password_hash, full_name, email, 'Admin', business['id'])
     return {
-        'access_token': create_access_token(user['id'], customer_id=user.get('customer_id')),
-        'refresh_token': create_refresh_token(user['id'], customer_id=user.get('customer_id')),
+        'access_token': create_access_token(user['id'], business_id=user.get('business_id'), customer_id=user.get('customer_id')),
+        'refresh_token': create_refresh_token(user['id'], business_id=user.get('business_id'), customer_id=user.get('customer_id')),
         'token_type': 'bearer',
         'user': _build_user_dict(user),
     }

@@ -95,6 +95,9 @@ class InvoiceCreate(BaseModel):
     nominal_total_weight: Optional[float] = Field(None, ge=0)
     actual_total_weight: Optional[float] = Field(None, ge=0)
     weight_adjustment_amount: float = 0
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 class InvoiceUpdate(BaseModel):
     invoice_number: Optional[str] = Field(None, max_length=50)
