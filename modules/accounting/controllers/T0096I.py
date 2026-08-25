@@ -1,9 +1,24 @@
+from fastapi import HTTPException
 from modules.accounting.models.payment_term import PaymentTermCreate, PaymentTermUpdate, PaymentTermResponse
-from modules.core.services.base import CrudService
-from modules.core.repositories.base import CrudRepository
+from modules.accounting.services.payment_term_service import PaymentTermService, PAYMENT_TERM_REPO
 from modules.core.controllers.base import create_crud_router
 
-repo = CrudRepository('T0096', business_columns=['id', 'name', 'code', 'description', 'due_days', 'discount_percentage', 'discount_days', 'is_active', 'is_default'])
-service = CrudService(repo)
-router = create_crud_router('/api/T0096I', 'T0096 - Payment Terms', service,
-                            PaymentTermCreate, PaymentTermUpdate, PaymentTermResponse)
+repo = PAYMENT_TERM_REPO
+service = PaymentTermService(repo)
+router = create_crud_router(
+    '/api/T0096I',
+    'T0096 - Payment Terms',
+    service,
+    PaymentTermCreate,
+    PaymentTermUpdate,
+    PaymentTermResponse,
+)
+
+
+@router.get('/default', response_model=PaymentTermResponse)
+def get_default_payment_term():
+    """Get the currently configured default payment term."""
+    term = service.get_default_term()
+    if not term:
+        raise HTTPException(404, "No default payment term found")
+    return term
