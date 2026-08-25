@@ -107,6 +107,7 @@ class BaseConnector(ABC):
     Provides standardized methods for connection validation, schema discovery,
     row count inspection, preview retrieval, and memory-safe chunked streaming extraction.
     """
+    source_type: str = ""
 
     def __init__(self, **kwargs: Any) -> None:
         self.options = kwargs
@@ -149,6 +150,29 @@ class BaseConnector(ABC):
     def get_table_schema(self, table_name: str) -> TableSchema:
         """Discover and return column definitions, primary keys, and types for a table."""
         pass
+
+    def discover_schema(self, table_filter: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Discover schema metadata across all or filtered tables in the legacy source."""
+        tables = self.get_tables()
+        if table_filter:
+            filter_set = {t.lower() for t in table_filter}
+            tables = [t for t in tables if t.lower() in filter_set]
+
+        schemas = {}
+        for tbl in tables:
+            try:
+                schemas[tbl] = self.get_table_schema(tbl)
+            except Exception:
+                pass
+
+        return {
+            "success": True,
+            "database_name": getattr(self, "database", getattr(self, "dump_path", "source")),
+            "tables_count": len(tables),
+            "tables": tables,
+            "schemas": schemas,
+            "error": None,
+        }
 
     @abstractmethod
     def get_row_count(

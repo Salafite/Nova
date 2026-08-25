@@ -73,9 +73,11 @@ class DryRunService:
         self,
         mapper: Optional[MappingEngine] = None,
         cleaner: Optional[CleansingService] = None,
+        batch_repo: Optional[CrudRepository] = None,
     ) -> None:
         self.mapping_engine = mapper or mapping_engine
         self.cleansing_service = cleaner or cleansing_service
+        self.batch_repo = batch_repo or BATCH_REPO
         # In-memory staging fallback for testing / isolated execution
         self._in_memory_staging: Dict[int, Dict[str, List[Dict[str, Any]]]] = {}
 
@@ -575,6 +577,7 @@ class DryRunService:
 
         return DryRunResult(
             batch_key=batch_key,
+            batch_id=batch_id,
             success=True,
             total_source_rows=total_source_rows,
             valid_rows_count=total_valid_rows,
@@ -760,7 +763,7 @@ class DryRunService:
 
         # 1. Create or update batch in t0104
         try:
-            batch = BATCH_REPO.create(
+            batch = self.batch_repo.create(
                 {
                     "batch_key": batch_key,
                     "entity_type": primary_entity,
@@ -890,9 +893,9 @@ class DryRunService:
 
         batch_row = None
         if isinstance(batch_id_or_key, int) or (isinstance(batch_id_or_key, str) and batch_id_or_key.isdigit()):
-            batch_row = BATCH_REPO.get(int(batch_id_or_key), business_id=active_tenant)
+            batch_row = self.batch_repo.get(int(batch_id_or_key), business_id=active_tenant)
         else:
-            batches = BATCH_REPO.list(
+            batches = self.batch_repo.list(
                 filters={"batch_key": str(batch_id_or_key)},
                 business_id=active_tenant,
             )
@@ -917,10 +920,10 @@ class DryRunService:
             for err in err_list
         ]
 
-        total_rows = batch_row.get("total_rows", 0)
-        valid_rows = recon.get("total_valid_rows", total_rows - len(parsed_errors))
-        error_rows = recon.get("total_error_rows", len([e for e in parsed_errors if getattr(e, "severity", "") == "error"]))
-        warning_rows = len([e for e in parsed_errors if getattr(e, "severity", "") == "warning"])
+        total_rows = batch_row.get("total_rows") or recon.get("total_records") or recon.get("total_source_rows", 0)
+        valid_rows = recon.get("total_valid_rows") if recon.get("total_valid_rows") is not None else recon.get("valid_records", total_rows - len(parsed_errors))
+        error_rows = recon.get("total_error_rows") if recon.get("total_error_rows") is not None else recon.get("error_records", len([e for e in parsed_errors if getattr(e, "severity", "") == "error"]))
+        warning_rows = recon.get("total_warning_rows", len([e for e in parsed_errors if getattr(e, "severity", "") == "warning"]))
 
         # Fetch sample transformed records
         sample_transformed: Dict[str, List[Dict[str, Any]]] = {}
@@ -930,6 +933,7 @@ class DryRunService:
 
         return DryRunResult(
             batch_key=batch_key,
+            batch_id=batch_id,
             success=batch_row.get("dry_run_completed", False),
             total_source_rows=total_rows,
             valid_rows_count=valid_rows,

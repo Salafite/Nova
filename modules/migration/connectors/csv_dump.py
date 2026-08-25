@@ -544,6 +544,7 @@ class CsvDumpConnector(BaseConnector):
     Provides schema introspection, delimiter & encoding autodetection, type inference,
     preview sampling, and memory-safe chunked streaming extraction.
     """
+    source_type: str = "csv_dump"
 
     def __init__(
         self,
@@ -558,6 +559,7 @@ class CsvDumpConnector(BaseConnector):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self.source_type = "csv_dump"
 
         # Allow passing config model or dict
         if config is not None:

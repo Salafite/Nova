@@ -64,9 +64,35 @@ ENTITY_TO_TABLE_MAP: Dict[str, str] = {
 class RollbackService:
     """Service orchestrating atomic instant rollback of legacy ERP migration batches."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        batch_repo: Optional[CrudRepository] = None,
+        items_repo: Optional[CrudRepository] = None,
+        dry_runner: Optional[Any] = None,
+    ) -> None:
+        self.batch_repo = batch_repo
+        self.items_repo = items_repo
+        self.dry_runner = dry_runner
         self.repositories = ENTITY_REPOSITORIES
         self.dependency_order = ROLLBACK_DEPENDENCY_ORDER
+
+    @property
+    def _batch_repo(self) -> CrudRepository:
+        if self.batch_repo is not None:
+            return self.batch_repo
+        return BATCH_REPO
+
+    @property
+    def _items_repo(self) -> CrudRepository:
+        if self.items_repo is not None:
+            return self.items_repo
+        return BATCH_ITEMS_REPO
+
+    @property
+    def _dry_runner(self) -> Any:
+        if self.dry_runner is not None:
+            return self.dry_runner
+        return dry_run_service
 
     # ==========================================================================
     # Main Rollback Entry Points
@@ -324,11 +350,11 @@ class RollbackService:
     ) -> Dict[str, Any]:
         """Verify that all records in the batch have been removed and status is RolledBack."""
         active_tenant = business_id if business_id is not None else get_current_tenant()
-        batch = BATCH_REPO.get(batch_id, business_id=active_tenant)
+        batch = self._batch_repo.get(batch_id, business_id=active_tenant)
         if not batch:
             return {"verified": False, "error": "Batch not found"}
 
-        items = BATCH_ITEMS_REPO.list(filters={"batch_id": batch_id}, business_id=active_tenant, conn=conn)
+        items = self._items_repo.list(filters={"batch_id": batch_id}, business_id=active_tenant, conn=conn)
         unrolled_items = [itm for itm in items if itm.get("status") != "RolledBack"]
 
         is_verified = (batch.get("status") == "RolledBack") and (len(unrolled_items) == 0)
@@ -353,10 +379,10 @@ class RollbackService:
         business_id: Optional[int],
     ) -> Dict[str, Any]:
         """Fetch batch and validate tenant ownership."""
-        batch = BATCH_REPO.get(batch_id, business_id=business_id)
+        batch = self._batch_repo.get(batch_id, business_id=business_id)
         if not batch:
-            unscoped = BATCH_REPO.get_unscoped(batch_id)
-            if unscoped:
+            unscoped = self._batch_repo.get_unscoped(batch_id)
+            if unscoped and isinstance(unscoped, dict):
                 raise ValueError(f"Batch {batch_id} exists but belongs to a different tenant organization")
             raise ValueError(f"Batch {batch_id} not found")
 
@@ -370,7 +396,7 @@ class RollbackService:
     ) -> List[Dict[str, Any]]:
         """Retrieve tracking items from Nova.t0104_items for rollback."""
         try:
-            return BATCH_ITEMS_REPO.list(
+            return self._items_repo.list(
                 filters={"batch_id": batch_id},
                 order_by="id",
                 business_id=business_id,
@@ -468,7 +494,7 @@ class RollbackService:
     ) -> None:
         """Update individual tracking item status to RolledBack in t0104_items."""
         try:
-            BATCH_ITEMS_REPO.update(
+            self._items_repo.update(
                 id_val=item_id,
                 payload={"status": "RolledBack"},
                 conn=conn,
@@ -544,7 +570,7 @@ class RollbackService:
     ) -> None:
         """Clean up in-memory staging, database staging table, and temp tables."""
         # 1. Clear DryRunService in-memory staging
-        dry_run_service.clear_staging(batch_id)
+        self._dry_runner.clear_staging(batch_id)
 
         # 2. Delete from PostgreSQL Nova.t0104_staging
         try:
@@ -604,7 +630,7 @@ class RollbackService:
         })
 
         try:
-            BATCH_REPO.update(
+            self._batch_repo.update(
                 id_val=batch_id,
                 payload={
                     "status": "RolledBack",

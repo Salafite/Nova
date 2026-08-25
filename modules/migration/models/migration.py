@@ -171,6 +171,10 @@ class MigrationMappingConfig(BaseModel):
     auto_fuzzy_match: bool = True
     custom_overrides: Dict[str, Dict[str, str]] = Field(default_factory=dict)
 
+    @property
+    def table_mappings(self) -> Dict[str, TableMappingRule]:
+        return self.mappings
+
 
 # ==============================================================================
 # 4. Data Cleansing and Phantom Product Options
@@ -251,6 +255,7 @@ class RowValidationError(BaseModel):
 class DryRunResult(BaseModel):
     """Result of a dry-run migration simulation with metrics and reconciliation summary."""
     batch_key: str
+    batch_id: Optional[int] = None
     success: bool
     total_source_rows: int = 0
     valid_rows_count: int = 0
@@ -264,6 +269,18 @@ class DryRunResult(BaseModel):
     sample_transformed: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
     reconciliation_summary: Optional[Dict[str, Any]] = None
     ready_for_commit: bool = False
+
+    @property
+    def total_records_processed(self) -> int:
+        return self.total_source_rows
+
+    @property
+    def valid_records_count(self) -> int:
+        return self.valid_rows_count
+
+    @property
+    def error_records_count(self) -> int:
+        return self.error_rows_count
 
 
 # ==============================================================================
@@ -292,6 +309,14 @@ class CustomerBalanceReconciliation(BaseModel):
     discrepancies: List[CustomerBalanceItem] = Field(default_factory=list)
     top_variances: List[CustomerBalanceItem] = Field(default_factory=list)
     is_reconciled: bool = True
+
+    @property
+    def is_balanced(self) -> bool:
+        return self.is_reconciled
+
+    @property
+    def delta_total(self) -> float:
+        return self.total_receivables_delta
 
 
 class WarehouseStockItem(BaseModel):
@@ -338,6 +363,18 @@ class InventoryReconciliation(BaseModel):
     discrepancies: List[WarehouseStockItem] = Field(default_factory=list)
     is_reconciled: bool = True
 
+    @property
+    def is_balanced(self) -> bool:
+        return self.is_reconciled
+
+    @property
+    def quantity_delta_total(self) -> float:
+        return self.total_quantity_delta
+
+    @property
+    def valuation_delta_total(self) -> float:
+        return self.total_valuation_delta
+
 
 class EntityCountReconciliation(BaseModel):
     """Entity-level count verification (source vs staged vs cleansed vs errors)."""
@@ -381,10 +418,15 @@ class CommitMigrationResponse(BaseModel):
     batch_key: str
     status: str = "Committed"
     total_inserted: int = 0
+    inserted_rows: Optional[int] = None
     inserted_by_entity: Dict[str, int] = Field(default_factory=dict)
     execution_time_ms: float = 0.0
     completed_at: Optional[datetime] = None
     message: str = "Migration committed successfully"
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.inserted_rows is None:
+            self.inserted_rows = self.total_inserted
 
 
 class RollbackMigrationRequest(BaseModel):
@@ -400,10 +442,15 @@ class RollbackMigrationResponse(BaseModel):
     batch_key: str
     status: str = "RolledBack"
     total_deleted: int = 0
+    deleted_rows: Optional[int] = None
     deleted_by_entity: Dict[str, int] = Field(default_factory=dict)
     execution_time_ms: float = 0.0
     completed_at: Optional[datetime] = None
     message: str = "Migration batch rolled back successfully"
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.deleted_rows is None:
+            self.deleted_rows = self.total_deleted
 
 
 class MigrationBatchResponse(AuditMixin):

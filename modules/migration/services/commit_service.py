@@ -287,8 +287,34 @@ ENTITY_FK_DEFINITIONS: Dict[str, Dict[str, Dict[str, Any]]] = {
 class CommitService:
     """Service orchestrating atomic one-click commit of staged legacy ERP migration records."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        batch_repo: Optional[CrudRepository] = None,
+        items_repo: Optional[CrudRepository] = None,
+        dry_runner: Optional[Any] = None,
+    ) -> None:
+        self.batch_repo = batch_repo
+        self.items_repo = items_repo
+        self.dry_runner = dry_runner
         self.repositories = ENTITY_REPOSITORIES
+
+    @property
+    def _batch_repo(self) -> CrudRepository:
+        if self.batch_repo is not None:
+            return self.batch_repo
+        return BATCH_REPO
+
+    @property
+    def _items_repo(self) -> CrudRepository:
+        if self.items_repo is not None:
+            return self.items_repo
+        return BATCH_ITEMS_REPO
+
+    @property
+    def _dry_runner(self) -> Any:
+        if self.dry_runner is not None:
+            return self.dry_runner
+        return dry_run_service
 
     # ==========================================================================
     # Main Commit Entry Points
@@ -465,7 +491,7 @@ class CommitService:
                 release_connection(active_conn)
 
         # Cleanup in-memory staging after successful commit
-        dry_run_service.clear_staging(batch_id)
+        self._dry_runner.clear_staging(batch_id)
 
         duration_ms = (time.perf_counter() - start_time) * 1000.0
         return CommitMigrationResponse(
@@ -527,8 +553,8 @@ class CommitService:
             logger.debug(f"Database read from t0104_staging skipped or failed: {e}")
 
         # 2. Check DryRunService in-memory staging fallback
-        if not staged_by_entity and batch_id in dry_run_service._in_memory_staging:
-            staged_by_entity = dry_run_service._in_memory_staging[batch_id]
+        if not staged_by_entity and batch_id in self._dry_runner._in_memory_staging:
+            staged_by_entity = self._dry_runner._in_memory_staging[batch_id]
 
         # 3. Check legacy temp table temp_mig_{batch_id} fallback
         if not staged_by_entity:
@@ -545,7 +571,7 @@ class CommitService:
                         cur.execute(f"SELECT data FROM {tbl} ORDER BY id")
                         rows = cur.fetchall()
                         if rows:
-                            batch_rec = BATCH_REPO.get(batch_id, business_id=active_tenant)
+                            batch_rec = self._batch_repo.get(batch_id, business_id=active_tenant)
                             ent_name = (
                                 batch_rec.get("entity_type")
                                 if batch_rec and isinstance(batch_rec, dict) and batch_rec.get("entity_type")
@@ -576,7 +602,7 @@ class CommitService:
         if entity_type:
             filters["entity_type"] = entity_type
 
-        return BATCH_ITEMS_REPO.list(
+        return self._items_repo.list(
             filters=filters,
             order_by="id",
             limit=limit,
@@ -591,7 +617,7 @@ class CommitService:
     ) -> Optional[Dict[str, Any]]:
         """Fetch summary of a migration batch with committed item counts."""
         active_tenant = business_id if business_id is not None else get_current_tenant()
-        batch = BATCH_REPO.get(batch_id, business_id=active_tenant)
+        batch = self._batch_repo.get(batch_id, business_id=active_tenant)
         if not batch:
             return None
 
@@ -627,17 +653,17 @@ class CommitService:
         force: bool,
     ) -> Dict[str, Any]:
         """Fetch batch and validate status and error conditions prior to commit."""
-        batch = BATCH_REPO.get(batch_id, business_id=business_id)
+        batch = self._batch_repo.get(batch_id, business_id=business_id)
         if not batch:
             # Check unscoped for descriptive tenant mismatch error
-            unscoped = BATCH_REPO.get_unscoped(batch_id)
-            if unscoped:
+            unscoped = self._batch_repo.get_unscoped(batch_id)
+            if unscoped and isinstance(unscoped, dict):
                 raise ValueError(f"Batch {batch_id} exists but belongs to a different tenant organization")
             raise ValueError(f"Batch {batch_id} not found")
 
         status = batch.get("status", "Preview")
         if status == "Committed":
-            raise ValueError(f"Batch {batch_id} is already committed")
+            raise ValueError(f"Batch {batch_id} is already committed (status is {status}, expected Preview)")
 
         if status not in ("Preview", "DryRunPassed", "Pending") and not force:
             raise ValueError(f"Batch status is {status}, expected Preview")
@@ -811,7 +837,7 @@ class CommitService:
     ) -> None:
         """Insert a tracking entry in Nova.t0104_items for atomic rollback."""
         try:
-            BATCH_ITEMS_REPO.create(
+            self._items_repo.create(
                 {
                     "batch_id": batch_id,
                     "entity_type": entity_type,
@@ -857,7 +883,7 @@ class CommitService:
         })
 
         try:
-            BATCH_REPO.update(
+            self._batch_repo.update(
                 id_val=batch_id,
                 payload={
                     "status": "Committed",

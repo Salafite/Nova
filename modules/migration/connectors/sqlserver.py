@@ -207,6 +207,7 @@ class SQLServerConnector(BaseConnector):
     Supports schema inspection, preview extraction, chunk streaming,
     and type coercion using pyodbc, pymssql, or mock test engines.
     """
+    source_type: str = "sqlserver"
 
     def __init__(
         self,
@@ -227,6 +228,7 @@ class SQLServerConnector(BaseConnector):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self.source_type = "sqlserver"
 
         # Allow passing config dictionary or Pydantic model
         if config is not None:

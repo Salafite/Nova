@@ -40,6 +40,7 @@ class ConnectorRegistration:
     def to_dict(self) -> Dict[str, Any]:
         """Convert connector registration metadata to a dictionary."""
         return {
+            "type": self.source_type,
             "source_type": self.source_type,
             "display_name": self.display_name,
             "description": self.description,
