@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from datetime import datetime, date, timezone
 from typing import Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.auth.deps import get_current_user, require_permission
@@ -74,11 +74,18 @@ def create_crud_router(prefix: str, tag: str, service: CrudService, create_schem
     audit_repo = CrudRepository('T0023', pk='id', business_columns=['id', 'table_name', 'record_id', 'action', 'changed_data', 'changed_by', 'changed_at'])
 
     @router.get('/', response_model=list[response_model] if response_model else None)
-    def list_all(user: dict = Depends(get_current_user)):
+    def list_all(
+        limit: int = Query(50, ge=1, le=500, description="Maximum number of records to return (1-500, default 50)"),
+        offset: int = Query(0, ge=0, description="Number of records to skip (default 0)"),
+        order_by: Optional[str] = Query(None, description="Field name to order results by"),
+        user: dict = Depends(get_current_user),
+    ):
         b_id = user.get('business_id') if isinstance(user, dict) else None
         if b_id is not None:
             set_current_tenant(b_id)
-        return service.list()
+        limit = min(max(1, limit), 500) if limit is not None else 50
+        offset = max(0, offset) if offset is not None else 0
+        return service.list(limit=limit, offset=offset, order_by=order_by)
 
     @router.get('/count')
     def count_all(user: dict = Depends(get_current_user)):
