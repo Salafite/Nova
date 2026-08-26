@@ -278,7 +278,9 @@ def test_portal_repo_reconcile_settlement_transaction_unit():
         None,  # idempotency: no existing payment
         {"id": 10, "name": "Acme", "balance": 1500.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
         {"id": 55, "payment_date": date(2026, 8, 23), "invoice_id": 42, "partner_id": 10, "amount": 500.0, "payment_method": "Stripe Card", "reference": "pi_123", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": "pi_123", "stripe_checkout_session_id": "cs_123", "payment_link": None, "created_at": None},  # payment
-        {"id": 42, "total_amount": 500.0, "paid_amount": 500.0, "status": "Paid"},  # updated invoice
+        {"total_paid": 500.0},  # total paid query from t0091
+        {"total_amount": 500.0},  # total amount query from t0090
+        {"id": 42, "total_amount": 500.0, "status": "Paid"},  # updated invoice
         {"balance": 1000.0},      # updated customer balance
         {"id": 1},                # COA bank account
         {"id": 2},                # COA AR account
@@ -310,6 +312,58 @@ def test_portal_repo_reconcile_settlement_transaction_unit():
     assert result["journal_entry_id"] == 301
     assert result["journal_entry_reference"] == "JE-STRIPE-55"
     mock_conn.commit.assert_called_once()
+
+
+def test_portal_repo_reconcile_settlement_multiple_invoices():
+    """Test PortalRepository reconciliation logic with multiple specific invoice IDs."""
+    from modules.portal.repositories.portal_repo import PortalRepository
+
+    repo = PortalRepository()
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+    mock_cur.fetchone.side_effect = [
+        None,  # idempotency: no existing payment
+        {"id": 10, "name": "Acme", "balance": 1500.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
+        {"id": 56, "payment_date": date(2026, 8, 23), "invoice_id": None, "partner_id": 10, "amount": 800.0, "payment_method": "Stripe ACH", "reference": "cs_ach_800", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": None, "stripe_checkout_session_id": "cs_ach_800", "payment_link": None, "created_at": None},  # payment
+        # invoice 1
+        {"total_paid": 400.0},
+        {"total_amount": 400.0},
+        {"id": 41},
+        # invoice 2
+        {"total_paid": 400.0},
+        {"total_amount": 400.0},
+        {"id": 42},
+        # customer balance
+        {"balance": 700.0},
+        # COA bank and AR
+        {"id": 1},
+        {"id": 2},
+        # JE
+        {"id": 302, "entry_date": date(2026, 8, 23), "reference": "JE-STRIPE-56", "description": "Stripe receipt", "status": "Posted", "created_at": None},
+        {"id": 1003},
+        {"id": 1004},
+    ]
+
+    with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("modules.portal.repositories.portal_repo.release_connection"):
+        result = repo.reconcile_settlement_transaction(
+            customer_id=10,
+            amount=800.0,
+            settlement_type="balance",
+            invoice_ids=[41, 42],
+            session_id="cs_ach_800",
+            payment_method="Stripe ACH",
+        )
+
+    assert result["reconciled"] is True
+    assert result["payment_id"] == 56
+    assert result["customer_id"] == 10
+    assert result["amount"] == 800.0
+    assert result["invoices_updated"] == [41, 42]
+    assert result["new_customer_balance"] == 700.0
+    assert result["journal_entry_id"] == 302
 
 
 def test_portal_repo_reconcile_idempotency():

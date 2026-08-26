@@ -380,13 +380,13 @@ class PortalRepository:
             # 1. Unpaid invoices stats from T0090
             inv_query = f"""
                 SELECT COUNT(*) as open_count,
-                       COALESCE(SUM(total_amount - COALESCE(paid_amount, 0)), 0) as unpaid_total
-                FROM {self._get_table("t0090")}
-                WHERE partner_id = %s AND status IN ('Unpaid', 'Partially Paid', 'Draft', 'Overdue')
+                       COALESCE(SUM(i.total_amount - COALESCE((SELECT SUM(p.amount) FROM {self._get_table("t0091")} p WHERE p.invoice_id = i.id AND p.status = 'Completed'), 0)), 0) as unpaid_total
+                FROM {self._get_table("t0090")} i
+                WHERE i.partner_id = %s AND i.status IN ('Unpaid', 'Partially Paid', 'Draft', 'Overdue')
             """
             inv_params: List[Any] = [customer_id]
             if tenant_id is not None:
-                inv_query += " AND business_id = %s"
+                inv_query += " AND i.business_id = %s"
                 inv_params.append(tenant_id)
 
             open_count = 0
@@ -862,7 +862,8 @@ class PortalRepository:
             query = f"""
                 SELECT i.id, i.invoice_number, i.invoice_type, i.partner_id, c.name as customer_name,
                        i.sales_order_id, o.order_number as sales_order_number,
-                       i.issue_date, i.due_date, i.total_amount, i.paid_amount,
+                       i.issue_date, i.due_date, i.total_amount,
+                       COALESCE((SELECT SUM(p.amount) FROM {self._get_table("t0091")} p WHERE p.invoice_id = i.id AND p.status = 'Completed'), 0) as paid_amount,
                        i.status, i.notes, i.stripe_payment_intent_id, i.stripe_checkout_session_id,
                        i.payment_link, i.created_at, i.created_by, i.updated_at, i.updated_by,
                        i.update_number
@@ -918,7 +919,8 @@ class PortalRepository:
             query = f"""
                 SELECT i.id, i.invoice_number, i.invoice_type, i.partner_id, c.name as customer_name,
                        i.sales_order_id, o.order_number as sales_order_number,
-                       i.issue_date, i.due_date, i.total_amount, i.paid_amount,
+                       i.issue_date, i.due_date, i.total_amount,
+                       COALESCE((SELECT SUM(p.amount) FROM {self._get_table("t0091")} p WHERE p.invoice_id = i.id AND p.status = 'Completed'), 0) as paid_amount,
                        i.status, i.notes, i.stripe_payment_intent_id, i.stripe_checkout_session_id,
                        i.payment_link, i.created_at, i.created_by, i.updated_at, i.updated_by,
                        i.update_number
@@ -1014,40 +1016,43 @@ class PortalRepository:
             tenant_id = get_current_tenant()
 
             # 1. Idempotency Check: see if payment record already exists
-            check_payment_query = f"""
-                SELECT id, payment_date, invoice_id, partner_id, amount, payment_method,
-                       reference, status, notes, stripe_payment_intent_id, stripe_checkout_session_id,
-                       payment_link, created_at
-                FROM {self._get_table("t0091")}
-                WHERE (stripe_payment_intent_id IS NOT NULL AND stripe_payment_intent_id = %s)
-                   OR (stripe_checkout_session_id IS NOT NULL AND stripe_checkout_session_id = %s)
-                LIMIT 1
-            """
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(check_payment_query, (payment_intent_id, session_id))
-                existing_payment = cur.fetchone()
+            if payment_intent_id or session_id:
+                check_payment_query = f"""
+                    SELECT id, payment_date, invoice_id, partner_id, amount, payment_method,
+                           reference, status, notes, stripe_payment_intent_id, stripe_checkout_session_id,
+                           payment_link, created_at
+                    FROM {self._get_table("t0091")}
+                    WHERE (%s IS NOT NULL AND stripe_payment_intent_id = %s)
+                       OR (%s IS NOT NULL AND stripe_checkout_session_id = %s)
+                    LIMIT 1
+                """
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                    cur.execute(check_payment_query, (payment_intent_id, payment_intent_id, session_id, session_id))
+                    existing_payment = cur.fetchone()
 
-            if existing_payment:
-                customer = self.get_customer(customer_id, conn=conn)
-                cust_bal = _to_float(customer.get("balance", 0.0)) if customer else 0.0
-                return {
-                    "reconciled": True,
-                    "already_processed": True,
-                    "payment_id": existing_payment["id"],
-                    "customer_id": customer_id,
-                    "amount": _to_float(existing_payment.get("amount")),
-                    "invoice_id": existing_payment.get("invoice_id"),
-                    "invoices_updated": [existing_payment["invoice_id"]] if existing_payment.get("invoice_id") else [],
-                    "new_customer_balance": cust_bal,
-                    "journal_entry_id": None,
-                    "session_id": session_id,
-                    "payment_intent_id": payment_intent_id,
-                }
+                if existing_payment:
+                    customer = self.get_customer(customer_id, conn=conn)
+                    cust_bal = _to_float(customer.get("balance", 0.0)) if customer else 0.0
+                    return {
+                        "reconciled": True,
+                        "already_processed": True,
+                        "payment_id": existing_payment["id"],
+                        "customer_id": customer_id,
+                        "amount": _to_float(existing_payment.get("amount")),
+                        "invoice_id": existing_payment.get("invoice_id"),
+                        "invoices_updated": [existing_payment["invoice_id"]] if existing_payment.get("invoice_id") else [],
+                        "new_customer_balance": cust_bal,
+                        "journal_entry_id": None,
+                        "session_id": session_id,
+                        "payment_intent_id": payment_intent_id,
+                    }
 
             # 2. Lookup customer
             customer = self.get_customer(customer_id, conn=conn)
             if not customer:
                 raise ValueError(f"Customer with ID {customer_id} does not exist.")
+
+            customer_business_id = customer.get("business_id") or tenant_id
 
             # 3. Create payment record in T0091
             insert_payment_query = f"""
@@ -1060,7 +1065,7 @@ class PortalRepository:
                           reference, status, notes, stripe_payment_intent_id,
                           stripe_checkout_session_id, payment_link, created_at
             """
-            reference = payment_intent_id or session_id or "Stripe Settlement"
+            reference = payment_intent_id or session_id or f"STRIPE-{customer_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
             payment_params = [
                 datetime.now(timezone.utc).date(),
                 invoice_id,
@@ -1073,7 +1078,7 @@ class PortalRepository:
                 payment_intent_id,
                 session_id,
                 payment_link,
-                customer.get("business_id", tenant_id),
+                customer_business_id,
             ]
 
             invoices_updated = []
@@ -1082,43 +1087,143 @@ class PortalRepository:
                 payment_row = cur.fetchone()
                 payment_id = payment_row["id"]
 
-                # 4. Update Invoices
+                # 4. Update Invoices in T0090
                 if invoice_id:
+                    # Calculate total paid for this invoice
+                    cur.execute(
+                        f"""
+                        SELECT COALESCE(SUM(amount), 0) as total_paid
+                        FROM {self._get_table("t0091")}
+                        WHERE invoice_id = %s AND status = 'Completed'
+                        """,
+                        (invoice_id,),
+                    )
+                    paid_row = cur.fetchone()
+                    total_paid = amount
+                    if paid_row:
+                        if isinstance(paid_row, dict):
+                            total_paid = _to_float(paid_row.get("total_paid", paid_row.get("paid_amount", amount)))
+                        elif isinstance(paid_row, (list, tuple)) and len(paid_row) > 0:
+                            total_paid = _to_float(paid_row[0])
+
+                    cur.execute(
+                        f"SELECT total_amount FROM {self._get_table('t0090')} WHERE id = %s",
+                        (invoice_id,),
+                    )
+                    inv_meta = cur.fetchone()
+                    tot_amount = 0.0
+                    if inv_meta:
+                        if isinstance(inv_meta, dict):
+                            tot_amount = _to_float(inv_meta.get("total_amount", 0.0))
+                        elif isinstance(inv_meta, (list, tuple)) and len(inv_meta) > 0:
+                            tot_amount = _to_float(inv_meta[0])
+
+                    inv_status = "Paid" if total_paid >= tot_amount else "Partially Paid"
                     update_inv_query = f"""
                         UPDATE {self._get_table("t0090")}
-                        SET paid_amount = COALESCE(paid_amount, 0) + %s,
-                            status = CASE
-                                WHEN (COALESCE(paid_amount, 0) + %s) >= total_amount THEN 'Paid'
-                                ELSE 'Partially Paid'
-                            END,
+                        SET status = %s,
+                            stripe_payment_intent_id = COALESCE(%s, stripe_payment_intent_id),
+                            stripe_checkout_session_id = COALESCE(%s, stripe_checkout_session_id),
+                            payment_link = COALESCE(%s, payment_link),
                             updated_at = NOW(),
                             update_number = COALESCE(update_number, 0) + 1
                         WHERE id = %s
-                        RETURNING id, total_amount, paid_amount, status
+                        RETURNING id, total_amount, status
                     """
-                    cur.execute(update_inv_query, (amount, amount, invoice_id))
+                    cur.execute(update_inv_query, (inv_status, payment_intent_id, session_id, payment_link, invoice_id))
                     inv_res = cur.fetchone()
                     if inv_res:
                         res_id = inv_res.get("id", invoice_id) if isinstance(inv_res, dict) else invoice_id
                         invoices_updated.append(res_id)
+
                 elif invoice_ids:
                     for inv_id in invoice_ids:
                         cur.execute(
                             f"""
+                            SELECT COALESCE(SUM(amount), 0) as total_paid
+                            FROM {self._get_table("t0091")}
+                            WHERE invoice_id = %s AND status = 'Completed'
+                            """,
+                            (inv_id,),
+                        )
+                        paid_row = cur.fetchone()
+                        total_paid = 0.0
+                        if paid_row:
+                            if isinstance(paid_row, dict):
+                                total_paid = _to_float(paid_row.get("total_paid", paid_row.get("paid_amount", 0.0)))
+                            elif isinstance(paid_row, (list, tuple)) and len(paid_row) > 0:
+                                total_paid = _to_float(paid_row[0])
+
+                        cur.execute(
+                            f"SELECT total_amount FROM {self._get_table('t0090')} WHERE id = %s",
+                            (inv_id,),
+                        )
+                        inv_meta = cur.fetchone()
+                        tot_amount = 0.0
+                        if inv_meta:
+                            if isinstance(inv_meta, dict):
+                                tot_amount = _to_float(inv_meta.get("total_amount", 0.0))
+                            elif isinstance(inv_meta, (list, tuple)) and len(inv_meta) > 0:
+                                tot_amount = _to_float(inv_meta[0])
+
+                        inv_status = "Paid" if (total_paid >= tot_amount or len(invoice_ids) == 1) else "Paid"
+                        cur.execute(
+                            f"""
                             UPDATE {self._get_table("t0090")}
-                            SET paid_amount = total_amount,
-                                status = 'Paid',
+                            SET status = %s,
+                                stripe_payment_intent_id = COALESCE(%s, stripe_payment_intent_id),
+                                stripe_checkout_session_id = COALESCE(%s, stripe_checkout_session_id),
+                                payment_link = COALESCE(%s, payment_link),
                                 updated_at = NOW(),
                                 update_number = COALESCE(update_number, 0) + 1
                             WHERE id = %s
                             RETURNING id
                             """,
-                            (inv_id,),
+                            (inv_status, payment_intent_id, session_id, payment_link, inv_id),
                         )
                         inv_res = cur.fetchone()
                         if inv_res:
                             res_id = inv_res.get("id", inv_id) if isinstance(inv_res, dict) else inv_id
                             invoices_updated.append(res_id)
+
+                else:
+                    # General balance payment without specific invoice IDs
+                    cur.execute(
+                        f"""
+                        SELECT id, total_amount
+                        FROM {self._get_table("t0090")}
+                        WHERE partner_id = %s AND status IN ('Unpaid', 'Partially Paid', 'Draft', 'Overdue')
+                        ORDER BY issue_date ASC, id ASC
+                        """,
+                        (customer_id,),
+                    )
+                    open_invoices = cur.fetchall()
+                    for o_inv in open_invoices:
+                        o_id = o_inv["id"]
+                        o_tot = _to_float(o_inv["total_amount"])
+                        cur.execute(
+                            f"""
+                            SELECT COALESCE(SUM(amount), 0) as total_paid
+                            FROM {self._get_table("t0091")}
+                            WHERE invoice_id = %s AND status = 'Completed'
+                            """,
+                            (o_id,),
+                        )
+                        p_row = cur.fetchone()
+                        p_paid = _to_float(p_row["total_paid"]) if p_row else 0.0
+                        if p_paid >= o_tot:
+                            cur.execute(
+                                f"""
+                                UPDATE {self._get_table("t0090")}
+                                SET status = 'Paid',
+                                    updated_at = NOW(),
+                                    update_number = COALESCE(update_number, 0) + 1
+                                WHERE id = %s
+                                RETURNING id
+                                """,
+                                (o_id,),
+                            )
+                            invoices_updated.append(o_id)
 
                 # 5. Decrement Customer Balance in T0010
                 update_cust_query = f"""
@@ -1137,7 +1242,7 @@ class PortalRepository:
                 cur.execute(
                     f"""
                     SELECT id FROM {self._get_table("t0026")}
-                    WHERE (code = '1000' OR type = 'Asset' OR name ILIKE '%Bank%' OR name ILIKE '%Cash%')
+                    WHERE (account_code = '1000' OR account_type = 'Asset' OR account_name ILIKE '%Bank%' OR account_name ILIKE '%Cash%')
                     ORDER BY id ASC LIMIT 1
                     """
                 )
@@ -1147,7 +1252,7 @@ class PortalRepository:
                 cur.execute(
                     f"""
                     SELECT id FROM {self._get_table("t0026")}
-                    WHERE (code = '1200' OR name ILIKE '%Receivable%' OR type = 'Asset')
+                    WHERE (account_code = '1200' OR account_name ILIKE '%Receivable%' OR account_type = 'Asset')
                     ORDER BY id ASC LIMIT 1
                     """
                 )
@@ -1166,32 +1271,32 @@ class PortalRepository:
                     je_ref,
                     f"Stripe settlement for customer {customer.get('name')}",
                     "Posted",
-                    customer.get("business_id", tenant_id),
+                    customer_business_id,
                 ]
                 cur.execute(insert_je_query, je_params)
                 je_row = cur.fetchone()
                 je_id = je_row["id"]
 
-                # Debit Bank
+                # Debit Bank / Cash
                 cur.execute(
                     f"""
                     INSERT INTO {self._get_table("t0089")} (
-                        journal_entry_id, account_id, debit, credit, description, business_id
-                    ) VALUES (%s, %s, %s, %s, %s, %s)
+                        journal_entry_id, account_id, debit, credit, description, is_active, business_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING id, journal_entry_id, account_id, debit, credit, description
                     """,
-                    (je_id, bank_acc_id, amount, 0.0, "Stripe settlement deposit", customer.get("business_id", tenant_id)),
+                    (je_id, bank_acc_id, amount, 0.0, f"Stripe settlement deposit - {customer.get('name')}", True, customer_business_id),
                 )
 
-                # Credit AR
+                # Credit Accounts Receivable
                 cur.execute(
                     f"""
                     INSERT INTO {self._get_table("t0089")} (
-                        journal_entry_id, account_id, debit, credit, description, business_id
-                    ) VALUES (%s, %s, %s, %s, %s, %s)
+                        journal_entry_id, account_id, debit, credit, description, is_active, business_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING id, journal_entry_id, account_id, debit, credit, description
                     """,
-                    (je_id, ar_acc_id, 0.0, amount, "Accounts receivable reduction", customer.get("business_id", tenant_id)),
+                    (je_id, ar_acc_id, 0.0, amount, f"Accounts receivable reduction - {customer.get('name')}", True, customer_business_id),
                 )
 
             if should_release:
