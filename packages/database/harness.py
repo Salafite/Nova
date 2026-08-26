@@ -25,7 +25,7 @@ DEFAULT_DB_CONFIG = {
     'schema': 'Nova',
     'sslmode': 'prefer',
     'pool_min': 1,
-    'pool_max': 60,
+    'pool_max': 50,
 }
 
 
@@ -135,14 +135,24 @@ class DatabaseHarness:
         Check out a connection from the pool and set its search_path.
         """
         target_schema = schema or self.config.get('schema', 'Nova')
-        conn = self.pool.getconn()
-        try:
-            with conn.cursor() as cur:
-                cur.execute(f'SET search_path TO "{target_schema}", public;')
-            return conn
-        except Exception:
-            self.release_connection(conn)
-            raise
+        last_err = None
+        for attempt in range(10):
+            conn = None
+            try:
+                conn = self.pool.getconn()
+                with conn.cursor() as cur:
+                    cur.execute(f'SET search_path TO "{target_schema}", public;')
+                return conn
+            except Exception as e:
+                if conn is not None:
+                    self.release_connection(conn)
+                last_err = e
+                err_str = str(e).lower()
+                if 'exhausted' in err_str or 'closed unexpectedly' in err_str or 'timeout' in err_str or 'too many clients' in err_str:
+                    time.sleep(0.02 * (attempt + 1))
+                    continue
+                raise
+        raise last_err
 
     def release_connection(self, conn, close: bool = False):
         """Return a connection back to the pool."""

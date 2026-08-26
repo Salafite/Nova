@@ -420,8 +420,21 @@ class TestRealPostgresConcurrentDirectServiceCreation:
         """
         reset_sequence('seq_pick_list_number', start_val=1)
         wh_repo = CrudRepository('T0008')
+        cust_repo = CrudRepository('T0010')
+        so_repo = CrudRepository('T0012')
         wh = wh_repo.create({'name': f'Concurrent WH {isolated_tenant}', 'is_active': True})
         wh_id = wh['id']
+        cust = cust_repo.create({'name': f'Concurrent Cust {isolated_tenant}', 'is_active': True})
+
+        order_ids = []
+        for i in range(50):
+            so = so_repo.create({
+                'order_number': f'SO-PL-SEED-{isolated_tenant}-{i:04d}',
+                'customer_id': cust['id'],
+                'warehouse_id': wh_id,
+                'status': 'Confirmed',
+            })
+            order_ids.append(so['id'])
 
         pl_repo = CrudRepository('T0101')
         service = PickListService(pl_repo)
@@ -436,7 +449,7 @@ class TestRealPostgresConcurrentDirectServiceCreation:
                 try:
                     barrier.wait()
                     pl = service.create({
-                        'sales_order_id': idx + 100,
+                        'sales_order_id': order_ids[idx],
                         'warehouse_id': wh_id,
                         'status': 'Pending',
                     })

@@ -38,7 +38,7 @@ def real_harness(db_config) -> Generator[DatabaseHarness, None, None]:
     except Exception as e:
         pytest.skip(f"Failed to provision schema on real PostgreSQL: {e}")
 
-    harness = get_shared_harness(minconn=1, maxconn=60, config=db_config)
+    harness = get_shared_harness(minconn=1, maxconn=50, config=db_config)
     try:
         yield harness
     finally:
