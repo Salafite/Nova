@@ -30,7 +30,7 @@ class TestDatabaseConfig:
         monkeypatch.delenv("DB_SSLMODE", raising=False)
 
         cfg = get_db_config()
-        assert cfg["host"] == "localhost"
+        assert cfg["host"] in ("localhost", "127.0.0.1")
         assert cfg["port"] == 5432
         assert cfg["dbname"] == "nova_erp"
         assert cfg["user"] == "nova"

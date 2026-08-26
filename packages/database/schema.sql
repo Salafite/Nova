@@ -3298,7 +3298,7 @@ GRANT SELECT (id, key_name, client_id, permissions, expires_at, is_active, creat
 REVOKE SELECT (api_key) ON "Nova".t0056 FROM nova_readonly;
 
 GRANT nova_readonly TO CURRENT_USER;
-=======
+
 -- Production Plans
 CREATE TABLE IF NOT EXISTS "Nova".t0024 (
     id SERIAL PRIMARY KEY,
