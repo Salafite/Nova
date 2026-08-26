@@ -643,5 +643,212 @@ class TestMultiTenantPaginationIsolation:
             # No next page for Tenant 2 since count <= limit
             assert 'rel="next"' not in resp3.headers.get('Link', '')
 
+    def test_multi_tenant_pagination_stateful_across_all_pages_and_empty_pages(self):
+        """Test multi-tenant pagination across page 1, middle page, partial last page, and out-of-bounds offset."""
+        app = FastAPI()
+        mock_repo = MagicMock(spec=CrudRepository)
+        mock_repo.table = 'T0003'
+        mock_repo.table_name = 't0003'
+        mock_service = MagicMock(spec=CrudService)
+        mock_service.repo = mock_repo
+
+        # Shared table contains 125 items for Tenant 100, 35 items for Tenant 200, and 0 for Tenant 300
+        tenant_100_items = [{'id': i, 'name': f'Tenant 100 Product {i}', 'business_id': 100} for i in range(1, 126)]
+        tenant_200_items = [{'id': i + 500, 'name': f'Tenant 200 Product {i}', 'business_id': 200} for i in range(1, 36)]
+
+        def mock_list(limit=50, offset=0, order_by=None):
+            from modules.core.context import get_current_tenant
+            active_tenant = get_current_tenant()
+            if active_tenant == 100:
+                data = list(tenant_100_items)
+            elif active_tenant == 200:
+                data = list(tenant_200_items)
+            else:
+                data = []
+            if order_by and order_by.startswith('-'):
+                data = list(reversed(data))
+            return data[offset:offset + limit]
+
+        def mock_count(where=None, params=None):
+            from modules.core.context import get_current_tenant
+            active_tenant = get_current_tenant()
+            if active_tenant == 100:
+                return len(tenant_100_items)
+            elif active_tenant == 200:
+                return len(tenant_200_items)
+            return 0
+
+        mock_service.list.side_effect = mock_list
+        mock_service.count.side_effect = mock_count
+
+        router = create_crud_router(
+            prefix='/api/T0003I',
+            tag='T0003 - Products',
+            service=mock_service,
+            response_model=ItemSchema
+        )
+        app.include_router(router)
+        client = TestClient(app)
+
+        user_100 = {'id': 1, 'username': 't100_admin', 'role': 'Admin', 'permissions': ['*'], 'business_id': 100}
+        token_100 = create_access_token(1, business_id=100)
+
+        user_200 = {'id': 2, 'username': 't200_admin', 'role': 'Admin', 'permissions': ['*'], 'business_id': 200}
+        token_200 = create_access_token(2, business_id=200)
+
+        user_300 = {'id': 3, 'username': 't300_admin', 'role': 'Admin', 'permissions': ['*'], 'business_id': 300}
+        token_300 = create_access_token(3, business_id=300)
+
+        # --- Tenant 100 Page 1 (offset 0, limit 50) ---
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_100):
+            r1 = client.get('/api/T0003I/?limit=50&offset=0', headers={'Authorization': f'Bearer {token_100}'})
+            assert r1.status_code == 200
+            d1 = r1.json()
+            assert len(d1) == 50
+            assert d1[0]['name'] == 'Tenant 100 Product 1'
+            assert d1[-1]['name'] == 'Tenant 100 Product 50'
+            assert r1.headers.get('X-Total-Count') == '125'
+            assert r1.headers.get('X-Page-Limit') == '50'
+            assert r1.headers.get('X-Page-Offset') == '0'
+            assert 'rel="first"' in r1.headers.get('Link', '')
+            assert 'rel="next"' in r1.headers.get('Link', '')
+            assert 'rel="last"' in r1.headers.get('Link', '')
+            assert 'rel="prev"' not in r1.headers.get('Link', '')
+
+        # --- Tenant 100 Page 2 (offset 50, limit 50) ---
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_100):
+            r2 = client.get('/api/T0003I/?limit=50&offset=50', headers={'Authorization': f'Bearer {token_100}'})
+            assert r2.status_code == 200
+            d2 = r2.json()
+            assert len(d2) == 50
+            assert d2[0]['name'] == 'Tenant 100 Product 51'
+            assert d2[-1]['name'] == 'Tenant 100 Product 100'
+            assert r2.headers.get('X-Total-Count') == '125'
+            assert 'rel="prev"' in r2.headers.get('Link', '')
+            assert 'rel="next"' in r2.headers.get('Link', '')
+
+        # --- Tenant 100 Page 3 (offset 100, limit 50, partial page of 25 items) ---
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_100):
+            r3 = client.get('/api/T0003I/?limit=50&offset=100', headers={'Authorization': f'Bearer {token_100}'})
+            assert r3.status_code == 200
+            d3 = r3.json()
+            assert len(d3) == 25
+            assert d3[0]['name'] == 'Tenant 100 Product 101'
+            assert d3[-1]['name'] == 'Tenant 100 Product 125'
+            assert r3.headers.get('X-Total-Count') == '125'
+            assert 'rel="prev"' in r3.headers.get('Link', '')
+            assert 'rel="next"' not in r3.headers.get('Link', '')
+
+        # --- Tenant 100 Page 4 (offset 150 > total 125, should be empty, zero leak from Tenant 200) ---
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_100):
+            r4 = client.get('/api/T0003I/?limit=50&offset=150', headers={'Authorization': f'Bearer {token_100}'})
+            assert r4.status_code == 200
+            d4 = r4.json()
+            assert len(d4) == 0
+            assert r4.headers.get('X-Total-Count') == '125'
+            assert 'rel="next"' not in r4.headers.get('Link', '')
+
+        # --- Tenant 200 Page 1 (offset 0, limit 20) ---
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_200):
+            r200_1 = client.get('/api/T0003I/?limit=20&offset=0', headers={'Authorization': f'Bearer {token_200}'})
+            assert r200_1.status_code == 200
+            d200_1 = r200_1.json()
+            assert len(d200_1) == 20
+            assert d200_1[0]['name'] == 'Tenant 200 Product 1'
+            assert r200_1.headers.get('X-Total-Count') == '35'
+            assert 'rel="next"' in r200_1.headers.get('Link', '')
+
+        # --- Tenant 200 Page 2 (offset 20, limit 20 -> 15 remaining) ---
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_200):
+            r200_2 = client.get('/api/T0003I/?limit=20&offset=20', headers={'Authorization': f'Bearer {token_200}'})
+            assert r200_2.status_code == 200
+            d200_2 = r200_2.json()
+            assert len(d200_2) == 15
+            assert d200_2[0]['name'] == 'Tenant 200 Product 21'
+            assert d200_2[-1]['name'] == 'Tenant 200 Product 35'
+            assert r200_2.headers.get('X-Total-Count') == '35'
+            assert 'rel="next"' not in r200_2.headers.get('Link', '')
+
+        # --- Tenant 300 (Empty Tenant) ---
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_300):
+            r300 = client.get('/api/T0003I/?limit=50&offset=0', headers={'Authorization': f'Bearer {token_300}'})
+            assert r300.status_code == 200
+            d300 = r300.json()
+            assert len(d300) == 0
+            assert r300.headers.get('X-Total-Count') == '0'
+            assert 'rel="next"' not in r300.headers.get('Link', '')
+
+    def test_multi_tenant_pagination_sorting_isolation(self):
+        """Verify sorting order under tenant context does not leak other tenants' data."""
+        repo = CrudRepository('t0003', pk='id')
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        mock_cur.fetchall.return_value = [{'id': 5, 'name': 'Item E', 'business_id': 77}]
+
+        with patch('modules.core.repositories.base.get_connection', return_value=mock_conn), \
+             patch('modules.core.repositories.base.release_connection'):
+            # With tenant context 77 and order_by '-name'
+            from modules.core.context import tenant_context
+            with tenant_context(77):
+                repo.list(order_by='-name', limit=20, offset=0)
+
+            query, params = mock_cur.execute.call_args[0]
+            assert '"business_id" = %s' in query
+            assert 'ORDER BY "name" DESC' in query
+            assert 'LIMIT %s' in query
+            assert 'OFFSET %s' in query
+            assert params == [77, 20, 0]
+
+    def test_multi_tenant_pagination_sql_injection_defense(self):
+        """Verify that malicious order_by strings cannot inject SQL or bypass business_id scoping."""
+        repo = CrudRepository('t0003', pk='id')
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        mock_cur.fetchall.return_value = []
+
+        with patch('modules.core.repositories.base.get_connection', return_value=mock_conn), \
+             patch('modules.core.repositories.base.release_connection'):
+            from modules.core.context import tenant_context
+            with tenant_context(88):
+                # Malicious SQL injection in order_by
+                repo.list(order_by='name; DELETE FROM t0003; --', limit=25, offset=10)
+
+            query, params = mock_cur.execute.call_args[0]
+            # Must retain business_id filter
+            assert '"business_id" = %s' in query
+            assert 88 in params
+            # Order by safely fell back to safe pk desc
+            assert 'ORDER BY "id" DESC' in query
+            assert params == [88, 25, 10]
+
+    def test_non_tenant_table_pagination_exempt_from_tenant_scoping(self):
+        """Verify that non-tenant tables (e.g. t0059) paginate without business_id filtering even when tenant is active."""
+        repo = CrudRepository('t0059', pk='id')
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        mock_cur.fetchall.return_value = [{'id': 1, 'tenant_name': 'Tenant 1'}]
+        mock_cur.fetchone.return_value = {'cnt': 5}
+
+        with patch('modules.core.repositories.base.get_connection', return_value=mock_conn), \
+             patch('modules.core.repositories.base.release_connection'):
+            from modules.core.context import tenant_context
+            with tenant_context(999):
+                items = repo.list(limit=10, offset=0)
+                count = repo.count()
+
+            # Query must not contain business_id for T0059
+            list_query, list_params = mock_cur.execute.call_args_list[0][0]
+            assert '"business_id"' not in list_query
+            assert 999 not in list_params
+            assert list_params == [10, 0]
+
+            count_query, count_params = mock_cur.execute.call_args_list[1][0]
+            assert '"business_id"' not in count_query
+            assert 999 not in count_params
+            assert count == 5
+
 
 
