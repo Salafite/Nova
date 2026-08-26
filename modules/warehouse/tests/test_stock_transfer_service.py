@@ -150,10 +150,12 @@ class TestStockTransferServiceCreation:
             'destination_warehouse_id': 2,
             'lines': [{'product_id': 10, 'qty_requested': 0}]
         }
-        with pytest.raises(HTTPException) as exc:
-            self.service.create_transfer(payload)
+        with patch('modules.warehouse.services.stock_transfer_service.generate_stock_transfer_number', return_value='TRF-00101'):
+            with pytest.raises(HTTPException) as exc:
+                self.service.create_transfer(payload)
         assert exc.value.status_code == 400
         assert "Requested quantity must be greater than 0" in exc.value.detail
+
 
 
 class TestStockTransferServiceDispatch:
