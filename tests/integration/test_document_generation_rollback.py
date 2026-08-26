@@ -876,8 +876,8 @@ class TestSalesServiceStateTransitionsAndValidation:
 
         assert order_repo.get(401)['status'] == 'Cancelled'
 
-    def test_order_creation_credit_limit_exceeded_raises_http_400_and_logs(self, caplog):
-        """Order creation exceeding customer credit limit is rejected with HTTP 400."""
+    def test_order_creation_credit_limit_exceeded_places_on_credit_hold_and_logs(self, caplog):
+        """Order creation exceeding customer credit limit is placed on Credit Hold status with reason logged."""
         customer_repo = CrudRepository('T0010')
         customer_repo.update(1, {'credit_limit': 1000.0, 'balance': 800.0})
 
@@ -885,17 +885,16 @@ class TestSalesServiceStateTransitionsAndValidation:
         service = SalesOrderService(order_repo)
 
         with caplog.at_level(logging.WARNING):
-            with pytest.raises(HTTPException) as exc_info:
-                service.create({
-                    'customer_id': 1,
-                    'subtotal': 300.0,
-                    'tax': 0.0,
-                    'grand_total': 300.0,
-                })
-            assert exc_info.value.status_code == 400
-            assert "credit limit" in exc_info.value.detail
+            order = service.create({
+                'customer_id': 1,
+                'subtotal': 300.0,
+                'tax': 0.0,
+                'grand_total': 300.0,
+            })
+            assert order['status'] == 'Credit Hold'
+            assert 'Customer credit limit exceeded' in order['hold_reason']
 
-        assert any("Order creation rejected for customer Acme Global" in r.message for r in caplog.records)
+        assert any("Order creation placed on Credit Hold for customer Acme Global" in r.message for r in caplog.records)
 
 
 # ============================================================================

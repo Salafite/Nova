@@ -351,6 +351,16 @@ COMMENT ON COLUMN "Nova".t0012.sales_rep_id IS 'Assigned sales representative (U
 COMMENT ON COLUMN "Nova".t0012.business_id IS 'Tenant / business organization identifier (FK to T0059)';
 
 ALTER TABLE "Nova".t0012
+    ADD COLUMN IF NOT EXISTS on_credit_hold BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS hold_reason TEXT;
+
+COMMENT ON COLUMN "Nova".t0012.on_credit_hold IS 'Whether sales order is on credit hold pending approval';
+COMMENT ON COLUMN "Nova".t0012.hold_reason IS 'Reason why sales order was placed on credit hold';
+
+CREATE INDEX IF NOT EXISTS idx_t0012_on_credit_hold ON "Nova".t0012(on_credit_hold);
+
+
+ALTER TABLE "Nova".t0012
     ADD COLUMN IF NOT EXISTS client_order_uuid VARCHAR(64) UNIQUE,
     ADD COLUMN IF NOT EXISTS is_offline_sync BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS sync_status VARCHAR(30) NOT NULL DEFAULT 'Synced',

@@ -1,7 +1,8 @@
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.sales.services.sales_service import SalesOrderService, ORDER_REPO, LINE_REPO
-from packages.mcp.registry import register_tool, register_resource
+from modules.sales.services.credit_service import CreditService
+from packages.mcp.registry import register_tool, register_resource, get_current_user
 from packages.mcp.types import Tool, Resource
 
 
@@ -10,6 +11,7 @@ _orders_svc = SalesOrderService(_orders_repo, line_repo=LINE_REPO)
 
 _customers_repo = CrudRepository('T0010', business_columns=['id', 'name', 'phone', 'email', 'credit_limit', 'balance', 'is_active'])
 _customers_svc = CrudService(_customers_repo)
+_credit_svc = CreditService()
 
 _quotations_repo = CrudRepository('T0067', business_columns=['id', 'quote_number', 'customer_id', 'quote_date', 'valid_until', 'subtotal', 'tax', 'grand_total', 'status', 'notes', 'converted_order_id'])
 _quotations_svc = CrudService(_quotations_repo)
@@ -193,6 +195,30 @@ def register_tools():
         }),
         _list_tax_rates,
     )
+    register_tool(
+        Tool(name="check_customer_credit", description="Check customer credit standing, credit limit, balance, available credit, and overdue invoices (>30 days)", input_schema={
+            "type": "object",
+            "properties": {
+                "customer_id": {"type": "integer", "description": "Customer ID to evaluate credit for"},
+                "order_amount": {"type": "number", "description": "Optional proposed order amount to evaluate total credit exposure and hold requirement"},
+                "as_of_date": {"type": "string", "description": "Optional reference date for overdue aging evaluation (YYYY-MM-DD)"},
+            },
+            "required": ["customer_id"],
+        }),
+        _check_customer_credit,
+    )
+    register_tool(
+        Tool(name="override_credit_hold", description="Override a credit hold on a sales order to approve order processing (requires financial manager confirmation)", tier="tier2", input_schema={
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "Sales order ID on Credit Hold"},
+                "reason": {"type": "string", "description": "Reason for approving the credit hold override"},
+                "target_status": {"type": "string", "description": "Target status after override (Confirmed, Pending, Draft; default Confirmed)"},
+            },
+            "required": ["id"],
+        }),
+        _override_credit_hold,
+    )
     register_resource(
         Resource(uri="nova://sales/orders", name="All Orders", description="List of all sales orders"),
         _list_orders,
@@ -336,6 +362,25 @@ def _list_price_lists():
 
 def _list_tax_rates():
     return _tax_rates_svc.list()
+
+
+def _check_customer_credit(customer_id: int, order_amount: float = 0.0, as_of_date: str = None):
+    if order_amount and float(order_amount) > 0:
+        return _credit_svc.evaluate_order_credit(customer_id, order_amount=float(order_amount), as_of_date=as_of_date)
+    return _credit_svc.get_customer_credit_status(customer_id, as_of_date=as_of_date)
+
+
+def _override_credit_hold(id: int, reason: str = "", target_status: str = "Confirmed"):
+    user = get_current_user() or {}
+    user_id = user.get("id") or user.get("user_id") or 1
+    user_name = user.get("username") or user.get("name") or "Financial Manager"
+    return _orders_svc.override_credit_hold(
+        order_id=id,
+        user_id=user_id,
+        user_name=user_name,
+        reason=reason,
+        target_status=target_status,
+    )
 
 
 def main():

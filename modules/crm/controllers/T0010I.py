@@ -5,11 +5,28 @@ from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router, check_record_ownership
 from modules.crm.models import CustomerCreate, CustomerUpdate, CustomerResponse
 from packages.auth.deps import get_current_user
+from modules.sales.services.credit_service import CreditService
 
 repo = CrudRepository('T0010', business_columns=['id', 'name', 'group_name', 'phone', 'email', 'credit_limit', 'balance', 'default_price_list_id', 'default_tax_rate_id', 'payment_term_id', 'is_active'])
 service = CustomerService(repo)
+credit_service = CreditService(customer_repo=repo)
 router = create_crud_router('/api/T0010I', 'T0010 - Customers', service,
                             CustomerCreate, CustomerUpdate, CustomerResponse)
+@router.get('/{id}/credit-status')
+def customer_credit_status(id: int, user: dict = Depends(get_current_user)):
+    """
+    Retrieve live customer balance, credit limit, available credit,
+    overdue >30 days amount and count, and credit hold status.
+    """
+    customer = repo.get(id)
+    if not customer:
+        check_record_ownership(repo, id, user, 'T0010', 'GET')
+        raise HTTPException(404, 'Customer not found')
+    credit_status = credit_service.get_customer_credit_status(id)
+    if not credit_status:
+        raise HTTPException(404, 'Customer not found')
+    return credit_status
+
 @router.get('/{id}/aging')
 def customer_aging(id: int, user: dict = Depends(get_current_user)):
     customer = repo.get(id)

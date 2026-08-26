@@ -143,21 +143,21 @@ class TestSalesDualUOMIntegration:
         assert line1['nominal_weight'] == 80.0
         assert line1['unit_price_pricing_uom'] == 15.0
 
-    def test_create_sales_order_credit_limit_exceeded_raises_400(self):
-        """Creating an order that pushes balance over credit limit raises HTTP 400."""
+    def test_create_sales_order_credit_limit_exceeded_places_on_credit_hold(self):
+        """Creating an order that pushes balance over credit limit automatically sets status to Credit Hold."""
         # Customer 201 has balance 1800 and credit limit 2000 (room for 200)
-        with pytest.raises(HTTPException) as exc_info:
-            self.service.create({
-                'order_number': 'SO-9002',
-                'customer_id': 201,
-                'warehouse_id': 1,
-                'subtotal': 500.0,
-                'tax': 0.0,
-                'grand_total': 500.0,
-                'status': 'Pending',
-            })
-        assert exc_info.value.status_code == 400
-        assert "credit limit" in exc_info.value.detail.lower()
+        order = self.service.create({
+            'order_number': 'SO-9002',
+            'customer_id': 201,
+            'warehouse_id': 1,
+            'subtotal': 500.0,
+            'tax': 0.0,
+            'grand_total': 500.0,
+            'status': 'Pending',
+        })
+        assert order['status'] == 'Credit Hold'
+        assert 'Customer credit limit exceeded' in order['hold_reason']
+        assert '$2,300.00 > Limit $2,000.00' in order['hold_reason']
 
     def test_delivery_validation_blocks_when_pick_list_has_unapproved_discrepancies(self):
         """Delivering an order is blocked if associated pick list has unapproved out-of-tolerance items."""

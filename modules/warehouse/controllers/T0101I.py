@@ -20,6 +20,22 @@ pli_repo = CrudRepository('T0102', business_columns=[
     'supervisor_approved_by', 'supervisor_approved_at', 'supervisor_notes'
 ])
 
+@router.post('/generate-from-order/{order_id}')
+@router.post('/generate/{order_id}')
+def generate_pick_list_from_order(order_id: int, body: dict = None):
+    body = body or {}
+    warehouse_id = body.get('warehouse_id')
+    try:
+        return pl_service.create_from_order(order_id, warehouse_id=warehouse_id)
+    except ValueError as e:
+        if 'not found' in str(e).lower():
+            raise HTTPException(404, str(e))
+        raise HTTPException(400, str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
 @router.get('/{id}/detail')
 def get_pick_list_detail(id: int):
     result = pl_service.get_with_items(id)
