@@ -294,3 +294,21 @@ class TestPaginationDirectHelpers:
         assert "rel=\"prev\"" in response.headers["Link"]
         assert "rel=\"next\"" in response.headers["Link"]
         assert "rel=\"last\"" in response.headers["Link"]
+
+
+class TestPaginationCORSHeaders:
+    def test_cors_exposed_headers_configured_in_main_app(self):
+        from apps.api.main import app
+        client = TestClient(app)
+
+        # Send request with Origin header to trigger CORS middleware response headers
+        resp = client.get('/api/health', headers={'Origin': 'http://localhost:5173'})
+        assert resp.status_code == 200
+
+        expose_headers = resp.headers.get('access-control-expose-headers', '')
+        # Check all pagination headers are exposed to frontend
+        assert 'X-Total-Count' in expose_headers or 'x-total-count' in expose_headers.lower()
+        assert 'X-Page-Limit' in expose_headers or 'x-page-limit' in expose_headers.lower()
+        assert 'X-Page-Offset' in expose_headers or 'x-page-offset' in expose_headers.lower()
+        assert 'Link' in expose_headers or 'link' in expose_headers.lower()
+
