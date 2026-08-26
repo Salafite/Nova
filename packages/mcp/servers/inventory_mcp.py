@@ -2,8 +2,9 @@ import psycopg2.extras
 from modules.core.context import get_current_tenant
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
+from modules.inventory.services.replenishment_service import ReplenishmentService
 from packages.database.connection import get_connection, release_connection
-from packages.mcp.registry import register_tool, register_resource
+from packages.mcp.registry import register_tool, register_resource, get_current_user
 from packages.mcp.types import Tool, Resource
 
 
@@ -29,6 +30,8 @@ _brands_svc = CrudService(_brands_repo)
 
 _stock_repo = CrudRepository('T0009', business_columns=['id', 'product_id', 'warehouse_id', 'qty', 'reserved_qty', 'reorder_level'])
 _stock_svc = CrudService(_stock_repo)
+
+_replenishment_svc = ReplenishmentService()
 
 
 def register_tools():
@@ -168,9 +171,60 @@ def register_tools():
         }),
         _list_brands,
     )
+    register_tool(
+        Tool(name="list_replenishment_suggestions", description="List inter-branch replenishment suggestions evaluating warehouse inventory levels against reorder thresholds and safety stock, matching deficits with surplus central distribution hubs", input_schema={
+            "type": "object",
+            "properties": {
+                "warehouse_id": {"type": "integer", "description": "Destination branch warehouse ID to evaluate"},
+                "destination_warehouse_id": {"type": "integer", "description": "Alternative parameter for destination warehouse ID"},
+                "source_warehouse_id": {"type": "integer", "description": "Preferred source hub warehouse ID"},
+                "product_id": {"type": "integer", "description": "Filter to a specific product SKU"},
+                "category": {"type": "string", "description": "Filter products by category"},
+                "priority": {"type": "string", "description": "Filter by priority level ('Critical', 'High', 'Normal', 'Low')"},
+                "min_deficit": {"type": "number", "description": "Minimum quantity deficit required (default 0.0)"},
+                "safety_stock_ratio": {"type": "number", "description": "Ratio of reorder level used as safety threshold (default 0.5)"},
+                "target_coverage_multiplier": {"type": "number", "description": "Multiplier on reorder level for target order size (default 1.5)"},
+            },
+        }),
+        _list_replenishment_suggestions,
+    )
+    register_tool(
+        Tool(name="generate_replenishment_transfers", description="Generate draft multi-warehouse Stock Transfer orders from replenishment recommendations, grouping items by source and destination warehouses", input_schema={
+            "type": "object",
+            "properties": {
+                "destination_warehouse_id": {"type": "integer", "description": "Optional destination warehouse ID filter/target"},
+                "source_warehouse_id": {"type": "integer", "description": "Optional source warehouse ID"},
+                "items": {
+                    "type": "array",
+                    "description": "Itemized replenishment suggestions to convert into transfer orders (optional; if omitted, automatically generates transfers for all active suggestions)",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "product_id": {"type": "integer", "description": "Product ID"},
+                            "destination_warehouse_id": {"type": "integer", "description": "Destination warehouse ID"},
+                            "source_warehouse_id": {"type": "integer", "description": "Source warehouse ID"},
+                            "suggested_transfer_qty": {"type": "number", "description": "Quantity to transfer"},
+                            "batch_id": {"type": "integer", "description": "Optional batch record ID"},
+                            "batch_number": {"type": "string", "description": "Optional batch/lot number"},
+                        },
+                        "required": ["product_id", "destination_warehouse_id", "source_warehouse_id", "suggested_transfer_qty"],
+                    },
+                },
+                "transfer_date": {"type": "string", "description": "Transfer date (YYYY-MM-DD)"},
+                "expected_delivery_date": {"type": "string", "description": "Expected delivery date (YYYY-MM-DD)"},
+                "carrier": {"type": "string", "description": "Logistics carrier name"},
+                "notes": {"type": "string", "description": "Transfer header notes"},
+            },
+        }),
+        _generate_replenishment_transfers,
+    )
     register_resource(
         Resource(uri="nova://inventory/products", name="All Products", description="List of all products"),
         _list_products,
+    )
+    register_resource(
+        Resource(uri="nova://inventory/replenishment-suggestions", name="Replenishment Suggestions", description="List of inter-branch replenishment suggestions and inventory deficit recommendations"),
+        _list_replenishment_suggestions,
     )
 
 
@@ -288,6 +342,64 @@ def _list_uoms():
 
 def _list_brands():
     return _brands_svc.list()
+
+
+def _list_replenishment_suggestions(
+    warehouse_id: int = None,
+    destination_warehouse_id: int = None,
+    source_warehouse_id: int = None,
+    product_id: int = None,
+    category: str = None,
+    priority: str = None,
+    min_deficit: float = 0.0,
+    safety_stock_ratio: float = 0.5,
+    target_coverage_multiplier: float = 1.5,
+    **kwargs,
+):
+    target_wh = warehouse_id if warehouse_id is not None else destination_warehouse_id
+    if hasattr(_replenishment_svc, "get_replenishment_suggestions"):
+        return _replenishment_svc.get_replenishment_suggestions(
+            warehouse_id=target_wh,
+            source_warehouse_id=source_warehouse_id,
+            product_id=product_id,
+            category=category,
+            priority=priority,
+            min_deficit=min_deficit if min_deficit is not None else 0.0,
+            safety_stock_ratio=safety_stock_ratio if safety_stock_ratio is not None else 0.5,
+            target_coverage_multiplier=target_coverage_multiplier if target_coverage_multiplier is not None else 1.5,
+        )
+    return {"total_suggestions": 0, "items": []}
+
+
+def _generate_replenishment_transfers(
+    destination_warehouse_id: int = None,
+    source_warehouse_id: int = None,
+    items: list = None,
+    suggestions: list = None,
+    transfer_date: str = None,
+    expected_delivery_date: str = None,
+    carrier: str = None,
+    notes: str = None,
+    **kwargs,
+):
+    user = get_current_user()
+    user_id = user.get("id") if isinstance(user, dict) else None
+    transfer_items = items if items is not None else suggestions
+    payload = {
+        "destination_warehouse_id": destination_warehouse_id,
+        "source_warehouse_id": source_warehouse_id,
+        "items": transfer_items,
+        "transfer_date": transfer_date,
+        "expected_delivery_date": expected_delivery_date,
+        "carrier": carrier,
+        "notes": notes,
+    }
+    for k, v in kwargs.items():
+        if v is not None and k not in payload:
+            payload[k] = v
+    if hasattr(_replenishment_svc, "generate_transfers"):
+        return _replenishment_svc.generate_transfers(payload=payload, user_id=user_id)
+    return {"transfers_created": 0, "transfers": []}
 
 
 def main():
