@@ -422,3 +422,226 @@ class TestCustomTCodeControllerPagination:
             assert 'rel="next"' in resp.headers.get('Link', '')
 
 
+class TestRepositoryPaginationAndSanitization:
+    def setup_method(self):
+        clear_current_tenant()
+
+    def teardown_method(self):
+        clear_current_tenant()
+
+    def test_sanitize_order_by_valid_columns(self):
+        repo = CrudRepository('t0001', pk='id')
+
+        # Single column neutral / default
+        clause = repo._sanitize_order_by('name')
+        assert clause == 'ORDER BY "name"'
+
+        # Single column descending prefix with -
+        clause = repo._sanitize_order_by('-name')
+        assert clause == 'ORDER BY "name" DESC'
+
+        # Single column ascending prefix with +
+        clause = repo._sanitize_order_by('+name')
+        assert clause == 'ORDER BY "name" ASC'
+
+        # Single column with explicit desc
+        clause = repo._sanitize_order_by('price desc')
+        assert clause == 'ORDER BY "price" DESC'
+
+        # Multiple columns
+        clause = repo._sanitize_order_by('category asc, -created_at')
+        assert clause == 'ORDER BY "category" ASC, "created_at" DESC'
+
+    def test_sanitize_order_by_sql_injection_defense(self):
+        repo = CrudRepository('t0001', pk='id')
+
+        # Malicious SQL injection attempts with no valid identifier should fall back to safe "id" DESC
+        pure_malicious_inputs = [
+            'name; DROP TABLE users;--',
+            'name UNION SELECT * FROM passwords',
+            '1=1',
+            'name OR 1=1',
+            'id/**/AND/**/1=1',
+            '(SELECT 1 FROM secret)',
+            'name` --',
+            'name; --',
+            '; DROP TABLE t0001;',
+            'name DESC; DELETE FROM t0001;',
+        ]
+        for bad_input in pure_malicious_inputs:
+            clause = repo._sanitize_order_by(bad_input)
+            assert clause == 'ORDER BY "id" DESC', f'Failed to sanitize: {bad_input}'
+
+        # Mixed inputs: invalid/injected parts are safely stripped, valid parts retained
+        mixed_clause = repo._sanitize_order_by('name, (SELECT 1 FROM secret)')
+        assert mixed_clause == 'ORDER BY "name"'
+
+    def test_sanitize_order_by_with_allowed_columns_whitelist(self):
+        repo = CrudRepository('t0001', pk='id')
+        allowed = {'name', 'sku', 'price', 'created_at'}
+
+        # Allowed column passes
+        assert repo._sanitize_order_by('sku asc', allowed_columns=allowed) == 'ORDER BY "sku" ASC'
+        assert repo._sanitize_order_by('-price', allowed_columns=allowed) == 'ORDER BY "price" DESC'
+
+        # Unallowed column is filtered out and defaults to safe id DESC
+        assert repo._sanitize_order_by('secret_column', allowed_columns=allowed) == 'ORDER BY "id" DESC'
+        assert repo._sanitize_order_by('-secret_column', allowed_columns=allowed) == 'ORDER BY "id" DESC'
+
+    def test_repository_list_query_construction_with_pagination(self):
+        repo = CrudRepository('t0001', pk='id')
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        mock_cur.fetchall.return_value = [{'id': 1, 'name': 'Item 1'}]
+
+        with patch('modules.core.repositories.base.get_connection', return_value=mock_conn), \
+             patch('modules.core.repositories.base.release_connection'):
+            items = repo.list(limit=25, offset=50, order_by='name desc')
+
+            assert len(items) == 1
+            execute_args = mock_cur.execute.call_args
+            query, params = execute_args[0]
+
+            assert 'ORDER BY "name" DESC' in query
+            assert 'LIMIT %s' in query
+            assert 'OFFSET %s' in query
+            assert params[-2:] == [25, 50]
+
+    def test_repository_list_query_capping_max_500(self):
+        repo = CrudRepository('t0001', pk='id')
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        mock_cur.fetchall.return_value = []
+
+        with patch('modules.core.repositories.base.get_connection', return_value=mock_conn), \
+             patch('modules.core.repositories.base.release_connection'):
+            # If a caller passes limit > 500 directly to repo.list, it gets capped to 500
+            repo.list(limit=1000, offset=0)
+            execute_args = mock_cur.execute.call_args
+            query, params = execute_args[0]
+            assert params[-2] == 500
+
+
+class TestMultiTenantPaginationIsolation:
+    def setup_method(self):
+        clear_current_tenant()
+
+    def teardown_method(self):
+        clear_current_tenant()
+
+    def test_tenant_filter_applied_to_both_list_and_count(self):
+        from modules.core.context import set_current_tenant
+
+        set_current_tenant(42)
+        repo = CrudRepository('t0001', pk='id')
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        mock_cur.fetchall.return_value = [{'id': 1, 'name': 'Tenant 42 Item', 'business_id': 42}]
+        mock_cur.fetchone.return_value = {'cnt': 10}
+
+        with patch('modules.core.repositories.base.get_connection', return_value=mock_conn), \
+             patch('modules.core.repositories.base.release_connection'):
+            # List query
+            items = repo.list(limit=50, offset=0)
+            assert len(items) == 1
+            list_query, list_params = mock_cur.execute.call_args[0]
+            assert '"business_id" = %s' in list_query
+            assert 42 in list_params
+
+            # Count query
+            count = repo.count()
+            assert count == 10
+            count_query, count_params = mock_cur.execute.call_args[0]
+            assert '"business_id" = %s' in count_query
+            assert 42 in count_params
+
+    def test_no_cross_tenant_data_leakage_across_pages(self):
+        """Verify that requests from Tenant A and Tenant B remain completely isolated across all pages."""
+        app = FastAPI()
+        mock_repo = MagicMock(spec=CrudRepository)
+        mock_repo.table = 'T0001'
+        mock_repo.table_name = 't0001'
+        mock_service = MagicMock(spec=CrudService)
+        mock_service.repo = mock_repo
+
+        # Simulate tenant-scoped service responses
+        tenant_1_data = [{'id': i, 'name': f'Tenant 1 Item {i}'} for i in range(1, 101)]
+        tenant_2_data = [{'id': i, 'name': f'Tenant 2 Item {i}'} for i in range(1, 31)]
+
+        def mock_list_side_effect(limit=50, offset=0, order_by=None):
+            from modules.core.context import get_current_tenant
+            active_tenant = get_current_tenant()
+            if active_tenant == 101:
+                return tenant_1_data[offset:offset + limit]
+            elif active_tenant == 202:
+                return tenant_2_data[offset:offset + limit]
+            return []
+
+        def mock_count_side_effect(where=None, params=None):
+            from modules.core.context import get_current_tenant
+            active_tenant = get_current_tenant()
+            if active_tenant == 101:
+                return len(tenant_1_data)
+            elif active_tenant == 202:
+                return len(tenant_2_data)
+            return 0
+
+        mock_service.list.side_effect = mock_list_side_effect
+        mock_service.count.side_effect = mock_count_side_effect
+
+        router = create_crud_router(
+            prefix='/api/test-items',
+            tag='T0001 - Test Items',
+            service=mock_service,
+            response_model=ItemSchema
+        )
+        app.include_router(router)
+        client = TestClient(app)
+
+        user_tenant_1 = {'id': 1, 'username': 'user1', 'role': 'User', 'permissions': ['*'], 'business_id': 101}
+        token_tenant_1 = create_access_token(1, business_id=101)
+
+        user_tenant_2 = {'id': 2, 'username': 'user2', 'role': 'User', 'permissions': ['*'], 'business_id': 202}
+        token_tenant_2 = create_access_token(2, business_id=202)
+
+        # Tenant 1 queries page 1 (50 items)
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_tenant_1):
+            resp1 = client.get('/api/test-items/?limit=50&offset=0', headers={'Authorization': f'Bearer {token_tenant_1}'})
+            assert resp1.status_code == 200
+            data1 = resp1.json()
+            assert len(data1) == 50
+            assert data1[0]['name'] == 'Tenant 1 Item 1'
+            assert resp1.headers.get('X-Total-Count') == '100'
+            assert 'rel="next"' in resp1.headers.get('Link', '')
+
+        # Tenant 1 queries page 2 (next 50 items)
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_tenant_1):
+            resp2 = client.get('/api/test-items/?limit=50&offset=50', headers={'Authorization': f'Bearer {token_tenant_1}'})
+            assert resp2.status_code == 200
+            data2 = resp2.json()
+            assert len(data2) == 50
+            assert data2[0]['name'] == 'Tenant 1 Item 51'
+            assert data2[-1]['name'] == 'Tenant 1 Item 100'
+            assert resp2.headers.get('X-Total-Count') == '100'
+            assert 'rel="prev"' in resp2.headers.get('Link', '')
+            assert 'rel="next"' not in resp2.headers.get('Link', '')
+
+        # Tenant 2 queries page 1 (30 items total)
+        with patch('packages.auth.deps.get_user_by_id', return_value=user_tenant_2):
+            resp3 = client.get('/api/test-items/?limit=50&offset=0', headers={'Authorization': f'Bearer {token_tenant_2}'})
+            assert resp3.status_code == 200
+            data3 = resp3.json()
+            assert len(data3) == 30
+            assert data3[0]['name'] == 'Tenant 2 Item 1'
+            assert data3[-1]['name'] == 'Tenant 2 Item 30'
+            # Zero leakage of Tenant 1 data
+            assert not any('Tenant 1' in item['name'] for item in data3)
+            assert resp3.headers.get('X-Total-Count') == '30'
+            # No next page for Tenant 2 since count <= limit
+            assert 'rel="next"' not in resp3.headers.get('Link', '')
+
+
+

@@ -33,7 +33,7 @@ class CrudRepository:
             return True
         return True
 
-    def _sanitize_order_by(self, order_by: Optional[str]) -> str:
+    def _sanitize_order_by(self, order_by: Optional[str], allowed_columns: Optional[set[str] | list[str]] = None) -> str:
         """
         Validate and sanitize order_by parameter to protect against SQL injection
         and ensure only valid column names and directions (ASC/DESC) are used.
@@ -84,6 +84,14 @@ class CrudRepository:
             if not IDENTIFIER_REGEX.match(col_name):
                 logger.warning(
                     "Invalid order_by identifier '%s' on table '%s'",
+                    col_name,
+                    self.table_name
+                )
+                continue
+
+            if allowed_columns and col_name not in allowed_columns:
+                logger.warning(
+                    "Order_by column '%s' not in allowed columns on table '%s'",
                     col_name,
                     self.table_name
                 )
@@ -149,7 +157,7 @@ class CrudRepository:
 
             if limit is not None:
                 try:
-                    limit_val = max(0, int(limit))
+                    limit_val = min(max(0, int(limit)), 500)
                     sql += ' LIMIT %s'
                     params.append(limit_val)
                 except (ValueError, TypeError):
