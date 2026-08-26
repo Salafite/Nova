@@ -228,3 +228,8 @@ def delete_transfer_line(
 
     service.delete_line(line_id)
     return None
+
+
+# Ensure static routes (e.g. /in-transit) are evaluated before parameterized routes (e.g. /{id})
+router.routes.sort(key=lambda r: 1 if "{" in getattr(r, "path", "") else 0)
+
