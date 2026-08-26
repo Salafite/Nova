@@ -307,4 +307,147 @@ describe('usePagination composable', () => {
     expect(pagination.limit.value).toBe(25)
     expect(pagination.orderBy.value).toBeNull()
   })
+
+  it('triggers immediate load when immediate: true', () => {
+    const fetchFn = vi.fn().mockResolvedValue({ data: [{ id: 1 }], headers: { 'x-total-count': '1' } })
+    usePagination({
+      fetchFn,
+      immediate: true,
+    })
+
+    expect(fetchFn).toHaveBeenCalledWith({ limit: 50, offset: 0 })
+  })
+
+  it('invokes onPageChange and onLimitChange callbacks', async () => {
+    const onPageChange = vi.fn()
+    const onLimitChange = vi.fn()
+    const fetchFn = vi.fn().mockResolvedValue({ data: [{ id: 1 }], headers: { 'x-total-count': '100' } })
+
+    const pagination = usePagination({
+      fetchFn,
+      onPageChange,
+      onLimitChange,
+    })
+
+    await pagination.load()
+    await pagination.setPage(2)
+    expect(onPageChange).toHaveBeenCalledWith(2)
+
+    await pagination.setLimit(100)
+    expect(onLimitChange).toHaveBeenCalledWith(100)
+  })
+
+  it('handles various response structures in setFromResponse', () => {
+    const pagination = usePagination()
+
+    // 1. Plain array
+    pagination.setFromResponse([{ id: 1 }, { id: 2 }])
+    expect(pagination.items.value).toEqual([{ id: 1 }, { id: 2 }])
+    expect(pagination.totalCount.value).toBe(2)
+
+    // 2. Object with items and totalCount
+    pagination.setFromResponse({ items: [{ id: 3 }], totalCount: 40 })
+    expect(pagination.items.value).toEqual([{ id: 3 }])
+    expect(pagination.totalCount.value).toBe(40)
+
+    // 3. Object with data and total
+    pagination.setFromResponse({ data: [{ id: 4 }], total: 50 })
+    expect(pagination.items.value).toEqual([{ id: 4 }])
+    expect(pagination.totalCount.value).toBe(50)
+
+    // 4. Null / undefined response
+    pagination.setFromResponse(null)
+    expect(pagination.items.value).toEqual([{ id: 4 }])
+  })
+
+  it('passes extra parameters through load, nextPage, and setPage', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({ data: [], headers: { 'x-total-count': '100' } })
+    const pagination = usePagination(fetchFn)
+
+    await pagination.load(1, { search: 'bolt', category_id: 5 })
+    expect(fetchFn).toHaveBeenLastCalledWith({
+      limit: 50,
+      offset: 0,
+      search: 'bolt',
+      category_id: 5,
+    })
+
+    await pagination.nextPage({ filter: 'active' })
+    expect(fetchFn).toHaveBeenLastCalledWith({
+      limit: 50,
+      offset: 50,
+      filter: 'active',
+    })
+  })
+
+  it('prevents navigation beyond boundaries', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({ data: [{ id: 1 }], headers: { 'x-total-count': '50' } })
+    const pagination = usePagination(fetchFn)
+    await pagination.load()
+
+    expect(pagination.totalPages.value).toBe(1)
+    expect(pagination.hasNextPage.value).toBe(false)
+    expect(pagination.hasPrevPage.value).toBe(false)
+
+    // Calling nextPage when hasNextPage is false should not fetch
+    fetchFn.mockClear()
+    await pagination.nextPage()
+    expect(fetchFn).not.toHaveBeenCalled()
+
+    // Calling prevPage when hasPrevPage is false should not fetch
+    await pagination.prevPage()
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('supports custom idKey for infinite scrolling deduplication', async () => {
+    let call = 0
+    const fetchFn = vi.fn().mockImplementation(() => {
+      call++
+      if (call === 1) {
+        return Promise.resolve({
+          data: [{ code: 'SKU-1', name: 'Item 1' }, { code: 'SKU-2', name: 'Item 2' }],
+          headers: { 'x-total-count': '3', 'x-page-limit': '2' },
+        })
+      } else {
+        return Promise.resolve({
+          data: [{ code: 'SKU-2', name: 'Item 2' }, { code: 'SKU-3', name: 'Item 3' }],
+          headers: { 'x-total-count': '3', 'x-page-limit': '2' },
+        })
+      }
+    })
+
+    const pagination = usePagination({
+      fetchFn,
+      defaultLimit: 2,
+      infinite: true,
+      idKey: 'code',
+    })
+
+    await pagination.load()
+    expect(pagination.items.value).toHaveLength(2)
+
+    await pagination.loadMore()
+    expect(pagination.items.value).toEqual([
+      { code: 'SKU-1', name: 'Item 1' },
+      { code: 'SKU-2', name: 'Item 2' },
+      { code: 'SKU-3', name: 'Item 3' },
+    ])
+  })
+
+  it('aliases hasNext and hasPrev correctly', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      data: [{ id: 1 }],
+      headers: { 'x-total-count': '100', 'x-page-limit': '50' },
+    })
+
+    const pagination = usePagination(fetchFn)
+    await pagination.load()
+
+    expect(pagination.hasNext.value).toBe(true)
+    expect(pagination.hasPrev.value).toBe(false)
+
+    await pagination.nextPage()
+    expect(pagination.hasNext.value).toBe(false)
+    expect(pagination.hasPrev.value).toBe(true)
+  })
 })

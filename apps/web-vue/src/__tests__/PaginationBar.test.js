@@ -173,4 +173,125 @@ describe('PaginationBar.vue', () => {
       expect(btn.attributes('disabled')).toBeDefined()
     })
   })
+
+  it('supports v-model:modelValue and emits update:modelValue on page selection', async () => {
+    const wrapper = mount(PaginationBar, {
+      props: {
+        modelValue: 3,
+        pageSize: 10,
+        totalCount: 50,
+      },
+    })
+
+    const pageButtons = wrapper.findAll('.page-btn-num')
+    expect(pageButtons[2].classes()).toContain('is-active')
+
+    await pageButtons[4].trigger('click')
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([5])
+    expect(wrapper.emitted('page-change')?.[0]).toEqual([5])
+  })
+
+  it('calculates visible page numbers with ellipses for large page counts', () => {
+    // 1. Middle page (page 10 of 20) -> should show first, ellipsis, neighbors, ellipsis, last
+    const midWrapper = mount(PaginationBar, {
+      props: {
+        page: 10,
+        pageSize: 10,
+        totalCount: 200,
+        maxVisibleButtons: 5,
+      },
+    })
+    const midItems = midWrapper.findAll('.pagination-pages > *')
+    const midTexts = midItems.map((item) => item.text())
+    expect(midTexts).toContain('…')
+    expect(midTexts[0]).toBe('1')
+    expect(midTexts[midTexts.length - 1]).toBe('20')
+
+    // 2. Start page (page 2 of 20) -> should show start numbers and ellipsis before last
+    const startWrapper = mount(PaginationBar, {
+      props: {
+        page: 2,
+        pageSize: 10,
+        totalCount: 200,
+        maxVisibleButtons: 5,
+      },
+    })
+    const startItems = startWrapper.findAll('.pagination-pages > *')
+    const startTexts = startItems.map((item) => item.text())
+    expect(startTexts[0]).toBe('1')
+    expect(startTexts).toContain('…')
+    expect(startTexts[startTexts.length - 1]).toBe('20')
+
+    // 3. End page (page 19 of 20) -> should show first, ellipsis, end numbers
+    const endWrapper = mount(PaginationBar, {
+      props: {
+        page: 19,
+        pageSize: 10,
+        totalCount: 200,
+        maxVisibleButtons: 5,
+      },
+    })
+    const endItems = endWrapper.findAll('.pagination-pages > *')
+    const endTexts = endItems.map((item) => item.text())
+    expect(endTexts[0]).toBe('1')
+    expect(endTexts[1]).toBe('…')
+    expect(endTexts[endTexts.length - 1]).toBe('20')
+  })
+
+  it('navigates to first and last pages when first/last buttons are clicked', async () => {
+    const wrapper = mount(PaginationBar, {
+      props: {
+        page: 3,
+        pageSize: 10,
+        totalCount: 100,
+        showFirstLast: true,
+      },
+    })
+
+    const iconButtons = wrapper.findAll('.page-btn-icon')
+    // iconButtons: [first_page, prev_page, next_page, last_page]
+    // Click first page (index 0)
+    await iconButtons[0].trigger('click')
+    expect(wrapper.emitted('page-change')?.[0]).toEqual([1])
+
+    // Click last page (index 3)
+    await iconButtons[3].trigger('click')
+    expect(wrapper.emitted('page-change')?.[1]).toEqual([10])
+  })
+
+  it('automatically adds current limit into pageSizeOptions if not present', () => {
+    const wrapper = mount(PaginationBar, {
+      props: {
+        page: 1,
+        pageSize: 75,
+        totalCount: 200,
+        pageSizeOptions: [10, 25, 50, 100],
+      },
+    })
+
+    const options = wrapper.findAll('select.size-select option')
+    const optionValues = options.map((opt) => Number(opt.element.value))
+    expect(optionValues).toContain(75)
+    // Should be sorted
+    expect(optionValues).toEqual([10, 25, 50, 75, 100])
+  })
+
+  it('hides elements when visibility props are set to false', () => {
+    const wrapper = mount(PaginationBar, {
+      props: {
+        page: 1,
+        pageSize: 50,
+        totalCount: 100,
+        showTotal: false,
+        showPageSize: false,
+        showFirstLast: false,
+      },
+    })
+
+    expect(wrapper.find('.pagination-info').exists()).toBe(false)
+    expect(wrapper.find('.pagination-size').exists()).toBe(false)
+    // Only prev and next buttons in pagination-nav
+    const iconButtons = wrapper.findAll('.page-btn-icon')
+    expect(iconButtons.length).toBe(2)
+  })
 })
