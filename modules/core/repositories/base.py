@@ -1,4 +1,5 @@
-﻿import os
+import os
+import re
 import logging
 from typing import Optional
 import psycopg2.extras
@@ -9,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 AUDIT_COLUMNS = {'created_at', 'created_by', 'updated_at', 'updated_by', 'update_number'}
 NON_TENANT_TABLES = {'t0059'}
+IDENTIFIER_REGEX = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
 
 
 class CrudRepository:
@@ -31,6 +33,94 @@ class CrudRepository:
             return True
         return True
 
+    def _sanitize_order_by(self, order_by: Optional[str]) -> str:
+        """
+        Validate and sanitize order_by parameter to protect against SQL injection
+        and ensure only valid column names and directions (ASC/DESC) are used.
+        Supports:
+          - 'column' (default direction)
+          - 'column ASC' or 'column DESC' (case-insensitive)
+          - '-column' (descending) or '+column' (ascending)
+          - Comma-separated list: 'column1 ASC, column2 DESC'
+        Falls back to default 'ORDER BY "{self.pk}" DESC' if order_by is invalid or empty.
+        """
+        if not order_by or not isinstance(order_by, str):
+            return f'ORDER BY "{self.pk}" DESC'
+
+        order_by_str = order_by.strip()
+        if not order_by_str:
+            return f'ORDER BY "{self.pk}" DESC'
+
+        valid_clauses = []
+        parts = [p.strip() for p in order_by_str.split(',') if p.strip()]
+
+        for part in parts:
+            direction = None
+            col_name = part
+
+            if col_name.startswith('-'):
+                direction = 'DESC'
+                col_name = col_name[1:].strip()
+            elif col_name.startswith('+'):
+                direction = 'ASC'
+                col_name = col_name[1:].strip()
+            else:
+                tokens = col_name.split()
+                if len(tokens) == 1:
+                    col_name = tokens[0]
+                    direction = None
+                elif len(tokens) == 2:
+                    col_name = tokens[0]
+                    dir_token = tokens[1].upper()
+                    if dir_token in ('ASC', 'DESC'):
+                        direction = dir_token
+                    else:
+                        continue
+                else:
+                    continue
+
+            col_name = col_name.strip('"` ')
+
+            if not IDENTIFIER_REGEX.match(col_name):
+                logger.warning(
+                    "Invalid order_by identifier '%s' on table '%s'",
+                    col_name,
+                    self.table_name
+                )
+                continue
+
+            if direction:
+                valid_clauses.append(f'"{col_name}" {direction}')
+            else:
+                valid_clauses.append(f'"{col_name}"')
+
+        if not valid_clauses:
+            return f'ORDER BY "{self.pk}" DESC'
+
+        return f'ORDER BY {", ".join(valid_clauses)}'
+
+    def _sanitize_filters(self, filters: dict) -> tuple[list[str], list]:
+        """
+        Validate filter column names against SQL identifier pattern.
+        Returns a tuple of (clause_strings, param_values).
+        """
+        clauses = []
+        params = []
+        if not filters or not isinstance(filters, dict):
+            return clauses, params
+
+        for k, v in filters.items():
+            if not isinstance(k, str):
+                continue
+            key = k.strip('"` ')
+            if not IDENTIFIER_REGEX.match(key):
+                logger.warning("Invalid filter key identifier: '%s'", k)
+                continue
+            clauses.append(f'"{key}" = %s')
+            params.append(v)
+
+        return clauses, params
+
     def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None, business_id: Optional[int] = None):
         should_release = False
         if conn is None:
@@ -48,18 +138,31 @@ class CrudRepository:
 
             if self._has_is_active():
                 clauses.append('is_active = TRUE')
+
             if filters:
-                for k, v in filters.items():
-                    clauses.append(f'"{k}" = %s')
-                    params.append(v)
-            order = f'ORDER BY "{order_by}"' if order_by else f'ORDER BY "{self.pk}" DESC'
+                filter_clauses, filter_params = self._sanitize_filters(filters)
+                clauses.extend(filter_clauses)
+                params.extend(filter_params)
+
+            order = self._sanitize_order_by(order_by)
             sql = f'SELECT * FROM {self.qualified} WHERE {" AND ".join(clauses)} {order}'
+
             if limit is not None:
-                sql += ' LIMIT %s'
-                params.append(limit)
+                try:
+                    limit_val = max(0, int(limit))
+                    sql += ' LIMIT %s'
+                    params.append(limit_val)
+                except (ValueError, TypeError):
+                    pass
+
             if offset is not None:
-                sql += ' OFFSET %s'
-                params.append(offset)
+                try:
+                    offset_val = max(0, int(offset))
+                    sql += ' OFFSET %s'
+                    params.append(offset_val)
+                except (ValueError, TypeError):
+                    pass
+
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, params)
                 return [dict(r) for r in cur.fetchall()]
@@ -261,9 +364,9 @@ class CrudRepository:
             if self._has_is_active():
                 clauses.append('is_active = TRUE')
             if filters:
-                for k, v in filters.items():
-                    clauses.append(f'"{k}" = %s')
-                    params.append(v)
+                filter_clauses, filter_params = self._sanitize_filters(filters)
+                clauses.extend(filter_clauses)
+                params.extend(filter_params)
             sql = f'SELECT COUNT(*) AS cnt FROM {self.qualified} WHERE {" AND ".join(clauses)}'
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, params)
