@@ -856,6 +856,7 @@ class FieldSalesSyncService:
 
     def _generate_order_number(self, cur, order_date: Optional[date] = None, prefix: str = "FSO") -> str:
         """Generate a sequential, date-formatted order number (e.g. FSO-20260822-0001)."""
+        import uuid
         d = order_date or date.today()
         today_str = d.strftime("%Y%m%d")
         pattern = f"{prefix}-{today_str}-%"
@@ -866,7 +867,11 @@ class FieldSalesSyncService:
         )
         row = cur.fetchone()
         count = (row["cnt"] if row and "cnt" in row else 0) + 1
-        return f"{prefix}-{today_str}-{count:04d}"
+        candidate = f"{prefix}-{today_str}-{count:04d}"
+        if self._is_order_number_taken(candidate, cur):
+            rand_suffix = uuid.uuid4().hex[:6].upper()
+            candidate = f"{prefix}-{today_str}-{rand_suffix}"
+        return candidate
 
     def _calculate_order_totals(
         self,
