@@ -1031,5 +1031,15 @@
   "reject-credit-hold": "Reject Credit Hold",
   "order-credit-hold-title": "Order Placed on Financial Credit Hold",
   "hold-reason": "Hold Reason",
-  "credit-hold-desc": "Automated financial safeguard active: Warehouse pick list creation and stock reservation are blocked until authorized by a Financial Manager."
+  "credit-hold-desc": "Automated financial safeguard active: Warehouse pick list creation and stock reservation are blocked until authorized by a Financial Manager.",
+  "pagination-showing": "Showing",
+  "pagination-of": "of",
+  "pagination-items": "items",
+  "pagination-no-records": "No records found",
+  "pagination-rows-per-page": "Rows per page:",
+  "pagination-first-page": "First page",
+  "pagination-prev-page": "Previous page",
+  "pagination-next-page": "Next page",
+  "pagination-last-page": "Last page",
+  "pagination-page": "Page"
 }
