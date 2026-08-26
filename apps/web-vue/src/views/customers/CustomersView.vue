@@ -24,6 +24,10 @@
         <span class="stat-value">${{ totalOutstanding }}</span>
         <span class="stat-label">{{ t('outstanding') }}</span>
       </div>
+      <div class="stat-card stat-card-risk" :class="{ 'stat-card-highlight': overLimitCount > 0 }">
+        <span class="stat-value" :class="overLimitCount > 0 ? 'text-danger' : ''">{{ overLimitCount }}</span>
+        <span class="stat-label">{{ t('over-credit-limit', 'Over Limit / Delinquent') }}</span>
+      </div>
     </div>
 
     <div class="toolbar">
@@ -34,6 +38,13 @@
       <select v-model="groupFilter" class="filter-select">
         <option value="">{{ t('all-groups') }}</option>
         <option v-for="g in groups" :key="g" :value="g">{{ g }}</option>
+      </select>
+      <select v-model="creditFilter" class="filter-select">
+        <option value="">{{ t('all-credit-statuses', 'All Credit Statuses') }}</option>
+        <option value="over-limit">{{ t('over-credit-limit', 'Over Credit Limit') }}</option>
+        <option value="near-limit">{{ t('near-credit-limit', 'Near Limit (≥80%)') }}</option>
+        <option value="within-limit">{{ t('within-limit', 'Within Credit Limit') }}</option>
+        <option value="unlimited">{{ t('unlimited-credit', 'No Limit / Unlimited') }}</option>
       </select>
     </div>
 
@@ -46,7 +57,7 @@
     </div>
 
     <template v-else>
-      <div v-if="!filteredItems.length && (searchQuery || groupFilter)" class="empty-state">
+      <div v-if="!filteredItems.length && (searchQuery || groupFilter || creditFilter)" class="empty-state">
         <span class="material-symbols-outlined empty-icon">search_off</span>
         <p>{{ t('no-records') }}</p>
       </div>
@@ -67,17 +78,33 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in filteredItems" :key="item.id">
-                <td class="col-name"><a class="name-link" @click="router.push(`/customers/${item.id}`)">{{ item.name }}</a></td>
+              <tr v-for="item in filteredItems" :key="item.id" :class="{ 'row-delinquent': isOverLimit(item) }">
+                <td class="col-name">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <a class="name-link" @click="router.push(`/customers/${item.id}`)">{{ item.name }}</a>
+                    <span v-if="isOverLimit(item)" class="badge badge-danger badge-xs" :title="t('credit-limit-exceeded', 'Credit limit exceeded')">
+                      {{ t('over-limit', 'Over Limit') }}
+                    </span>
+                    <span v-else-if="isNearLimit(item)" class="badge badge-warning badge-xs" :title="t('near-credit-limit', 'Near Limit (≥80%)')">
+                      {{ t('near-limit', 'Near Limit') }}
+                    </span>
+                  </div>
+                </td>
                 <td class="col-group"><span class="group-tag">{{ item.group_name || '-' }}</span></td>
                 <td class="col-contact cell-mono">{{ item.phone || '-' }}</td>
                 <td class="col-num cell-mono">{{ formatNum(item.credit_limit) }}</td>
-                <td class="col-num cell-mono">{{ formatNum(item.balance) }}</td>
+                <td class="col-num cell-mono" :class="{ 'text-danger font-bold': isOverLimit(item), 'text-warning': isNearLimit(item) }">{{ formatNum(item.balance) }}</td>
                 <td class="col-usage">
-                  <div v-if="(item.credit_limit || 0) > 0" class="util-track" :title="utilTitle(item)">
-                    <div class="util-fill" :class="utilLevel(item)" :style="{ width: utilPct(item) + '%' }"></div>
+                  <div v-if="(item.credit_limit || 0) > 0" class="util-container" :title="utilTitle(item)">
+                    <div class="util-header">
+                      <span class="util-pct" :class="utilTextClass(item)">{{ actualUtilPct(item) }}%</span>
+                      <span v-if="isOverLimit(item)" class="badge badge-danger badge-xs">{{ t('exceeded', 'Exceeded') }}</span>
+                    </div>
+                    <div class="util-track">
+                      <div class="util-fill" :class="utilLevel(item)" :style="{ width: utilPct(item) + '%' }"></div>
+                    </div>
                   </div>
-                  <span v-else class="util-na">{{ t('unlimited') }}</span>
+                  <span v-else class="util-na">{{ t('unlimited', 'Unlimited') }}</span>
                 </td>
                 <td class="text-center">
                   <span :class="item.is_active ? 'badge badge-active' : 'badge badge-inactive'">
@@ -179,6 +206,7 @@ const error = ref('')
 const items = ref([])
 const searchQuery = ref('')
 const groupFilter = ref('')
+const creditFilter = ref('')
 const panelOpen = ref(false)
 const editing = ref(false)
 const saving = ref(false)
@@ -186,7 +214,37 @@ const editId = ref(null)
 const confirmTarget = ref(null)
 const form = ref({ name: '', group_name: 'Retail', phone: '', email: '', credit_limit: 0, balance: 0, is_active: true })
 
+function isOverLimit(item) {
+  const cl = item?.credit_limit || 0
+  const bal = item?.balance || 0
+  return cl > 0 && bal > cl
+}
+
+function isNearLimit(item) {
+  const cl = item?.credit_limit || 0
+  const bal = item?.balance || 0
+  return cl > 0 && !isOverLimit(item) && bal >= cl * 0.8
+}
+
+function actualUtilPct(item) {
+  const cl = item?.credit_limit || 0
+  const bal = item?.balance || 0
+  if (cl <= 0) return 0
+  return Math.round((bal / cl) * 100)
+}
+
+function utilTextClass(item) {
+  const cl = item?.credit_limit || 0
+  const bal = item?.balance || 0
+  if (cl <= 0) return ''
+  const pct = bal / cl
+  if (pct >= 1) return 'text-danger font-bold'
+  if (pct >= 0.8) return 'text-warning font-semibold'
+  return 'text-success'
+}
+
 const activeCount = computed(() => items.value.filter(i => i.is_active).length)
+const overLimitCount = computed(() => items.value.filter(i => isOverLimit(i)).length)
 const totalOutstanding = computed(() => items.value.reduce((s, i) => s + (i.balance || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 }))
 
 const groups = computed(() => {
@@ -206,6 +264,17 @@ const filteredItems = computed(() => {
   }
   if (groupFilter.value) {
     result = result.filter(i => i.group_name === groupFilter.value)
+  }
+  if (creditFilter.value) {
+    if (creditFilter.value === 'over-limit') {
+      result = result.filter(i => isOverLimit(i))
+    } else if (creditFilter.value === 'near-limit') {
+      result = result.filter(i => isNearLimit(i))
+    } else if (creditFilter.value === 'within-limit') {
+      result = result.filter(i => (i.credit_limit || 0) > 0 && !isOverLimit(i) && !isNearLimit(i))
+    } else if (creditFilter.value === 'unlimited') {
+      result = result.filter(i => (i.credit_limit || 0) <= 0)
+    }
   }
   return result
 })
@@ -232,7 +301,7 @@ function utilLevel(item) {
 }
 
 function utilTitle(item) {
-  const pct = utilPct(item)
+  const pct = actualUtilPct(item)
   return `${pct}% ${t('credit-usage')}`
 }
 
@@ -318,6 +387,8 @@ onMounted(load)
 
 .stats-row { display: flex; gap: 12px; margin-bottom: 16px; }
 .stat-card { flex: 1; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+.stat-card-risk { border-left: 3px solid var(--border-default); }
+.stat-card-highlight { border-color: var(--color-error); border-left: 3px solid var(--color-error); background: rgba(239, 68, 68, 0.04); }
 .stat-value { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1; }
 .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
@@ -347,12 +418,27 @@ onMounted(load)
 .cell-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 .group-tag { display: inline-block; padding: 2px 8px; background: var(--bg-surface-low); border-radius: 4px; font-size: 12px; color: var(--text-muted); }
 
+.util-container { display: flex; flex-direction: column; gap: 3px; min-width: 100px; }
+.util-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 2px; }
+.util-pct { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; }
 .util-track { width: 100%; height: 6px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
 .util-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
 .util-fill.util-ok { background: var(--color-success); }
 .util-fill.util-warning { background: var(--color-warning, #d97706); }
 .util-fill.util-danger { background: var(--color-error); }
 .util-na { font-size: 11px; color: var(--text-faint); }
+
+.badge-xs { padding: 1px 6px; font-size: 10px; line-height: 1.2; border-radius: 4px; }
+.row-delinquent { background: rgba(239, 68, 68, 0.04); }
+.text-danger { color: var(--color-error); }
+.text-warning { color: var(--color-warning, #d97706); }
+.text-success { color: var(--color-success); }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-2 { gap: 8px; }
+.flex-wrap { flex-wrap: wrap; }
 
 [dir="rtl"] .col-num { text-align: left; }
 
