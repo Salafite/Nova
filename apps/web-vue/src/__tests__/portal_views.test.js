@@ -605,9 +605,9 @@ describe('Portal Views Suite', () => {
         },
       })
 
-      expect(wrapper.text()).toContain('Replenishment Order #SO-20260825-001')
+      expect(wrapper.text()).toContain('Sales Order #SO-20260825-001')
       expect(wrapper.text()).toContain('Fulfillment & Delivery Progress')
-      expect(wrapper.text()).toContain('Fulfillment & Delivery Details')
+      expect(wrapper.text()).toContain('Order Information')
       expect(wrapper.text()).toContain('Payment & Invoice Summary')
       expect(wrapper.text()).toContain('Itemized Order Line Items (1)')
       expect(wrapper.text()).toContain('Espresso Roast Beans 1kg')
