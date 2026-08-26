@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Optional, Union, Dict, Any, List
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
@@ -15,14 +15,15 @@ from modules.accounting.services.payment_term_service import (
 logger = logging.getLogger(__name__)
 
 VALID_SALES_STATUS_TRANSITIONS = {
-    'Draft': ['Confirmed', 'Cancelled'],
-    'Pending': ['Confirmed', 'Cancelled'],
+    'Draft': ['Confirmed', 'Cancelled', 'Credit Hold'],
+    'Pending': ['Confirmed', 'Cancelled', 'Credit Hold'],
     'Confirmed': ['Shipped', 'Cancelled'],
     'Shipped': ['Delivered', 'Cancelled'],
     'Delivered': ['Invoiced'],
     'Invoiced': ['Paid', 'Cancelled'],
     'Paid': [],
     'Cancelled': [],
+    'Credit Hold': ['Draft', 'Pending', 'Confirmed', 'Cancelled'],
 }
 
 LINE_REPO = CrudRepository(
@@ -71,6 +72,10 @@ ORDER_REPO = CrudRepository(
         'is_offline_sync',
         'sync_status',
         'offline_created_at',
+        'hold_reason',
+        'hold_released_by',
+        'hold_released_at',
+        'hold_release_reason',
     ],
 )
 
@@ -199,6 +204,8 @@ class SalesOrderService(CrudService):
         pli_repo: CrudRepository = None,
         product_repo: CrudRepository = None,
         payment_term_repo: CrudRepository = None,
+        credit_service=None,
+        notification_service=None,
     ):
         super().__init__(repo or ORDER_REPO)
         self.line_repo = line_repo or LINE_REPO
@@ -208,6 +215,11 @@ class SalesOrderService(CrudService):
         self.pli_repo = pli_repo or PLI_REPO
         self.product_repo = product_repo or PRODUCT_REPO
         self.payment_term_repo = payment_term_repo or PAYMENT_TERM_REPO
+        self.credit_service = credit_service
+        self.notification_service = notification_service
+
+    def _dispatch_ws_broadcast(self, **kwargs):
+        pass
 
     def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None):
         if filters and 'is_catch_weight' in filters:
@@ -232,6 +244,7 @@ class SalesOrderService(CrudService):
         if not payload.get('grand_total') and payload.get('subtotal') is not None:
             payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
         customer_id = payload.get('customer_id')
+        hold_reason = None
         if customer_id:
             customer = self.customer_repo.get(customer_id, conn=conn) if self.customer_repo else None
             if customer:
@@ -239,15 +252,27 @@ class SalesOrderService(CrudService):
                 if not payload.get('payment_term_id') and customer.get('payment_term_id'):
                     payload['payment_term_id'] = customer.get('payment_term_id')
 
-                new_balance = customer.get('balance', 0) + payload.get('grand_total', 0)
-                credit_limit = customer.get('credit_limit', 0)
-                if credit_limit > 0 and new_balance > credit_limit:
-                    from fastapi import HTTPException
-                    logger.warning(
-                        f"Order creation rejected for customer {customer.get('name')} (id {customer_id}): "
-                        f"credit limit {credit_limit} exceeded by new balance {new_balance}"
+                if self.credit_service:
+                    credit_check = self.credit_service.evaluate_order_credit(
+                        customer_id=customer_id,
+                        order_amount=payload.get('grand_total', 0),
+                        conn=conn,
                     )
-                    raise HTTPException(400, f'Order would exceed credit limit ({customer.get("name")}: limit={credit_limit}, new balance={new_balance})')
+                    if credit_check and credit_check.get('is_hold_required'):
+                        hold_reason = credit_check.get('hold_reason', 'Customer credit limit exceeded')
+                else:
+                    new_balance = customer.get('balance', 0) + payload.get('grand_total', 0)
+                    credit_limit = customer.get('credit_limit', 0)
+                    if credit_limit > 0 and new_balance > credit_limit:
+                        hold_reason = f"Customer credit limit exceeded (${new_balance:,.2f} > Limit ${credit_limit:,.2f})"
+
+        if hold_reason:
+            payload['status'] = 'Credit Hold'
+            payload['hold_reason'] = hold_reason
+            customer_name = customer.get('name', 'Unknown') if customer else 'Unknown'
+            logger.warning(f"Order creation placed on Credit Hold for customer {customer_name}: {hold_reason}")
+        elif not payload.get('status'):
+            payload['status'] = 'Pending'
 
         # If payment_term_id is still not set, resolve default active payment term if available
         if not payload.get('payment_term_id') and hasattr(self, 'payment_term_repo') and self.payment_term_repo:
@@ -258,7 +283,33 @@ class SalesOrderService(CrudService):
             except Exception as e:
                 logger.warning(f"Could not resolve default payment term for order: {e}")
 
-        return super().create(payload, conn=conn)
+        result = super().create(payload, conn=conn)
+
+        if hold_reason and hasattr(self, 'notification_service') and self.notification_service:
+            try:
+                self.notification_service.notify_roles(
+                    title=f"Credit Hold: {result.get('order_number', '')}",
+                    message=f"Order {result.get('order_number', '')} placed on credit hold for {customer.get('name', 'Unknown')}: {hold_reason}",
+                    notification_type='Credit Hold',
+                    reference_type='SalesOrder',
+                    reference_id=result.get('id'),
+                    roles=['admin'],
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send credit hold notification: {e}")
+
+        if hold_reason and hasattr(self, '_dispatch_ws_broadcast'):
+            try:
+                self._dispatch_ws_broadcast(
+                    order_id=result.get('id'),
+                    order_number=result.get('order_number', ''),
+                    status='Credit Hold',
+                    customer_name=customer.get('name', 'Unknown') if customer else 'Unknown',
+                )
+            except Exception as e:
+                logger.warning(f"Failed to dispatch WS broadcast: {e}")
+
+        return result
 
     def update(self, id_val, payload: dict, conn=None):
         should_release = False
@@ -300,6 +351,31 @@ class SalesOrderService(CrudService):
             result = super().update(id_val, payload, conn=conn)
             if should_release:
                 conn.commit()
+
+            if new_status == 'Credit Hold' and hasattr(self, 'notification_service') and self.notification_service:
+                try:
+                    self.notification_service.notify_roles(
+                        title=f"Credit Hold: {result.get('order_number', '')}",
+                        message=f"Order {result.get('order_number', '')} placed on credit hold: {payload.get('hold_reason', 'Credit limit exceeded')}",
+                        notification_type='Credit Hold',
+                        reference_type='SalesOrder',
+                        reference_id=id_val,
+                        roles=['admin'],
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to send credit hold notification: {e}")
+
+            if new_status == 'Credit Hold' and hasattr(self, '_dispatch_ws_broadcast'):
+                try:
+                    self._dispatch_ws_broadcast(
+                        order_id=id_val,
+                        order_number=result.get('order_number', ''),
+                        status='Credit Hold',
+                        customer_name='',
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to dispatch WS broadcast: {e}")
+
             return result
         except Exception as e:
             if should_release:
@@ -312,6 +388,80 @@ class SalesOrderService(CrudService):
         finally:
             if should_release:
                 release_connection(conn)
+
+    def override_credit_hold(self, order_id: int, user_id: int = None, user_name: str = None,
+                             reason: str = '', target_status: str = 'Confirmed', conn=None):
+        VALID_OVERRIDE_TARGETS = {'Confirmed', 'Pending'}
+        if target_status not in VALID_OVERRIDE_TARGETS:
+            from fastapi import HTTPException
+            raise HTTPException(400, f"Invalid target status '{target_status}'. Allowed: {VALID_OVERRIDE_TARGETS}")
+
+        order = self.repo.get(order_id, conn=conn)
+        if not order:
+            raise ValueError(f"Sales order {order_id} not found")
+
+        if order.get('status') != 'Credit Hold':
+            from fastapi import HTTPException
+            raise HTTPException(400, f"Order {order_id} status is '{order.get('status')}', expected 'Credit Hold'")
+
+        update_payload = {
+            'status': target_status,
+            'hold_released_by': user_id,
+            'hold_release_reason': reason,
+            'hold_released_at': datetime.now(timezone.utc).isoformat(),
+        }
+        result = self.repo.update(order_id, update_payload, conn=conn)
+
+        if target_status == 'Confirmed':
+            self._reserve_order_stock(order_id, conn=conn)
+
+        if self.notification_service and order.get('sales_rep_id'):
+            try:
+                self.notification_service.create_notification(
+                    user_id=order['sales_rep_id'],
+                    title='Credit Hold Approved',
+                    message=f"Order {order.get('order_number', '')} credit hold released. Reason: {reason}",
+                    notification_type='Credit Hold',
+                    reference_type='SalesOrder',
+                    reference_id=order_id,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send credit hold override notification: {e}")
+
+        return result
+
+    def reject_credit_hold(self, order_id: int, user_id: int = None, user_name: str = None,
+                           reason: str = '', conn=None):
+        order = self.repo.get(order_id, conn=conn)
+        if not order:
+            raise ValueError(f"Sales order {order_id} not found")
+
+        if order.get('status') != 'Credit Hold':
+            from fastapi import HTTPException
+            raise HTTPException(400, f"Order {order_id} status is '{order.get('status')}', expected 'Credit Hold'")
+
+        update_payload = {
+            'status': 'Cancelled',
+            'hold_released_by': user_id,
+            'hold_release_reason': f"Rejected: {reason}" if reason else 'Rejected',
+            'hold_released_at': datetime.now(timezone.utc).isoformat(),
+        }
+        result = self.repo.update(order_id, update_payload, conn=conn)
+
+        if self.notification_service and order.get('sales_rep_id'):
+            try:
+                self.notification_service.create_notification(
+                    user_id=order['sales_rep_id'],
+                    title='Credit Hold Rejected',
+                    message=f"Order {order.get('order_number', '')} credit hold rejected. Reason: {reason}",
+                    notification_type='Credit Hold',
+                    reference_type='SalesOrder',
+                    reference_id=order_id,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send credit hold rejection notification: {e}")
+
+        return result
 
     def _validate_delivery_tolerance_approvals(self, order_id: int, conn=None):
         """

@@ -35,6 +35,10 @@ repo = CrudRepository(
         'is_offline_sync',
         'sync_status',
         'offline_created_at',
+        'hold_reason',
+        'hold_released_by',
+        'hold_released_at',
+        'hold_release_reason',
     ],
 )
 service = SalesOrderService(repo)
@@ -162,11 +166,73 @@ def preview_order_catch_weight_recalculation(id: int):
     if not order:
         raise HTTPException(404, 'Order not found')
     try:
-        # Recalculate will return the full breakdown
         result = service.recalculate_order_catch_weight(id)
         return result
     except HTTPException:
         raise
     except Exception as e:
         _server_error(e, 'preview order recalculation')
+
+
+def record_security_event(action: str, user_id: int = None, details: str = ''):
+    logger.warning(f"Security event: action={action} user_id={user_id} details={details}")
+
+
+@router.post('/{id}/override-credit-hold')
+def override_credit_hold_endpoint(id: int, body: dict, current_user: dict = Depends(get_current_user)):
+    allowed_roles = {'Admin', 'Financial Manager', 'Credit Controller'}
+    user_role = current_user.get('role', '')
+    user_perms = current_user.get('permissions', [])
+    if user_role not in allowed_roles and '*' not in user_perms:
+        record_security_event(
+            action='UNAUTHORIZED_CREDIT_OVERRIDE',
+            user_id=current_user.get('id'),
+            details=f"User {current_user.get('username')} attempted credit override on order {id}",
+        )
+        raise HTTPException(403, 'Financial manager authorization required to override credit hold')
+
+    order = service.get(id)
+    if not order:
+        raise HTTPException(404, 'Order not found')
+
+    if order.get('status') != 'Credit Hold':
+        raise HTTPException(400, "Only orders in 'Credit Hold' status can be overridden")
+
+    result = service.override_credit_hold(
+        order_id=id,
+        user_id=current_user.get('id'),
+        user_name=current_user.get('username'),
+        reason=body.get('reason', ''),
+        target_status=body.get('target_status', 'Confirmed'),
+    )
+    return result
+
+
+@router.post('/{id}/reject-credit-hold')
+def reject_credit_hold_endpoint(id: int, body: dict, current_user: dict = Depends(get_current_user)):
+    allowed_roles = {'Admin', 'Financial Manager', 'Credit Controller'}
+    user_role = current_user.get('role', '')
+    user_perms = current_user.get('permissions', [])
+    if user_role not in allowed_roles and '*' not in user_perms:
+        record_security_event(
+            action='UNAUTHORIZED_CREDIT_REJECT',
+            user_id=current_user.get('id'),
+            details=f"User {current_user.get('username')} attempted credit rejection on order {id}",
+        )
+        raise HTTPException(403, 'Financial manager authorization required to reject credit hold')
+
+    order = service.get(id)
+    if not order:
+        raise HTTPException(404, 'Order not found')
+
+    if order.get('status') != 'Credit Hold':
+        raise HTTPException(400, "Only orders in 'Credit Hold' status can be rejected")
+
+    result = service.reject_credit_hold(
+        order_id=id,
+        user_id=current_user.get('id'),
+        user_name=current_user.get('username'),
+        reason=body.get('reason', ''),
+    )
+    return result
 

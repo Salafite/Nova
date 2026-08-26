@@ -13,9 +13,11 @@ def _to_decimal(value) -> Decimal:
 
 
 class EnhancedSalesOrderService(CrudService):
-    def __init__(self, repo):
+    def __init__(self, repo=None, line_repo=None, price_list_item_repo=None,
+                 tax_rate_repo=None, customer_repo=None, inv_repo=None,
+                 payment_term_repo=None, credit_service=None, notification_service=None):
         super().__init__(repo)
-        self.line_repo = CrudRepository(
+        self.line_repo = line_repo or CrudRepository(
             'T0013',
             business_columns=[
                 'id',
@@ -37,13 +39,13 @@ class EnhancedSalesOrderService(CrudService):
                 'recalculated_total',
             ],
         )
-        self.price_list_item_repo = CrudRepository('T0084', business_columns=['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
-        self.tax_rate_repo = CrudRepository('T0085', business_columns=['id', 'name', 'code', 'rate', 'type'])
-        self.customer_repo = CrudRepository(
+        self.price_list_item_repo = price_list_item_repo or CrudRepository('T0084', business_columns=['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
+        self.tax_rate_repo = tax_rate_repo or CrudRepository('T0085', business_columns=['id', 'name', 'code', 'rate', 'type'])
+        self.customer_repo = customer_repo or CrudRepository(
             'T0010',
             business_columns=['id', 'name', 'credit_limit', 'balance', 'payment_term_id'],
         )
-        self.payment_term_repo = CrudRepository(
+        self.payment_term_repo = payment_term_repo or CrudRepository(
             'T0096',
             business_columns=[
                 'id',
@@ -57,6 +59,12 @@ class EnhancedSalesOrderService(CrudService):
                 'is_default',
             ],
         )
+        self.inv_repo = inv_repo
+        self.credit_service = credit_service
+        self.notification_service = notification_service
+
+    def _dispatch_ws_broadcast(self, **kwargs):
+        pass
 
     def create_with_lines(self, order_data, lines, conn=None):
         should_release = False
@@ -108,13 +116,85 @@ class EnhancedSalesOrderService(CrudService):
                 }, conn=conn)
 
             tax_amount = subtotal * tax_rate_pct / Decimal(100)
-            result = super().update(order['id'], {
+            grand_total = subtotal + tax_amount
+
+            hold_reason = None
+            customer_id = order_data.get('customer_id')
+            if customer_id:
+                if hasattr(self, 'credit_service') and self.credit_service:
+                    credit_check = self.credit_service.evaluate_order_credit(
+                        customer_id=customer_id,
+                        order_amount=float(grand_total),
+                        conn=conn,
+                    )
+                    if credit_check and credit_check.get('is_hold_required'):
+                        hold_reason = credit_check.get('hold_reason', 'Customer credit limit exceeded')
+                else:
+                    try:
+                        customer = self.customer_repo.get(customer_id, conn=conn)
+                        if customer:
+                            new_balance = customer.get('balance', 0) + float(grand_total)
+                            credit_limit = customer.get('credit_limit', 0)
+                            if credit_limit > 0 and new_balance > credit_limit:
+                                hold_reason = f"Customer credit limit exceeded (${new_balance:,.2f} > Limit ${credit_limit:,.2f})"
+                    except Exception:
+                        pass
+
+            update_data = {
                 'subtotal': subtotal,
                 'tax': tax_amount,
-                'grand_total': subtotal + tax_amount,
-            }, conn=conn)
+                'grand_total': grand_total,
+            }
+            if hold_reason:
+                update_data['status'] = 'Credit Hold'
+                update_data['hold_reason'] = hold_reason
+            else:
+                update_data['status'] = 'Pending'
+
+            result = super().update(order['id'], update_data, conn=conn)
             if should_release:
                 conn.commit()
+
+            if hold_reason and hasattr(self, 'notification_service') and self.notification_service:
+                try:
+                    customer_name = ''
+                    if customer_id:
+                        try:
+                            customer = self.customer_repo.get(customer_id, conn=conn)
+                            if customer:
+                                customer_name = customer.get('name', '')
+                        except Exception:
+                            pass
+                    self.notification_service.notify_roles(
+                        title=f"Credit Hold: {result.get('order_number', '')}",
+                        message=f"Order {result.get('order_number', '')} placed on credit hold for {customer_name}: {hold_reason}",
+                        notification_type='Credit Hold',
+                        reference_type='SalesOrder',
+                        reference_id=result.get('id'),
+                        roles=['admin'],
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to send credit hold notification: {e}")
+
+            if hold_reason and hasattr(self, '_dispatch_ws_broadcast'):
+                try:
+                    ws_customer_name = ''
+                    if customer_id:
+                        try:
+                            ws_cust = self.customer_repo.get(customer_id, conn=conn)
+                            if ws_cust:
+                                ws_customer_name = ws_cust.get('name', '')
+                        except Exception:
+                            pass
+                    self._dispatch_ws_broadcast(
+                        order_id=result.get('id'),
+                        order_number=result.get('order_number', ''),
+                        status='Credit Hold',
+                        customer_name=ws_customer_name,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to dispatch WS broadcast: {e}")
+
             return result
         except Exception:
             if should_release:

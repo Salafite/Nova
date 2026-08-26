@@ -24,6 +24,10 @@ class SalesOrderCreate(BaseModel):
     sales_rep_id: Optional[int] = None
     freight_amount: float = 0
     discount_amount: float = 0
+    hold_reason: Optional[str] = None
+    hold_released_by: Optional[int] = None
+    hold_released_at: Optional[datetime] = None
+    hold_release_reason: Optional[str] = None
     business_id: Optional[int] = None
 
 class SalesOrderUpdate(BaseModel):
@@ -46,6 +50,10 @@ class SalesOrderUpdate(BaseModel):
     sync_status: Optional[str] = None
     offline_created_at: Optional[datetime] = None
     sales_rep_id: Optional[int] = None
+    hold_reason: Optional[str] = None
+    hold_released_by: Optional[int] = None
+    hold_released_at: Optional[datetime] = None
+    hold_release_reason: Optional[str] = None
     business_id: Optional[int] = None
 
 class SalesOrderResponse(AuditMixin):
@@ -69,6 +77,23 @@ class SalesOrderResponse(AuditMixin):
     sync_status: str = 'Synced'
     offline_created_at: Optional[datetime] = None
     sales_rep_id: Optional[int] = None
+    hold_reason: Optional[str] = None
+    hold_released_by: Optional[int] = None
+    hold_released_at: Optional[datetime] = None
+    hold_release_reason: Optional[str] = None
+
+
+class CreditHoldOverrideRequest(BaseModel):
+    reason: Optional[str] = None
+    release_reason: Optional[str] = None
+    notes: Optional[str] = None
+    target_status: Optional[str] = 'Confirmed'
+
+
+class CreditHoldRejectRequest(BaseModel):
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+
 
 
 class SalesLineCreate(BaseModel):
