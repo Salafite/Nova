@@ -1,434 +1,411 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from datetime import time
+from fastapi import HTTPException
+
 from modules.portal.repositories.portal_repo import PortalRepository
 from modules.portal.services.portal_pricing_service import PortalPricingService
 from modules.portal.models.portal import (
-    PortalCustomerProfile,
-    PortalAccountSummary,
     PortalCatalogQuery,
     PortalCatalogResponse,
+    PortalAccountSummary,
+    PortalCustomerProfile,
 )
 
 
-@pytest.fixture
-def mock_db():
-    mock_conn = MagicMock()
-    mock_cursor = MagicMock()
-    mock_cursor.rowcount = 1
-    mock_context = MagicMock()
-    mock_context.__enter__.return_value = mock_cursor
-    mock_conn.cursor.return_value = mock_context
+class TestPortalRepositoryPricing:
+    """Unit tests for PortalRepository contracted pricing and catalog query methods."""
 
-    with patch('modules.portal.repositories.portal_repo.get_connection', return_value=mock_conn), \
-         patch('modules.portal.repositories.portal_repo.release_connection'):
-        yield {'conn': mock_conn, 'cursor': mock_cursor, 'ctx': mock_context}
+    @pytest.fixture
+    def repo(self):
+        return PortalRepository()
 
-
-class TestPortalRepository:
-    def test_get_customer_by_id_found(self, mock_db):
-        repo = PortalRepository()
-        mock_db['cursor'].fetchone.return_value = {
-            'id': 101,
-            'name': 'Gourmet Bistro',
-            'group_name': 'Wholesale',
-            'phone': '555-0100',
-            'email': 'buyer@gourmetbistro.com',
-            'credit_limit': 10000.00,
-            'balance': 2500.00,
-            'min_order_amount': 250.00,
-            'order_cutoff_time': time(22, 0),
-            'allow_reorders': True,
-            'default_price_list_id': 2,
-            'default_tax_rate_id': 1,
-            'payment_term_id': 3,
-            'is_active': True
+    def test_resolve_contracted_price_with_price_list_match(self, repo):
+        customer = {
+            "id": 10,
+            "name": "Bistro Gourmet",
+            "default_price_list_id": 5,
+            "business_id": 1,
+        }
+        product = {
+            "id": 101,
+            "name": "Olive Oil Extra Virgin 5L",
+            "sku": "OIL-EV-5L",
+            "price": 50.0,
+        }
+        price_items = {
+            101: {"unit_price": 42.50, "min_qty": 1, "product_id": 101}
         }
 
-        customer = repo.get_customer_by_id(101)
-        assert customer is not None
-        assert customer['id'] == 101
-        assert customer['name'] == 'Gourmet Bistro'
-        assert customer['credit_limit'] == 10000.00
-        assert customer['balance'] == 2500.00
-        assert customer['available_credit'] == 7500.00
-        assert customer['min_order_amount'] == 250.00
-        assert customer['order_cutoff_time'] == '22:00'
-        assert customer['allow_reorders'] is True
+        with patch.object(repo, "get_customer", return_value=customer), \
+             patch.object(repo, "get_product", return_value=product), \
+             patch.object(repo, "get_price_list_items", return_value=price_items):
 
-    def test_get_customer_by_id_not_found(self, mock_db):
-        repo = PortalRepository()
-        mock_db['cursor'].fetchone.return_value = None
+            res = repo.resolve_contracted_price(customer_id=10, product_id=101)
 
-        customer = repo.get_customer_by_id(9999)
-        assert customer is None
+            assert res["product_id"] == 101
+            assert res["base_price"] == 50.0
+            assert res["contracted_price"] == 42.50
+            assert res["unit_price"] == 42.50
+            assert res["is_contracted"] is True
+            assert res["discount_percent"] == 15.0  # (50 - 42.50) / 50 * 100
 
-    def test_resolve_customer_price_list_id(self, mock_db):
-        repo = PortalRepository()
-        # Customer has default_price_list_id = 5
-        mock_db['cursor'].fetchone.return_value = {
-            'id': 102,
-            'name': 'Cafe Central',
-            'credit_limit': 5000.0,
-            'balance': 0.0,
-            'min_order_amount': 100.0,
-            'order_cutoff_time': '20:00',
-            'allow_reorders': True,
-            'default_price_list_id': 5,
-            'is_active': True
+    def test_resolve_contracted_price_fallback_to_base_price_when_item_not_in_price_list(self, repo):
+        customer = {
+            "id": 10,
+            "name": "Bistro Gourmet",
+            "default_price_list_id": 5,
+        }
+        product = {
+            "id": 102,
+            "name": "Truffle Butter 500g",
+            "sku": "TRUF-BUT-500",
+            "price": 30.0,
+        }
+        price_items = {
+            101: {"unit_price": 42.50, "product_id": 101}
         }
 
-        pl_id = repo.resolve_customer_price_list_id(102)
-        assert pl_id == 5
+        with patch.object(repo, "get_customer", return_value=customer), \
+             patch.object(repo, "get_product", return_value=product), \
+             patch.object(repo, "get_price_list_items", return_value=price_items):
 
-    def test_resolve_customer_price_list_id_fallback_to_default(self, mock_db):
-        repo = PortalRepository()
-        # Customer without price list
-        mock_db['cursor'].fetchone.side_effect = [
+            res = repo.resolve_contracted_price(customer_id=10, product_id=102)
+
+            assert res["product_id"] == 102
+            assert res["base_price"] == 30.0
+            assert res["contracted_price"] == 30.0
+            assert res["unit_price"] == 30.0
+            assert res["is_contracted"] is False
+            assert res["discount_percent"] == 0.0
+
+    def test_resolve_contracted_price_fallback_when_customer_has_no_price_list(self, repo):
+        customer = {
+            "id": 12,
+            "name": "Corner Cafe",
+            "default_price_list_id": None,
+        }
+        product = {
+            "id": 103,
+            "name": "Espresso Beans 1kg",
+            "sku": "COF-ESP-1K",
+            "price": 24.0,
+        }
+
+        with patch.object(repo, "get_customer", return_value=customer), \
+             patch.object(repo, "get_product", return_value=product):
+
+            res = repo.resolve_contracted_price(customer_id=12, product_id=103)
+
+            assert res["product_id"] == 103
+            assert res["base_price"] == 24.0
+            assert res["contracted_price"] == 24.0
+            assert res["is_contracted"] is False
+            assert res["discount_percent"] == 0.0
+
+    def test_get_catalog_with_contracted_prices_and_stock(self, repo):
+        customer = {
+            "id": 10,
+            "name": "Bistro Gourmet",
+            "default_price_list_id": 5,
+            "min_order_amount": 150.0,
+            "order_cutoff_time": "22:00:00",
+        }
+        price_items = {
+            101: {"unit_price": 40.0, "product_id": 101}
+        }
+        stock_map = {101: 25.0, 102: 0.0}
+        categories = [{"id": 1, "category_name": "Pantry", "item_count": 2}]
+
+        mock_products = [
             {
-                'id': 103,
-                'name': 'Deli Market',
-                'credit_limit': 1000.0,
-                'balance': 0.0,
-                'min_order_amount': 0.0,
-                'order_cutoff_time': None,
-                'allow_reorders': True,
-                'default_price_list_id': None,
-                'is_active': True
-            },
-            # Default price list lookup
-            {
-                'id': 1,
-                'name': 'Standard Retail',
-                'code': 'STD',
-                'description': 'Default Price List',
-                'currency': 'USD',
-                'is_active': True,
-                'is_default': True
-            }
-        ]
-
-        pl_id = repo.resolve_customer_price_list_id(103)
-        assert pl_id == 1
-
-    def test_get_catalog_categories(self, mock_db):
-        repo = PortalRepository()
-        mock_db['cursor'].fetchall.return_value = [
-            {'category_name': 'Dairy', 'item_count': 12},
-            {'category_name': 'Produce', 'item_count': 35},
-        ]
-
-        cats = repo.get_catalog_categories()
-        assert len(cats) == 2
-        assert cats[0]['category_name'] == 'Dairy'
-        assert cats[0]['item_count'] == 12
-        assert cats[1]['category_name'] == 'Produce'
-        assert cats[1]['item_count'] == 35
-
-    def test_get_catalog_with_contracted_pricing(self, mock_db):
-        repo = PortalRepository()
-        # Setup mocks: customer fetch, count query, data query
-        mock_db['cursor'].fetchone.side_effect = [
-            # Customer lookup
-            {
-                'id': 101,
-                'name': 'Gourmet Bistro',
-                'credit_limit': 10000.0,
-                'balance': 0.0,
-                'min_order_amount': 200.0,
-                'order_cutoff_time': '21:00',
-                'allow_reorders': True,
-                'default_price_list_id': 2,
-                'is_active': True
-            },
-            # Count query
-            {'total': 2}
-        ]
-
-        mock_db['cursor'].fetchall.return_value = [
-            {
-                'id': 1,
-                'product_code': 'MILK-001',
-                'product_name': 'Whole Milk 1 Gallon',
-                'category_name': 'Dairy',
-                'base_price': 5.00,
-                'image_url': 'http://img/milk.png',
-                'description': 'Fresh dairy milk',
-                'is_active': True,
-                'uom_id': 3,
-                'uom_name': 'Gallon',
-                'stock_qty': 45.0,
-                'contracted_unit_price': 4.25  # 15% discount
+                "id": 101,
+                "name": "Olive Oil 5L",
+                "sku": "OIL-5L",
+                "barcode": "111222",
+                "description": "Greek EVOO",
+                "price": 50.0,
+                "category": "Pantry",
+                "base_uom_id": 1,
+                "uom_name": "Bottle",
+                "uom_code": "BTL",
+                "image_url": "https://img/1.png",
+                "is_active": True,
+                "is_saleable": True,
             },
             {
-                'id': 2,
-                'product_code': 'EGGS-012',
-                'product_name': 'Organic Eggs 12pk',
-                'category_name': 'Dairy',
-                'base_price': 6.00,
-                'image_url': None,
-                'description': 'Grade A organic eggs',
-                'is_active': True,
-                'uom_id': 4,
-                'uom_name': 'Dozen',
-                'stock_qty': 0.0,
-                'contracted_unit_price': None  # No contracted price, fallback to base
-            }
-        ]
-
-        items, total = repo.get_catalog(customer_id=101, category='Dairy', page=1, limit=50)
-        assert total == 2
-        assert len(items) == 2
-
-        # Item 1: Contracted price applied
-        item1 = items[0]
-        assert item1['id'] == 1
-        assert item1['product_code'] == 'MILK-001'
-        assert item1['base_price'] == 5.00
-        assert item1['contracted_price'] == 4.25
-        assert item1['is_contracted'] is True
-        assert item1['discount_percent'] == 15.0
-        assert item1['stock_qty'] == 45.0
-        assert item1['is_in_stock'] is True
-
-        # Item 2: Base price fallback
-        item2 = items[1]
-        assert item2['id'] == 2
-        assert item2['base_price'] == 6.00
-        assert item2['contracted_price'] == 6.00
-        assert item2['is_contracted'] is False
-        assert item2['discount_percent'] == 0.0
-        assert item2['stock_qty'] == 0.0
-        assert item2['is_in_stock'] is False
-
-    def test_resolve_product_price_contracted(self, mock_db):
-        repo = PortalRepository()
-        mock_db['cursor'].fetchone.side_effect = [
-            # Product lookup from T0003
-            {'id': 10, 'name': 'Butter 1lb', 'sku': 'BUTTER-01', 'price': 8.00, 'is_active': True},
-            # Price list item from T0084
-            {'unit_price': 6.40, 'min_qty': 5}
-        ]
-
-        result = repo.resolve_product_price(product_id=10, price_list_id=2)
-        assert result is not None
-        assert result['product_id'] == 10
-        assert result['base_price'] == 8.00
-        assert result['contracted_price'] == 6.40
-        assert result['unit_price'] == 6.40
-        assert result['is_contracted'] is True
-        assert result['discount_percent'] == 20.0
-        assert result['min_qty'] == 5.0
-
-    def test_resolve_product_price_base_fallback(self, mock_db):
-        repo = PortalRepository()
-        mock_db['cursor'].fetchone.side_effect = [
-            # Product lookup from T0003
-            {'id': 11, 'name': 'Cheese 1lb', 'sku': 'CHEESE-01', 'price': 12.00, 'is_active': True},
-            # T0084 returns None
-            None
-        ]
-
-        result = repo.resolve_product_price(product_id=11, price_list_id=2)
-        assert result is not None
-        assert result['product_id'] == 11
-        assert result['base_price'] == 12.00
-        assert result['contracted_price'] == 12.00
-        assert result['unit_price'] == 12.00
-        assert result['is_contracted'] is False
-        assert result['discount_percent'] == 0.0
-
-    def test_get_account_summary(self, mock_db):
-        repo = PortalRepository()
-        mock_db['cursor'].fetchone.side_effect = [
-            # Customer lookup
-            {
-                'id': 200,
-                'name': 'Trattoria Bella',
-                'group_name': 'Restaurant',
-                'email': 'bella@trattoria.com',
-                'phone': '555-4321',
-                'credit_limit': 15000.0,
-                'balance': 3000.0,
-                'available_credit': 12000.0,
-                'min_order_amount': 300.0,
-                'order_cutoff_time': '22:00',
-                'allow_reorders': True,
-                'default_price_list_id': 3,
-                'is_active': True
+                "id": 102,
+                "name": "Flour 25kg",
+                "sku": "FLOUR-25K",
+                "barcode": "333444",
+                "description": "Tipo 00",
+                "price": 35.0,
+                "category": "Pantry",
+                "base_uom_id": 2,
+                "uom_name": "Bag",
+                "uom_code": "BAG",
+                "image_url": None,
+                "is_active": True,
+                "is_saleable": True,
             },
-            # Price list lookup
-            {
-                'id': 3,
-                'name': 'VIP Wholesale Tier'
-            },
-            # Invoices aggregation
-            {
-                'open_count': 3,
-                'total_unpaid': 3000.0
-            },
-            # Orders aggregation
-            {
-                'order_count': 14
-            }
         ]
 
-        summary = repo.get_account_summary(200)
-        assert summary['customer_id'] == 200
-        assert summary['customer_name'] == 'Trattoria Bella'
-        assert summary['credit_limit'] == 15000.0
-        assert summary['current_balance'] == 3000.0
-        assert summary['available_credit'] == 12000.0
-        assert summary['open_invoices_count'] == 3
-        assert summary['total_unpaid_amount'] == 3000.0
-        assert summary['recent_orders_count'] == 14
-        assert summary['default_price_list_name'] == 'VIP Wholesale Tier'
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = mock_products
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch.object(repo, "get_customer", return_value=customer), \
+             patch.object(repo, "get_price_list_items", return_value=price_items), \
+             patch.object(repo, "get_stock_levels", return_value=stock_map), \
+             patch.object(repo, "get_categories", return_value=categories):
+
+            items, total, cats, meta = repo.get_catalog(
+                customer_id=10,
+                conn=mock_conn,
+            )
+
+            assert total == 2
+            assert len(items) == 2
+
+            # Product 101: has contracted price $40 (vs base $50, 20% off), in stock
+            p1 = items[0]
+            assert p1["id"] == 101
+            assert p1["contracted_price"] == 40.0
+            assert p1["is_contracted"] is True
+            assert p1["discount_percent"] == 20.0
+            assert p1["stock_qty"] == 25.0
+            assert p1["is_in_stock"] is True
+
+            # Product 102: no contracted price -> base price $35, out of stock
+            p2 = items[1]
+            assert p2["id"] == 102
+            assert p2["contracted_price"] == 35.0
+            assert p2["is_contracted"] is False
+            assert p2["stock_qty"] == 0.0
+            assert p2["is_in_stock"] is False
+
+            assert meta["min_order_amount"] == 150.0
+            assert meta["order_cutoff_time"] == "22:00:00"
 
 
 class TestPortalPricingService:
-    def test_get_customer_profile(self):
-        mock_repo = MagicMock()
-        mock_repo.get_customer_by_id.return_value = {
-            'id': 105,
-            'name': 'Artisan Bakery',
-            'group_name': 'Bakery',
-            'phone': '555-8888',
-            'email': 'baker@artisan.com',
-            'credit_limit': 8000.0,
-            'balance': 1200.0,
-            'available_credit': 6800.0,
-            'min_order_amount': 150.0,
-            'order_cutoff_time': '21:30',
-            'allow_reorders': True,
-            'default_price_list_id': 4,
-            'default_tax_rate_id': 1,
-            'payment_term_id': 2,
-            'is_active': True
-        }
+    """Unit tests for PortalPricingService business logic and API model mapping."""
 
-        service = PortalPricingService(portal_repo=mock_repo)
-        profile = service.get_customer_profile(105)
+    @pytest.fixture
+    def service(self):
+        mock_repo = MagicMock(spec=PortalRepository)
+        return PortalPricingService(repo=mock_repo)
 
-        assert isinstance(profile, PortalCustomerProfile)
-        assert profile.id == 105
-        assert profile.name == 'Artisan Bakery'
-        assert profile.min_order_amount == 150.0
-        assert profile.order_cutoff_time == '21:30'
-
-    def test_get_account_summary(self):
-        mock_repo = MagicMock()
-        mock_repo.get_account_summary.return_value = {
-            'customer_id': 105,
-            'customer_name': 'Artisan Bakery',
-            'group_name': 'Bakery',
-            'email': 'baker@artisan.com',
-            'phone': '555-8888',
-            'credit_limit': 8000.0,
-            'current_balance': 1200.0,
-            'available_credit': 6800.0,
-            'min_order_amount': 150.0,
-            'order_cutoff_time': '21:30',
-            'allow_reorders': True,
-            'open_invoices_count': 2,
-            'total_unpaid_amount': 1200.0,
-            'recent_orders_count': 9,
-            'default_price_list_id': 4,
-            'default_price_list_name': 'Bakery Special'
-        }
-
-        service = PortalPricingService(portal_repo=mock_repo)
-        summary = service.get_account_summary(105)
-
-        assert isinstance(summary, PortalAccountSummary)
-        assert summary.customer_id == 105
-        assert summary.open_invoices_count == 2
-        assert summary.total_unpaid_amount == 1200.0
-
-    def test_get_catalog(self):
-        mock_repo = MagicMock()
-        mock_repo.get_customer_by_id.return_value = {
-            'id': 101,
-            'min_order_amount': 200.0,
-            'order_cutoff_time': '22:00'
-        }
-        mock_repo.get_catalog_categories.return_value = [
-            {'id': 1, 'category_name': 'Flour & Grains', 'item_count': 5}
+    def test_get_catalog_service_mapping(self, service):
+        service.repo.get_categories.return_value = [
+            {"id": 1, "category_name": "Dairy", "item_count": 5}
         ]
-        mock_repo.get_catalog.return_value = (
-            [
-                {
-                    'id': 50,
-                    'product_code': 'FLOUR-50',
-                    'product_name': 'Bread Flour 50lb',
-                    'category_id': None,
-                    'category_name': 'Flour & Grains',
-                    'uom_id': 1,
-                    'uom_name': 'Bag',
-                    'base_price': 30.0,
-                    'contracted_price': 24.0,
-                    'is_contracted': True,
-                    'discount_percent': 20.0,
-                    'stock_qty': 100.0,
-                    'is_in_stock': True,
-                    'image_url': None,
-                    'description': 'High protein bread flour',
-                    'is_active': True
-                }
-            ],
-            1
+        items_data = [
+            {
+                "id": 201,
+                "product_code": "MILK-WHOLE-1G",
+                "product_name": "Whole Milk 1 Gallon",
+                "category_id": 1,
+                "category_name": "Dairy",
+                "uom_id": 3,
+                "uom_name": "Gallon",
+                "base_price": 5.50,
+                "contracted_price": 4.80,
+                "is_contracted": True,
+                "discount_percent": 12.73,
+                "stock_qty": 50.0,
+                "is_in_stock": True,
+                "image_url": "https://img/milk.jpg",
+                "description": "Organic whole milk",
+                "is_active": True,
+            }
+        ]
+        service.repo.get_catalog.return_value = (
+            items_data,
+            1,
+            [{"id": 1, "category_name": "Dairy", "item_count": 5}],
+            {"min_order_amount": 100.0, "order_cutoff_time": "21:30:00"},
         )
 
-        service = PortalPricingService(portal_repo=mock_repo)
-        response = service.get_catalog(customer_id=101, query=PortalCatalogQuery(category_id=1))
+        query = PortalCatalogQuery(category_id=1, search="milk", in_stock_only=True)
+        response = service.get_catalog(customer_id=42, query=query)
 
         assert isinstance(response, PortalCatalogResponse)
         assert response.total == 1
         assert len(response.items) == 1
-        assert response.items[0].product_name == 'Bread Flour 50lb'
-        assert response.items[0].contracted_price == 24.0
-        assert response.min_order_amount == 200.0
-        assert response.order_cutoff_time == '22:00'
+        item = response.items[0]
+        assert item.id == 201
+        assert item.product_code == "MILK-WHOLE-1G"
+        assert item.contracted_price == 4.80
+        assert item.is_contracted is True
+        assert response.min_order_amount == 100.0
+        assert response.order_cutoff_time == "21:30:00"
 
-    def test_resolve_line_items_pricing(self):
-        mock_repo = MagicMock()
-        mock_repo.get_contracted_prices_for_products.return_value = {
-            50: {
-                'product_id': 50,
-                'product_code': 'FLOUR-50',
-                'product_name': 'Bread Flour 50lb',
-                'unit_price': 25.0,
-                'base_price': 30.0,
-                'is_contracted': True,
-                'discount_percent': 16.67
-            },
-            51: {
-                'product_id': 51,
-                'product_code': 'YEAST-01',
-                'product_name': 'Instant Dry Yeast 1lb',
-                'unit_price': 10.0,
-                'base_price': 10.0,
-                'is_contracted': False,
-                'discount_percent': 0.0
-            }
+    def test_get_account_summary_success(self, service):
+        service.repo.get_account_summary.return_value = {
+            "customer_id": 42,
+            "customer_name": "Trattoria Romana",
+            "group_name": "Wholesale VIP",
+            "email": "chef@trattoria.com",
+            "phone": "555-0199",
+            "credit_limit": 5000.0,
+            "current_balance": 1200.0,
+            "available_credit": 3800.0,
+            "min_order_amount": 200.0,
+            "order_cutoff_time": "22:00:00",
+            "allow_reorders": True,
+            "open_invoices_count": 2,
+            "total_unpaid_amount": 1200.0,
+            "recent_orders_count": 8,
+            "default_price_list_id": 3,
+            "default_price_list_name": "Preferred Tier A",
         }
 
-        service = PortalPricingService(portal_repo=mock_repo)
-        input_items = [
-            {'product_id': 50, 'qty': 4, 'notes': 'Stack carefully'},
-            {'product_id': 51, 'qty': 2}
+        summary = service.get_account_summary(customer_id=42)
+
+        assert isinstance(summary, PortalAccountSummary)
+        assert summary.customer_id == 42
+        assert summary.customer_name == "Trattoria Romana"
+        assert summary.credit_limit == 5000.0
+        assert summary.available_credit == 3800.0
+        assert summary.open_invoices_count == 2
+        assert summary.default_price_list_name == "Preferred Tier A"
+
+    def test_get_account_summary_not_found_raises_404(self, service):
+        service.repo.get_account_summary.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            service.get_account_summary(customer_id=999)
+
+        assert exc_info.value.status_code == 404
+        assert "Customer with id 999 not found" in str(exc_info.value.detail)
+
+    def test_get_customer_profile_success(self, service):
+        service.repo.get_customer.return_value = {
+            "id": 42,
+            "name": "Trattoria Romana",
+            "group_name": "Wholesale VIP",
+            "phone": "555-0199",
+            "email": "chef@trattoria.com",
+            "credit_limit": 5000.0,
+            "balance": 1200.0,
+            "min_order_amount": 200.0,
+            "order_cutoff_time": "22:00:00",
+            "allow_reorders": True,
+            "default_price_list_id": 3,
+            "default_tax_rate_id": 1,
+            "payment_term_id": 2,
+            "is_active": True,
+        }
+
+        profile = service.get_customer_profile(customer_id=42)
+
+        assert isinstance(profile, PortalCustomerProfile)
+        assert profile.id == 42
+        assert profile.name == "Trattoria Romana"
+        assert profile.available_credit == 3800.0
+        assert profile.min_order_amount == 200.0
+        assert profile.order_cutoff_time == "22:00:00"
+        assert profile.allow_reorders is True
+
+    def test_get_customer_profile_not_found_raises_404(self, service):
+        service.repo.get_customer.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            service.get_customer_profile(customer_id=999)
+
+        assert exc_info.value.status_code == 404
+
+    def test_resolve_line_items_pricing_mixed_items(self, service):
+        service.repo.get_product.side_effect = lambda pid, conn=None: {
+            101: {"name": "Olive Oil 5L", "sku": "OIL-5L", "uom_name": "Bottle"},
+            102: {"name": "Flour 25kg", "sku": "FLOUR-25K", "uom_name": "Bag"},
+        }.get(pid)
+
+        service.repo.resolve_contracted_price.side_effect = lambda customer_id, product_id, qty=1.0, conn=None: {
+            101: {"unit_price": 40.0, "base_price": 50.0, "is_contracted": True, "product_name": "Olive Oil 5L"},
+            102: {"unit_price": 30.0, "base_price": 30.0, "is_contracted": False, "product_name": "Flour 25kg"},
+        }.get(product_id, {})
+
+        raw_items = [
+            {"product_id": 101, "qty": 3.0, "notes": "Cold pressed"},
+            {"product_id": 102, "qty": 2.0, "notes": None},
         ]
 
-        lines = service.resolve_line_items_pricing(customer_id=101, items=input_items)
-        assert len(lines) == 2
+        resolved = service.resolve_line_items_pricing(customer_id=42, items=raw_items)
 
-        assert lines[0]['product_id'] == 50
-        assert lines[0]['qty'] == 4.0
-        assert lines[0]['unit_price'] == 25.0
-        assert lines[0]['line_total'] == 100.0
-        assert lines[0]['is_contracted'] is True
+        assert len(resolved) == 2
+        # Item 1: 3 * $40.0 = $120.0
+        assert resolved[0]["line_number"] == 1
+        assert resolved[0]["product_id"] == 101
+        assert resolved[0]["product_code"] == "OIL-5L"
+        assert resolved[0]["product_name"] == "Olive Oil 5L"
+        assert resolved[0]["uom_name"] == "Bottle"
+        assert resolved[0]["qty"] == 3.0
+        assert resolved[0]["unit_price"] == 40.0
+        assert resolved[0]["base_price"] == 50.0
+        assert resolved[0]["line_total"] == 120.0
+        assert resolved[0]["is_contracted"] is True
+        assert resolved[0]["notes"] == "Cold pressed"
 
-        assert lines[1]['product_id'] == 51
-        assert lines[1]['qty'] == 2.0
-        assert lines[1]['unit_price'] == 10.0
-        assert lines[1]['line_total'] == 20.0
-        assert lines[1]['is_contracted'] is False
+        # Item 2: 2 * $30.0 = $60.0
+        assert resolved[1]["line_number"] == 2
+        assert resolved[1]["product_id"] == 102
+        assert resolved[1]["product_code"] == "FLOUR-25K"
+        assert resolved[1]["qty"] == 2.0
+        assert resolved[1]["unit_price"] == 30.0
+        assert resolved[1]["line_total"] == 60.0
+        assert resolved[1]["is_contracted"] is False
+
+    def test_get_catalog_category_id_resolution(self, service):
+        service.repo.get_categories.return_value = [
+            {"id": 1, "category_name": "Produce", "item_count": 8},
+            {"id": 2, "category_name": "Bakery", "item_count": 4},
+        ]
+        service.repo.get_catalog.return_value = (
+            [],
+            0,
+            [
+                {"id": 1, "category_name": "Produce", "item_count": 8},
+                {"id": 2, "category_name": "Bakery", "item_count": 4},
+            ],
+            {"min_order_amount": 100.0, "order_cutoff_time": "22:00:00"},
+        )
+
+        query = PortalCatalogQuery(category_id=2, search=None)
+        res = service.get_catalog(customer_id=42, query=query)
+
+        service.repo.get_catalog.assert_called_once_with(
+            customer_id=42,
+            category="Bakery",
+            search=None,
+            in_stock_only=False,
+            page=1,
+            limit=50,
+            conn=None,
+        )
+        assert res.total == 0
+        assert len(res.categories) == 2
+        assert res.categories[1].category_name == "Bakery"
+
+    def test_get_categories_service(self, service):
+        service.repo.get_categories.return_value = [
+            {"id": 1, "category_name": "Dairy", "item_count": 10}
+        ]
+
+        cats = service.get_categories()
+        assert len(cats) == 1
+        assert cats[0].category_name == "Dairy"
+        assert cats[0].item_count == 10
+
+    def test_resolve_contracted_price_nonexistent_product(self, service):
+        repo = PortalRepository()
+        with patch.object(repo, "get_customer", return_value={"id": 10}), \
+             patch.object(repo, "get_product", return_value=None):
+
+            res = repo.resolve_contracted_price(customer_id=10, product_id=9999)
+            assert res["product_id"] == 9999
+            assert res["base_price"] == 0.0
+            assert res["unit_price"] == 0.0
+            assert res["is_contracted"] is False
+

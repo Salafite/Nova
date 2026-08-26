@@ -548,3 +548,45 @@ class TestReorderAndCancel:
         cancel_req = PortalOrderCancelRequest(reason="Too late")
         with pytest.raises(ValueError, match="Cannot cancel order in 'Shipped' status"):
             order_service.cancel_order(101, order_id=502, cancel_in=cancel_req)
+
+    def test_cancel_already_delivered_order_raises(self, order_service, mock_repo):
+        mock_repo.get_order_by_id.return_value = {
+            'id': 503,
+            'order_number': 'SO-00503',
+            'customer_id': 101,
+            'status': 'Delivered'
+        }
+
+        cancel_req = PortalOrderCancelRequest(reason="Delivered already")
+        with pytest.raises(ValueError, match="Cannot cancel order in 'Delivered' status"):
+            order_service.cancel_order(101, order_id=503, cancel_in=cancel_req)
+
+    def test_cancel_cross_customer_isolation_fails(self, order_service, mock_repo):
+        # Order 501 belongs to customer 101. Customer 102 queries it -> returns None
+        mock_repo.get_order_by_id.return_value = None
+
+        cancel_req = PortalOrderCancelRequest(reason="Malicious cancel attempt")
+        with pytest.raises(ValueError, match="Order #501 not found"):
+            order_service.cancel_order(102, order_id=501, cancel_in=cancel_req)
+
+    def test_reorder_cross_customer_isolation_fails(self, order_service, mock_repo):
+        mock_repo.get_customer_by_id.return_value = {
+            'id': 102,
+            'name': 'Other Bistro',
+            'allow_reorders': True,
+            'is_active': True,
+        }
+        # Order 400 belongs to 101, so querying for 102 returns None
+        mock_repo.get_order_by_id.return_value = None
+
+        reorder_req = PortalReorderRequest(order_id=400)
+        with pytest.raises(ValueError, match="Original order #400 not found or does not belong to customer"):
+            order_service.reorder(102, reorder_in=reorder_req)
+
+    def test_create_order_empty_items_raises(self, order_service, mock_repo):
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            PortalOrderCreate(items=[])
+
+

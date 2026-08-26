@@ -1,415 +1,372 @@
 <template>
   <div class="portal-order-detail-page" :dir="dir">
     <div class="portal-container">
-      <!-- Breadcrumbs & Header -->
-      <div class="detail-header-section">
-        <div class="header-left">
+      <!-- Loading Skeleton -->
+      <div v-if="portal.ordersLoading && !order" class="detail-loading-box">
+        <div class="skeleton-shimmer skeleton-header"></div>
+        <div class="skeleton-cards-grid">
+          <div class="skeleton-shimmer skeleton-card"></div>
+          <div class="skeleton-shimmer skeleton-card"></div>
+        </div>
+        <div class="skeleton-shimmer skeleton-table"></div>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="portal.ordersError && !order" class="detail-error-card">
+        <span class="material-symbols-outlined error-icon">error</span>
+        <h3>{{ t('order-load-error', 'Unable to Load Order Details') }}</h3>
+        <p>{{ portal.ordersError }}</p>
+        <div class="error-actions">
+          <router-link to="/portal/orders" class="btn-outline">
+            <span class="material-symbols-outlined">arrow_back</span>
+            <span>{{ t('back-to-orders', 'Back to Order History') }}</span>
+          </router-link>
+          <button class="btn-primary" @click="loadOrderDetail">
+            <span class="material-symbols-outlined">refresh</span>
+            <span>{{ t('retry', 'Retry') }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Order Detail View -->
+      <div v-else-if="order" class="order-detail-content">
+        <!-- Top Navigation & Breadcrumbs -->
+        <div class="detail-top-nav">
           <router-link to="/portal/orders" class="back-link">
             <span class="material-symbols-outlined">arrow_back</span>
             <span>{{ t('back-to-orders', 'Back to Order History') }}</span>
           </router-link>
-          <div class="title-status-row" v-if="order">
-            <h1 class="page-title">{{ t('order-num-prefix', 'Order') }} #{{ order.order_number }}</h1>
-            <span class="status-badge" :class="getStatusBadgeClass(order.status)">
-              <span class="material-symbols-outlined status-icon">{{ getStatusIcon(order.status) }}</span>
-              <span>{{ order.status }}</span>
-            </span>
+        </div>
+
+        <!-- Header Section -->
+        <div class="order-header-card">
+          <div class="header-left-col">
+            <div class="order-title-row">
+              <h1 class="order-title">{{ t('sales-order', 'Replenishment Order') }} #{{ order.order_number }}</h1>
+              <span class="status-badge" :class="getStatusBadgeClass(order.status)">
+                <span class="status-dot"></span>
+                <span>{{ order.status }}</span>
+              </span>
+            </div>
+            <p class="order-meta-desc">
+              {{ t('placed-on', 'Placed on') }} <strong>{{ formatDate(order.order_date) }}</strong>
+              <span v-if="order.requested_delivery_date"> &bull; {{ t('requested-delivery', 'Requested Delivery') }}: <strong>{{ formatDate(order.requested_delivery_date) }}</strong></span>
+            </p>
           </div>
-          <p class="order-meta-text" v-if="order">
-            {{ t('placed-on', 'Placed on') }} {{ formatDate(order.order_date) }}
-            <span v-if="order.created_at">at {{ formatTime(order.created_at) }}</span>
-          </p>
+
+          <!-- Top Action Buttons -->
+          <div class="header-right-actions">
+            <!-- 1-Click Reorder Button -->
+            <button class="btn-action-primary" @click="openReorderModal" :title="t('reorder-these-supplies', '1-Click Reorder Standard Supplies')">
+              <span class="material-symbols-outlined">repeat</span>
+              <span>{{ t('reorder-supplies', 'Reorder Supplies') }}</span>
+            </button>
+
+            <!-- Load into Cart Button -->
+            <button class="btn-action-secondary" @click="loadToCart" :title="t('load-to-cart-desc', 'Load these items into active cart')">
+              <span class="material-symbols-outlined">add_shopping_cart</span>
+              <span>{{ t('load-to-cart', 'Load to Cart') }}</span>
+            </button>
+
+            <!-- Cancel Order Button (if allowed) -->
+            <button v-if="canCancelOrder" class="btn-action-danger" @click="openCancelModal">
+              <span class="material-symbols-outlined">close</span>
+              <span>{{ t('cancel-order', 'Cancel Order') }}</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Top Action Buttons -->
-        <div class="header-actions" v-if="order">
-          <button
-            v-if="portal.allowReorders && order.status !== 'Cancelled'"
-            class="btn-primary-reorder"
-            @click="openReorderModal"
-          >
-            <span class="material-symbols-outlined">repeat</span>
-            <span>{{ t('1-click-reorder', '1-Click Reorder Supplies') }}</span>
-          </button>
+        <!-- Visual Fulfillment Step Tracker -->
+        <div class="fulfillment-tracker-card">
+          <div class="tracker-header">
+            <span class="material-symbols-outlined tracker-icon">local_shipping</span>
+            <span class="tracker-heading">{{ t('fulfillment-progress', 'Fulfillment & Delivery Progress') }}</span>
+          </div>
 
-          <button
-            class="btn-secondary-cart"
-            @click="handleLoadToCart"
-          >
-            <span class="material-symbols-outlined">add_shopping_cart</span>
-            <span>{{ t('add-items-to-cart', 'Add Items to Cart') }}</span>
-          </button>
-
-          <button
-            v-if="isCancellable(order.status)"
-            class="btn-outline-danger"
-            @click="openCancelModal"
-          >
-            <span class="material-symbols-outlined">cancel</span>
-            <span>{{ t('cancel-order', 'Cancel Order') }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="portal.ordersLoading" class="detail-loading-state">
-        <div class="skeleton-stepper-card">
-          <div class="skeleton-shimmer skeleton-stepper"></div>
-        </div>
-        <div class="skeleton-grid">
-          <div class="skeleton-shimmer skeleton-card-box"></div>
-          <div class="skeleton-shimmer skeleton-card-box"></div>
-        </div>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="portal.ordersError" class="detail-error-card">
-        <span class="material-symbols-outlined error-icon">error</span>
-        <h3>{{ t('order-not-found', 'Order Not Found') }}</h3>
-        <p>{{ portal.ordersError }}</p>
-        <router-link to="/portal/orders" class="btn-primary">
-          <span class="material-symbols-outlined">arrow_back</span>
-          <span>{{ t('return-to-orders', 'Return to Order History') }}</span>
-        </router-link>
-      </div>
-
-      <!-- Order Detail Content -->
-      <div v-else-if="order" class="order-content-wrapper">
-        <!-- Fulfillment Stepper Timeline -->
-        <div class="stepper-card">
-          <h3 class="stepper-title">
-            <span class="material-symbols-outlined">timeline</span>
-            <span>{{ t('fulfillment-progress', 'Fulfillment Progress') }}</span>
-          </h3>
-
-          <div class="fulfillment-stepper" v-if="order.status !== 'Cancelled'">
+          <div class="tracker-steps" :class="{ 'is-cancelled-order': order.status === 'Cancelled' }">
             <div
               v-for="(step, idx) in fulfillmentSteps"
               :key="step.key"
-              class="stepper-step"
+              class="tracker-step"
               :class="{
                 'step-completed': isStepCompleted(step.key),
                 'step-current': isStepCurrent(step.key),
-                'step-pending': isStepPending(step.key)
+                'step-upcoming': isStepUpcoming(step.key),
               }"
             >
-              <div class="step-connector-line" v-if="idx > 0"></div>
-              <div class="step-circle">
-                <span class="material-symbols-outlined" v-if="isStepCompleted(step.key)">check</span>
-                <span class="material-symbols-outlined" v-else>{{ step.icon }}</span>
+              <div class="step-marker-row">
+                <div class="step-circle">
+                  <span class="material-symbols-outlined" v-if="isStepCompleted(step.key)">check</span>
+                  <span class="material-symbols-outlined" v-else-if="isStepCurrent(step.key)">{{ step.icon }}</span>
+                  <span class="step-num" v-else>{{ idx + 1 }}</span>
+                </div>
+                <div class="step-line" v-if="idx < fulfillmentSteps.length - 1"></div>
               </div>
-              <div class="step-info">
-                <span class="step-name">{{ step.label }}</span>
-                <span class="step-detail" v-if="isStepCurrent(step.key)">{{ t('in-progress', 'Current Stage') }}</span>
-                <span class="step-detail" v-else-if="isStepCompleted(step.key)">{{ t('completed', 'Completed') }}</span>
+              <div class="step-label-area">
+                <span class="step-title">{{ step.label }}</span>
+                <span class="step-sub">{{ step.description }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Cancelled Order Banner -->
-          <div v-else class="cancelled-banner">
-            <span class="material-symbols-outlined banner-icon">cancel</span>
-            <div class="banner-text">
-              <strong>{{ t('order-cancelled-title', 'Order Cancelled') }}</strong>
-              <p>{{ t('order-cancelled-msg', 'This order has been cancelled and will not be processed for fulfillment.') }}</p>
-            </div>
+          <!-- Cancelled Banner if Order was Cancelled -->
+          <div v-if="order.status === 'Cancelled'" class="cancelled-alert-banner">
+            <span class="material-symbols-outlined">cancel</span>
+            <span>{{ t('order-is-cancelled-desc', 'This replenishment order has been cancelled and will not be fulfilled.') }}</span>
           </div>
         </div>
 
-        <!-- Information Cards Grid -->
-        <div class="detail-info-grid">
-          <!-- Card 1: Fulfillment & Delivery Info -->
+        <!-- 2-Column Summary Cards -->
+        <div class="summary-cards-grid">
+          <!-- Order & Fulfillment Information Card -->
           <div class="info-card">
             <div class="card-header">
-              <span class="material-symbols-outlined card-icon text-indigo">local_shipping</span>
-              <h4>{{ t('delivery-details', 'Delivery & Schedule') }}</h4>
+              <span class="material-symbols-outlined card-header-icon">info</span>
+              <h3>{{ t('order-info', 'Fulfillment & Delivery Details') }}</h3>
             </div>
-            <div class="info-rows">
-              <div class="info-row">
-                <span class="info-label">{{ t('requested-delivery-date', 'Requested Delivery') }}</span>
-                <span class="info-value font-semibold text-indigo">
-                  {{ formatDate(order.requested_delivery_date) || t('standard-schedule', 'Standard Delivery') }}
-                </span>
+            <div class="card-body">
+              <div class="info-data-row">
+                <span class="info-label">{{ t('order-number', 'Order Number') }}:</span>
+                <span class="info-val font-mono">{{ order.order_number }}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">{{ t('order-date', 'Date Placed') }}</span>
-                <span class="info-value">{{ formatDate(order.order_date) }}</span>
+              <div class="info-data-row">
+                <span class="info-label">{{ t('order-date', 'Order Date') }}:</span>
+                <span class="info-val">{{ formatDate(order.order_date) }}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">{{ t('order-number', 'Sales Order #') }}</span>
-                <span class="info-value font-mono">{{ order.order_number }}</span>
+              <div class="info-data-row">
+                <span class="info-label">{{ t('requested-delivery-date', 'Requested Delivery') }}:</span>
+                <span class="info-val font-semibold text-accent">{{ formatDate(order.requested_delivery_date) }}</span>
               </div>
-              <div class="info-row" v-if="order.notes">
-                <span class="info-label">{{ t('delivery-notes', 'Delivery Notes') }}</span>
-                <span class="info-value notes-text">{{ order.notes }}</span>
+              <div class="info-data-row">
+                <span class="info-label">{{ t('customer-name', 'Account Name') }}:</span>
+                <span class="info-val">{{ order.customer_name || portal.accountSummary?.company_name || 'Customer' }}</span>
+              </div>
+              <div class="info-data-row" v-if="order.notes">
+                <span class="info-label">{{ t('delivery-instructions', 'Special Notes') }}:</span>
+                <span class="info-val notes-val">{{ order.notes }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Card 2: Account & Customer Info -->
+          <!-- Financial Summary Card -->
           <div class="info-card">
             <div class="card-header">
-              <span class="material-symbols-outlined card-icon text-green">business</span>
-              <h4>{{ t('customer-account', 'Wholesale Account') }}</h4>
+              <span class="material-symbols-outlined card-header-icon">receipt</span>
+              <h3>{{ t('financial-summary', 'Payment & Invoice Summary') }}</h3>
             </div>
-            <div class="info-rows">
-              <div class="info-row">
-                <span class="info-label">{{ t('account-name', 'Company Name') }}</span>
-                <span class="info-value font-semibold">{{ order.customer_name || portal.accountSummary?.company_name || 'Customer' }}</span>
+            <div class="card-body">
+              <div class="info-data-row">
+                <span class="info-label">{{ t('subtotal', 'Subtotal') }}:</span>
+                <span class="info-val font-mono">${{ (order.subtotal || 0).toFixed(2) }}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">{{ t('customer-id', 'Customer ID') }}</span>
-                <span class="info-value font-mono">#{{ order.customer_id }}</span>
+              <div class="info-data-row">
+                <span class="info-label">{{ t('tax', 'Tax') }}:</span>
+                <span class="info-val font-mono">${{ (order.tax || 0).toFixed(2) }}</span>
               </div>
-              <div class="info-row" v-if="portal.accountSummary?.default_price_list_name">
-                <span class="info-label">{{ t('contract-price-list', 'Contracted Price List') }}</span>
-                <span class="info-value">{{ portal.accountSummary.default_price_list_name }}</span>
+              <div class="info-data-row total-highlight-row">
+                <span class="info-label font-bold">{{ t('grand-total', 'Grand Total') }}:</span>
+                <span class="info-val total-grand font-mono font-bold">${{ (order.grand_total || order.subtotal || 0).toFixed(2) }}</span>
               </div>
-              <div class="info-row" v-if="portal.accountSummary?.order_cutoff_time">
-                <span class="info-label">{{ t('account-cutoff', 'Daily Cutoff Time') }}</span>
-                <span class="info-value font-mono">{{ portal.accountSummary.order_cutoff_time.slice(0, 5) }}</span>
-              </div>
-            </div>
-          </div>
 
-          <!-- Card 3: Financial Summary -->
-          <div class="info-card">
-            <div class="card-header">
-              <span class="material-symbols-outlined card-icon text-amber">payments</span>
-              <h4>{{ t('financial-summary', 'Payment & Financials') }}</h4>
-            </div>
-            <div class="info-rows">
-              <div class="info-row">
-                <span class="info-label">{{ t('subtotal', 'Items Subtotal') }}</span>
-                <span class="info-value">${{ (Number(order.subtotal) || 0).toFixed(2) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">{{ t('tax', 'Wholesale Tax') }}</span>
-                <span class="info-value">${{ (Number(order.tax) || 0).toFixed(2) }}</span>
-              </div>
-              <div class="info-row total-highlight-row">
-                <span class="info-label font-bold">{{ t('order-total', 'Grand Total') }}</span>
-                <span class="info-value total-amount font-bold">${{ (Number(order.grand_total || order.subtotal) || 0).toFixed(2) }}</span>
+              <!-- Quick Link to Invoices -->
+              <div class="invoice-link-prompt">
+                <router-link to="/portal/invoices" class="btn-invoice-link">
+                  <span class="material-symbols-outlined">payments</span>
+                  <span>{{ t('view-open-invoices', 'View & Settle Invoices') }}</span>
+                  <span class="material-symbols-outlined">arrow_forward</span>
+                </router-link>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Itemized Order Lines Table Card -->
-        <div class="order-lines-card">
-          <div class="card-top-title">
-            <div class="title-with-count">
-              <span class="material-symbols-outlined">inventory_2</span>
-              <h3>{{ t('itemized-order-lines', 'Itemized Line Items') }}</h3>
-              <span class="lines-count-pill">{{ order.lines?.length || 0 }} {{ order.lines?.length === 1 ? 'item' : 'items' }}</span>
+        <!-- Itemized Line Items Card -->
+        <div class="line-items-card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <span class="material-symbols-outlined card-header-icon">format_list_bulleted</span>
+              <h3>{{ t('itemized-order-lines', 'Itemized Order Line Items') }} ({{ order.lines ? order.lines.length : 0 }})</h3>
             </div>
-            <button class="btn-sm-cart" @click="handleLoadToCart">
-              <span class="material-symbols-outlined">add_shopping_cart</span>
-              <span>{{ t('reorder-all-items', 'Reorder All Lines') }}</span>
-            </button>
           </div>
 
-          <div class="lines-table-wrapper">
+          <div class="table-wrap">
             <table class="lines-table">
               <thead>
                 <tr>
-                  <th class="col-num-header">#</th>
-                  <th>{{ t('sku-code', 'SKU / Code') }}</th>
-                  <th>{{ t('product-name', 'Product Name') }}</th>
+                  <th class="col-num-index">#</th>
+                  <th>{{ t('product-details', 'Product Details') }}</th>
                   <th>{{ t('uom', 'UOM') }}</th>
-                  <th class="text-center">{{ t('quantity', 'Quantity') }}</th>
-                  <th class="text-right">{{ t('unit-price', 'Contracted Price') }}</th>
+                  <th class="text-right">{{ t('contracted-price', 'Unit Price') }}</th>
+                  <th class="text-center">{{ t('qty-ordered', 'Qty') }}</th>
                   <th class="text-right">{{ t('line-total', 'Line Total') }}</th>
-                  <th class="text-center">{{ t('buy-again', 'Action') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(line, idx) in order.lines" :key="line.id || idx" class="line-row">
-                  <td class="col-num font-mono">{{ line.line_number || (idx + 1) }}</td>
-                  <td class="cell-sku font-mono">{{ line.product_code || '-' }}</td>
-                  <td class="cell-product-name">
-                    <div class="product-name-cluster">
-                      <span class="name-text">{{ line.product_name }}</span>
-                      <span class="contract-badge-mini">
-                        <span class="material-symbols-outlined">verified</span> Contracted
-                      </span>
+                  <td class="col-num-index font-mono">{{ idx + 1 }}</td>
+                  <td class="cell-product-info">
+                    <div class="product-info-cluster">
+                      <span class="product-name-title">{{ line.product_name }}</span>
+                      <div class="product-code-row" v-if="line.product_code">
+                        <span class="sku-pill font-mono">{{ line.product_code }}</span>
+                      </div>
                     </div>
                   </td>
                   <td class="cell-uom">
                     <span class="uom-pill">{{ line.uom_name || 'Ea' }}</span>
                   </td>
-                  <td class="text-center font-bold cell-qty">
+                  <td class="cell-unit-price text-right font-mono">
+                    ${{ (line.unit_price || 0).toFixed(2) }}
+                  </td>
+                  <td class="cell-qty text-center font-bold font-mono">
                     {{ line.qty }}
                   </td>
-                  <td class="text-right cell-price">
-                    ${{ (Number(line.unit_price) || 0).toFixed(2) }}
-                  </td>
-                  <td class="text-right cell-line-total font-bold">
-                    ${{ (Number(line.line_total) || (Number(line.unit_price || 0) * Number(line.qty || 1))).toFixed(2) }}
-                  </td>
-                  <td class="text-center cell-action">
-                    <button
-                      class="btn-buy-line"
-                      @click="quickAddLineToCart(line)"
-                      :title="t('add-item-to-cart', 'Add this item to cart')"
-                    >
-                      <span class="material-symbols-outlined">add_shopping_cart</span>
-                      <span>{{ t('add', 'Add') }}</span>
-                    </button>
+                  <td class="cell-line-total text-right font-mono font-bold">
+                    ${{ (line.line_total || ((line.unit_price || 0) * line.qty)).toFixed(2) }}
                   </td>
                 </tr>
               </tbody>
+              <tfoot>
+                <tr class="tfoot-row">
+                  <td colspan="4" class="text-right font-bold">{{ t('subtotal', 'Subtotal') }}:</td>
+                  <td colspan="2" class="text-right font-mono font-bold">${{ (order.subtotal || 0).toFixed(2) }}</td>
+                </tr>
+                <tr class="tfoot-row">
+                  <td colspan="4" class="text-right">{{ t('tax', 'Estimated Wholesale Tax') }}:</td>
+                  <td colspan="2" class="text-right font-mono">${{ (order.tax || 0).toFixed(2) }}</td>
+                </tr>
+                <tr class="tfoot-row grand-total-tfoot">
+                  <td colspan="4" class="text-right font-bold">{{ t('grand-total', 'Grand Total') }}:</td>
+                  <td colspan="2" class="text-right font-mono font-bold total-grand">${{ (order.grand_total || order.subtotal || 0).toFixed(2) }}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 1-Click Replenishment Reorder Modal -->
-    <div v-if="showReorderModal && order" class="modal-overlay" @click.self="closeReorderModal">
-      <div class="modal-card">
+    <!-- 1-Click Reorder Modal -->
+    <div v-if="showReorderModal" class="modal-overlay" @click.self="showReorderModal = false">
+      <div class="reorder-modal-card">
         <div class="modal-header">
           <div class="modal-title-wrap">
-            <div class="modal-badge-icon bg-indigo">
+            <div class="modal-icon-badge">
               <span class="material-symbols-outlined">repeat</span>
             </div>
             <div>
-              <h3 class="modal-title">{{ t('reorder-supplies-title', '1-Click Reorder Standard Supplies') }}</h3>
-              <p class="modal-subtitle">{{ t('reorder-based-on', 'Reordering standard items from Order') }} #{{ order.order_number }}</p>
+              <h3>{{ t('reorder-title', 'Reorder Supplies') }}</h3>
+              <p class="modal-subtitle">{{ t('reorder-from-order', 'Replenish items from order') }} <strong>#{{ order?.order_number }}</strong></p>
             </div>
           </div>
-          <button class="modal-close-btn" @click="closeReorderModal">
+          <button class="btn-close-modal" @click="showReorderModal = false">
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
 
         <div class="modal-body">
-          <!-- Cutoff Time Alert -->
-          <div class="cutoff-notice-box" :class="{ 'past-cutoff': portal.isPastCutoff }">
-            <span class="material-symbols-outlined notice-icon">
-              {{ portal.isPastCutoff ? 'schedule' : 'bolt' }}
-            </span>
-            <div class="notice-text">
-              <strong>{{ portal.isPastCutoff ? 'Post-Cutoff Reorder' : 'Next-Day Delivery Eligible' }}</strong>
-              <p>{{ portal.isPastCutoff ? `Cutoff deadline passed. Reorder will be scheduled for ${portal.nextDeliveryDate}.` : `Order now for estimated next-day fulfillment on ${portal.nextDeliveryDate}.` }}</p>
-            </div>
-          </div>
+          <div class="reorder-options-box">
+            <div class="option-mode-toggle">
+              <label class="mode-radio-label" :class="{ selected: reorderMode === 'direct' }">
+                <input type="radio" v-model="reorderMode" value="direct" />
+                <div class="mode-text-wrap">
+                  <span class="mode-title">{{ t('instant-1click-reorder', 'Instant 1-Click Order Submission') }}</span>
+                  <span class="mode-desc">{{ t('instant-reorder-desc', 'Creates a new order immediately using your contracted pricing.') }}</span>
+                </div>
+              </label>
 
-          <!-- Items to Reorder List -->
-          <div class="reorder-items-preview">
-            <h4 class="section-title">
-              <span class="material-symbols-outlined">inventory_2</span>
-              {{ t('reorder-items', 'Items in this Reorder') }} ({{ order.lines?.length || 0 }})
-            </h4>
-            <div class="reorder-lines-list">
-              <div v-for="line in order.lines" :key="line.id" class="reorder-line-item">
-                <div class="reorder-line-info">
-                  <span class="line-product-name">{{ line.product_name }}</span>
-                  <span class="line-sku" v-if="line.product_code">({{ line.product_code }})</span>
+              <label class="mode-radio-label" :class="{ selected: reorderMode === 'cart' }">
+                <input type="radio" v-model="reorderMode" value="cart" />
+                <div class="mode-text-wrap">
+                  <span class="mode-title">{{ t('load-to-cart', 'Load Items into Cart to Modify') }}</span>
+                  <span class="mode-desc">{{ t('load-cart-desc', 'Loads these items into your replenishment cart so you can adjust quantities.') }}</span>
                 </div>
-                <div class="reorder-line-qty">
-                  <span class="qty-pill">Qty: {{ line.qty }} {{ line.uom_name || '' }}</span>
-                  <span class="line-price">${{ (Number(line.unit_price || 0) * Number(line.qty || 1)).toFixed(2) }}</span>
-                </div>
+              </label>
+            </div>
+
+            <!-- Direct Reorder Settings -->
+            <div v-if="reorderMode === 'direct'" class="direct-reorder-fields">
+              <div class="form-group">
+                <label class="field-label">
+                  <span class="material-symbols-outlined mini-icon">event</span>
+                  {{ t('requested-delivery-date', 'Requested Delivery Date') }}
+                </label>
+                <input
+                  type="date"
+                  v-model="reorderDeliveryDate"
+                  :min="minDeliveryDate"
+                  class="portal-input"
+                />
+                <span class="input-hint" v-if="portal.nextDeliveryDate">
+                  Earliest available: {{ portal.nextDeliveryDate }}
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label class="field-label">
+                  <span class="material-symbols-outlined mini-icon">edit_note</span>
+                  {{ t('reorder-notes', 'Delivery Notes / Special Instructions') }}
+                </label>
+                <textarea
+                  v-model="reorderNotes"
+                  rows="2"
+                  class="portal-textarea"
+                  :placeholder="t('delivery-notes-placeholder', 'e.g., Deliver to kitchen back dock before 10 AM...')"
+                ></textarea>
               </div>
             </div>
-          </div>
-
-          <!-- Delivery Date & Notes Form -->
-          <div class="reorder-form-grid">
-            <div class="form-group">
-              <label class="form-label">
-                <span class="material-symbols-outlined">calendar_today</span>
-                {{ t('requested-delivery-date', 'Requested Delivery Date') }}
-              </label>
-              <input
-                type="date"
-                v-model="reorderDeliveryDate"
-                :min="portal.nextDeliveryDate || todayDate"
-                class="form-input"
-              />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">
-                <span class="material-symbols-outlined">notes</span>
-                {{ t('special-delivery-instructions', 'Special Delivery Instructions') }}
-              </label>
-              <textarea
-                v-model="reorderNotes"
-                rows="2"
-                :placeholder="t('reorder-notes-placeholder', 'e.g., Deliver to kitchen back entrance before 9 AM...')"
-                class="form-input"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Estimated Total -->
-          <div class="reorder-total-banner">
-            <span>{{ t('estimated-reorder-total', 'Estimated Reorder Subtotal') }}:</span>
-            <span class="total-val">${{ Number(order.grand_total || order.subtotal || 0).toFixed(2) }}</span>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button class="btn-outline" @click="closeReorderModal">
+          <button class="btn-outline" @click="showReorderModal = false" :disabled="isReordering">
             {{ t('cancel', 'Cancel') }}
           </button>
-          <button class="btn-secondary" @click="handleLoadAndCustomize">
-            <span class="material-symbols-outlined">edit_note</span>
-            {{ t('load-to-cart-to-edit', 'Load into Cart to Customize') }}
-          </button>
-          <button class="btn-primary" :disabled="reorderSubmitting" @click="executeInstantReorder">
-            <span class="material-symbols-outlined" v-if="!reorderSubmitting">repeat</span>
-            <span class="spinner" v-else></span>
-            <span>{{ reorderSubmitting ? t('placing-reorder', 'Submitting Reorder...') : t('confirm-1-click-reorder', 'Confirm 1-Click Reorder') }}</span>
+          <button class="btn-primary" @click="executeReorder" :disabled="isReordering">
+            <span class="material-symbols-outlined" v-if="!isReordering">repeat</span>
+            <span class="material-symbols-outlined spin-icon" v-else>sync</span>
+            <span>{{ isReordering ? t('reordering', 'Placing Reorder...') : (reorderMode === 'cart' ? t('load-items-cart', 'Load to Cart & Proceed') : t('confirm-reorder', 'Submit Replenishment Order')) }}</span>
           </button>
         </div>
       </div>
     </div>
 
     <!-- Cancel Order Confirmation Modal -->
-    <div v-if="showCancelModal && order" class="modal-overlay" @click.self="closeCancelModal">
-      <div class="modal-card modal-card-sm">
-        <div class="modal-header">
-          <div class="modal-title-wrap">
-            <div class="modal-badge-icon bg-red">
-              <span class="material-symbols-outlined">cancel</span>
-            </div>
-            <div>
-              <h3 class="modal-title">{{ t('cancel-order-title', 'Cancel Replenishment Order') }}</h3>
-              <p class="modal-subtitle">{{ t('order-num-prefix', 'Order') }} #{{ order.order_number }}</p>
-            </div>
+    <div v-if="showCancelModal" class="modal-overlay" @click.self="showCancelModal = false">
+      <div class="cancel-modal-card">
+        <div class="cancel-header">
+          <div class="warning-icon-badge">
+            <span class="material-symbols-outlined">warning</span>
           </div>
-          <button class="modal-close-btn" @click="closeCancelModal">
-            <span class="material-symbols-outlined">close</span>
-          </button>
+          <h3>{{ t('cancel-order-title', 'Cancel Replenishment Order') }}</h3>
+          <p class="modal-subtitle">
+            {{ t('cancel-order-prompt', 'Are you sure you want to cancel order') }} <strong>#{{ order?.order_number }}</strong>?
+          </p>
         </div>
 
-        <div class="modal-body">
+        <div class="cancel-body">
           <p class="cancel-warning-text">
-            {{ t('cancel-order-prompt', 'Are you sure you want to cancel this replenishment order? Any reserved inventory will be immediately released.') }}
+            {{ t('cancel-warning', 'Cancelling this order will release any allocated stock and mark the order as Cancelled.') }}
           </p>
-
-          <div class="form-group mt-4">
-            <label class="form-label">{{ t('cancellation-reason', 'Reason for Cancellation (optional)') }}</label>
-            <textarea
+          <div class="form-group">
+            <label class="field-label">{{ t('cancellation-reason', 'Cancellation Reason (Optional)') }}</label>
+            <input
+              type="text"
               v-model="cancelReason"
-              rows="2"
-              :placeholder="t('cancel-reason-placeholder', 'e.g., Placed by mistake, changed delivery requirements...')"
-              class="form-input"
-            ></textarea>
+              class="portal-input"
+              :placeholder="t('reason-placeholder', 'e.g., Ordered duplicate items by mistake')"
+            />
           </div>
         </div>
 
         <div class="modal-footer">
-          <button class="btn-outline" @click="closeCancelModal">
+          <button class="btn-outline" @click="showCancelModal = false" :disabled="isCancelling">
             {{ t('keep-order', 'Keep Order') }}
           </button>
-          <button class="btn-danger" :disabled="cancelSubmitting" @click="executeCancelOrder">
-            <span class="material-symbols-outlined" v-if="!cancelSubmitting">delete</span>
-            <span class="spinner" v-else></span>
-            <span>{{ cancelSubmitting ? t('cancelling', 'Cancelling...') : t('confirm-cancel', 'Yes, Cancel Order') }}</span>
+          <button class="btn-danger" @click="executeCancel" :disabled="isCancelling">
+            <span class="material-symbols-outlined" v-if="!isCancelling">delete_forever</span>
+            <span class="material-symbols-outlined spin-icon" v-else>sync</span>
+            <span>{{ isCancelling ? t('cancelling', 'Cancelling...') : t('confirm-cancel-order', 'Yes, Cancel Order') }}</span>
           </button>
         </div>
       </div>
@@ -430,212 +387,169 @@ const portal = usePortalStore()
 const { show: showToast } = useToast()
 const { t, dir } = useI18n()
 
-// 1-Click Reorder Modal state
 const showReorderModal = ref(false)
+const reorderMode = ref('direct')
 const reorderDeliveryDate = ref('')
 const reorderNotes = ref('')
-const reorderSubmitting = ref(false)
+const isReordering = ref(false)
 
-// Cancel Modal state
 const showCancelModal = ref(false)
 const cancelReason = ref('')
-const cancelSubmitting = ref(false)
+const isCancelling = ref(false)
 
 const order = computed(() => portal.currentOrder)
 
-const todayDate = computed(() => {
-  return new Date().toISOString().split('T')[0]
+const canCancelOrder = computed(() => {
+  return order.value && ['Pending', 'Confirmed', 'Draft'].includes(order.value.status)
 })
 
-// Stepper Step Definitions
 const fulfillmentSteps = [
-  { key: 'Draft', label: 'Order Drafted', icon: 'edit_document' },
-  { key: 'Confirmed', label: 'Confirmed', icon: 'check_circle' },
-  { key: 'Shipped', label: 'Shipped / In Transit', icon: 'local_shipping' },
-  { key: 'Delivered', label: 'Delivered', icon: 'verified' },
+  { key: 'Draft', label: 'Draft / Placed', description: 'Order submitted', icon: 'edit_document' },
+  { key: 'Confirmed', label: 'Confirmed', description: 'Stock reserved', icon: 'check_circle' },
+  { key: 'Shipped', label: 'Shipped', description: 'On delivery route', icon: 'local_shipping' },
+  { key: 'Delivered', label: 'Delivered', description: 'Fulfillment completed', icon: 'task_alt' },
 ]
 
-const stepOrder = ['Draft', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered']
-
-function getStatusRank(status) {
-  if (status === 'Draft') return 0
-  if (status === 'Pending') return 1
-  if (status === 'Confirmed' || status === 'Processing') return 2
-  if (status === 'Shipped') return 3
-  if (status === 'Delivered' || status === 'Paid' || status === 'Invoiced') return 4
-  return -1
+const statusOrderMap = {
+  Draft: 0,
+  Pending: 1,
+  Confirmed: 1,
+  Processing: 1,
+  Shipped: 2,
+  Delivered: 3,
 }
 
 function isStepCompleted(stepKey) {
-  if (!order.value) return false
-  const currentRank = getStatusRank(order.value.status)
-  const targetRank = getStatusRank(stepKey)
-  return currentRank > targetRank
+  if (!order.value || order.value.status === 'Cancelled') return false
+  const currentIdx = statusOrderMap[order.value.status] ?? 0
+  const stepIdx = statusOrderMap[stepKey] ?? 0
+  return currentIdx > stepIdx
 }
 
 function isStepCurrent(stepKey) {
-  if (!order.value) return false
-  const currentRank = getStatusRank(order.value.status)
-  const targetRank = getStatusRank(stepKey)
-  return currentRank === targetRank
+  if (!order.value || order.value.status === 'Cancelled') return false
+  const currentIdx = statusOrderMap[order.value.status] ?? 0
+  const stepIdx = statusOrderMap[stepKey] ?? 0
+  return currentIdx === stepIdx
 }
 
-function isStepPending(stepKey) {
-  if (!order.value) return true
-  const currentRank = getStatusRank(order.value.status)
-  const targetRank = getStatusRank(stepKey)
-  return currentRank < targetRank
+function isStepUpcoming(stepKey) {
+  if (!order.value || order.value.status === 'Cancelled') return true
+  const currentIdx = statusOrderMap[order.value.status] ?? 0
+  const stepIdx = statusOrderMap[stepKey] ?? 0
+  return currentIdx < stepIdx
 }
 
-function isCancellable(status) {
-  return ['Draft', 'Pending', 'Confirmed'].includes(status)
-}
+const minDeliveryDate = computed(() => {
+  if (portal.cutoffStatus?.next_delivery_date) {
+    return portal.cutoffStatus.next_delivery_date
+  }
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return tomorrow.toISOString().split('T')[0]
+})
 
-// 1-Click Reorder Handlers
-function openReorderModal() {
-  if (!order.value) return
-  reorderDeliveryDate.value = portal.nextDeliveryDate || todayDate.value
-  reorderNotes.value = `Standard replenishment reorder based on #${order.value.order_number}`
-  showReorderModal.value = true
-}
-
-function closeReorderModal() {
-  showReorderModal.value = false
-  reorderSubmitting.value = false
-}
-
-async function executeInstantReorder() {
-  if (!order.value) return
-  reorderSubmitting.value = true
+function formatDate(val) {
+  if (!val) return '-'
   try {
-    const result = await portal.reorderPastOrder(order.value.id, {
-      requested_delivery_date: reorderDeliveryDate.value || null,
-      notes: reorderNotes.value || null,
-      status: 'Confirmed',
-    })
-    if (result) {
-      showToast(`Reorder #${result.order_number} submitted successfully!`, 'success', 4000)
-      closeReorderModal()
-      router.push(`/portal/orders/${result.id}`)
-    }
-  } catch (err) {
-    showToast(err.message || 'Failed to submit 1-click reorder', 'error', 4000)
-  } finally {
-    reorderSubmitting.value = false
+    const d = new Date(val)
+    if (isNaN(d.getTime())) return val
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  } catch {
+    return val
   }
 }
 
-function handleLoadToCart() {
-  if (!order.value) return
-  const count = portal.loadOrderToCart(order.value, false)
-  showToast(`Added ${count} items from order #${order.value.order_number} to cart!`, 'success', 3000)
+function getStatusBadgeClass(status) {
+  const map = {
+    Confirmed: 'badge-blue',
+    Shipped: 'badge-purple',
+    Delivered: 'badge-green',
+    Processing: 'badge-indigo',
+    Pending: 'badge-amber',
+    Draft: 'badge-neutral',
+    Cancelled: 'badge-red',
+  }
+  return map[status] || 'badge-neutral'
 }
 
-function handleLoadAndCustomize() {
+async function loadOrderDetail() {
+  const orderId = route.params.id
+  if (orderId) {
+    await portal.fetchOrderDetail(orderId)
+  }
+}
+
+function openReorderModal() {
   if (!order.value) return
-  portal.loadOrderToCart(order.value, false)
-  closeReorderModal()
-  showToast(`Loaded ${order.value.lines?.length || 0} items to cart for customization`, 'info', 3000)
+  showReorderModal.value = true
+  reorderMode.value = 'direct'
+  reorderDeliveryDate.value = portal.cutoffStatus?.next_delivery_date || ''
+  reorderNotes.value = order.value.notes || ''
+}
+
+function loadToCart() {
+  if (!order.value) return
+  const count = portal.loadOrderToCart(order.value, false)
+  showToast(t('reorder-loaded-toast', `Loaded ${count} items into your replenishment cart!`), 'success', 3000)
   router.push('/portal/cart')
 }
 
-function quickAddLineToCart(line) {
-  if (!line.product_id) return
-  portal.addToCart({
-    id: line.product_id,
-    product_id: line.product_id,
-    product_code: line.product_code || '',
-    product_name: line.product_name || '',
-    uom_name: line.uom_name || '',
-    unit_price: Number(line.unit_price || 0),
-    contracted_price: Number(line.unit_price || 0),
-    base_price: Number(line.unit_price || 0),
-    is_contracted: true,
-  }, Number(line.qty || 1))
-  showToast(`Added ${line.product_name} to cart!`, 'success', 2000)
-}
-
-// Cancel Handlers
-function openCancelModal() {
-  cancelReason.value = ''
-  showCancelModal.value = true
-}
-
-function closeCancelModal() {
-  showCancelModal.value = false
-  cancelSubmitting.value = false
-}
-
-async function executeCancelOrder() {
+async function executeReorder() {
   if (!order.value) return
-  cancelSubmitting.value = true
+
+  if (reorderMode.value === 'cart') {
+    loadToCart()
+    showReorderModal.value = false
+    return
+  }
+
+  isReordering.value = true
+  try {
+    const payload = {
+      requested_delivery_date: reorderDeliveryDate.value || null,
+      notes: reorderNotes.value || null,
+      status: 'Confirmed',
+    }
+    const newOrder = await portal.reorderPastOrder(order.value.id, payload)
+    if (newOrder) {
+      showToast(t('reorder-success-toast', `Reorder placed successfully! Order #${newOrder.order_number}`), 'success', 4000)
+      showReorderModal.value = false
+      router.push(`/portal/orders/${newOrder.id}`)
+    }
+  } catch (err) {
+    showToast(err.message || t('reorder-failed-toast', 'Failed to place reorder'), 'error', 4000)
+  } finally {
+    isReordering.value = false
+  }
+}
+
+function openCancelModal() {
+  showCancelModal.value = true
+  cancelReason.value = ''
+}
+
+async function executeCancel() {
+  if (!order.value) return
+  isCancelling.value = true
   try {
     await portal.cancelOrder(order.value.id, cancelReason.value)
-    showToast(`Order #${order.value.order_number} cancelled successfully`, 'info', 3000)
-    closeCancelModal()
-    portal.fetchOrderDetail(route.params.id)
+    showToast(t('order-cancelled-toast', `Order #${order.value.order_number} cancelled`), 'info', 3000)
+    showCancelModal.value = false
+    await loadOrderDetail()
   } catch (err) {
-    showToast(err.message || 'Failed to cancel order', 'error', 4000)
+    showToast(err.message || t('cancel-failed-toast', 'Failed to cancel order'), 'error', 4000)
   } finally {
-    cancelSubmitting.value = false
+    isCancelling.value = false
   }
 }
 
-// Helpers
-function getStatusBadgeClass(status) {
-  const map = {
-    Draft: 'status-draft',
-    Pending: 'status-pending',
-    Confirmed: 'status-confirmed',
-    Processing: 'status-processing',
-    Shipped: 'status-shipped',
-    Delivered: 'status-delivered',
-    Cancelled: 'status-cancelled',
-    Paid: 'status-paid',
-  }
-  return map[status] || 'status-default'
-}
-
-function getStatusIcon(status) {
-  const map = {
-    Draft: 'edit_document',
-    Pending: 'hourglass_empty',
-    Confirmed: 'check_circle',
-    Processing: 'autorenew',
-    Shipped: 'local_shipping',
-    Delivered: 'verified',
-    Cancelled: 'cancel',
-    Paid: 'payments',
-  }
-  return map[status] || 'receipt'
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  try {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-  } catch {
-    return dateStr
-  }
-}
-
-function formatTime(dateTimeStr) {
-  if (!dateTimeStr) return ''
-  try {
-    const d = new Date(dateTimeStr)
-    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return ''
-  }
-}
-
-onMounted(() => {
-  if (route.params.id) {
-    portal.fetchOrderDetail(route.params.id)
-  }
-  portal.fetchAccountSummary()
-  portal.fetchCutoffStatus()
+onMounted(async () => {
+  await Promise.all([
+    loadOrderDetail(),
+    portal.fetchCutoffStatus(),
+    portal.fetchAccountSummary(),
+  ])
 })
 </script>
 
@@ -650,196 +564,268 @@ onMounted(() => {
   padding: 0 24px;
 }
 
-/* Header Section */
-.detail-header-section {
+/* Loading & Error */
+.detail-loading-box {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-header { height: 100px; }
+.skeleton-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.skeleton-card { height: 200px; }
+.skeleton-table { height: 300px; }
+
+.detail-error-card {
+  background: var(--bg-surface, #1a1a2e);
+  border: 1px solid var(--border-default, #2a2a4a);
+  border-radius: 12px;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 48px;
+  color: #f87171;
+  margin-bottom: 12px;
+}
+
+.detail-error-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  margin-bottom: 8px;
+}
+
+.detail-error-card p {
+  font-size: 14px;
+  color: var(--text-secondary, #94a3b8);
   margin-bottom: 24px;
-  gap: 16px;
-  flex-wrap: wrap;
+}
+
+.error-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Top Nav */
+.detail-top-nav {
+  margin-bottom: 16px;
 }
 
 .back-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  color: #a5b4fc;
   font-size: 13px;
   font-weight: 600;
-  color: #818cf8;
   text-decoration: none;
-  margin-bottom: 8px;
-  transition: color 0.15s ease;
+  transition: color 0.15s;
 }
 
 .back-link:hover {
-  color: #a5b4fc;
+  color: #fff;
 }
 
 .back-link .material-symbols-outlined {
-  font-size: 16px;
+  font-size: 18px;
 }
 
-.title-status-row {
+/* Header Card */
+.order-header-card {
+  background: var(--bg-surface, #1a1a2e);
+  border: 1px solid var(--border-default, #2a2a4a);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
-.page-title {
-  font-size: 24px;
+.order-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.order-title {
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-primary, #fff);
-  letter-spacing: -0.4px;
+  letter-spacing: -0.3px;
   margin: 0;
 }
 
-.order-meta-text {
+.order-meta-desc {
   font-size: 13px;
   color: var(--text-secondary, #94a3b8);
   margin: 0;
 }
 
-.header-actions {
+.header-right-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.btn-primary-reorder {
+.btn-action-primary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
   border-radius: 10px;
   background: linear-gradient(135deg, #6366f1, #4f46e5);
-  color: #fff;
   border: none;
+  color: #fff;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transition: all 0.15s;
 }
 
-.btn-primary-reorder:hover {
+.btn-action-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
 }
 
-.btn-secondary-cart {
+.btn-action-secondary {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 10px 16px;
   border-radius: 10px;
-  background: var(--bg-surface, #1a1a2e);
+  background: var(--bg-body, #0f0f1a);
   border: 1px solid var(--border-default, #2a2a4a);
   color: var(--text-primary, #fff);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s;
 }
 
-.btn-secondary-cart:hover {
-  background: rgba(255, 255, 255, 0.05);
+.btn-action-secondary:hover {
+  background: var(--bg-surface-hover, #2a2a4a);
   border-color: #6366f1;
 }
 
-.btn-outline-danger {
+.btn-action-danger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   padding: 10px 16px;
   border-radius: 10px;
-  background: transparent;
+  background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #f87171;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s;
 }
 
-.btn-outline-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: #ef4444;
+.btn-action-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
 }
 
-/* Stepper Card */
-.stepper-card {
+/* Fulfillment Tracker Card */
+.fulfillment-tracker-card {
   background: var(--bg-surface, #1a1a2e);
   border: 1px solid var(--border-default, #2a2a4a);
-  border-radius: 12px;
-  padding: 20px 24px;
+  border-radius: 16px;
+  padding: 24px;
   margin-bottom: 24px;
 }
 
-.stepper-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary, #fff);
+.tracker-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 20px;
+  margin-bottom: 24px;
 }
 
-.stepper-title .material-symbols-outlined {
+.tracker-icon {
+  font-size: 22px;
   color: #818cf8;
-  font-size: 18px;
 }
 
-.fulfillment-stepper {
+.tracker-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+}
+
+.tracker-steps {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  position: relative;
-  padding: 0 10px;
+  gap: 12px;
 }
 
-.stepper-step {
+@media (max-width: 768px) {
+  .tracker-steps {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+.tracker-step {
+  flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.step-marker-row {
+  display: flex;
   align-items: center;
-  position: relative;
-  flex: 1;
-  z-index: 1;
-}
-
-.step-connector-line {
-  position: absolute;
-  top: 18px;
-  right: 50%;
-  left: -50%;
-  height: 3px;
-  background: var(--border-default, #2a2a4a);
-  z-index: -1;
-}
-
-.step-completed .step-connector-line,
-.step-current .step-connector-line {
-  background: #6366f1;
+  margin-bottom: 10px;
 }
 
 .step-circle {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--bg-surface-low, #0f0f1a);
+  background: var(--bg-body, #0f0f1a);
   border: 2px solid var(--border-default, #2a2a4a);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted, #64748b);
-  margin-bottom: 8px;
-  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+  flex-shrink: 0;
+  transition: all 0.2s;
 }
 
-.step-circle .material-symbols-outlined {
-  font-size: 18px;
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border-default, #2a2a4a);
+  margin: 0 8px;
 }
 
 .step-completed .step-circle {
@@ -848,62 +834,62 @@ onMounted(() => {
   color: #fff;
 }
 
-.step-current .step-circle {
-  background: #6366f1;
-  border-color: #818cf8;
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25);
+.step-completed .step-line {
+  background: #22c55e;
 }
 
-.step-info {
+.step-current .step-circle {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #a5b4fc;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+}
+
+.step-label-area {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
 }
 
-.step-name {
-  font-size: 12px;
+.step-title {
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary, #fff);
+  margin-bottom: 2px;
 }
 
-.step-detail {
+.step-upcoming .step-title {
+  color: var(--text-muted, #94a3b8);
+}
+
+.step-sub {
   font-size: 11px;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-muted, #94a3b8);
 }
 
-.cancelled-banner {
+.cancelled-alert-banner {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px 16px;
   border-radius: 10px;
   background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   color: #f87171;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.cancelled-banner .banner-icon {
-  font-size: 28px;
-}
-
-.banner-text p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--text-secondary, #94a3b8);
-}
-
-/* Info Cards Grid */
-.detail-info-grid {
+/* 2-Column Summary Cards */
+.summary-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
   margin-bottom: 24px;
 }
 
-@media (max-width: 1024px) {
-  .detail-info-grid {
+@media (max-width: 860px) {
+  .summary-cards-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -911,353 +897,290 @@ onMounted(() => {
 .info-card {
   background: var(--bg-surface, #1a1a2e);
   border: 1px solid var(--border-default, #2a2a4a);
-  border-radius: 12px;
-  padding: 18px 20px;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 .card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-  padding-bottom: 10px;
+  gap: 8px;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.15);
   border-bottom: 1px solid var(--border-default, #2a2a4a);
 }
 
-.card-header h4 {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary, #fff);
-  margin: 0;
-}
-
-.card-icon {
+.card-header-icon {
   font-size: 20px;
-}
-
-.text-indigo { color: #818cf8; }
-.text-green { color: #4ade80; }
-.text-amber { color: #fbbf24; }
-
-.info-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-}
-
-.info-label {
-  color: var(--text-secondary, #94a3b8);
-}
-
-.info-value {
-  color: var(--text-primary, #fff);
-}
-
-.total-highlight-row {
-  border-top: 1px solid var(--border-default, #2a2a4a);
-  padding-top: 10px;
-  margin-top: 4px;
-}
-
-.total-amount {
-  font-size: 16px;
   color: #a5b4fc;
 }
 
-.notes-text {
-  max-width: 200px;
-  text-align: right;
-  font-style: italic;
-  color: var(--text-secondary, #94a3b8);
-}
-
-/* Order Lines Card */
-.order-lines-card {
-  background: var(--bg-surface, #1a1a2e);
-  border: 1px solid var(--border-default, #2a2a4a);
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 24px;
-}
-
-.card-top-title {
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border-default, #2a2a4a);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.title-with-count {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.title-with-count h3 {
+.card-header h3 {
   font-size: 15px;
   font-weight: 700;
   color: var(--text-primary, #fff);
   margin: 0;
 }
 
-.title-with-count .material-symbols-outlined {
-  color: #818cf8;
-  font-size: 20px;
+.card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.lines-count-pill {
-  background: rgba(255, 255, 255, 0.08);
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  color: var(--text-secondary, #94a3b8);
-  font-weight: 600;
-}
-
-.btn-sm-cart {
-  display: inline-flex;
+.info-data-row {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.info-label {
+  color: var(--text-secondary, #94a3b8);
+}
+
+.info-val {
+  color: var(--text-primary, #fff);
+  font-weight: 500;
+}
+
+.notes-val {
+  max-width: 60%;
+  text-align: right;
+  font-style: italic;
+}
+
+.total-highlight-row {
+  border-top: 1px solid var(--border-default, #2a2a4a);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.total-grand {
+  font-size: 18px;
+  color: #a5b4fc;
+}
+
+.text-accent {
+  color: #4ade80 !important;
+}
+
+.invoice-link-prompt {
+  margin-top: 8px;
+}
+
+.btn-invoice-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
   color: #a5b4fc;
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  text-decoration: none;
+  transition: all 0.15s;
 }
 
-.btn-sm-cart:hover {
-  background: #6366f1;
+.btn-invoice-link:hover {
+  background: rgba(99, 102, 241, 0.18);
   color: #fff;
+  border-color: #6366f1;
 }
 
-.lines-table-wrapper {
+.btn-invoice-link .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Itemized Line Items Card */
+.line-items-card {
+  background: var(--bg-surface, #1a1a2e);
+  border: 1px solid var(--border-default, #2a2a4a);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.table-wrap {
   overflow-x: auto;
 }
 
 .lines-table {
   width: 100%;
   border-collapse: collapse;
-  text-align: left;
+  font-size: 13px;
 }
 
 .lines-table th {
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--border-default, #2a2a4a);
+  background: rgba(0, 0, 0, 0.2);
   padding: 12px 18px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-muted, #64748b);
-  font-weight: 700;
+  border-bottom: 1px solid var(--border-default, #2a2a4a);
+  white-space: nowrap;
 }
 
 .lines-table td {
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 13px;
-  color: var(--text-primary, #e2e8f0);
+  border-bottom: 1px solid var(--border-default, #2a2a4a);
+  color: var(--text-primary, #fff);
+  vertical-align: middle;
 }
 
-.line-row:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.col-num-header, .col-num {
+.col-num-index {
   width: 40px;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #94a3b8);
 }
 
-.cell-sku {
-  font-size: 12px;
-  color: var(--text-secondary, #94a3b8);
+.cell-product-info {
+  min-width: 220px;
 }
 
-.product-name-cluster {
+.product-info-cluster {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.name-text {
+.product-name-title {
   font-weight: 600;
   color: var(--text-primary, #fff);
 }
 
-.contract-badge-mini {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: rgba(99, 102, 241, 0.12);
-  color: #a5b4fc;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-weight: 600;
+.product-code-row {
+  margin-top: 2px;
 }
 
-.contract-badge-mini .material-symbols-outlined {
-  font-size: 12px;
+.sku-pill {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.cell-uom {
+  width: 80px;
 }
 
 .uom-pill {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 2px 6px;
-  border-radius: 4px;
   font-size: 11px;
-}
-
-.cell-qty {
-  font-size: 14px;
-  color: var(--text-primary, #fff);
-}
-
-.btn-buy-line {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-default, #2a2a4a);
   color: var(--text-secondary, #94a3b8);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.btn-buy-line:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: #6366f1;
-  color: #a5b4fc;
+.tfoot-row td {
+  background: rgba(0, 0, 0, 0.15);
+  padding: 10px 18px;
 }
 
-.btn-buy-line .material-symbols-outlined {
-  font-size: 14px;
+.grand-total-tfoot td {
+  border-top: 1px solid var(--border-default, #2a2a4a);
+  font-size: 15px;
 }
 
-/* Status Badges */
+/* Badges */
 .status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 20px;
+  border-radius: 14px;
   font-size: 11px;
   font-weight: 700;
+  text-transform: capitalize;
 }
 
-.status-icon {
-  font-size: 14px;
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }
 
-.status-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-.status-confirmed, .status-processing { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); }
-.status-shipped { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-.status-delivered, .status-paid { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
-.status-cancelled { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-.status-draft { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
-.status-default { background: rgba(255, 255, 255, 0.08); color: #e2e8f0; }
-
-/* Loading & Error */
-.detail-loading-state {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.badge-green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
 }
+.badge-green .status-dot { background: #4ade80; }
 
-.skeleton-stepper-card {
-  height: 120px;
-  border-radius: 12px;
-  background: var(--bg-surface, #1a1a2e);
-  padding: 20px;
+.badge-blue {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
 }
+.badge-blue .status-dot { background: #818cf8; }
 
-.skeleton-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+.badge-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
 }
+.badge-purple .status-dot { background: #c084fc; }
 
-.skeleton-card-box {
-  height: 160px;
+.badge-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
+.badge-amber .status-dot { background: #fbbf24; }
 
-.skeleton-shimmer {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 8px;
-  width: 100%;
-  height: 100%;
+.badge-neutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
+.badge-neutral .status-dot { background: #94a3b8; }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.detail-error-card {
-  text-align: center;
-  padding: 48px 24px;
-  background: var(--bg-surface, #1a1a2e);
-  border: 1px solid var(--border-default, #2a2a4a);
-  border-radius: 12px;
-}
-
-.error-icon {
-  font-size: 40px;
+.badge-red {
+  background: rgba(239, 68, 68, 0.15);
   color: #f87171;
-  margin-bottom: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
+.badge-red .status-dot { background: #f87171; }
 
 /* Modals */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   padding: 16px;
 }
 
-.modal-card {
-  width: 100%;
-  max-width: 600px;
+.reorder-modal-card {
   background: var(--bg-surface, #1a1a2e);
   border: 1px solid var(--border-default, #2a2a4a);
   border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  width: 580px;
+  max-width: 95vw;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
-}
-
-.modal-card-sm {
-  max-width: 480px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
 
 .modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border-default, #2a2a4a);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-default, #2a2a4a);
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .modal-title-wrap {
@@ -1266,160 +1189,105 @@ onMounted(() => {
   gap: 12px;
 }
 
-.modal-badge-icon {
-  width: 38px;
-  height: 38px;
+.modal-icon-badge {
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
+  background: rgba(99, 102, 241, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #a5b4fc;
 }
 
-.bg-indigo { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; }
-.bg-red { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.modal-icon-badge .material-symbols-outlined {
+  font-size: 22px;
+}
 
-.modal-title {
-  font-size: 17px;
+.modal-title-wrap h3 {
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary, #fff);
-  margin: 0 0 2px;
+  margin: 0;
 }
 
 .modal-subtitle {
   font-size: 12px;
   color: var(--text-secondary, #94a3b8);
-  margin: 0;
+  margin: 2px 0 0;
 }
 
-.modal-close-btn {
+.btn-close-modal {
   background: none;
   border: none;
-  color: var(--text-muted, #64748b);
+  color: var(--text-muted, #94a3b8);
   cursor: pointer;
-  padding: 6px;
+  padding: 4px;
   border-radius: 6px;
   display: flex;
   align-items: center;
 }
 
-.modal-close-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary, #fff);
+.btn-close-modal:hover {
+  color: #fff;
 }
 
 .modal-body {
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: 70vh;
+  padding: 24px;
   overflow-y: auto;
 }
 
-.cutoff-notice-box {
+.option-mode-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.mode-radio-label {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 12px 16px;
   border-radius: 10px;
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.25);
-  color: #4ade80;
-  font-size: 12px;
+  border: 1px solid var(--border-default, #2a2a4a);
+  background: var(--bg-body, #0f0f1a);
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-.cutoff-notice-box.past-cutoff {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.25);
-  color: #fbbf24;
+.mode-radio-label.selected {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
 }
 
-.cutoff-notice-box .notice-icon {
-  font-size: 20px;
-  margin-top: 1px;
+.mode-radio-label input[type="radio"] {
+  margin-top: 3px;
+  accent-color: #6366f1;
 }
 
-.notice-text p {
-  margin: 2px 0 0;
-  color: var(--text-secondary, #94a3b8);
-}
-
-.reorder-items-preview {
+.mode-text-wrap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
-.section-title {
+.mode-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-primary, #fff);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
+  margin-bottom: 2px;
 }
 
-.section-title .material-symbols-outlined {
-  font-size: 16px;
-  color: #818cf8;
-}
-
-.reorder-lines-list {
-  background: var(--bg-surface-low, #0f0f1a);
-  border: 1px solid var(--border-default, #2a2a4a);
-  border-radius: 8px;
-  max-height: 160px;
-  overflow-y: auto;
-}
-
-.reorder-line-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 12px;
-}
-
-.reorder-line-item:last-child {
-  border-bottom: none;
-}
-
-.line-product-name {
-  font-weight: 600;
-  color: var(--text-primary, #fff);
-}
-
-.line-sku {
-  color: var(--text-muted, #64748b);
-  margin-left: 4px;
-}
-
-.reorder-line-qty {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.qty-pill {
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-weight: 600;
+.mode-desc {
   font-size: 11px;
+  color: var(--text-secondary, #94a3b8);
 }
 
-.line-price {
-  font-weight: 700;
-  color: var(--text-primary, #fff);
-}
-
-.reorder-form-grid {
+.direct-reorder-fields {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  padding-top: 6px;
 }
 
 .form-group {
@@ -1428,158 +1296,176 @@ onMounted(() => {
   gap: 6px;
 }
 
-.form-label {
+.field-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary, #94a3b8);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.form-label .material-symbols-outlined {
-  font-size: 15px;
-}
-
-.form-input {
+.portal-input, .portal-textarea {
   width: 100%;
-  padding: 10px 12px;
-  background: var(--bg-surface-low, #0f0f1a);
-  border: 1px solid var(--border-default, #2a2a4a);
+  padding: 9px 12px;
+  background: var(--bg-body, #0f0f1a);
+  border: 1px solid var(--border-input, #3a3a5a);
   border-radius: 8px;
   color: var(--text-primary, #fff);
   font-size: 13px;
   outline: none;
 }
 
-.form-input:focus {
+.portal-input:focus, .portal-textarea:focus {
   border-color: #6366f1;
 }
 
-.reorder-total-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary, #fff);
+.input-hint {
+  font-size: 11px;
+  color: #4ade80;
 }
 
-.total-val {
-  font-size: 18px;
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-default, #2a2a4a);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Cancel Modal */
+.cancel-modal-card {
+  background: var(--bg-surface, #1a1a2e);
+  border: 1px solid var(--border-default, #2a2a4a);
+  border-radius: 16px;
+  width: 480px;
+  max-width: 95vw;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.cancel-header {
+  padding: 24px 24px 12px;
+  text-align: center;
+}
+
+.warning-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f87171;
+  margin-bottom: 12px;
+}
+
+.warning-icon-badge .material-symbols-outlined {
+  font-size: 28px;
+}
+
+.cancel-header h3 {
+  font-size: 17px;
   font-weight: 700;
-  color: #a5b4fc;
+  color: var(--text-primary, #fff);
+  margin-bottom: 4px;
+}
+
+.cancel-body {
+  padding: 0 24px 20px;
 }
 
 .cancel-warning-text {
   font-size: 13px;
   color: var(--text-secondary, #94a3b8);
   line-height: 1.5;
-  margin: 0;
+  margin-bottom: 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 10px 14px;
+  border-radius: 8px;
 }
 
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border-default, #2a2a4a);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.btn-primary, .btn-secondary, .btn-outline, .btn-danger {
+/* Generic Buttons */
+.btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
+  gap: 6px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #fff;
+  padding: 9px 18px;
+  border: none;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
-  border: none;
-}
-
-.btn-primary {
-  background: #6366f1;
-  color: #fff;
+  transition: all 0.15s;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #4f46e5;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }
 
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary, #fff);
-  border: 1px solid var(--border-default, #2a2a4a);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
-  border: 1px solid var(--border-default, #2a2a4a);
   color: var(--text-secondary, #94a3b8);
+  padding: 9px 18px;
+  border: 1px solid var(--border-default, #2a2a4a);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary, #fff);
-}
-
-.btn-danger {
-  background: #ef4444;
+  background: var(--bg-surface-hover, #2a2a4a);
   color: #fff;
 }
 
-.btn-danger:hover:not(:disabled) {
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: #dc2626;
+  color: #fff;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-.spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
-  .detail-header-section {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .fulfillment-stepper {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-  .step-connector-line {
-    display: none;
-  }
-  .stepper-step {
-    flex-direction: row;
-    gap: 12px;
-  }
-  .step-info {
-    align-items: flex-start;
-    text-align: left;
-  }
-  .lines-table th:nth-child(2),
-  .lines-table td:nth-child(2) {
-    display: none;
-  }
-}
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-mono { font-family: monospace; }
+
+[dir="rtl"] .lines-table th { text-align: right; }
+[dir="rtl"] .lines-table td { text-align: right; }
+[dir="rtl"] .text-right { text-align: left; }
 </style>

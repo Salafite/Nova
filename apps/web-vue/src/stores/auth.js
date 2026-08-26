@@ -11,6 +11,8 @@ export const useAuthStore = defineStore('auth', {
     permissions: state => state.user?.permissions || [],
     role: state => state.user?.role || '',
     businessId: state => state.user?.business_id || null,
+    customerId: state => state.user?.customer_id || null,
+    isPortalCustomer: state => state.user?.role === 'Customer' || !!state.user?.customer_id,
   },
   actions: {
     async fetchUser() {

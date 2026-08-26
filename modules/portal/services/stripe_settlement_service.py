@@ -252,12 +252,21 @@ class StripeSettlementService:
         amount = 0.0
         raw_total = session_data.get("amount_total")
         if raw_total is not None:
-            amount = float(raw_total) / 100.0 if float(raw_total) > 1000 and metadata.get("amount") and float(raw_total) == float(metadata.get("amount_cents", 0)) else float(raw_total) if float(raw_total) < 1000 and not metadata.get("amount_cents") else float(raw_total) / 100.0
+            try:
+                amount = float(raw_total) / 100.0
+            except (ValueError, TypeError):
+                amount = 0.0
         if amount <= 0:
             if metadata.get("amount_cents"):
-                amount = float(metadata["amount_cents"]) / 100.0
+                try:
+                    amount = float(metadata["amount_cents"]) / 100.0
+                except (ValueError, TypeError):
+                    pass
             elif metadata.get("amount"):
-                amount = float(metadata["amount"])
+                try:
+                    amount = float(metadata["amount"])
+                except (ValueError, TypeError):
+                    pass
 
         # Determine payment method
         payment_methods = session_data.get("payment_method_types") or []

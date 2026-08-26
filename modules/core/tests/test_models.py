@@ -312,3 +312,115 @@ def test_warehouse_and_sales_models_support_business_id():
         business_id=15
     )
     assert pos_req.business_id == 15
+
+
+def test_portal_models_and_portal_fields():
+    from modules.crm.models.crm import CustomerCreate, CustomerUpdate, CustomerResponse
+    from modules.administration.models.system import UserCreate, UserUpdate, UserResponse
+    from modules.accounting.models.finance import InvoiceCreate, InvoiceResponse, PaymentCreate, PaymentResponse
+    from modules.portal.models import (
+        PortalCustomerProfile,
+        PortalAccountSummary,
+        PortalCatalogItem,
+        PortalCatalogCategory,
+        PortalCatalogQuery,
+        PortalCatalogResponse,
+        CutoffValidationResponse,
+        OrderValidationResponse,
+        PortalOrderLineCreate,
+        PortalOrderCreate,
+        PortalOrderLineResponse,
+        PortalOrderResponse,
+        PortalReorderRequest,
+        PortalOrderCancelRequest,
+        PortalInvoiceResponse,
+        InvoiceCheckoutSessionRequest,
+        BalanceSettlementCheckoutRequest,
+        PortalCheckoutSessionResponse,
+        PaymentSessionStatusResponse,
+        SettlementReconciliationResult,
+    )
+
+    # CRM Customer with portal settings
+    cust_create = CustomerCreate(
+        name='B2B Bistro',
+        min_order_amount=150.0,
+        order_cutoff_time='22:00:00',
+        allow_reorders=True,
+        business_id=1
+    )
+    assert cust_create.min_order_amount == 150.0
+    assert cust_create.order_cutoff_time == '22:00:00'
+    assert cust_create.allow_reorders is True
+
+    # User with customer_id linkage
+    u_create = UserCreate(username='bistro_buyer', customer_id=5, business_id=1)
+    assert u_create.customer_id == 5
+
+    # Invoice & Payment with Stripe fields
+    inv_create = InvoiceCreate(
+        partner_id=5,
+        issue_date=datetime.now().date(),
+        due_date=datetime.now().date(),
+        total_amount=250.0,
+        stripe_payment_intent_id='pi_123',
+        stripe_checkout_session_id='cs_123',
+        payment_link='https://checkout.stripe.com/c/pay/cs_123',
+        business_id=1
+    )
+    assert inv_create.stripe_payment_intent_id == 'pi_123'
+    assert inv_create.payment_link == 'https://checkout.stripe.com/c/pay/cs_123'
+
+    pay_create = PaymentCreate(
+        payment_date=datetime.now().date(),
+        partner_id=5,
+        amount=250.0,
+        payment_method='Card',
+        stripe_payment_intent_id='pi_123',
+        stripe_checkout_session_id='cs_123',
+        business_id=1
+    )
+    assert pay_create.stripe_payment_intent_id == 'pi_123'
+
+    # Portal Catalog & Order models
+    cat_item = PortalCatalogItem(
+        id=1,
+        product_code='PRD-001',
+        product_name='Organic Olive Oil 5L',
+        base_price=45.0,
+        contracted_price=38.0,
+        is_contracted=True,
+        stock_qty=100.0,
+        is_in_stock=True
+    )
+    assert cat_item.contracted_price == 38.0
+    assert cat_item.is_contracted is True
+
+    order_create = PortalOrderCreate(
+        items=[PortalOrderLineCreate(product_id=1, qty=5.0)],
+        status='Confirmed'
+    )
+    assert len(order_create.items) == 1
+    assert order_create.items[0].qty == 5.0
+
+    cutoff_resp = CutoffValidationResponse(
+        is_past_cutoff=False,
+        cutoff_time='22:00:00',
+        current_time='18:30:00',
+        next_delivery_date=datetime.now().date(),
+        message='Order placed before 22:00 cutoff. Eligible for next-day fulfillment.'
+    )
+    assert cutoff_resp.is_past_cutoff is False
+
+    session_resp = PortalCheckoutSessionResponse(
+        session_id='cs_test_abc123',
+        checkout_url='https://checkout.stripe.com/pay/cs_test_abc123',
+        customer_id=5,
+        amount=190.0,
+        amount_cents=19000,
+        settlement_type='invoice',
+        invoice_id=10
+    )
+    assert session_resp.amount_cents == 19000
+    assert session_resp.settlement_type == 'invoice'
+

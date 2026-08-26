@@ -287,7 +287,10 @@ CREATE TABLE IF NOT EXISTS "Nova".t0010 (
     created_by          INT,
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by          INT,
-    update_number       INT NOT NULL DEFAULT 1
+    update_number       INT NOT NULL DEFAULT 1,
+    allow_reorders      BOOLEAN NOT NULL DEFAULT true,
+    min_order_amount    NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (min_order_amount >= 0),
+    order_cutoff_time   TIME,
 );
 COMMENT ON COLUMN "Nova".t0010.business_id IS 'Tenant / business organization identifier (FK to T0059)';
 CREATE INDEX IF NOT EXISTS idx_t0010_business_id ON "Nova".t0010(business_id);
@@ -3468,3 +3471,18 @@ CREATE INDEX IF NOT EXISTS idx_t0107_business_id ON "Nova".t0107(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0107_business_id_id ON "Nova".t0107(business_id, id);
 
 COMMIT;
+CREATE INDEX IF NOT EXISTS idx_t0021_customer_id ON "Nova".t0021(customer_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_stripe_intent ON "Nova".t0090(stripe_payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_stripe_session ON "Nova".t0090(stripe_checkout_session_id);
+CREATE INDEX IF NOT EXISTS idx_t0091_stripe_intent ON "Nova".t0091(stripe_payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_t0091_stripe_session ON "Nova".t0091(stripe_checkout_session_id);
+COMMENT ON COLUMN "Nova".t0010.allow_reorders IS 'Whether customer is permitted 1-click reorders in portal';
+COMMENT ON COLUMN "Nova".t0010.min_order_amount IS 'Minimum order amount required for portal orders';
+COMMENT ON COLUMN "Nova".t0010.order_cutoff_time IS 'Daily order cutoff time (e.g. 22:00:00) for next-day fulfillment';
+COMMENT ON COLUMN "Nova".t0021.customer_id IS 'Linked customer account for B2B customer portal users (FK to t0010)';
+COMMENT ON COLUMN "Nova".t0090.payment_link IS 'Direct hosted Stripe payment URL';
+COMMENT ON COLUMN "Nova".t0090.stripe_checkout_session_id IS 'Stripe Checkout Session ID for hosted payment';
+COMMENT ON COLUMN "Nova".t0090.stripe_payment_intent_id IS 'Stripe PaymentIntent ID for online settlement';
+COMMENT ON COLUMN "Nova".t0091.payment_link IS 'Stripe hosted payment receipt or session link';
+COMMENT ON COLUMN "Nova".t0091.stripe_checkout_session_id IS 'Stripe Checkout Session ID for online payment';
+COMMENT ON COLUMN "Nova".t0091.stripe_payment_intent_id IS 'Stripe PaymentIntent ID for online payment';

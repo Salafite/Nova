@@ -171,3 +171,115 @@ class TestInvoicePdfService:
         assert len(pdf_bytes) > 500
         assert pdf_bytes.startswith(b"%PDF")
 
+    def test_generate_invoice_pdf_overdue_status(self, pdf_service, mock_repo):
+        mock_repo.get_invoice_by_id.return_value = {
+            "id": 105,
+            "invoice_number": "INV-2026-00105",
+            "invoice_type": "Sales",
+            "partner_id": 50,
+            "customer_name": "Overdue Customer",
+            "sales_order_id": None,
+            "issue_date": date(2026, 7, 1),
+            "due_date": date(2026, 7, 15),
+            "total_amount": 850.0,
+            "paid_amount": 0.0,
+            "balance_due": 850.0,
+            "status": "Overdue",
+            "notes": "Payment is past due. Please settle immediately.",
+            "payment_link": "https://checkout.stripe.com/pay/cs_test_overdue",
+        }
+        mock_repo.get_customer_by_id.return_value = {
+            "id": 50,
+            "name": "Overdue Customer",
+        }
+
+        pdf_bytes = pdf_service.generate_invoice_pdf(invoice_id=105, customer_id=50)
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 500
+        assert pdf_bytes.startswith(b"%PDF")
+
+    def test_generate_invoice_pdf_draft_status(self, pdf_service, mock_repo):
+        mock_repo.get_invoice_by_id.return_value = {
+            "id": 106,
+            "invoice_number": "INV-2026-00106",
+            "invoice_type": "Sales",
+            "partner_id": 50,
+            "customer_name": "New Client",
+            "sales_order_id": None,
+            "issue_date": date(2026, 8, 26),
+            "due_date": date(2026, 9, 26),
+            "total_amount": 120.0,
+            "paid_amount": 0.0,
+            "balance_due": 120.0,
+            "status": "Draft",
+            "notes": "Draft preview",
+            "payment_link": None,
+        }
+        mock_repo.get_customer_by_id.return_value = {
+            "id": 50,
+            "name": "New Client",
+        }
+
+        pdf_bytes = pdf_service.generate_invoice_pdf(invoice_id=106, customer_id=50)
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 500
+        assert pdf_bytes.startswith(b"%PDF")
+
+    def test_generate_invoice_pdf_with_sales_order_no_lines(self, pdf_service, mock_repo):
+        mock_repo.get_invoice_by_id.return_value = {
+            "id": 107,
+            "invoice_number": "INV-2026-00107",
+            "partner_id": 50,
+            "sales_order_id": 502,
+            "total_amount": 350.0,
+            "paid_amount": 0.0,
+            "balance_due": 350.0,
+            "status": "Unpaid",
+        }
+        mock_repo.get_customer_by_id.return_value = {"id": 50, "name": "Bistro Bella"}
+        mock_repo.get_order_by_id.return_value = {
+            "id": 502,
+            "order_number": "SO-00502",
+            "subtotal": 320.0,
+            "tax": 30.0,
+            "grand_total": 350.0,
+        }
+        mock_repo.get_order_lines.return_value = []
+
+        pdf_bytes = pdf_service.generate_invoice_pdf(invoice_id=107, customer_id=50)
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 500
+        assert pdf_bytes.startswith(b"%PDF")
+
+    def test_generate_invoice_pdf_special_characters_and_html_entities(self, pdf_service, mock_repo):
+        mock_repo.get_invoice_by_id.return_value = {
+            "id": 108,
+            "invoice_number": "INV-2026-00108",
+            "partner_id": 50,
+            "customer_name": "Tom & Jerry's Café <Wholesale>",
+            "sales_order_id": None,
+            "total_amount": 100.0,
+            "paid_amount": 0.0,
+            "balance_due": 100.0,
+            "status": "Unpaid",
+            "notes": "Terms: 2% 10 Net 30. Handle with care & expedite shipment.",
+            "payment_link": "https://checkout.stripe.com/pay/cs_test_ampersand?foo=1&bar=2",
+        }
+        mock_repo.get_customer_by_id.return_value = {
+            "id": 50,
+            "name": "Tom & Jerry's Café",
+            "group_name": "Café & Bakery",
+            "email": "buyer@tomjerry.com",
+            "phone": "+1 555-888-9999",
+        }
+
+        pdf_bytes = pdf_service.generate_invoice_pdf(invoice_id=108, customer_id=50)
+        assert isinstance(pdf_bytes, bytes)
+        assert len(pdf_bytes) > 500
+        assert pdf_bytes.startswith(b"%PDF")
+
+    def test_invoice_pdf_service_default_init(self):
+        service = InvoicePdfService()
+        assert service.portal_repo is not None
+
+
