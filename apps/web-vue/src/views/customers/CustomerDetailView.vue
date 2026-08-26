@@ -45,11 +45,29 @@
               <span class="info-label">{{ t('balance') }}</span>
               <span class="info-value mono" :class="balanceClass">${{ (customer.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
             </div>
+            <div v-if="creditStatus" class="info-row">
+              <span class="info-label">Available Credit</span>
+              <span class="info-value mono">${{ formatAmount(creditStatus.available_credit || 0) }}</span>
+            </div>
           </div>
         </div>
 
         <div class="detail-card">
           <h3 class="card-title">{{ t('aging-breakdown') }}</h3>
+          <div v-if="creditStatus" class="credit-standing-section">
+            <div class="credit-standing-row">
+              <span class="info-label">Credit Standing</span>
+              <span class="badge" :class="creditStanding.class">{{ creditStanding.label }}</span>
+            </div>
+            <div class="credit-standing-row">
+              <span class="info-label">Utilization</span>
+              <span class="mono" :class="utilizationClass">{{ creditUtilization }}%</span>
+              <span v-if="creditUtilization >= 100" class="badge badge-danger badge-xs">Exceeded</span>
+            </div>
+            <div class="utilization-bar-wrap">
+              <div class="utilization-bar" :class="utilizationClass" :style="{ width: creditUtilization + '%' }"></div>
+            </div>
+          </div>
           <div v-if="aging" class="aging-list">
             <div class="aging-row">
               <span class="aging-label">{{ t('current') }}</span>
@@ -77,6 +95,52 @@
             </div>
           </div>
           <div v-else class="empty-sm">{{ t('loading') }}</div>
+        </div>
+      </div>
+
+      <div v-if="creditStatus && creditStatus.on_hold" class="delinquent-banner">
+        <div class="banner-header">
+          <span class="material-symbols-outlined banner-icon">warning</span>
+          <h3>Delinquent Account & Credit Hold Notice</h3>
+        </div>
+        <div class="banner-body">
+          <div v-if="creditStatus.hold_reasons && creditStatus.hold_reasons.length" class="hold-reasons">
+            <div v-for="(reason, idx) in creditStatus.hold_reasons" :key="idx" class="hold-reason-item">
+              <span class="material-symbols-outlined reason-icon">info</span>
+              <span>{{ reason }}</span>
+            </div>
+          </div>
+          <div v-if="creditStatus.hold_orders_count > 0" class="hold-orders-notice">
+            <span class="material-symbols-outlined reason-icon">inventory_2</span>
+            <span>{{ creditStatus.hold_orders_count }} active sales order(s) currently held</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="creditStatus && creditStatus.on_hold" class="data-card overdue-section">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice Number</th>
+                <th class="col-num">Amount</th>
+                <th>Issue Date</th>
+                <th>Due Date</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="inv in (creditStatus.overdue_invoices || [])" :key="inv.id">
+                <td class="cell-mono">{{ inv.invoice_number }}</td>
+                <td class="col-num cell-mono">${{ (inv.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</td>
+                <td>{{ inv.issue_date }}</td>
+                <td>{{ inv.due_date }}</td>
+                <td class="text-center">
+                  <span class="badge badge-danger">&gt;30d Overdue</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -229,6 +293,7 @@ const { t, dir } = useI18n()
 const loading = ref(true)
 const error = ref('')
 const customer = ref(null)
+const creditStatus = ref(null)
 const aging = ref(null)
 const invoices = ref([])
 const payments = ref([])
@@ -268,6 +333,29 @@ const balanceClass = computed(() => {
   if (cl > 0 && b > cl * 0.8) return 'text-danger'
   if (b > 0) return 'text-warning'
   return ''
+})
+
+const creditStanding = computed(() => {
+  if (!creditStatus.value) return { label: '-', class: '' }
+  if (creditStatus.value.on_hold) return { label: 'Financial Hold', class: 'badge-danger' }
+  if (creditStatus.value.is_delinquent) return { label: 'Delinquent', class: 'badge-danger' }
+  if (creditStatus.value.credit_limit_exceeded) return { label: 'Exceeded', class: 'badge-warning' }
+  return { label: 'Good Standing', class: 'badge-active' }
+})
+
+const creditUtilization = computed(() => {
+  if (!creditStatus.value) return 0
+  const cl = creditStatus.value.credit_limit || 0
+  const bal = creditStatus.value.balance || 0
+  if (cl <= 0) return 0
+  return Math.round((bal / cl) * 100)
+})
+
+const utilizationClass = computed(() => {
+  const pct = creditUtilization.value
+  if (pct >= 100) return 'util-exceeded'
+  if (pct >= 80) return 'util-warning'
+  return 'util-ok'
 })
 
 function invStatusBadge(status) {
@@ -320,14 +408,16 @@ async function load() {
   error.value = ''
   try {
     const id = route.params.id
-    const [custRes, agingRes, invRes, payRes, termsRes] = await Promise.all([
+    const [custRes, creditRes, agingRes, invRes, payRes, termsRes] = await Promise.all([
       api.get(`/T0010I/${id}`),
+      api.get(`/T0010I/${id}/credit-status`).catch(() => ({ data: null })),
       api.get(`/T0010I/${id}/aging`),
       api.get(`/T0010I/${id}/invoices`),
       api.get(`/T0010I/${id}/payments`),
       api.get('/T0096I/').catch(() => ({ data: [] })),
     ])
     customer.value = custRes.data
+    creditStatus.value = creditRes.data
     aging.value = agingRes.data?.aging || null
     invoices.value = invRes.data || []
     payments.value = payRes.data || []
@@ -403,6 +493,26 @@ onMounted(load)
 .badge-info { background: #e0f2fe; color: #0284c7; }
 .badge-inactive { background: var(--bg-surface-low); color: var(--text-faint); }
 .badge-danger { background: #fee2e2; color: var(--color-error); }
+
+.credit-standing-section { margin-bottom: 16px; }
+.credit-standing-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13px; }
+.utilization-bar-wrap { height: 6px; background: var(--bg-surface-low); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.utilization-bar { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+.util-ok { background: var(--color-success); }
+.util-warning { background: var(--color-warning, #d97706); }
+.util-exceeded { background: var(--color-error); }
+
+.delinquent-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.banner-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.banner-icon { color: var(--color-error); font-size: 24px; }
+.banner-header h3 { font-size: 15px; font-weight: 700; color: #991b1b; margin: 0; }
+.banner-body { display: flex; flex-direction: column; gap: 8px; }
+.hold-reasons { display: flex; flex-direction: column; gap: 6px; }
+.hold-reason-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #7f1d1d; }
+.reason-icon { font-size: 16px; color: var(--color-error); flex-shrink: 0; margin-top: 1px; }
+.hold-orders-notice { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #7f1d1d; font-weight: 600; }
+
+.overdue-section { margin-bottom: 16px; }
 
 .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
 .panel-overlay.panel-shown { opacity: 1; pointer-events: auto; }

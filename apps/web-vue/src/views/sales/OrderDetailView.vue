@@ -10,6 +10,10 @@
           <div class="flex items-center gap-3 flex-wrap">
             <h1 class="page-title">{{ t('sales-order', 'Sales Order') }} #{{ order.order_number }}</h1>
             <span class="badge" :class="statusBadge">{{ order.status }}</span>
+            <span v-if="order.status === 'Credit Hold'" class="badge badge-credit-hold">
+              <span class="material-symbols-outlined icon-xs">gpp_bad</span>
+              Credit Hold
+            </span>
             <span v-if="hasCatchWeightLines" class="badge badge-cw" :title="t('dual-uom-order-hint', 'Order contains dual UOM catch-weight items with scale weight pricing')">
               <span class="material-symbols-outlined icon-xs">scale</span>
               {{ t('dual-uom-order', 'Dual UOM / Catch-Weight') }}
@@ -47,6 +51,10 @@
             <span v-else class="material-symbols-outlined icon-xs">local_shipping</span>
             {{ delivering ? t('delivering', 'Delivering...') : t('deliver', 'Mark Delivered') }}
           </button>
+          <button v-if="order.status === 'Credit Hold'" class="btn-override" @click="showOverrideModal = true">
+            <span class="material-symbols-outlined icon-xs">lock_open</span>
+            Override Credit Hold
+          </button>
           <button v-if="canCancel" class="btn-outline btn-outline-danger" @click="cancelOrder">
             <span class="material-symbols-outlined icon-xs">cancel</span>
             {{ t('cancel-order', 'Cancel Order') }}
@@ -73,6 +81,40 @@
                 ({{ formatVariance(totalWeightVariance) }}%)
               </span>
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Credit Hold Banner -->
+      <div v-if="order.status === 'Credit Hold'" class="credit-hold-banner mb-4">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined credit-hold-icon">gpp_bad</span>
+          <div class="flex-1">
+            <h4 class="credit-hold-title">Order Placed on Financial Credit Hold</h4>
+            <p class="credit-hold-reason">{{ order.hold_reason }}</p>
+            <div v-if="creditStatus" class="credit-status-info">
+              <span class="credit-status-label">Available Credit</span>
+              <span class="mono">${{ formatNumber(creditStatus.available_credit || 0) }}</span>
+            </div>
+          </div>
+          <button class="btn-outline btn-outline-danger" @click="showRejectModal = true">
+            <span class="material-symbols-outlined icon-xs">block</span>
+            Reject Order
+          </button>
+        </div>
+      </div>
+
+      <!-- Credit Hold Release Banner -->
+      <div v-if="order.hold_released_by" class="credit-hold-release-banner mb-4">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined credit-hold-release-icon">verified</span>
+          <div class="flex-1">
+            <h4 class="credit-hold-release-title">Credit Hold Overridden & Authorized</h4>
+            <p class="credit-hold-release-reason">{{ order.hold_release_reason }}</p>
+            <div class="credit-status-info">
+              <span class="credit-status-label">Released by</span>
+              <span class="mono">{{ order.hold_released_by }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -330,7 +372,52 @@
         <div v-else class="empty-state-sm">{{ t('no-records', 'No records found') }}</div>
       </div>
     </template>
-    
+
+    <!-- Override Credit Hold Modal -->
+    <Teleport to="body">
+      <div v-if="showOverrideModal" class="modal-overlay" @click.self="showOverrideModal = false">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Override Credit Hold</h3>
+            <button class="btn-icon" @click="showOverrideModal = false"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="modal-body">
+            <label>Reason for override</label>
+            <textarea class="form-textarea" v-model="overrideReason" rows="3" placeholder="Enter reason for overriding credit hold..."></textarea>
+            <label class="mt-3">Target Status</label>
+            <select class="form-select" v-model="overrideTargetStatus">
+              <option value="Confirmed">Confirmed</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-outline" @click="showOverrideModal = false">Cancel</button>
+            <button class="btn-override" @click="executeOverride" :disabled="!overrideReason">Confirm Override</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Reject Credit Hold Modal -->
+    <Teleport to="body">
+      <div v-if="showRejectModal" class="modal-overlay" @click.self="showRejectModal = false">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Reject Credit Hold</h3>
+            <button class="btn-icon" @click="showRejectModal = false"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="modal-body">
+            <label>Reason for rejection</label>
+            <textarea class="form-textarea" v-model="rejectReason" rows="3" placeholder="Enter reason for rejecting this order..."></textarea>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-outline" @click="showRejectModal = false">Cancel</button>
+            <button class="btn-outline btn-outline-danger btn-danger" @click="executeReject" :disabled="!rejectReason">Confirm Rejection</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <ConfirmDialog
       v-if="showConfirmCancel"
       :title="t('cancel-order', 'Cancel Order')"
@@ -367,6 +454,12 @@ const warehouses = ref([])
 const uoms = ref([])
 const paymentTerms = ref([])
 const showConfirmCancel = ref(false)
+const creditStatus = ref(null)
+const showOverrideModal = ref(false)
+const overrideReason = ref('')
+const overrideTargetStatus = ref('Confirmed')
+const showRejectModal = ref(false)
+const rejectReason = ref('')
 
 const customerName = computed(() => {
   if (!order.value) return ''
@@ -584,6 +677,13 @@ async function load() {
     warehouses.value = whRes.data || []
     uoms.value = uomRes.data || []
     paymentTerms.value = ptRes.data || []
+
+    if (order.value?.status === 'Credit Hold' && order.value?.customer_id) {
+      try {
+        const creditRes = await api.get(`/T0010I/${order.value.customer_id}/credit-status`)
+        creditStatus.value = creditRes.data
+      } catch { creditStatus.value = null }
+    }
   } catch {
     error.value = t('failed-load', 'Failed to load sales order')
   } finally {
@@ -640,6 +740,36 @@ async function executeCancel() {
     await load()
   } catch (e) {
     toast(e.response?.data?.detail || 'Cancellation failed', 'error')
+  }
+}
+
+async function executeOverride() {
+  try {
+    await api.post(`/T0012I/${order.value.id}/override-credit-hold`, {
+      reason: overrideReason.value,
+      target_status: overrideTargetStatus.value,
+    })
+    toast('Credit hold overridden — order released', 'success')
+    showOverrideModal.value = false
+    overrideReason.value = ''
+    overrideTargetStatus.value = 'Confirmed'
+    await load()
+  } catch (e) {
+    toast(e.response?.data?.detail || 'Override failed', 'error')
+  }
+}
+
+async function executeReject() {
+  try {
+    await api.post(`/T0012I/${order.value.id}/reject-credit-hold`, {
+      reason: rejectReason.value,
+    })
+    toast('Credit hold rejected — order cancelled', 'success')
+    showRejectModal.value = false
+    rejectReason.value = ''
+    await load()
+  } catch (e) {
+    toast(e.response?.data?.detail || 'Rejection failed', 'error')
   }
 }
 
@@ -750,6 +880,37 @@ onMounted(load)
 .timeline-dot.badge-inactive { background: #888; }
 .timeline-content { display: flex; align-items: center; gap: 10px; }
 .timeline-date { font-size: 11px; color: #999; }
+
+.badge-credit-hold { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.credit-hold-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; }
+.credit-hold-icon { color: #dc2626; font-size: 28px; }
+.credit-hold-title { font-size: 15px; font-weight: 700; color: #991b1b; margin: 0 0 6px; }
+.credit-hold-reason { font-size: 13px; color: #7f1d1d; margin: 0 0 10px; }
+.credit-status-info { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding-top: 8px; border-top: 1px solid #fecaca; }
+.credit-status-label { color: #991b1b; font-weight: 600; }
+
+.credit-hold-release-banner { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; }
+.credit-hold-release-icon { color: #16a34a; font-size: 28px; }
+.credit-hold-release-title { font-size: 15px; font-weight: 700; color: #166534; margin: 0 0 6px; }
+.credit-hold-release-reason { font-size: 13px; color: #14532d; margin: 0 0 10px; }
+
+.btn-override { display: inline-flex; align-items: center; gap: 6px; background: #16a34a; color: #fff; padding: 8px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-override:hover { background: #15803d; }
+.btn-override:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background: #fff; border-radius: 12px; width: 480px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e0e0e0; }
+.modal-header h3 { font-size: 16px; font-weight: 700; margin: 0; }
+.modal-body { padding: 24px; }
+.modal-body label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 4px; }
+.form-textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; resize: vertical; font-family: inherit; }
+.form-textarea:focus { outline: none; border-color: #5d3fd3; }
+.form-select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; margin-top: 4px; }
+.mt-3 { margin-top: 12px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e0e0e0; }
+.font-medium { font-weight: 600; }
+.icon-xs { font-size: 16px; }
 
 [dir="rtl"] .timeline-item { border-left: none; border-right: 2px solid #e0e0e0; margin-left: 0; margin-right: 8px; padding-left: 0; padding-right: 20px; }
 [dir="rtl"] .timeline-dot { left: auto; right: -6px; }
