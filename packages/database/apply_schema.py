@@ -408,16 +408,19 @@ def ensure_schema_provisioned(conn=None, schema_file: Optional[str] = None, forc
     """
     Ensure that schema 'Nova' is fully provisioned with all 107 tables, sequences, and constraints.
     If tables or constraints are missing (or if force=True), provisions the schema.
-    Returns the schema verification dictionary.
+    Runs all pending migrations and returns the schema verification dictionary.
     """
     from packages.database.verify_schema import verify_schema
+    from packages.database.migration_runner import run_migrations
     
     if not force:
         res = verify_schema(conn)
         if res["success"]:
+            run_migrations(conn=conn)
             return res
 
     apply_schema(conn=conn, schema_file=schema_file)
+    run_migrations(conn=conn)
     res = verify_schema(conn)
     return res
 

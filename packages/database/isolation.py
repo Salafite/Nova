@@ -273,21 +273,34 @@ class DatabaseCleaner:
         c, should_release = self._get_connection(conn=conn, autocommit=True)
         try:
             tenant_tables = self.get_tenant_tables(conn=c)
+            # Delete child / higher-numbered tables first to respect foreign key constraints
+            ordered_tables = sorted([t for t in tenant_tables if t != "t0059"], reverse=True)
             deleted_counts = {}
 
             with c.cursor() as cur:
-                for tbl in tenant_tables:
-                    if tbl == "t0059":
-                        continue
-                    try:
-                        cur.execute(
-                            f'DELETE FROM "{self.schema}"."{tbl}" WHERE "business_id" = %s;',
-                            (business_id,)
-                        )
-                        if cur.rowcount > 0:
-                            deleted_counts[tbl] = cur.rowcount
-                    except Exception as e:
-                        logger.warning(f"Error cleaning tenant {business_id} from table {tbl}: {e}")
+                # Multi-pass deletion to handle any out-of-order foreign key dependencies
+                pending_tables = list(ordered_tables)
+                for _pass in range(3):
+                    next_pending = []
+                    for tbl in pending_tables:
+                        try:
+                            cur.execute(f"SAVEPOINT sp_del_{tbl};")
+                            cur.execute(
+                                f'DELETE FROM "{self.schema}"."{tbl}" WHERE "business_id" = %s;',
+                                (business_id,)
+                            )
+                            cur.execute(f"RELEASE SAVEPOINT sp_del_{tbl};")
+                            if cur.rowcount > 0:
+                                deleted_counts[tbl] = deleted_counts.get(tbl, 0) + cur.rowcount
+                        except Exception as e:
+                            try:
+                                cur.execute(f"ROLLBACK TO SAVEPOINT sp_del_{tbl}; RELEASE SAVEPOINT sp_del_{tbl};")
+                            except Exception:
+                                pass
+                            next_pending.append(tbl)
+                    pending_tables = next_pending
+                    if not pending_tables:
+                        break
 
                 # Finally delete tenant record from t0059 if it exists
                 try:

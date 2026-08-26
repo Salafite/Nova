@@ -265,7 +265,11 @@ def _get_order(id: int):
 
 
 def _create_order(customer_id: int, warehouse_id: int = None, order_date: str = None, subtotal: float = 0, tax: float = 0, grand_total: float = None, notes: str = None, order_number: str = None):
+    if not order_number:
+        import uuid
+        order_number = f"SO-{uuid.uuid4().hex[:8].upper()}"
     payload = {
+        "order_number": order_number,
         "customer_id": customer_id,
         "subtotal": subtotal,
         "tax": tax,
