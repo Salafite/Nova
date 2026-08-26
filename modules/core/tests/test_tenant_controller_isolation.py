@@ -897,4 +897,130 @@ class TestEndToEndControllerCrossTenantIntegration:
             assert resp.json()["uom_name"] == "Tenant 2 Unit"
             assert len(db_store["T0023"]) == 3
 
+    def test_full_cross_tenant_pagination_isolation_and_query_capping(self):
+        """Verify that list pagination, total counts, and link headers are strictly isolated across tenants with zero cross-tenant leakage."""
+        db_store = {
+            "T0001": {
+                # 80 items for Tenant 100
+                **{
+                    i: {
+                        "id": i,
+                        "uom_code": f"T100-UOM-{i:03d}",
+                        "uom_name": f"Tenant 100 Unit {i}",
+                        "category": "Count",
+                        "is_base_unit": True,
+                        "is_active": True,
+                        "business_id": 100,
+                    }
+                    for i in range(1, 81)
+                },
+                # 25 items for Tenant 200
+                **{
+                    i + 500: {
+                        "id": i + 500,
+                        "uom_code": f"T200-UOM-{i:03d}",
+                        "uom_name": f"Tenant 200 Unit {i}",
+                        "category": "Count",
+                        "is_base_unit": True,
+                        "is_active": True,
+                        "business_id": 200,
+                    }
+                    for i in range(1, 26)
+                },
+            }
+        }
+
+        def fake_list(self, filters=None, order_by=None, limit=None, offset=None, conn=None, business_id=None):
+            active_tenant = business_id if business_id is not None else get_current_tenant()
+            table_dict = db_store.get(self.table, {})
+            rows = [dict(v) for v in table_dict.values()]
+            if active_tenant is not None and self._has_business_id():
+                rows = [r for r in rows if r.get("business_id") == active_tenant]
+            if order_by and order_by.startswith("-"):
+                col = order_by.lstrip("-")
+                rows = sorted(rows, key=lambda x: x.get(col, 0), reverse=True)
+            elif order_by:
+                rows = sorted(rows, key=lambda x: x.get(order_by, 0))
+            else:
+                rows = sorted(rows, key=lambda x: x.get("id", 0))
+
+            off = offset or 0
+            lim = limit if limit is not None else 50
+            return rows[off:off + lim]
+
+        def fake_count(self, filters=None, conn=None, business_id=None):
+            active_tenant = business_id if business_id is not None else get_current_tenant()
+            table_dict = db_store.get(self.table, {})
+            rows = list(table_dict.values())
+            if active_tenant is not None and self._has_business_id():
+                rows = [r for r in rows if r.get("business_id") == active_tenant]
+            return len(rows)
+
+        test_client = TestClient(app)
+        user_tenant100 = {"id": 11, "username": "user100", "role": "Admin", "permissions": ["*"], "business_id": 100}
+        user_tenant200 = {"id": 22, "username": "user200", "role": "Admin", "permissions": ["*"], "business_id": 200}
+        token_tenant100 = create_access_token(11, business_id=100)
+        token_tenant200 = create_access_token(22, business_id=200)
+
+        with patch("packages.auth.deps.get_user_by_id", side_effect=lambda uid: user_tenant100 if uid == 11 else user_tenant200), \
+             patch("modules.core.repositories.base.CrudRepository.list", fake_list), \
+             patch("modules.core.repositories.base.CrudRepository.count", fake_count):
+
+            # --- Tenant 100: Page 1 (limit 50, offset 0) ---
+            resp1 = test_client.get("/api/T0001I/?limit=50&offset=0", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp1.status_code == 200
+            data1 = resp1.json()
+            assert len(data1) == 50
+            assert all(item["business_id"] == 100 for item in data1)
+            assert data1[0]["uom_code"] == "T100-UOM-001"
+            assert data1[-1]["uom_code"] == "T100-UOM-050"
+            assert resp1.headers.get("X-Total-Count") == "80"
+            assert resp1.headers.get("X-Page-Limit") == "50"
+            assert resp1.headers.get("X-Page-Offset") == "0"
+            assert 'rel="first"' in resp1.headers.get("Link", "")
+            assert 'rel="next"' in resp1.headers.get("Link", "")
+            assert 'rel="last"' in resp1.headers.get("Link", "")
+            assert 'rel="prev"' not in resp1.headers.get("Link", "")
+
+            # --- Tenant 100: Page 2 (limit 50, offset 50) ---
+            resp2 = test_client.get("/api/T0001I/?limit=50&offset=50", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp2.status_code == 200
+            data2 = resp2.json()
+            assert len(data2) == 30
+            assert all(item["business_id"] == 100 for item in data2)
+            assert data2[0]["uom_code"] == "T100-UOM-051"
+            assert data2[-1]["uom_code"] == "T100-UOM-080"
+            assert resp2.headers.get("X-Total-Count") == "80"
+            assert 'rel="prev"' in resp2.headers.get("Link", "")
+            assert 'rel="next"' not in resp2.headers.get("Link", "")
+
+            # --- Tenant 100: Page 3 (offset 100 > total 80) -> Empty, Zero leakage of Tenant 200's items ---
+            resp3 = test_client.get("/api/T0001I/?limit=50&offset=100", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp3.status_code == 200
+            data3 = resp3.json()
+            assert len(data3) == 0
+            assert resp3.headers.get("X-Total-Count") == "80"
+
+            # --- Tenant 200: Page 1 (limit 50, offset 0) -> Exactly 25 items, zero leak from Tenant 100 ---
+            resp4 = test_client.get("/api/T0001I/?limit=50&offset=0", headers={"Authorization": f"Bearer {token_tenant200}"})
+            assert resp4.status_code == 200
+            data4 = resp4.json()
+            assert len(data4) == 25
+            assert all(item["business_id"] == 200 for item in data4)
+            assert data4[0]["uom_code"] == "T200-UOM-001"
+            assert data4[-1]["uom_code"] == "T200-UOM-025"
+            assert resp4.headers.get("X-Total-Count") == "25"
+            assert 'rel="next"' not in resp4.headers.get("Link", "")
+
+            # --- Query capping: limit=500 returns all 80 items for Tenant 100 ---
+            resp5 = test_client.get("/api/T0001I/?limit=500&offset=0", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp5.status_code == 200
+            data5 = resp5.json()
+            assert len(data5) == 80
+
+            # --- Query validation: limit=600 is rejected with 422 ---
+            resp6 = test_client.get("/api/T0001I/?limit=600&offset=0", headers={"Authorization": f"Bearer {token_tenant100}"})
+            assert resp6.status_code == 422
+
+
 

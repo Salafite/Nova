@@ -1,11 +1,12 @@
-from datetime import date
 from typing import Optional
-from fastapi import Depends, HTTPException
+from datetime import date
+from fastapi import Depends, HTTPException, Query, Request, Response
 from modules.crm.services.customer_service import CustomerService
 from modules.crm.services.aging_service import aging_service
 from modules.sales.services.credit_service import CreditService
 from modules.core.repositories.base import CrudRepository
-from modules.core.controllers.base import create_crud_router, check_record_ownership
+from modules.core.controllers.base import create_crud_router, check_record_ownership, apply_pagination_headers
+from modules.core.context import set_current_tenant
 from modules.crm.models import CustomerCreate, CustomerUpdate, CustomerResponse
 from packages.auth.deps import get_current_user
 
@@ -40,6 +41,9 @@ def all_customers_aging(as_of_date: Optional[str] = None, limit: int = 100, user
 
 @router.get('/{id}/aging')
 def customer_aging(id: int, as_of_date: Optional[str] = None, user: dict = Depends(get_current_user)):
+    b_id = user.get('business_id') if isinstance(user, dict) else None
+    if b_id is not None:
+        set_current_tenant(b_id)
     customer = repo.get(id)
     if not customer:
         check_record_ownership(repo, id, user, 'T0010', 'GET')
@@ -49,23 +53,67 @@ def customer_aging(id: int, as_of_date: Optional[str] = None, user: dict = Depen
 
 
 @router.get('/{id}/payments')
-def customer_payments(id: int, limit: int = 50, user: dict = Depends(get_current_user)):
+def customer_payments(
+    id: int,
+    response: Response,
+    request: Request,
+    limit: int = Query(50, ge=1, le=500, description="Maximum number of records to return (1-500, default 50)"),
+    offset: int = Query(0, ge=0, description="Number of records to skip (default 0)"),
+    order_by: Optional[str] = Query('payment_date', description="Field name to order results by"),
+    user: dict = Depends(get_current_user),
+):
+    b_id = user.get('business_id') if isinstance(user, dict) else None
+    if b_id is not None:
+        set_current_tenant(b_id)
+    limit = min(max(1, limit), 500) if limit is not None else 50
+    offset = max(0, offset) if offset is not None else 0
     customer = repo.get(id)
     if not customer:
         check_record_ownership(repo, id, user, 'T0010', 'GET')
         raise HTTPException(404, 'Customer not found')
     pay_repo = CrudRepository('T0091', business_columns=['id', 'payment_date', 'invoice_id', 'partner_id', 'amount', 'payment_method', 'reference', 'status', 'notes'])
-    payments = pay_repo.list(filters={'partner_id': id}, order_by='payment_date', limit=limit)
+    filters = {'partner_id': id}
+    payments = pay_repo.list(filters=filters, order_by=order_by, limit=limit, offset=offset)
+    total_count = pay_repo.count(filters=filters)
+    apply_pagination_headers(
+        response=response,
+        request=request,
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+    )
     return payments
 
 @router.get('/{id}/invoices')
-def customer_invoices(id: int, user: dict = Depends(get_current_user)):
+def customer_invoices(
+    id: int,
+    response: Response,
+    request: Request,
+    limit: int = Query(50, ge=1, le=500, description="Maximum number of records to return (1-500, default 50)"),
+    offset: int = Query(0, ge=0, description="Number of records to skip (default 0)"),
+    order_by: Optional[str] = Query('issue_date', description="Field name to order results by"),
+    user: dict = Depends(get_current_user),
+):
+    b_id = user.get('business_id') if isinstance(user, dict) else None
+    if b_id is not None:
+        set_current_tenant(b_id)
+    limit = min(max(1, limit), 500) if limit is not None else 50
+    offset = max(0, offset) if offset is not None else 0
     customer = repo.get(id)
     if not customer:
         check_record_ownership(repo, id, user, 'T0010', 'GET')
         raise HTTPException(404, 'Customer not found')
     inv_repo = CrudRepository('T0090', business_columns=['id', 'invoice_number', 'invoice_type', 'partner_id', 'sales_order_id', 'issue_date', 'due_date', 'total_amount', 'status'])
-    invoices = inv_repo.list(filters={'partner_id': id}, order_by='issue_date')
+    filters = {'partner_id': id}
+    invoices = inv_repo.list(filters=filters, order_by=order_by, limit=limit, offset=offset)
+    total_count = inv_repo.count(filters=filters)
+    apply_pagination_headers(
+        response=response,
+        request=request,
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+    )
     return invoices
 
 

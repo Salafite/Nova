@@ -28,8 +28,9 @@ class SettingService(CrudService):
             count += 1
         return count
 
-    def list_by_group(self, group: str = None):
+    def list_by_group(self, group: str = None, limit: int = None, offset: int = None, order_by: str = None):
         filters = {}
         if group:
             filters['setting_group'] = group
-        return self.repo.list(filters)
+        return self.repo.list(filters=filters, order_by=order_by, limit=limit, offset=offset)
+

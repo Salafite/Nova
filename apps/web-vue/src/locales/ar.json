@@ -1055,5 +1055,15 @@
   "reject-credit-hold": "رفض الحظر الائتماني",
   "order-credit-hold-title": "تم وضع الطلب تحت الحظر الائتماني المالي",
   "hold-reason": "سبب الحظر",
-  "credit-hold-desc": "إجراء الحماية المالية التلقائي نشط: يتم حظر إنشاء قوائم الانتقاء في المستودع وحجز المخزون حتى يتم اعتماده من قبل المدير المالي."
+  "credit-hold-desc": "إجراء الحماية المالية التلقائي نشط: يتم حظر إنشاء قوائم الانتقاء في المستودع وحجز المخزون حتى يتم اعتماده من قبل المدير المالي.",
+  "pagination-showing": "عرض",
+  "pagination-of": "من",
+  "pagination-items": "عنصر",
+  "pagination-no-records": "لا توجد سجلات",
+  "pagination-rows-per-page": "عدد الصفوف بالصفحة:",
+  "pagination-first-page": "الصفحة الأولى",
+  "pagination-prev-page": "الصفحة السابقة",
+  "pagination-next-page": "الصفحة التالية",
+  "pagination-last-page": "الصفحة الأخيرة",
+  "pagination-page": "صفحة"
 }

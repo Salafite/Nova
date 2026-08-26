@@ -430,3 +430,96 @@ class TestCrudRepository:
         assert '"business_id"' not in sql
         assert cnt == 100
 
+
+class TestRepositorySanitizationAndPagination:
+    def test_sanitize_order_by_default_and_empty(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        assert repo._sanitize_order_by(None) == 'ORDER BY "id" DESC'
+        assert repo._sanitize_order_by('') == 'ORDER BY "id" DESC'
+        assert repo._sanitize_order_by('   ') == 'ORDER BY "id" DESC'
+
+    def test_sanitize_order_by_single_column(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        assert repo._sanitize_order_by('name') == 'ORDER BY "name"'
+        assert repo._sanitize_order_by('created_at') == 'ORDER BY "created_at"'
+
+    def test_sanitize_order_by_directions(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        assert repo._sanitize_order_by('name ASC') == 'ORDER BY "name" ASC'
+        assert repo._sanitize_order_by('name desc') == 'ORDER BY "name" DESC'
+        assert repo._sanitize_order_by('created_at DESC') == 'ORDER BY "created_at" DESC'
+
+    def test_sanitize_order_by_prefix_notation(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        assert repo._sanitize_order_by('-created_at') == 'ORDER BY "created_at" DESC'
+        assert repo._sanitize_order_by('+name') == 'ORDER BY "name" ASC'
+
+    def test_sanitize_order_by_multiple_columns(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        assert repo._sanitize_order_by('name ASC, created_at DESC') == 'ORDER BY "name" ASC, "created_at" DESC'
+        assert repo._sanitize_order_by('+name, -created_at') == 'ORDER BY "name" ASC, "created_at" DESC'
+
+    def test_sanitize_order_by_sql_injection_neutralized(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        # Semicolons and SQL statements
+        assert repo._sanitize_order_by('name; DROP TABLE t0001; --') == 'ORDER BY "id" DESC'
+        # Quotes and booleans
+        assert repo._sanitize_order_by("name' OR '1'='1") == 'ORDER BY "id" DESC'
+        # Nested subqueries and functions
+        assert repo._sanitize_order_by('id ASC, (SELECT password FROM users)') == 'ORDER BY "id" ASC'
+
+    def test_sanitize_filters_valid(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        clauses, params = repo._sanitize_filters({'name': 'Widget', 'is_active': True})
+        assert clauses == ['"name" = %s', '"is_active" = %s']
+        assert params == ['Widget', True]
+
+    def test_sanitize_filters_rejects_malformed_keys(self):
+        from modules.core.repositories.base import CrudRepository
+        repo = CrudRepository('T0001', pk='id')
+
+        clauses, params = repo._sanitize_filters({
+            'valid_col': 123,
+            'name; DROP TABLE t0001; --': 'exploit',
+            'bad col name': 'val',
+            'col"quoted': 'val',
+        })
+        assert clauses == ['"valid_col" = %s']
+        assert params == [123]
+
+    def test_list_combines_sanitized_order_pagination_and_tenant(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name', 'created_at'])
+        mock_db['cursor'].fetchall.return_value = []
+
+        with tenant_context(42):
+            repo.list(filters={'name': 'Widget'}, order_by='-created_at', limit=25, offset=50)
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+
+        assert '"business_id" = %s' in sql
+        assert '"name" = %s' in sql
+        assert 'ORDER BY "created_at" DESC' in sql
+        assert 'LIMIT %s' in sql
+        assert 'OFFSET %s' in sql
+        assert params == [42, 'Widget', 25, 50]
+
+
