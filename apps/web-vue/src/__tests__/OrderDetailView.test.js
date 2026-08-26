@@ -45,9 +45,15 @@ describe('OrderDetailView (Dual UOM & Catch-Weight)', () => {
     discount_amount: 0,
     status: 'Confirmed',
     order_date: '2026-08-23',
+    payment_term_id: 2,
     notes: 'Urgent catch-weight delivery',
     is_catch_weight: true,
   }
+
+  const samplePaymentTerms = [
+    { id: 1, name: 'Net 30', due_days: 30, discount_days: 0, discount_percentage: 0 },
+    { id: 2, name: '2/10 Net 30', due_days: 30, discount_days: 10, discount_percentage: 2 },
+  ]
 
   const sampleLines = [
     {
@@ -88,7 +94,7 @@ describe('OrderDetailView (Dual UOM & Catch-Weight)', () => {
     }
   ]
 
-  const sampleCustomers = [{ id: 1, name: 'Gourmet Foods LLC', balance: 500 }]
+  const sampleCustomers = [{ id: 1, name: 'Gourmet Foods LLC', balance: 500, payment_term_id: 2 }]
   const sampleWarehouses = [{ id: 1, name: 'Cold Storage DC' }]
   const sampleUOMs = [
     { id: 10, uom_code: 'CS', uom_name: 'Case' },
@@ -115,6 +121,9 @@ describe('OrderDetailView (Dual UOM & Catch-Weight)', () => {
       }
       if (url.includes('/T0001I/')) {
         return Promise.resolve({ data: sampleUOMs })
+      }
+      if (url.includes('/T0096I/')) {
+        return Promise.resolve({ data: samplePaymentTerms })
       }
       return Promise.resolve({ data: [] })
     })
@@ -145,6 +154,16 @@ describe('OrderDetailView (Dual UOM & Catch-Weight)', () => {
     expect(w.text()).toContain('Dual UOM / Catch-Weight')
     expect(w.text()).toContain('Gourmet Foods LLC')
     expect(w.text()).toContain('Cold Storage DC')
+  })
+
+  it('renders payment terms and early discount details in order info', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    expect(w.text()).toContain('Payment Terms')
+    expect(w.text()).toContain('2/10 Net 30')
+    expect(w.text()).toContain('2%')
+    expect(w.text().toLowerCase()).toContain('10 days')
   })
 
   it('renders catch-weight breakdown and weight adjustments in totals card', async () => {

@@ -347,7 +347,7 @@
           </div>
           <div class="modal-body">
             <!-- Early Discount Notice in Modal -->
-            <div v-if="isDiscountEligible" class="modal-discount-notice mb-4">
+            <div v-if="isModalDiscountEligible" class="modal-discount-notice mb-4">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="text-xs text-green flex items-center gap-1">
                   <span class="material-symbols-outlined icon-xs">savings</span>
@@ -478,6 +478,13 @@ const isDiscountExpired = computed(() => {
   if (!invoice.value || invoice.value.status !== 'Unpaid' || !hasEarlyDiscount.value) return false
   if (!invoice.value.discount_due_date) return false
   return today() > invoice.value.discount_due_date
+})
+
+const isModalDiscountEligible = computed(() => {
+  if (!invoice.value || invoice.value.status !== 'Unpaid' || !hasEarlyDiscount.value) return false
+  const pDate = payForm.value.payment_date || today()
+  if (!invoice.value.discount_due_date) return true
+  return pDate <= invoice.value.discount_due_date
 })
 
 const discountSavings = computed(() => {

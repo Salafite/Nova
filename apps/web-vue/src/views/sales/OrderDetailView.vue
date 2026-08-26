@@ -14,27 +14,13 @@
               <span class="material-symbols-outlined icon-xs">scale</span>
               {{ t('dual-uom-order', 'Dual UOM / Catch-Weight') }}
             </span>
+            <span v-if="orderPaymentTerm && orderPaymentTerm.discount_percentage > 0" class="badge badge-discount-rate" :title="t('early-discount-available', 'Early Payment Discount Available')">
+              <span class="material-symbols-outlined icon-xs">savings</span>
+              {{ orderPaymentTerm.discount_percentage }}% {{ t('early-discount', 'Early Discount') }}
+            </span>
           </div>
         </div>
         <div class="flex gap-2 flex-wrap items-center">
-          <button
-            v-if="order.status === 'Credit Hold'"
-            class="btn-primary btn-override"
-            @click="openOverrideModal"
-            :title="t('override-credit-hold-hint', 'Override credit hold and release order for fulfillment')"
-          >
-            <span class="material-symbols-outlined icon-xs">lock_open</span>
-            {{ t('override-credit-hold', 'Override Credit Hold') }}
-          </button>
-          <button
-            v-if="order.status === 'Credit Hold'"
-            class="btn-outline btn-outline-danger"
-            @click="openRejectModal"
-            :title="t('reject-credit-hold-hint', 'Reject credit hold and cancel order')"
-          >
-            <span class="material-symbols-outlined icon-xs">block</span>
-            {{ t('reject-order', 'Reject Order') }}
-          </button>
           <button
             v-if="hasCatchWeightLines && (order.status === 'Confirmed' || order.status === 'Shipped' || order.status === 'Delivered')"
             class="btn-outline btn-cw"
@@ -61,91 +47,10 @@
             <span v-else class="material-symbols-outlined icon-xs">local_shipping</span>
             {{ delivering ? t('delivering', 'Delivering...') : t('deliver', 'Mark Delivered') }}
           </button>
-          <button v-if="canCancel && order.status !== 'Credit Hold'" class="btn-outline btn-outline-danger" @click="cancelOrder">
+          <button v-if="canCancel" class="btn-outline btn-outline-danger" @click="cancelOrder">
             <span class="material-symbols-outlined icon-xs">cancel</span>
             {{ t('cancel-order', 'Cancel Order') }}
           </button>
-        </div>
-      </div>
-
-      <!-- Credit Hold Alert Banner -->
-      <div v-if="order.status === 'Credit Hold'" class="credit-hold-banner mb-4">
-        <div class="flex items-start gap-3">
-          <span class="material-symbols-outlined credit-hold-icon">gpp_bad</span>
-          <div class="flex-1">
-            <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
-              <h4 class="credit-hold-title">
-                {{ t('order-credit-hold-title', 'Order Placed on Financial Credit Hold') }}
-                <span class="badge badge-danger">{{ t('financial-hold', 'Credit Hold') }}</span>
-              </h4>
-              <div class="flex gap-2">
-                <button class="btn-sm btn-override" @click="openOverrideModal">
-                  <span class="material-symbols-outlined icon-xs">lock_open</span>
-                  {{ t('override-credit-hold', 'Override Credit Hold') }}
-                </button>
-                <button class="btn-sm btn-outline-danger" @click="openRejectModal">
-                  <span class="material-symbols-outlined icon-xs">block</span>
-                  {{ t('reject-order', 'Reject Order') }}
-                </button>
-              </div>
-            </div>
-            <p class="credit-hold-desc" v-if="order.hold_reason">
-              <strong>{{ t('hold-reason', 'Hold Reason') }}:</strong> {{ order.hold_reason }}
-            </p>
-            <p class="credit-hold-subtext">
-              {{ t('credit-hold-desc', 'Automated financial safeguard active: Warehouse pick list creation and stock reservation are blocked until authorized by a Financial Manager.') }}
-            </p>
-
-            <!-- Customer Credit Metrics Mini Grid -->
-            <div v-if="customerCredit" class="credit-summary-grid mt-3">
-              <div class="credit-mini-stat">
-                <span class="mini-label">{{ t('credit-balance', 'Current Balance') }}</span>
-                <span class="mini-val font-mono">${{ (customerCredit.balance || 0).toFixed(2) }}</span>
-              </div>
-              <div class="credit-mini-stat">
-                <span class="mini-label">{{ t('credit-limit', 'Credit Limit') }}</span>
-                <span class="mini-val font-mono">
-                  {{ customerCredit.is_credit_limit_enforced ? `$${(customerCredit.credit_limit || 0).toFixed(2)}` : t('no-credit-limit', 'No Limit') }}
-                </span>
-              </div>
-              <div class="credit-mini-stat">
-                <span class="mini-label">{{ t('credit-available', 'Available Credit') }}</span>
-                <span class="mini-val font-mono" :class="customerCredit.available_credit > 0 ? 'text-green' : 'text-danger'">
-                  ${{ (customerCredit.available_credit || 0).toFixed(2) }}
-                </span>
-              </div>
-              <div class="credit-mini-stat">
-                <span class="mini-label">{{ t('credit-overdue-30', 'Overdue (>30d)') }}</span>
-                <span class="mini-val font-mono" :class="customerCredit.has_overdue_invoices ? 'text-danger font-bold' : 'text-muted'">
-                  ${{ (customerCredit.overdue_invoices_amount || 0).toFixed(2) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Credit Hold Released Banner -->
-      <div v-if="order.status !== 'Credit Hold' && (order.hold_released_by || order.hold_release_reason)" class="credit-released-banner mb-4">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined credit-released-icon">verified_user</span>
-          <div class="flex-1">
-            <h4 class="credit-released-title">
-              {{ t('credit-hold-released', 'Credit Hold Overridden & Authorized') }}
-              <span class="badge badge-active">{{ t('approved', 'Manager Approved') }}</span>
-            </h4>
-            <div class="credit-released-details text-xs">
-              <span v-if="order.hold_released_by">
-                <strong>{{ t('authorized-by', 'Authorized By') }}:</strong> {{ order.hold_released_by }} &bull;
-              </span>
-              <span v-if="order.hold_released_at">
-                <strong>{{ t('authorized-at', 'Date') }}:</strong> {{ formatDate(order.hold_released_at) }} &bull;
-              </span>
-              <span v-if="order.hold_release_reason">
-                <strong>{{ t('approval-reason', 'Justification') }}:</strong> {{ order.hold_release_reason }}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -178,20 +83,19 @@
           <h3 class="card-title">{{ t('order-info', 'Order Information') }}</h3>
           <div class="info-row"><span class="info-label">{{ t('status', 'Status') }}:</span><span class="badge" :class="statusBadge">{{ order.status }}</span></div>
           <div class="info-row"><span class="info-label">{{ t('sales-customer', 'Customer') }}:</span><span>{{ customerName }}</span></div>
+          <div class="info-row">
+            <span class="info-label">{{ t('payment-terms', 'Payment Terms') }}:</span>
+            <span class="font-medium text-primary">{{ paymentTermDisplay }}</span>
+          </div>
+          <div v-if="orderPaymentTerm && orderPaymentTerm.discount_percentage > 0" class="info-row">
+            <span class="info-label">{{ t('early-discount', 'Early Discount') }}:</span>
+            <span class="badge badge-discount-rate">
+              <span class="material-symbols-outlined icon-xs">savings</span>
+              {{ orderPaymentTerm.discount_percentage }}% {{ t('within', 'within') }} {{ orderPaymentTerm.discount_days }} {{ t('days', 'days') }}
+            </span>
+          </div>
           <div class="info-row"><span class="info-label">{{ t('sales-order-date', 'Order Date') }}:</span><span>{{ order.order_date }}</span></div>
           <div class="info-row"><span class="info-label">{{ t('warehouse', 'Warehouse') }}:</span><span>{{ warehouseName }}</span></div>
-          <div v-if="order.status === 'Credit Hold' && order.hold_reason" class="info-row">
-            <span class="info-label text-danger font-medium">{{ t('hold-reason', 'Hold Reason') }}:</span>
-            <span class="text-danger font-medium text-right">{{ order.hold_reason }}</span>
-          </div>
-          <div v-if="order.hold_released_by" class="info-row">
-            <span class="info-label">{{ t('authorized-by', 'Authorized By') }}:</span>
-            <span class="font-medium text-primary">{{ order.hold_released_by }}</span>
-          </div>
-          <div v-if="order.hold_release_reason" class="info-row">
-            <span class="info-label">{{ t('release-reason', 'Release Reason') }}:</span>
-            <span>{{ order.hold_release_reason }}</span>
-          </div>
           <div v-if="hasCatchWeightLines" class="info-row">
             <span class="info-label">{{ t('pricing-model', 'Pricing Model') }}:</span>
             <span class="badge badge-cw">
@@ -434,121 +338,6 @@
       @confirm="executeCancel"
       @cancel="showConfirmCancel = false"
     />
-
-    <!-- Manager Override Modal -->
-    <Teleport to="body">
-      <div v-if="showOverrideModal" class="modal-overlay" @click.self="showOverrideModal = false">
-        <div class="modal-content" :dir="dir">
-          <div class="modal-header">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-amber">gavel</span>
-              <h3 class="modal-title">{{ t('override-credit-hold-title', 'Financial Manager Credit Override') }}</h3>
-            </div>
-            <button class="btn-icon" @click="showOverrideModal = false" aria-label="Close">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="override-warning-box mb-4">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="material-symbols-outlined text-amber icon-xs">warning</span>
-                <strong>{{ t('sales-order', 'Sales Order') }} #{{ order.order_number }}</strong>
-                <span class="text-muted">({{ customerName }})</span>
-              </div>
-              <p class="text-xs text-muted" v-if="order.hold_reason">
-                <strong>{{ t('current-hold-reason', 'Current Hold') }}:</strong> {{ order.hold_reason }}
-              </p>
-              <p class="text-xs text-muted mt-1">
-                {{ t('override-explanation', 'Overriding will release the credit hold, allowing warehouse picking, fulfillment, and invoicing to proceed. This action requires financial management authorization and will be permanently recorded in the audit log.') }}
-              </p>
-            </div>
-
-            <div class="form-group mb-3">
-              <label class="form-label">
-                {{ t('target-status', 'Target Status') }} <span class="required">*</span>
-              </label>
-              <select v-model="overrideForm.target_status" class="form-input">
-                <option value="Confirmed">{{ t('status-confirmed', 'Confirmed (Ready for Fulfillment)') }}</option>
-                <option value="Pending">{{ t('status-pending', 'Pending (Draft Review)') }}</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">
-                {{ t('override-reason-label', 'Manager Approval / Override Reason') }} <span class="required">*</span>
-              </label>
-              <textarea
-                v-model="overrideForm.reason"
-                class="form-input form-textarea"
-                rows="3"
-                :placeholder="t('override-reason-placeholder', 'State the justification for credit override (e.g. Wire transfer pending, executive exception approved, guarantee received)...')"
-                required
-              ></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn-outline" @click="showOverrideModal = false" :disabled="submittingOverride">
-              {{ t('cancel', 'Cancel') }}
-            </button>
-            <button class="btn-primary btn-override" @click="executeOverride" :disabled="submittingOverride || !overrideForm.reason.trim()">
-              <span v-if="submittingOverride" class="material-symbols-outlined spin icon-xs">progress_activity</span>
-              <span v-else class="material-symbols-outlined icon-xs">check_circle</span>
-              {{ submittingOverride ? t('authorizing', 'Authorizing...') : t('authorize-release', 'Authorize & Release Hold') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- Manager Reject Modal -->
-    <Teleport to="body">
-      <div v-if="showRejectModal" class="modal-overlay" @click.self="showRejectModal = false">
-        <div class="modal-content" :dir="dir">
-          <div class="modal-header">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-danger">block</span>
-              <h3 class="modal-title">{{ t('reject-credit-hold-title', 'Reject Credit Hold & Cancel Order') }}</h3>
-            </div>
-            <button class="btn-icon" @click="showRejectModal = false" aria-label="Close">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="reject-warning-box mb-4">
-              <p class="text-sm text-danger font-medium mb-1">
-                {{ t('reject-warning', 'Are you sure you want to reject this order due to credit non-compliance?') }}
-              </p>
-              <p class="text-xs text-muted">
-                {{ t('reject-explanation', 'This will transition Sales Order #') }}{{ order.order_number }}{{ t('to Cancelled status and notify the sales representative.', ' to Cancelled status and notify the sales representative.') }}
-              </p>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">
-                {{ t('rejection-reason-label', 'Rejection Reason') }} <span class="required">*</span>
-              </label>
-              <textarea
-                v-model="rejectForm.reason"
-                class="form-input form-textarea"
-                rows="3"
-                :placeholder="t('rejection-reason-placeholder', 'Provide reason for credit rejection (e.g. Account delinquent >60 days, credit limit exhausted without deposit)...')"
-                required
-              ></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn-outline" @click="showRejectModal = false" :disabled="submittingReject">
-              {{ t('cancel', 'Cancel') }}
-            </button>
-            <button class="btn-danger" @click="executeReject" :disabled="submittingReject || !rejectForm.reason.trim()">
-              <span v-if="submittingReject" class="material-symbols-outlined spin icon-xs">progress_activity</span>
-              <span v-else class="material-symbols-outlined icon-xs">cancel</span>
-              {{ submittingReject ? t('rejecting', 'Rejecting...') : t('confirm-reject', 'Reject & Cancel Order') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -570,26 +359,52 @@ const { t, dir } = useI18n()
 const loading = ref(true)
 const recalculating = ref(false)
 const delivering = ref(false)
-const submittingOverride = ref(false)
-const submittingReject = ref(false)
 const error = ref('')
 const order = ref(null)
 const lines = ref([])
 const customers = ref([])
 const warehouses = ref([])
 const uoms = ref([])
+const paymentTerms = ref([])
 const showConfirmCancel = ref(false)
-const showOverrideModal = ref(false)
-const showRejectModal = ref(false)
-const customerCredit = ref(null)
-const loadingCustomerCredit = ref(false)
-const overrideForm = ref({ target_status: 'Confirmed', reason: '' })
-const rejectForm = ref({ reason: '' })
 
 const customerName = computed(() => {
   if (!order.value) return ''
   const c = customers.value.find(x => x.id === order.value.customer_id)
   return c ? c.name : `#${order.value.customer_id}`
+})
+
+const orderPaymentTerm = computed(() => {
+  if (!order.value?.payment_term_id) {
+    const cust = customers.value.find(x => x.id === order.value?.customer_id)
+    if (cust?.payment_term_id) {
+      return paymentTerms.value.find(p => p.id === cust.payment_term_id) || null
+    }
+    return null
+  }
+  return paymentTerms.value.find(p => p.id === order.value.payment_term_id) || null
+})
+
+const paymentTermDisplay = computed(() => {
+  if (!order.value?.payment_term_id) {
+    const cust = customers.value.find(x => x.id === order.value?.customer_id)
+    if (cust?.payment_term_id) {
+      const term = paymentTerms.value.find(p => p.id === cust.payment_term_id)
+      if (term) {
+        if (term.discount_percentage > 0 && term.discount_days > 0) {
+          return `${term.name} (${term.discount_percentage}% / ${term.discount_days}d, Net ${term.due_days}d)`
+        }
+        return `${term.name} (Net ${term.due_days}d)`
+      }
+    }
+    return '-'
+  }
+  const term = paymentTerms.value.find(p => p.id === order.value.payment_term_id)
+  if (!term) return `Term #${order.value.payment_term_id}`
+  if (term.discount_percentage > 0 && term.discount_days > 0) {
+    return `${term.name} (${term.discount_percentage}% / ${term.discount_days}d, Net ${term.due_days}d)`
+  }
+  return `${term.name} (Net ${term.due_days}d)`
 })
 
 const warehouseName = computed(() => {
@@ -601,7 +416,6 @@ const warehouseName = computed(() => {
 const statusBadge = computed(() => {
   const map = {
     Pending: 'badge-warning',
-    'Credit Hold': 'badge-danger',
     Confirmed: 'badge-info',
     Shipped: 'badge-info',
     Delivered: 'badge-active',
@@ -613,7 +427,7 @@ const statusBadge = computed(() => {
 })
 
 const canCancel = computed(() => {
-  return order.value && ['Pending', 'Confirmed', 'Credit Hold'].includes(order.value.status)
+  return order.value && ['Pending', 'Confirmed'].includes(order.value.status)
 })
 
 const hasCatchWeightLines = computed(() => {
@@ -671,13 +485,12 @@ const weightAdjustmentAmount = computed(() => {
 
 const statusHistory = computed(() => {
   if (!order.value) return []
-  const allStatuses = ['Pending', 'Credit Hold', 'Confirmed', 'Shipped', 'Delivered', 'Invoiced', 'Paid', 'Cancelled']
+  const allStatuses = ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Invoiced', 'Paid', 'Cancelled']
   const current = order.value.status
   const idx = allStatuses.indexOf(current)
-  if (idx === -1) return [{ status: current, date: order.value.updated_at || order.value.created_at, class: current === 'Credit Hold' ? 'badge-danger' : 'badge-info' }]
+  if (idx === -1) return [{ status: current, date: order.value.updated_at || order.value.created_at, class: 'badge-info' }]
   const classMap = {
     Pending: 'badge-warning',
-    'Credit Hold': 'badge-danger',
     Confirmed: 'badge-info',
     Shipped: 'badge-info',
     Delivered: 'badge-active',
@@ -735,17 +548,6 @@ function formatVariance(val) {
   return num > 0 ? `+${num.toFixed(2)}` : num.toFixed(2)
 }
 
-function formatDate(val) {
-  if (!val) return '-'
-  try {
-    const d = new Date(val)
-    if (isNaN(d.getTime())) return val
-    return d.toLocaleString()
-  } catch {
-    return val
-  }
-}
-
 function getLineVariance(line) {
   if (!line || line.nominal_weight === null || line.nominal_weight === undefined || line.catch_weight_actual === null || line.catch_weight_actual === undefined) {
     return null
@@ -763,98 +565,25 @@ function getLineVarianceClass(line) {
   return 'badge-tolerance-out'
 }
 
-function openOverrideModal() {
-  overrideForm.value = {
-    target_status: 'Confirmed',
-    reason: '',
-  }
-  showOverrideModal.value = true
-}
-
-function openRejectModal() {
-  rejectForm.value = {
-    reason: '',
-  }
-  showRejectModal.value = true
-}
-
-async function executeOverride() {
-  if (!overrideForm.value.reason.trim()) {
-    toast(t('override-reason-required', 'Approval / override reason is required'), 'error')
-    return
-  }
-  submittingOverride.value = true
-  try {
-    await api.post(`/T0012I/${order.value.id}/override-credit-hold`, {
-      reason: overrideForm.value.reason.trim(),
-      target_status: overrideForm.value.target_status || 'Confirmed',
-    })
-    toast(t('credit-hold-overridden-success', 'Credit hold overridden — order released and moved to ' + (overrideForm.value.target_status || 'Confirmed')), 'success')
-    showOverrideModal.value = false
-    await load()
-  } catch (e) {
-    const msg = e.response?.data?.detail || t('override-failed', 'Failed to override credit hold')
-    toast(msg, 'error')
-  } finally {
-    submittingOverride.value = false
-  }
-}
-
-async function executeReject() {
-  if (!rejectForm.value.reason.trim()) {
-    toast(t('reject-reason-required', 'Rejection reason is required'), 'error')
-    return
-  }
-  submittingReject.value = true
-  try {
-    await api.post(`/T0012I/${order.value.id}/reject-credit-hold`, {
-      reason: rejectForm.value.reason.trim(),
-    })
-    toast(t('credit-hold-rejected-success', 'Credit hold rejected — order cancelled'), 'success')
-    showRejectModal.value = false
-    await load()
-  } catch (e) {
-    const msg = e.response?.data?.detail || t('reject-failed', 'Failed to reject credit hold')
-    toast(msg, 'error')
-  } finally {
-    submittingReject.value = false
-  }
-}
-
-async function loadCustomerCredit(customerId) {
-  if (!customerId) return
-  loadingCustomerCredit.value = true
-  try {
-    const res = await api.get(`/T0010I/${customerId}/credit-status`)
-    customerCredit.value = res.data
-  } catch {
-    customerCredit.value = null
-  } finally {
-    loadingCustomerCredit.value = false
-  }
-}
-
 async function load() {
   loading.value = true
   error.value = ''
   try {
     const id = route.params.id
-    const [orderRes, lineRes, custRes, whRes, uomRes] = await Promise.all([
+    const [orderRes, lineRes, custRes, whRes, uomRes, ptRes] = await Promise.all([
       api.get(`/T0012I/${id}`),
       api.get('/T0013I/', { params: { sales_order_id: id } }),
       api.get('/T0010I/'),
       api.get('/T0008I/'),
       api.get('/T0001I/').catch(() => ({ data: [] })),
+      api.get('/T0096I/').catch(() => ({ data: [] })),
     ])
     order.value = orderRes.data
     lines.value = lineRes.data || []
     customers.value = custRes.data || []
     warehouses.value = whRes.data || []
     uoms.value = uomRes.data || []
-
-    if (order.value?.customer_id) {
-      loadCustomerCredit(order.value.customer_id)
-    }
+    paymentTerms.value = ptRes.data || []
   } catch {
     error.value = t('failed-load', 'Failed to load sales order')
   } finally {
@@ -998,10 +727,12 @@ onMounted(load)
 .badge-adjustment-pos { background: #dcfce7; color: #16a34a; font-family: monospace; }
 .badge-adjustment-neg { background: #fee2e2; color: #dc2626; font-family: monospace; }
 .badge-pending-weigh { background: #fef3c7; color: #b45309; }
+.badge-discount-rate { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 
 .icon-xs { font-size: 14px !important; }
 .text-cw { color: #0284c7; }
 .text-green { color: #16a34a; }
+.text-success { color: #16a34a; }
 .text-amber { color: #d97706; }
 .text-danger { color: #dc2626; }
 .text-primary { color: #5d3fd3; }
@@ -1023,53 +754,5 @@ onMounted(load)
 [dir="rtl"] .timeline-item { border-left: none; border-right: 2px solid #e0e0e0; margin-left: 0; margin-right: 8px; padding-left: 0; padding-right: 20px; }
 [dir="rtl"] .timeline-dot { left: auto; right: -6px; }
 [dir="rtl"] .data-table th { text-align: right; }
-
-/* Credit Hold Banner */
-.credit-hold-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 16px 20px; }
-.credit-hold-icon { font-size: 32px; color: #dc2626; flex-shrink: 0; }
-.credit-hold-title { font-size: 15px; font-weight: 700; color: #991b1b; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.credit-hold-desc { font-size: 13px; color: #7f1d1d; margin: 6px 0; }
-.credit-hold-subtext { font-size: 12px; color: #991b1b; margin: 0; opacity: 0.9; }
-
-.credit-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
-.credit-mini-stat { background: #fff; border: 1px solid #fee2e2; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; }
-.mini-label { font-size: 10px; text-transform: uppercase; color: #991b1b; font-weight: 600; margin-bottom: 2px; }
-.mini-val { font-size: 13px; font-weight: 700; color: #1e293b; }
-
-/* Credit Hold Released Banner */
-.credit-released-banner { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 14px 18px; }
-.credit-released-icon { font-size: 28px; color: #16a34a; flex-shrink: 0; }
-.credit-released-title { font-size: 14px; font-weight: 700; color: #14532d; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-.credit-released-details { color: #166534; }
-
-/* Override / Reject Buttons & Modals */
-.btn-override { background: #059669 !important; color: #fff !important; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
-.btn-override:hover { background: #047857 !important; }
-.btn-override:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.btn-danger { display: inline-flex; align-items: center; gap: 6px; background: #dc2626; color: #fff; padding: 8px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.btn-danger:hover { background: #b91c1c; }
-.btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; }
-
-.modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: flex; align-items: center; justify-content: center; z-index: 10000; }
-.modal-content { background: #fff; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.15); overflow: hidden; }
-.modal-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
-.modal-title { font-size: 16px; font-weight: 700; margin: 0; color: #1a1a2e; }
-.modal-body { padding: 20px; }
-.modal-footer { padding: 14px 20px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 10px; background: #fafafa; }
-.btn-icon { background: none; border: none; cursor: pointer; color: #666; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; }
-.btn-icon:hover { background: #f0f0f0; }
-
-.form-group { margin-bottom: 12px; }
-.form-label { display: block; font-size: 12px; font-weight: 600; color: #444; margin-bottom: 4px; }
-.form-input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
-.form-textarea { resize: vertical; font-family: inherit; }
-.required { color: #dc2626; }
-
-.override-warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; }
-.reject-warning-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; }
-.badge-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
 </style>
 
