@@ -14,8 +14,9 @@ from modules.purchasing.services.demand_forecast_service import (
 class TestDemandForecastService:
     @pytest.fixture
     def service(self):
-        svc = DemandForecastService()
-        return svc
+        with patch('modules.purchasing.services.demand_forecast_service.get_connection', side_effect=Exception('DB not connected')):
+            svc = DemandForecastService()
+            yield svc
 
     def test_calculate_sales_velocity_fallback_orders(self, service):
         ref_date = date(2026, 8, 20)
