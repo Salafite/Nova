@@ -79,8 +79,13 @@ class InvoiceCreate(BaseModel):
     partner_id: int
     sales_order_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
+    payment_term_id: Optional[int] = None
     issue_date: date
     due_date: date
+    discount_due_date: Optional[date] = None
+    discount_percentage: float = Field(default=0, ge=0, le=100)
+    discount_days: int = Field(default=0, ge=0)
+    early_discount_amount: float = Field(default=0, ge=0)
     freight_amount: float = 0
     discount_amount: float = 0
     total_amount: float = Field(..., ge=0)
@@ -97,8 +102,13 @@ class InvoiceUpdate(BaseModel):
     partner_id: Optional[int] = None
     sales_order_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
+    payment_term_id: Optional[int] = None
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
+    discount_due_date: Optional[date] = None
+    discount_percentage: Optional[float] = Field(None, ge=0, le=100)
+    discount_days: Optional[int] = Field(None, ge=0)
+    early_discount_amount: Optional[float] = Field(None, ge=0)
     freight_amount: Optional[float] = None
     discount_amount: Optional[float] = None
     total_amount: Optional[float] = Field(None, ge=0)
@@ -116,8 +126,13 @@ class InvoiceResponse(AuditMixin):
     partner_id: int
     sales_order_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
+    payment_term_id: Optional[int] = None
     issue_date: date
     due_date: date
+    discount_due_date: Optional[date] = None
+    discount_percentage: float = 0
+    discount_days: int = 0
+    early_discount_amount: float = 0
     freight_amount: float = 0
     discount_amount: float = 0
     total_amount: float
@@ -137,6 +152,7 @@ class PaymentCreate(BaseModel):
     amount: float = Field(..., gt=0)
     payment_method: str = Field(..., max_length=50) # Cash, Bank Transfer, Card
     reference: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
     status: str = 'Completed'
 
 class PaymentUpdate(BaseModel):
@@ -146,6 +162,7 @@ class PaymentUpdate(BaseModel):
     amount: Optional[float] = Field(None, gt=0)
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
     status: Optional[str] = None
 
 class PaymentResponse(AuditMixin):
@@ -156,4 +173,6 @@ class PaymentResponse(AuditMixin):
     amount: float
     payment_method: str
     reference: Optional[str]
+    notes: Optional[str] = None
     status: str
+

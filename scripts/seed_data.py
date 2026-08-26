@@ -147,10 +147,12 @@ SEED_ACCOUNTS = [
 ]
 
 SEED_PAYMENT_TERMS = [
-    {'name': 'Due on Receipt', 'code': 'DUE_ON_RECEIPT', 'description': 'Payment due immediately upon receipt', 'due_days': 0, 'is_default': True},
-    {'name': 'Net 15', 'code': 'NET_15', 'description': 'Payment due within 15 days', 'due_days': 15},
-    {'name': 'Net 30', 'code': 'NET_30', 'description': 'Payment due within 30 days', 'due_days': 30},
-    {'name': 'Net 60', 'code': 'NET_60', 'description': 'Payment due within 60 days', 'due_days': 60},
+    {'name': 'Net 30', 'code': 'NET_30', 'description': 'Payment due within 30 days', 'due_days': 30, 'discount_percentage': 0.0, 'discount_days': 0, 'is_active': True, 'is_default': True},
+    {'name': 'Cash on Delivery (COD)', 'code': 'COD', 'description': 'Payment due immediately upon delivery', 'due_days': 0, 'discount_percentage': 0.0, 'discount_days': 0, 'is_active': True, 'is_default': False},
+    {'name': 'Net 15', 'code': 'NET_15', 'description': 'Payment due within 15 days', 'due_days': 15, 'discount_percentage': 0.0, 'discount_days': 0, 'is_active': True, 'is_default': False},
+    {'name': 'Net 60', 'code': 'NET_60', 'description': 'Payment due within 60 days', 'due_days': 60, 'discount_percentage': 0.0, 'discount_days': 0, 'is_active': True, 'is_default': False},
+    {'name': '2/10 Net 30', 'code': '2_10_NET_30', 'description': '2% discount if paid within 10 days, net due in 30 days', 'due_days': 30, 'discount_percentage': 2.0, 'discount_days': 10, 'is_active': True, 'is_default': False},
+    {'name': 'Due on Receipt', 'code': 'DUE_ON_RECEIPT', 'description': 'Payment due immediately upon receipt', 'due_days': 0, 'discount_percentage': 0.0, 'discount_days': 0, 'is_active': True, 'is_default': False},
 ]
 
 SEED_PAYMENT_METHODS = [

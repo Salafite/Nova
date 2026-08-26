@@ -785,6 +785,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     sales_rep_id    INT REFERENCES "Nova".t0021(id),
     status          VARCHAR(20) NOT NULL DEFAULT 'Draft',
     notes           TEXT,
+    payment_term_id INT REFERENCES "Nova".t0096(id),
+    discount_due_date DATE DEFAULT NULL,
+    discount_percentage NUMERIC(5,2) NOT NULL DEFAULT 0,
+    discount_days   INT NOT NULL DEFAULT 0,
+    early_discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
@@ -795,9 +800,17 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
 COMMENT ON COLUMN "Nova".t0090.freight_amount IS 'Freight / shipping charges billed on invoice';
 COMMENT ON COLUMN "Nova".t0090.discount_amount IS 'Customer discount deducted on invoice';
 COMMENT ON COLUMN "Nova".t0090.sales_rep_id IS 'Assigned sales representative (User ID)';
+COMMENT ON COLUMN "Nova".t0090.payment_term_id IS 'Assigned payment term identifier (FK to T0096)';
+COMMENT ON COLUMN "Nova".t0090.discount_due_date IS 'Cutoff date for early payment discount eligibility';
+COMMENT ON COLUMN "Nova".t0090.discount_percentage IS 'Early payment discount percentage applicable before cutoff';
+COMMENT ON COLUMN "Nova".t0090.discount_days IS 'Number of days within which early payment discount is valid';
+COMMENT ON COLUMN "Nova".t0090.early_discount_amount IS 'Calculated maximum early discount amount if paid within discount period';
 COMMENT ON COLUMN "Nova".t0090.business_id IS 'Tenant / business organization identifier (FK to T0059)';
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id ON "Nova".t0090(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id_id ON "Nova".t0090(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0090_payment_term_id ON "Nova".t0090(payment_term_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_discount_due_date ON "Nova".t0090(discount_due_date);
+CREATE INDEX IF NOT EXISTS idx_t0090_due_date ON "Nova".t0090(due_date);
 
 
 

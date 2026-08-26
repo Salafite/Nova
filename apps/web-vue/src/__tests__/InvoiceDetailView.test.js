@@ -163,4 +163,101 @@ describe('InvoiceDetailView (Dual UOM & Catch-Weight)', () => {
     expect(w.text()).toContain('41.50 kg')
     expect(w.text()).toContain('$207.50')
   })
+
+  it('renders payment terms and due dates in invoice information card', async () => {
+    const sampleInvoiceWithTerms = {
+      ...sampleInvoice,
+      payment_term_id: 1,
+      due_date: '2026-09-25',
+      discount_due_date: '2026-09-05',
+      discount_percentage: 2.0,
+      discount_days: 10,
+      early_discount_amount: 4.15,
+    }
+    const sampleTerms = [
+      { id: 1, name: '2/10 Net 30', due_days: 30, discount_percentage: 2.0, discount_days: 10 }
+    ]
+    api.get.mockImplementation((url) => {
+      if (url.includes('/T0090I/1/catch-weight-breakdown')) return Promise.resolve({ data: sampleBreakdown })
+      if (url.includes('/T0090I/1')) return Promise.resolve({ data: sampleInvoiceWithTerms })
+      if (url.includes('/T0091I/')) return Promise.resolve({ data: [] })
+      if (url.includes('/T0010I/')) return Promise.resolve({ data: sampleCustomers })
+      if (url.includes('/T0096I/')) return Promise.resolve({ data: sampleTerms })
+      if (url.includes('/T0013I/')) return Promise.resolve({ data: sampleBreakdown.lines })
+      if (url.includes('/T0001I/')) return Promise.resolve({ data: sampleUOMs })
+      return Promise.resolve({ data: [] })
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    expect(w.text()).toContain('2/10 Net 30')
+    expect(w.text()).toContain('2026-09-25')
+    expect(w.text()).toContain('2026-09-05')
+  })
+
+  it('renders active early payment discount banner when discount deadline is ahead', async () => {
+    // Current date is 2026-08-26, discount_due_date 2026-09-05
+    const sampleInvoiceWithDiscount = {
+      ...sampleInvoice,
+      payment_term_id: 1,
+      total_amount: 200.0,
+      due_date: '2026-09-25',
+      discount_due_date: '2099-12-31',
+      discount_percentage: 2.0,
+      discount_days: 10,
+      early_discount_amount: 4.0,
+    }
+    const sampleTerms = [
+      { id: 1, name: '2/10 Net 30', due_days: 30, discount_percentage: 2.0, discount_days: 10 }
+    ]
+    api.get.mockImplementation((url) => {
+      if (url.includes('/T0090I/1/catch-weight-breakdown')) return Promise.resolve({ data: sampleBreakdown })
+      if (url.includes('/T0090I/1')) return Promise.resolve({ data: sampleInvoiceWithDiscount })
+      if (url.includes('/T0091I/')) return Promise.resolve({ data: [] })
+      if (url.includes('/T0010I/')) return Promise.resolve({ data: sampleCustomers })
+      if (url.includes('/T0096I/')) return Promise.resolve({ data: sampleTerms })
+      if (url.includes('/T0013I/')) return Promise.resolve({ data: sampleBreakdown.lines })
+      if (url.includes('/T0001I/')) return Promise.resolve({ data: sampleUOMs })
+      return Promise.resolve({ data: [] })
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    expect(w.text()).toContain('Early Payment Discount Available')
+    expect(w.text()).toContain('$196.00')
+    expect(w.text()).toContain('Save $4.00')
+    expect(w.find('.early-discount-banner').exists()).toBe(true)
+  })
+
+  it('renders expired early discount banner when discount deadline has passed', async () => {
+    const sampleInvoiceExpired = {
+      ...sampleInvoice,
+      payment_term_id: 1,
+      total_amount: 200.0,
+      due_date: '2026-09-25',
+      discount_due_date: '2020-01-01',
+      discount_percentage: 2.0,
+      discount_days: 10,
+      early_discount_amount: 4.0,
+    }
+    api.get.mockImplementation((url) => {
+      if (url.includes('/T0090I/1/catch-weight-breakdown')) return Promise.resolve({ data: sampleBreakdown })
+      if (url.includes('/T0090I/1')) return Promise.resolve({ data: sampleInvoiceExpired })
+      if (url.includes('/T0091I/')) return Promise.resolve({ data: [] })
+      if (url.includes('/T0010I/')) return Promise.resolve({ data: sampleCustomers })
+      if (url.includes('/T0096I/')) return Promise.resolve({ data: [] })
+      if (url.includes('/T0013I/')) return Promise.resolve({ data: sampleBreakdown.lines })
+      if (url.includes('/T0001I/')) return Promise.resolve({ data: sampleUOMs })
+      return Promise.resolve({ data: [] })
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    expect(w.text()).toContain('Early Discount Window Closed')
+    expect(w.find('.early-discount-expired-banner').exists()).toBe(true)
+  })
 })
+

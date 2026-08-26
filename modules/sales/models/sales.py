@@ -5,14 +5,12 @@ from modules.core.models.base import AuditMixin
 
 
 class SalesOrderCreate(BaseModel):
-    order_number: str = Field(..., max_length=30)
+    order_number: str = Field(..., max_length=50)
     customer_id: int
     warehouse_id: Optional[int] = None
     subtotal: float = 0
     tax: float = 0
     grand_total: float = 0
-    freight_amount: float = 0
-    discount_amount: float = 0
     status: str = 'Pending'
     order_date: date = Field(default_factory=date.today)
     price_list_id: Optional[int] = None
@@ -24,13 +22,16 @@ class SalesOrderCreate(BaseModel):
     sync_status: str = 'Synced'
     offline_created_at: Optional[datetime] = None
     sales_rep_id: Optional[int] = None
+    freight_amount: float = 0
+    discount_amount: float = 0
     hold_reason: Optional[str] = None
     hold_released_by: Optional[int] = None
     hold_released_at: Optional[datetime] = None
     hold_release_reason: Optional[str] = None
+    business_id: Optional[int] = None
 
 class SalesOrderUpdate(BaseModel):
-    order_number: Optional[str] = Field(None, max_length=30)
+    order_number: Optional[str] = Field(None, max_length=50)
     customer_id: Optional[int] = None
     warehouse_id: Optional[int] = None
     subtotal: Optional[float] = None
@@ -53,6 +54,7 @@ class SalesOrderUpdate(BaseModel):
     hold_released_by: Optional[int] = None
     hold_released_at: Optional[datetime] = None
     hold_release_reason: Optional[str] = None
+    business_id: Optional[int] = None
 
 class SalesOrderResponse(AuditMixin):
     id: int
@@ -62,8 +64,8 @@ class SalesOrderResponse(AuditMixin):
     subtotal: float
     tax: float
     grand_total: float
-    freight_amount: float = 0.0
-    discount_amount: float = 0.0
+    freight_amount: float = 0
+    discount_amount: float = 0
     status: str
     order_date: date
     price_list_id: Optional[int] = None

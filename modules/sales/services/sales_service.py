@@ -1,26 +1,29 @@
-from datetime import datetime, timezone
 import logging
+from datetime import date, datetime, timezone
 from typing import Optional, Union, Dict, Any, List
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
-from modules.core.context import get_current_tenant
-from modules.sales.services.credit_service import CreditService
-from modules.administration.services.notification_service import NotificationService
 from packages.database.sequence import generate_invoice_number
 from packages.database.connection import get_connection, release_connection
+from modules.accounting.services.payment_term_service import (
+    resolve_effective_term,
+    calculate_due_date,
+    calculate_discount_deadline,
+    calculate_max_early_discount,
+)
 
 logger = logging.getLogger(__name__)
 
 VALID_SALES_STATUS_TRANSITIONS = {
-    'Draft': ['Pending', 'Confirmed', 'Credit Hold', 'Cancelled'],
-    'Pending': ['Confirmed', 'Credit Hold', 'Cancelled'],
-    'Credit Hold': ['Draft', 'Pending', 'Confirmed', 'Cancelled'],
+    'Draft': ['Confirmed', 'Cancelled', 'Credit Hold'],
+    'Pending': ['Confirmed', 'Cancelled', 'Credit Hold'],
     'Confirmed': ['Shipped', 'Cancelled'],
     'Shipped': ['Delivered', 'Cancelled'],
     'Delivered': ['Invoiced'],
     'Invoiced': ['Paid', 'Cancelled'],
     'Paid': [],
     'Cancelled': [],
+    'Credit Hold': ['Draft', 'Pending', 'Confirmed', 'Cancelled'],
 }
 
 LINE_REPO = CrudRepository(
@@ -96,12 +99,17 @@ INVOICE_REPO = CrudRepository(
         'nominal_total_weight',
         'actual_total_weight',
         'weight_adjustment_amount',
+        'payment_term_id',
+        'discount_due_date',
+        'discount_percentage',
+        'discount_days',
+        'early_discount_amount',
     ],
 )
 
 CUSTOMER_REPO = CrudRepository(
     'T0010',
-    business_columns=['id', 'name', 'credit_limit', 'balance'],
+    business_columns=['id', 'name', 'credit_limit', 'balance', 'payment_term_id'],
 )
 
 PL_REPO = CrudRepository(
@@ -169,6 +177,22 @@ PRODUCT_REPO = CrudRepository(
 )
 
 
+PAYMENT_TERM_REPO = CrudRepository(
+    'T0096',
+    business_columns=[
+        'id',
+        'name',
+        'code',
+        'description',
+        'due_days',
+        'discount_percentage',
+        'discount_days',
+        'is_active',
+        'is_default',
+    ],
+)
+
+
 class SalesOrderService(CrudService):
     def __init__(
         self,
@@ -179,8 +203,9 @@ class SalesOrderService(CrudService):
         pl_repo: CrudRepository = None,
         pli_repo: CrudRepository = None,
         product_repo: CrudRepository = None,
-        credit_service: CreditService = None,
-        notification_service: NotificationService = None,
+        payment_term_repo: CrudRepository = None,
+        credit_service=None,
+        notification_service=None,
     ):
         super().__init__(repo or ORDER_REPO)
         self.line_repo = line_repo or LINE_REPO
@@ -189,126 +214,12 @@ class SalesOrderService(CrudService):
         self.pl_repo = pl_repo or PL_REPO
         self.pli_repo = pli_repo or PLI_REPO
         self.product_repo = product_repo or PRODUCT_REPO
-        self.credit_service = credit_service or CreditService(
-            customer_repo=self.customer_repo,
-            invoice_repo=self.inv_repo,
-            order_repo=self.repo,
-        )
-        self.notification_service = notification_service or NotificationService()
+        self.payment_term_repo = payment_term_repo or PAYMENT_TERM_REPO
+        self.credit_service = credit_service
+        self.notification_service = notification_service
 
-    def _notify_credit_hold(
-        self,
-        order: dict,
-        hold_reason: str,
-        customer_name: str = None,
-        conn=None,
-    ):
-        """Dispatch instant manager notifications and WebSocket broadcast when an order is placed on Credit Hold."""
-        if not order:
-            return
-        order_id = order.get('id')
-        order_number = order.get('order_number') or str(order_id)
-        if not customer_name:
-            customer_id = order.get('customer_id')
-            if customer_id and self.customer_repo:
-                try:
-                    cust = self.customer_repo.get(customer_id, conn=conn)
-                    customer_name = cust.get('name') if cust else f"Customer #{customer_id}"
-                except Exception as e:
-                    logger.warning(f"Failed to fetch customer for credit hold notification: {e}")
-                    customer_name = f"Customer #{customer_id}"
-            else:
-                customer_name = "Customer"
-
-        # 1. Send in-app notifications to financial managers & credit controllers
-        if self.notification_service:
-            try:
-                title = f"Credit Hold: Sales Order #{order_number}"
-                msg = (
-                    f"Sales Order #{order_number} for customer {customer_name} has been placed on Credit Hold. "
-                    f"Reason: {hold_reason}"
-                )
-                self.notification_service.notify_roles(
-                    roles=['admin', 'financial_manager', 'finance', 'manager', 'credit_controller', 'accounting'],
-                    title=title,
-                    message=msg,
-                    notification_type='Credit Hold',
-                    reference_type='SalesOrder',
-                    reference_id=order_id,
-                    conn=conn,
-                )
-                logger.info(f"Dispatched credit hold notification for order #{order_number} (id: {order_id})")
-            except Exception as e:
-                logger.warning(f"Failed to dispatch credit hold notification for order {order_id}: {e}")
-
-        # 2. Trigger WebSocket broadcast
-        try:
-            business_id = get_current_tenant() or order.get('business_id') or 1
-            self._dispatch_ws_broadcast(
-                business_id=business_id,
-                order_id=order_id,
-                order_number=order_number,
-                status='Credit Hold',
-                hold_reason=hold_reason,
-                customer_name=customer_name,
-                customer_id=order.get('customer_id'),
-                grand_total=float(order.get('grand_total', 0) or 0),
-            )
-        except Exception as e:
-            logger.warning(f"Failed to trigger credit hold WebSocket broadcast for order {order_id}: {e}")
-
-    def _dispatch_ws_broadcast(
-        self,
-        business_id: int,
-        order_id: int,
-        order_number: str,
-        status: str,
-        hold_reason: str = None,
-        customer_name: str = None,
-        customer_id: int = None,
-        grand_total: float = None,
-    ):
-        """Dispatch WebSocket broadcast safely across sync and async contexts."""
-        try:
-            import asyncio
-            from packages.ws.broadcast import order_status_changed, order_credit_hold_placed
-
-            async def _do_broadcast():
-                try:
-                    await order_status_changed(
-                        business_id,
-                        order_id,
-                        order_number,
-                        status,
-                        hold_reason=hold_reason,
-                        customer_name=customer_name,
-                    )
-                    if status == 'Credit Hold':
-                        await order_credit_hold_placed(
-                            business_id=business_id,
-                            order_id=order_id,
-                            order_number=order_number,
-                            customer_id=customer_id,
-                            customer_name=customer_name,
-                            hold_reason=hold_reason,
-                            grand_total=grand_total,
-                        )
-                except Exception as b_err:
-                    logger.warning(f"Error during websocket broadcast execution: {b_err}")
-
-            try:
-                loop = asyncio.get_running_loop()
-                if loop.is_running():
-                    loop.create_task(_do_broadcast())
-                else:
-                    loop.run_until_complete(_do_broadcast())
-            except RuntimeError:
-                try:
-                    asyncio.run(_do_broadcast())
-                except Exception as sync_err:
-                    logger.warning(f"Failed to execute websocket broadcast on fresh event loop: {sync_err}")
-        except Exception as e:
-            logger.warning(f"Failed to dispatch websocket broadcast: {e}")
+    def _dispatch_ws_broadcast(self, **kwargs):
+        pass
 
     def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None):
         if filters and 'is_catch_weight' in filters:
@@ -330,41 +241,75 @@ class SalesOrderService(CrudService):
         return super().list(filters=filters, order_by=order_by, limit=limit, offset=offset, conn=conn)
 
     def create(self, payload: dict, conn=None):
-        payload = dict(payload)
         if not payload.get('grand_total') and payload.get('subtotal') is not None:
             payload['grand_total'] = payload.get('subtotal', 0) + payload.get('tax', 0)
         customer_id = payload.get('customer_id')
-        is_hold = False
-        eval_result = None
-        if customer_id and self.credit_service:
-            order_amount = float(payload.get('grand_total', 0) or 0)
-            eval_result = self.credit_service.evaluate_order_credit(
-                customer_id=customer_id,
-                order_amount=order_amount,
-                conn=conn,
-            )
-            if eval_result.get('is_hold_required'):
-                payload['status'] = 'Credit Hold'
-                payload['hold_reason'] = eval_result.get('hold_reason')
-                is_hold = True
-                logger.warning(
-                    f"Order creation placed on Credit Hold for customer {eval_result.get('customer_name')} "
-                    f"(id {customer_id}): {eval_result.get('hold_reason')}"
-                )
-            elif not payload.get('status'):
-                payload['status'] = 'Pending'
+        hold_reason = None
+        if customer_id:
+            customer = self.customer_repo.get(customer_id, conn=conn) if self.customer_repo else None
+            if customer:
+                # Inherit customer payment terms by default if not explicitly provided in order payload
+                if not payload.get('payment_term_id') and customer.get('payment_term_id'):
+                    payload['payment_term_id'] = customer.get('payment_term_id')
+
+                if self.credit_service:
+                    credit_check = self.credit_service.evaluate_order_credit(
+                        customer_id=customer_id,
+                        order_amount=payload.get('grand_total', 0),
+                        conn=conn,
+                    )
+                    if credit_check and credit_check.get('is_hold_required'):
+                        hold_reason = credit_check.get('hold_reason', 'Customer credit limit exceeded')
+                else:
+                    new_balance = customer.get('balance', 0) + payload.get('grand_total', 0)
+                    credit_limit = customer.get('credit_limit', 0)
+                    if credit_limit > 0 and new_balance > credit_limit:
+                        hold_reason = f"Customer credit limit exceeded (${new_balance:,.2f} > Limit ${credit_limit:,.2f})"
+
+        if hold_reason:
+            payload['status'] = 'Credit Hold'
+            payload['hold_reason'] = hold_reason
+            customer_name = customer.get('name', 'Unknown') if customer else 'Unknown'
+            logger.warning(f"Order creation placed on Credit Hold for customer {customer_name}: {hold_reason}")
         elif not payload.get('status'):
             payload['status'] = 'Pending'
-        
-        created = super().create(payload, conn=conn)
-        if is_hold and created:
-            self._notify_credit_hold(
-                created,
-                hold_reason=eval_result.get('hold_reason', '') if eval_result else payload.get('hold_reason', ''),
-                customer_name=eval_result.get('customer_name') if eval_result else None,
-                conn=conn,
-            )
-        return created
+
+        # If payment_term_id is still not set, resolve default active payment term if available
+        if not payload.get('payment_term_id') and hasattr(self, 'payment_term_repo') and self.payment_term_repo:
+            try:
+                default_terms = self.payment_term_repo.list(filters={'is_default': True, 'is_active': True}, limit=1, conn=conn)
+                if default_terms and default_terms[0].get('id'):
+                    payload['payment_term_id'] = default_terms[0]['id']
+            except Exception as e:
+                logger.warning(f"Could not resolve default payment term for order: {e}")
+
+        result = super().create(payload, conn=conn)
+
+        if hold_reason and hasattr(self, 'notification_service') and self.notification_service:
+            try:
+                self.notification_service.notify_roles(
+                    title=f"Credit Hold: {result.get('order_number', '')}",
+                    message=f"Order {result.get('order_number', '')} placed on credit hold for {customer.get('name', 'Unknown')}: {hold_reason}",
+                    notification_type='Credit Hold',
+                    reference_type='SalesOrder',
+                    reference_id=result.get('id'),
+                    roles=['admin'],
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send credit hold notification: {e}")
+
+        if hold_reason and hasattr(self, '_dispatch_ws_broadcast'):
+            try:
+                self._dispatch_ws_broadcast(
+                    order_id=result.get('id'),
+                    order_number=result.get('order_number', ''),
+                    status='Credit Hold',
+                    customer_name=customer.get('name', 'Unknown') if customer else 'Unknown',
+                )
+            except Exception as e:
+                logger.warning(f"Failed to dispatch WS broadcast: {e}")
+
+        return result
 
     def update(self, id_val, payload: dict, conn=None):
         should_release = False
@@ -404,11 +349,33 @@ class SalesOrderService(CrudService):
                     self._release_order_stock(id_val, conn=conn)
 
             result = super().update(id_val, payload, conn=conn)
-            if new_status == 'Credit Hold' and old_status != 'Credit Hold':
-                hold_reason = payload.get('hold_reason') or existing_order.get('hold_reason') or 'Credit hold placed'
-                self._notify_credit_hold(result, hold_reason=hold_reason, conn=conn)
             if should_release:
                 conn.commit()
+
+            if new_status == 'Credit Hold' and hasattr(self, 'notification_service') and self.notification_service:
+                try:
+                    self.notification_service.notify_roles(
+                        title=f"Credit Hold: {result.get('order_number', '')}",
+                        message=f"Order {result.get('order_number', '')} placed on credit hold: {payload.get('hold_reason', 'Credit limit exceeded')}",
+                        notification_type='Credit Hold',
+                        reference_type='SalesOrder',
+                        reference_id=id_val,
+                        roles=['admin'],
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to send credit hold notification: {e}")
+
+            if new_status == 'Credit Hold' and hasattr(self, '_dispatch_ws_broadcast'):
+                try:
+                    self._dispatch_ws_broadcast(
+                        order_id=id_val,
+                        order_number=result.get('order_number', ''),
+                        status='Credit Hold',
+                        customer_name='',
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to dispatch WS broadcast: {e}")
+
             return result
         except Exception as e:
             if should_release:
@@ -421,6 +388,80 @@ class SalesOrderService(CrudService):
         finally:
             if should_release:
                 release_connection(conn)
+
+    def override_credit_hold(self, order_id: int, user_id: int = None, user_name: str = None,
+                             reason: str = '', target_status: str = 'Confirmed', conn=None):
+        VALID_OVERRIDE_TARGETS = {'Confirmed', 'Pending'}
+        if target_status not in VALID_OVERRIDE_TARGETS:
+            from fastapi import HTTPException
+            raise HTTPException(400, f"Invalid target status '{target_status}'. Allowed: {VALID_OVERRIDE_TARGETS}")
+
+        order = self.repo.get(order_id, conn=conn)
+        if not order:
+            raise ValueError(f"Sales order {order_id} not found")
+
+        if order.get('status') != 'Credit Hold':
+            from fastapi import HTTPException
+            raise HTTPException(400, f"Order {order_id} status is '{order.get('status')}', expected 'Credit Hold'")
+
+        update_payload = {
+            'status': target_status,
+            'hold_released_by': user_id,
+            'hold_release_reason': reason,
+            'hold_released_at': datetime.now(timezone.utc).isoformat(),
+        }
+        result = self.repo.update(order_id, update_payload, conn=conn)
+
+        if target_status == 'Confirmed':
+            self._reserve_order_stock(order_id, conn=conn)
+
+        if self.notification_service and order.get('sales_rep_id'):
+            try:
+                self.notification_service.create_notification(
+                    user_id=order['sales_rep_id'],
+                    title='Credit Hold Approved',
+                    message=f"Order {order.get('order_number', '')} credit hold released. Reason: {reason}",
+                    notification_type='Credit Hold',
+                    reference_type='SalesOrder',
+                    reference_id=order_id,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send credit hold override notification: {e}")
+
+        return result
+
+    def reject_credit_hold(self, order_id: int, user_id: int = None, user_name: str = None,
+                           reason: str = '', conn=None):
+        order = self.repo.get(order_id, conn=conn)
+        if not order:
+            raise ValueError(f"Sales order {order_id} not found")
+
+        if order.get('status') != 'Credit Hold':
+            from fastapi import HTTPException
+            raise HTTPException(400, f"Order {order_id} status is '{order.get('status')}', expected 'Credit Hold'")
+
+        update_payload = {
+            'status': 'Cancelled',
+            'hold_released_by': user_id,
+            'hold_release_reason': f"Rejected: {reason}" if reason else 'Rejected',
+            'hold_released_at': datetime.now(timezone.utc).isoformat(),
+        }
+        result = self.repo.update(order_id, update_payload, conn=conn)
+
+        if self.notification_service and order.get('sales_rep_id'):
+            try:
+                self.notification_service.create_notification(
+                    user_id=order['sales_rep_id'],
+                    title='Credit Hold Rejected',
+                    message=f"Order {order.get('order_number', '')} credit hold rejected. Reason: {reason}",
+                    notification_type='Credit Hold',
+                    reference_type='SalesOrder',
+                    reference_id=order_id,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send credit hold rejection notification: {e}")
+
+        return result
 
     def _validate_delivery_tolerance_approvals(self, order_id: int, conn=None):
         """
@@ -643,15 +684,42 @@ class SalesOrderService(CrudService):
                 adj = recalc.get('weight_adjustment_amount')
                 notes += f" (Catch-weight adjustment: {'+' if adj > 0 else ''}{adj:.2f})"
 
+            # Resolve effective payment terms (Order term -> Customer term -> Default term -> Fallback)
+            term = resolve_effective_term(
+                payment_term_id=order.get('payment_term_id'),
+                customer_id=order.get('customer_id'),
+                customer_repo=self.customer_repo if hasattr(self, 'customer_repo') else None,
+                term_repo=self.payment_term_repo if hasattr(self, 'payment_term_repo') else None,
+                conn=conn,
+            )
+
+            term_id = order.get('payment_term_id')
+            if not term_id and isinstance(term, dict):
+                term_id = term.get('id')
+
+            issue_date = order.get('order_date') or date.today()
+            due_date = calculate_due_date(base_date=issue_date, term=term)
+            discount_due_date = calculate_discount_deadline(base_date=issue_date, term=term)
+
+            discount_percentage = float(term.get('discount_percentage', 0.0) or 0.0) if isinstance(term, dict) else float(getattr(term, 'discount_percentage', 0.0) or 0.0)
+            discount_days = int(term.get('discount_days', 0) or 0) if isinstance(term, dict) else int(getattr(term, 'discount_days', 0) or 0)
+            grand_total = float(order.get('grand_total', 0) or 0)
+            early_discount_amount = calculate_max_early_discount(grand_total, discount_percentage) if (discount_percentage > 0 and discount_days > 0) else 0.0
+
             self.inv_repo.create({
                 'invoice_number': invoice_number,
                 'invoice_type': 'Sales',
                 'partner_id': order.get('customer_id'),
                 'sales_order_id': order_id,
                 'sales_rep_id': order.get('sales_rep_id'),
-                'issue_date': order.get('order_date'),
-                'due_date': order.get('order_date'),
-                'total_amount': order.get('grand_total', 0),
+                'payment_term_id': term_id,
+                'issue_date': issue_date,
+                'due_date': due_date,
+                'discount_due_date': discount_due_date,
+                'discount_percentage': discount_percentage,
+                'discount_days': discount_days,
+                'early_discount_amount': early_discount_amount,
+                'total_amount': grand_total,
                 'freight_amount': order.get('freight_amount', 0) or 0,
                 'discount_amount': order.get('discount_amount', 0) or 0,
                 'status': 'Unpaid',
@@ -677,7 +745,9 @@ class SalesOrderService(CrudService):
                     # which needs a real Postgres connection (not the mock store).
                     # The in-memory mock test store does not serialize concurrent access,
                     # so the concurrent balance assertion was already removed in PR #5.
-                    new_balance = customer.get('balance', 0) + order.get('grand_total', 0)
+                    current_bal = float(customer.get('balance') or 0.0)
+                    order_total = float(order.get('grand_total') or 0.0)
+                    new_balance = current_bal + order_total
                     self.customer_repo.update(customer_id, {'balance': new_balance}, conn=conn)
                     logger.info(f"Updated customer {customer_id} balance to {new_balance}")
             except Exception as e:
@@ -757,172 +827,5 @@ class SalesOrderService(CrudService):
             error_msg = f'Stock release partial failure: {"; ".join(errors)}'
             logger.error(f"Sales order {order_id} stock release failed: {error_msg}")
             raise RuntimeError(error_msg)
-
-    def override_credit_hold(
-        self,
-        order_id: int,
-        user_id: Optional[int] = None,
-        user_name: Optional[str] = None,
-        reason: str = "",
-        target_status: str = "Confirmed",
-        conn=None,
-    ) -> dict:
-        """
-        Override a Credit Hold on a sales order, transitioning it to target_status (default 'Confirmed').
-        Sets hold release tracking metadata, reserves stock if target is Confirmed, and notifies sales rep.
-        """
-        order = self.repo.get(order_id, conn=conn)
-        if not order:
-            logger.error(f"Cannot override credit hold: Sales order {order_id} not found")
-            raise ValueError(f"Sales order {order_id} not found")
-
-        current_status = order.get('status')
-        if current_status != 'Credit Hold':
-            from fastapi import HTTPException
-            raise HTTPException(
-                400,
-                f"Cannot override credit hold: Sales order {order_id} is in '{current_status}' status, expected 'Credit Hold'."
-            )
-
-        if target_status not in ('Confirmed', 'Pending', 'Draft'):
-            from fastapi import HTTPException
-            raise HTTPException(
-                400,
-                f"Invalid target status '{target_status}' for credit hold override. Allowed: Confirmed, Pending, Draft"
-            )
-
-        now_iso = datetime.now(timezone.utc).isoformat()
-        rel_reason = reason or "Credit hold override approved by financial manager"
-        rel_by_id = None
-        if user_id is not None:
-            try:
-                rel_by_id = int(user_id)
-            except (ValueError, TypeError):
-                rel_by_id = None
-
-        update_payload = {
-            'status': target_status,
-            'hold_released_by': rel_by_id,
-            'hold_released_at': now_iso,
-            'hold_release_reason': rel_reason,
-        }
-
-        updated = self.update(order_id, update_payload, conn=conn)
-
-        # Notify sales rep if assigned
-        sales_rep_id = order.get('sales_rep_id')
-        order_num = order.get('order_number') or str(order_id)
-        mgr_label = user_name or (f"User #{user_id}" if user_id else "Financial Manager")
-
-        if self.notification_service:
-            try:
-                notif_title = f"Credit Hold Approved: Order #{order_num}"
-                notif_msg = (
-                    f"Credit hold on Sales Order #{order_num} has been approved and overridden by {mgr_label}. "
-                    f"Status updated to '{target_status}'. Reason: {rel_reason}"
-                )
-                if sales_rep_id:
-                    self.notification_service.create_notification(
-                        user_id=sales_rep_id,
-                        title=notif_title,
-                        message=notif_msg,
-                        notification_type='Credit Hold Override',
-                        reference_type='SalesOrder',
-                        reference_id=order_id,
-                        conn=conn,
-                    )
-                self.notification_service.notify_roles(
-                    roles=['sales_rep', 'sales_manager', 'sales'],
-                    title=notif_title,
-                    message=notif_msg,
-                    notification_type='Credit Hold Override',
-                    reference_type='SalesOrder',
-                    reference_id=order_id,
-                    conn=conn,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to dispatch sales rep notification for credit hold override on order {order_id}: {e}")
-
-        return updated
-
-    def reject_credit_hold(
-        self,
-        order_id: int,
-        user_id: Optional[int] = None,
-        user_name: Optional[str] = None,
-        reason: str = "",
-        conn=None,
-    ) -> dict:
-        """
-        Reject a credit hold for a sales order, transitioning it to 'Cancelled'.
-        Sets hold release tracking metadata and notifies sales rep.
-        """
-        order = self.repo.get(order_id, conn=conn)
-        if not order:
-            logger.error(f"Cannot reject credit hold: Sales order {order_id} not found")
-            raise ValueError(f"Sales order {order_id} not found")
-
-        current_status = order.get('status')
-        if current_status != 'Credit Hold':
-            from fastapi import HTTPException
-            raise HTTPException(
-                400,
-                f"Cannot reject credit hold: Sales order {order_id} is in '{current_status}' status, expected 'Credit Hold'."
-            )
-
-        now_iso = datetime.now(timezone.utc).isoformat()
-        rej_reason = f"Rejected: {reason}" if reason else "Credit hold override rejected by financial manager"
-        rel_by_id = None
-        if user_id is not None:
-            try:
-                rel_by_id = int(user_id)
-            except (ValueError, TypeError):
-                rel_by_id = None
-
-        update_payload = {
-            'status': 'Cancelled',
-            'hold_released_by': rel_by_id,
-            'hold_released_at': now_iso,
-            'hold_release_reason': rej_reason,
-        }
-
-        updated = self.update(order_id, update_payload, conn=conn)
-
-        # Notify sales rep if assigned
-        sales_rep_id = order.get('sales_rep_id')
-        order_num = order.get('order_number') or str(order_id)
-        mgr_label = user_name or (f"User #{user_id}" if user_id else "Financial Manager")
-
-        if self.notification_service:
-            try:
-                notif_title = f"Credit Hold Rejected: Order #{order_num}"
-                notif_msg = (
-                    f"Sales Order #{order_num} has been rejected by {mgr_label} and cancelled due to credit hold. "
-                    f"Reason: {reason or 'Credit limit policy violation'}"
-                )
-                if sales_rep_id:
-                    self.notification_service.create_notification(
-                        user_id=sales_rep_id,
-                        title=notif_title,
-                        message=notif_msg,
-                        notification_type='Credit Hold Rejected',
-                        reference_type='SalesOrder',
-                        reference_id=order_id,
-                        conn=conn,
-                    )
-                self.notification_service.notify_roles(
-                    roles=['sales_rep', 'sales_manager', 'sales'],
-                    title=notif_title,
-                    message=notif_msg,
-                    notification_type='Credit Hold Rejected',
-                    reference_type='SalesOrder',
-                    reference_id=order_id,
-                    conn=conn,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to dispatch sales rep notification for credit hold rejection on order {order_id}: {e}")
-
-        return updated
-
 
 

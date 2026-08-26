@@ -456,6 +456,198 @@ class TestSalesOrderDeliveryAndInvoicing:
         assert cust_args[0] == 200
         assert cust_args[1]['balance'] == 1676.0
 
+    def test_order_creation_inherits_customer_payment_term_when_omitted(self):
+        """When payment_term_id is not passed, order inherits customer's payment_term_id."""
+        mock_payment_term_repo = MagicMock()
+        service = SalesOrderService(
+            repo=self.mock_order_repo,
+            customer_repo=self.mock_customer_repo,
+            payment_term_repo=mock_payment_term_repo,
+        )
+        self.mock_customer_repo.get.return_value = {
+            'id': 200,
+            'name': 'Boutique Foods',
+            'payment_term_id': 5,
+            'balance': 0.0,
+            'credit_limit': 10000.0,
+        }
+        self.mock_order_repo.create.return_value = {'id': 99, 'payment_term_id': 5}
+
+        payload = {'customer_id': 200, 'subtotal': 500.0}
+        service.create(payload)
+
+        assert payload['payment_term_id'] == 5
+        self.mock_order_repo.create.assert_called_once_with(payload)
+
+    def test_order_creation_preserves_explicit_payment_term(self):
+        """When payment_term_id is explicitly passed, customer's payment term is not applied."""
+        mock_payment_term_repo = MagicMock()
+        service = SalesOrderService(
+            repo=self.mock_order_repo,
+            customer_repo=self.mock_customer_repo,
+            payment_term_repo=mock_payment_term_repo,
+        )
+        self.mock_customer_repo.get.return_value = {
+            'id': 200,
+            'name': 'Boutique Foods',
+            'payment_term_id': 5,
+            'balance': 0.0,
+            'credit_limit': 10000.0,
+        }
+        self.mock_order_repo.create.return_value = {'id': 99, 'payment_term_id': 2}
+
+        payload = {'customer_id': 200, 'payment_term_id': 2, 'subtotal': 500.0}
+        service.create(payload)
+
+        assert payload['payment_term_id'] == 2
+        self.mock_order_repo.create.assert_called_once_with(payload)
+
+    def test_order_creation_falls_back_to_default_payment_term(self):
+        """When customer has no payment term, order falls back to active default payment term."""
+        mock_payment_term_repo = MagicMock()
+        mock_payment_term_repo.list.return_value = [{'id': 1, 'code': 'NET_30', 'is_default': True}]
+        service = SalesOrderService(
+            repo=self.mock_order_repo,
+            customer_repo=self.mock_customer_repo,
+            payment_term_repo=mock_payment_term_repo,
+        )
+        self.mock_customer_repo.get.return_value = {
+            'id': 200,
+            'name': 'Boutique Foods',
+            'payment_term_id': None,
+            'balance': 0.0,
+            'credit_limit': 10000.0,
+        }
+        self.mock_order_repo.create.return_value = {'id': 99, 'payment_term_id': 1}
+
+        payload = {'customer_id': 200, 'subtotal': 500.0}
+        service.create(payload)
+
+        assert payload['payment_term_id'] == 1
+        mock_payment_term_repo.list.assert_called_once_with(filters={'is_default': True, 'is_active': True}, limit=1, conn=None)
+
+    def test_order_delivery_computes_2_10_net_30_due_date_and_early_discount(self):
+        """Order delivery with 2/10 Net 30 terms computes due date (+30d), discount deadline (+10d), and discount amount."""
+        mock_payment_term_repo = MagicMock()
+        service = SalesOrderService(
+            repo=self.mock_order_repo,
+            line_repo=self.mock_line_repo,
+            customer_repo=self.mock_customer_repo,
+            inv_repo=self.mock_inv_repo,
+            pl_repo=self.mock_pl_repo,
+            pli_repo=self.mock_pli_repo,
+            payment_term_repo=mock_payment_term_repo,
+        )
+
+        order_data = {
+            'id': 60,
+            'order_number': 'SO-00060',
+            'customer_id': 300,
+            'payment_term_id': 4,
+            'subtotal': 2000.0,
+            'tax': 0.0,
+            'grand_total': 2000.0,
+            'status': 'Shipped',
+            'order_date': date(2026, 8, 1),
+        }
+        self.mock_order_repo.get.side_effect = [
+            order_data,
+            order_data,
+            order_data,
+        ]
+        self.mock_line_repo.list.return_value = []
+        self.mock_pl_repo.list.return_value = []
+        self.mock_customer_repo.get.return_value = {
+            'id': 300,
+            'name': 'Artisan Bakery',
+            'balance': 0.0,
+            'payment_term_id': 4,
+        }
+        mock_payment_term_repo.get.return_value = {
+            'id': 4,
+            'name': '2/10 Net 30',
+            'code': '2_10_NET_30',
+            'due_days': 30,
+            'discount_percentage': 2.0,
+            'discount_days': 10,
+            'is_active': True,
+        }
+
+        with patch.object(service, '_generate_invoice_number', return_value='INV-00060'):
+            service.update(60, {'status': 'Delivered'})
+
+        self.mock_inv_repo.create.assert_called_once()
+        inv_payload = self.mock_inv_repo.create.call_args[0][0]
+
+        assert inv_payload['invoice_number'] == 'INV-00060'
+        assert inv_payload['payment_term_id'] == 4
+        assert inv_payload['issue_date'] == date(2026, 8, 1)
+        assert inv_payload['due_date'] == date(2026, 8, 31)  # 2026-08-01 + 30 days
+        assert inv_payload['discount_due_date'] == date(2026, 8, 11)  # 2026-08-01 + 10 days
+        assert inv_payload['discount_percentage'] == 2.0
+        assert inv_payload['discount_days'] == 10
+        assert inv_payload['early_discount_amount'] == 40.0  # 2% of 2000.0
+
+    def test_order_delivery_computes_cod_due_date(self):
+        """Order delivery with COD terms sets due date equal to delivery date, discount_due_date to None."""
+        mock_payment_term_repo = MagicMock()
+        service = SalesOrderService(
+            repo=self.mock_order_repo,
+            line_repo=self.mock_line_repo,
+            customer_repo=self.mock_customer_repo,
+            inv_repo=self.mock_inv_repo,
+            pl_repo=self.mock_pl_repo,
+            pli_repo=self.mock_pli_repo,
+            payment_term_repo=mock_payment_term_repo,
+        )
+
+        order_data = {
+            'id': 61,
+            'order_number': 'SO-00061',
+            'customer_id': 301,
+            'payment_term_id': 2,
+            'subtotal': 500.0,
+            'tax': 0.0,
+            'grand_total': 500.0,
+            'status': 'Shipped',
+            'order_date': date(2026, 8, 15),
+        }
+        self.mock_order_repo.get.side_effect = [
+            order_data,
+            order_data,
+            order_data,
+        ]
+        self.mock_line_repo.list.return_value = []
+        self.mock_pl_repo.list.return_value = []
+        self.mock_customer_repo.get.return_value = {
+            'id': 301,
+            'name': 'Cash Cafe',
+            'balance': 0.0,
+            'payment_term_id': 2,
+        }
+        mock_payment_term_repo.get.return_value = {
+            'id': 2,
+            'name': 'Cash on Delivery (COD)',
+            'code': 'COD',
+            'due_days': 0,
+            'discount_percentage': 0.0,
+            'discount_days': 0,
+            'is_active': True,
+        }
+
+        with patch.object(service, '_generate_invoice_number', return_value='INV-00061'):
+            service.update(61, {'status': 'Delivered'})
+
+        self.mock_inv_repo.create.assert_called_once()
+        inv_payload = self.mock_inv_repo.create.call_args[0][0]
+
+        assert inv_payload['payment_term_id'] == 2
+        assert inv_payload['issue_date'] == date(2026, 8, 15)
+        assert inv_payload['due_date'] == date(2026, 8, 15)  # COD = due immediately (0 days)
+        assert inv_payload['discount_due_date'] is None
+        assert inv_payload['discount_percentage'] == 0.0
+        assert inv_payload['early_discount_amount'] == 0.0
+
 
 class TestSalesOrderControllerEndpoints:
     def test_recalculate_catch_weight_controller_endpoint(self, monkeypatch):

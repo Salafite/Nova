@@ -14,6 +14,10 @@
               <span class="material-symbols-outlined icon-xs">scale</span>
               {{ t('catch-weight-invoice', 'Catch-Weight / Dual UOM') }}
             </span>
+            <span v-if="isDiscountEligible" class="badge badge-discount-rate" :title="t('early-discount-available', 'Early Payment Discount Available')">
+              <span class="material-symbols-outlined icon-xs">savings</span>
+              {{ invoice.discount_percentage }}% {{ t('early-discount', 'Early Discount') }}
+            </span>
           </div>
         </div>
         <div class="flex gap-2 flex-wrap items-center">
@@ -28,10 +32,67 @@
             <span v-else class="material-symbols-outlined icon-xs">refresh</span>
             {{ syncing ? t('syncing', 'Syncing...') : t('sync-weights', 'Refresh Catch-Weight') }}
           </button>
-          <button v-if="invoice.status === 'Unpaid'" class="btn-primary" @click="showPayForm = true">
+          <button v-if="invoice.status === 'Unpaid'" class="btn-primary" @click="openPaymentModal">
             <span class="material-symbols-outlined icon-xs">payments</span>
             {{ t('record-payment', 'Record Payment') }}
           </button>
+        </div>
+      </div>
+
+      <!-- Early Payment Discount Banner (Active & Eligible) -->
+      <div v-if="isDiscountEligible" class="early-discount-banner mb-4">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3 flex-1 min-w-[280px]">
+            <span class="material-symbols-outlined discount-banner-icon">savings</span>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <h4 class="discount-banner-title">{{ t('early-discount-available', 'Early Payment Discount Available') }}</h4>
+                <span class="badge badge-discount-rate">
+                  {{ invoice.discount_percentage }}% {{ t('early-discount', 'Discount') }}
+                </span>
+                <span v-if="daysLeftForDiscount !== null && daysLeftForDiscount >= 0" class="badge badge-discount-days" :class="{ 'badge-urgent': daysLeftForDiscount <= 2 }">
+                  <span class="material-symbols-outlined icon-xs">schedule</span>
+                  {{ daysLeftForDiscount === 0 ? t('today', 'Today') : `${daysLeftForDiscount} ${daysLeftForDiscount === 1 ? t('day-left', 'day left') : t('days-left', 'days left')}` }}
+                </span>
+              </div>
+              <p class="discount-banner-desc">
+                {{ t('early-discount-prompt', 'Pay on or before') }}
+                <strong class="discount-date">{{ invoice.discount_due_date }}</strong>
+                {{ t('to-pay-discounted', 'to pay only') }}
+                <strong class="discount-price">${{ formatNumber(discountedTotal) }}</strong>
+                {{ t('instead-of', 'instead of') }}
+                <span class="strike">${{ formatNumber(invoice.total_amount) }}</span>
+                <span class="discount-savings">({{ t('save', 'Save') }} ${{ formatNumber(discountSavings) }})</span>
+              </p>
+            </div>
+          </div>
+          <div v-if="invoice.status === 'Unpaid'">
+            <button class="btn-discount-pay" @click="openPaymentWithDiscount">
+              <span class="material-symbols-outlined icon-xs">payments</span>
+              {{ t('pay-discounted-balance', 'Pay Discounted Balance') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Early Payment Discount Banner (Expired) -->
+      <div v-else-if="isDiscountExpired" class="early-discount-expired-banner mb-4">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined expired-banner-icon">event_busy</span>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <h4 class="expired-banner-title">{{ t('early-discount-expired', 'Early Discount Window Closed') }}</h4>
+              <span class="badge badge-inactive">{{ invoice.discount_percentage }}% {{ t('early-discount', 'Discount') }}</span>
+            </div>
+            <p class="expired-banner-desc">
+              {{ t('discount-cutoff-passed', 'The') }} {{ t('early-discount-window', 'early discount window closed on') }}
+              <strong>{{ invoice.discount_due_date }}</strong>.
+              {{ t('full-balance-due-by', 'Full invoice amount of') }}
+              <strong>${{ formatNumber(invoice.total_amount) }}</strong>
+              {{ t('is-due-by', 'is due by') }}
+              <strong>{{ invoice.due_date }}</strong>.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -65,8 +126,22 @@
           <div class="info-row"><span class="info-label">{{ t('invoices-number', 'Invoice #') }}:</span><span class="cell-mono">{{ invoice.invoice_number }}</span></div>
           <div class="info-row"><span class="info-label">{{ t('invoices-type', 'Type') }}:</span><span>{{ invoice.invoice_type }}</span></div>
           <div class="info-row"><span class="info-label">{{ t('invoices-partner', 'Partner / Customer') }}:</span><span>{{ partnerName }}</span></div>
+          <div class="info-row">
+            <span class="info-label">{{ t('payment-terms', 'Payment Terms') }}:</span>
+            <span class="font-medium text-primary">{{ paymentTermDisplay }}</span>
+          </div>
           <div class="info-row"><span class="info-label">{{ t('invoices-issue-date', 'Issue Date') }}:</span><span>{{ invoice.issue_date }}</span></div>
-          <div class="info-row"><span class="info-label">{{ t('invoices-due-date', 'Due Date') }}:</span><span>{{ invoice.due_date }}</span></div>
+          <div class="info-row">
+            <span class="info-label">{{ t('invoices-due-date', 'Due Date') }}:</span>
+            <span class="cell-mono font-bold" :class="isInvoiceOverdue ? 'text-danger' : ''">{{ invoice.due_date }}</span>
+          </div>
+          <div v-if="invoice.discount_due_date || invoice.discount_percentage > 0" class="info-row">
+            <span class="info-label">{{ t('discount-due-date', 'Discount Deadline') }}:</span>
+            <span class="cell-mono font-medium" :class="isDiscountExpired ? 'text-muted strike' : 'text-success'">
+              {{ invoice.discount_due_date || '-' }}
+              <span v-if="invoice.discount_percentage > 0" class="text-xs">({{ invoice.discount_percentage }}%)</span>
+            </span>
+          </div>
           <div class="info-row"><span class="info-label">{{ t('status', 'Status') }}:</span><span class="badge" :class="statusBadge">{{ invoice.status }}</span></div>
           <div class="info-row" v-if="invoice.sales_order_id">
             <span class="info-label">{{ t('sales-order', 'Sales Order') }}:</span>
@@ -112,6 +187,18 @@
           </template>
 
           <div class="info-row"><span class="info-label">{{ t('total-amount', 'Total Amount') }}:</span><span class="col-num font-bold">${{ (invoice.total_amount || 0).toFixed(2) }}</span></div>
+          
+          <template v-if="hasEarlyDiscount">
+            <div class="info-row">
+              <span class="info-label text-success font-medium">{{ t('early-discount-amount', 'Early Discount Amount') }}:</span>
+              <span class="col-num font-bold text-success">-${{ formatNumber(discountSavings) }} <span class="text-xs">({{ invoice.discount_percentage }}%)</span></span>
+            </div>
+            <div class="info-row" :class="{ 'early-pay-highlight': isDiscountEligible }">
+              <span class="info-label font-medium" :class="isDiscountEligible ? 'text-primary' : 'text-muted'">{{ t('early-pay-amount', 'Discounted Total') }}:</span>
+              <span class="col-num font-bold" :class="isDiscountEligible ? 'text-primary' : 'text-muted strike'">${{ formatNumber(discountedTotal) }}</span>
+            </div>
+          </template>
+
           <div class="info-row"><span class="info-label">{{ t('amount-paid', 'Amount Paid') }}:</span><span class="col-num text-success">${{ totalPaid.toFixed(2) }}</span></div>
           <div class="info-row total-row">
             <span class="info-label">{{ t('balance-due', 'Balance Due') }}:</span>
@@ -259,6 +346,19 @@
             <button class="btn-icon" @click="showPayForm = false" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
           </div>
           <div class="modal-body">
+            <!-- Early Discount Notice in Modal -->
+            <div v-if="isModalDiscountEligible" class="modal-discount-notice mb-4">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="text-xs text-green flex items-center gap-1">
+                  <span class="material-symbols-outlined icon-xs">savings</span>
+                  <span>{{ t('eligible-discount-notice', 'Early payment discount is available for this date') }}: <strong>${{ formatNumber(discountSavings) }}</strong> ({{ invoice.discount_percentage }}%)</span>
+                </div>
+                <button type="button" class="btn-xs btn-outline-success" @click="applyDiscountToPayForm">
+                  {{ t('pay-discounted-balance', 'Apply Early Discount') }} (${{ formatNumber(discountedTotal) }})
+                </button>
+              </div>
+            </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label>{{ t('payment-date', 'Payment Date') }} <span class="required">*</span></label>
@@ -318,6 +418,7 @@ const error = ref('')
 const invoice = ref(null)
 const payments = ref([])
 const customers = ref([])
+const paymentTerms = ref([])
 const orderLines = ref([])
 const cwBreakdown = ref(null)
 const uoms = ref([])
@@ -325,18 +426,101 @@ const showPayForm = ref(false)
 const saving = ref(false)
 const payForm = ref({ payment_date: '', amount: 0, payment_method: 'Cash', reference: '' })
 
+function today() {
+  return new Date().toISOString().split('T')[0]
+}
+
 const partnerName = computed(() => {
   if (!invoice.value) return `#${invoice.value?.partner_id}`
   const c = customers.value.find(x => x.id === invoice.value.partner_id)
   return c ? c.name : `#${invoice.value.partner_id}`
 })
 
+const paymentTermDisplay = computed(() => {
+  if (!invoice.value) return '-'
+  if (invoice.value.payment_term_id) {
+    const pt = paymentTerms.value.find(p => p.id === invoice.value.payment_term_id)
+    if (pt) {
+      if (pt.discount_percentage > 0 && pt.discount_days > 0) {
+        return `${pt.name} (${pt.discount_percentage}% / ${pt.discount_days}d, Net ${pt.due_days}d)`
+      }
+      return `${pt.name} (Net ${pt.due_days}d)`
+    }
+    return `Term #${invoice.value.payment_term_id}`
+  }
+  if (invoice.value.discount_percentage > 0 && invoice.value.discount_days > 0) {
+    return `${invoice.value.discount_percentage}% / ${invoice.value.discount_days}d`
+  }
+  return t('no-term', 'None (No Term)')
+})
+
+const isInvoiceOverdue = computed(() => {
+  if (!invoice.value || invoice.value.status === 'Paid' || invoice.value.status === 'Cancelled' || !invoice.value.due_date) return false
+  return today() > invoice.value.due_date
+})
+
+const hasEarlyDiscount = computed(() => {
+  if (!invoice.value) return false
+  return Boolean(
+    (invoice.value.discount_percentage && invoice.value.discount_percentage > 0) ||
+    (invoice.value.early_discount_amount && invoice.value.early_discount_amount > 0) ||
+    invoice.value.discount_due_date
+  )
+})
+
+const isDiscountEligible = computed(() => {
+  if (!invoice.value || invoice.value.status !== 'Unpaid' || !hasEarlyDiscount.value) return false
+  if (!invoice.value.discount_due_date) return true
+  return today() <= invoice.value.discount_due_date
+})
+
+const isDiscountExpired = computed(() => {
+  if (!invoice.value || invoice.value.status !== 'Unpaid' || !hasEarlyDiscount.value) return false
+  if (!invoice.value.discount_due_date) return false
+  return today() > invoice.value.discount_due_date
+})
+
+const isModalDiscountEligible = computed(() => {
+  if (!invoice.value || invoice.value.status !== 'Unpaid' || !hasEarlyDiscount.value) return false
+  const pDate = payForm.value.payment_date || today()
+  if (!invoice.value.discount_due_date) return true
+  return pDate <= invoice.value.discount_due_date
+})
+
+const discountSavings = computed(() => {
+  if (!invoice.value) return 0
+  if (invoice.value.early_discount_amount && invoice.value.early_discount_amount > 0) {
+    return Number(invoice.value.early_discount_amount)
+  }
+  const pct = Number(invoice.value.discount_percentage || 0)
+  const tot = Number(invoice.value.total_amount || 0)
+  if (pct > 0 && tot > 0) {
+    return Number(((tot * pct) / 100).toFixed(2))
+  }
+  return 0
+})
+
+const discountedTotal = computed(() => {
+  if (!invoice.value) return 0
+  const tot = Number(invoice.value.total_amount || 0)
+  const sav = discountSavings.value
+  return Math.max(0, Number((tot - sav).toFixed(2)))
+})
+
+const daysLeftForDiscount = computed(() => {
+  if (!invoice.value?.discount_due_date) return null
+  const current = new Date(today())
+  const deadline = new Date(invoice.value.discount_due_date)
+  const diffTime = deadline.getTime() - current.getTime()
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+})
+
 const isCatchWeightInvoice = computed(() => {
   if (!invoice.value) return false
   return Boolean(
     invoice.value.is_catch_weight ||
-    invoice.value.nominal_total_weight !== null && invoice.value.nominal_total_weight !== undefined ||
-    invoice.value.actual_total_weight !== null && invoice.value.actual_total_weight !== undefined ||
+    (invoice.value.nominal_total_weight !== null && invoice.value.nominal_total_weight !== undefined) ||
+    (invoice.value.actual_total_weight !== null && invoice.value.actual_total_weight !== undefined) ||
     (invoice.value.weight_adjustment_amount && invoice.value.weight_adjustment_amount !== 0) ||
     cwBreakdown.value?.is_catch_weight
   )
@@ -373,10 +557,10 @@ function isLineCatchWeight(line) {
   if (!line) return false
   return Boolean(
     line.is_catch_weight ||
-    line.pricing_uom_id !== null && line.pricing_uom_id !== undefined ||
-    line.unit_price_pricing_uom !== null && line.unit_price_pricing_uom !== undefined ||
-    line.nominal_weight !== null && line.nominal_weight !== undefined ||
-    line.catch_weight_actual !== null && line.catch_weight_actual !== undefined
+    (line.pricing_uom_id !== null && line.pricing_uom_id !== undefined) ||
+    (line.unit_price_pricing_uom !== null && line.unit_price_pricing_uom !== undefined) ||
+    (line.nominal_weight !== null && line.nominal_weight !== undefined) ||
+    (line.catch_weight_actual !== null && line.catch_weight_actual !== undefined)
   )
 }
 
@@ -422,23 +606,39 @@ function getLineVariance(line) {
   return Number((((act - nom) / nom) * 100).toFixed(2))
 }
 
-function today() { return new Date().toISOString().split('T')[0] }
+function openPaymentModal() {
+  payForm.value.payment_date = today()
+  payForm.value.amount = balanceDue.value > 0 ? balanceDue.value : 0
+  showPayForm.value = true
+}
+
+function openPaymentWithDiscount() {
+  payForm.value.payment_date = today()
+  payForm.value.amount = isDiscountEligible.value ? discountedTotal.value : (balanceDue.value > 0 ? balanceDue.value : 0)
+  showPayForm.value = true
+}
+
+function applyDiscountToPayForm() {
+  payForm.value.amount = discountedTotal.value
+}
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
     const id = route.params.id
-    const [invRes, payRes, custRes, uomRes] = await Promise.all([
+    const [invRes, payRes, custRes, uomRes, termsRes] = await Promise.all([
       api.get(`/T0090I/${id}`),
       api.get('/T0091I/', { params: { invoice_id: id } }),
-      api.get('/T0010I/'),
+      api.get('/T0010I/').catch(() => ({ data: [] })),
       api.get('/T0001I/').catch(() => ({ data: [] })),
+      api.get('/T0096I/').catch(() => ({ data: [] })),
     ])
     invoice.value = invRes.data
     payments.value = payRes.data || []
     customers.value = custRes.data || []
     uoms.value = uomRes.data || []
+    paymentTerms.value = termsRes.data || []
     payForm.value.payment_date = today()
     payForm.value.amount = balanceDue.value > 0 ? balanceDue.value : 0
 
@@ -494,7 +694,7 @@ async function savePayment() {
       status: 'Completed',
     })
     const totalAfter = totalPaid.value + payForm.value.amount
-    if (totalAfter >= invoice.value.total_amount) {
+    if (totalAfter >= invoice.value.total_amount || (isDiscountEligible.value && payForm.value.amount >= discountedTotal.value)) {
       await api.put(`/T0090I/${invoice.value.id}`, { status: 'Paid' })
     }
     toast(t('payment-recorded', 'Payment recorded successfully'), 'success')
@@ -516,6 +716,7 @@ onMounted(load)
 .error-state { color: #ba1a1a; }
 .error-state p { margin-bottom: 16px; }
 .empty-cell { text-align: center; color: #999; padding: 24px !important; }
+.mb-1 { margin-bottom: 4px; }
 .mb-4 { margin-bottom: 16px; }
 .mb-6 { margin-bottom: 24px; }
 .mt-4 { margin-top: 16px; }
@@ -527,6 +728,7 @@ onMounted(load)
 .gap-1 { gap: 4px; }
 .gap-2 { gap: 8px; }
 .gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
 
 .btn-link { background: none; border: none; color: #5d3fd3; font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 8px; }
 .btn-link:hover { text-decoration: underline; }
@@ -545,6 +747,25 @@ onMounted(load)
 .btn-icon { background: none; border: none; padding: 6px; cursor: pointer; border-radius: 6px; color: #888; }
 .btn-icon:hover { background: #f0f0f0; }
 
+/* Early Discount Banners */
+.early-discount-banner { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 14px 18px; }
+.discount-banner-icon { font-size: 28px; color: #16a34a; }
+.discount-banner-title { font-size: 14px; font-weight: 700; color: #14532d; margin: 0; }
+.discount-banner-desc { font-size: 13px; color: #166534; margin: 0; }
+.discount-date { color: #15803d; text-decoration: underline; }
+.discount-price { color: #15803d; font-size: 14px; }
+.discount-savings { font-weight: 600; color: #16a34a; margin-left: 4px; }
+.badge-discount-rate { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.badge-discount-days { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px; }
+.badge-discount-days.badge-urgent { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+.btn-discount-pay { display: inline-flex; align-items: center; gap: 6px; background: #16a34a; color: #fff; padding: 8px 16px; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-discount-pay:hover { background: #15803d; }
+
+.early-discount-expired-banner { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px 18px; }
+.expired-banner-icon { font-size: 28px; color: #d97706; }
+.expired-banner-title { font-size: 14px; font-weight: 700; color: #92400e; margin: 0; }
+.expired-banner-desc { font-size: 12px; color: #b45309; margin: 0; }
+
 /* Catch-Weight Banner */
 .cw-notice-banner { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 14px 18px; }
 .cw-banner-icon { font-size: 28px; color: #16a34a; }
@@ -559,15 +780,20 @@ onMounted(load)
 .info-label { color: #888; font-weight: 500; min-width: 120px; }
 .total-row { border-top: 1px solid #eee; margin-top: 8px; padding-top: 8px; }
 .cw-adj-row { background: #f8fafc; padding: 6px 8px; border-radius: 6px; }
+.early-pay-highlight { background: #f0fdf4; padding: 6px 8px; border-radius: 6px; }
 .col-num { font-family: monospace; font-weight: 600; text-align: right; }
 .cell-mono { font-family: monospace; font-size: 12px; color: #888; }
 .strike-original { text-decoration: line-through; color: #94a3b8; }
+.strike { text-decoration: line-through; opacity: 0.7; }
 .text-success { color: #16a34a; }
 .text-green { color: #16a34a; }
 .text-amber { color: #d97706; }
 .text-danger { color: #dc2626; }
 .text-primary { color: #5d3fd3; }
 .text-cw { color: #0284c7; }
+.text-muted { color: #94a3b8; }
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 700; }
 
 .data-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; }
 .table-wrap { overflow-x: auto; }
@@ -599,6 +825,11 @@ onMounted(load)
 .modal-header h3 { font-size: 16px; font-weight: 700; color: #1a1a2e; margin: 0; }
 .modal-body { padding: 24px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+.modal-discount-notice { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; }
+.btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-outline-success { background: #fff; border: 1px solid #16a34a; color: #16a34a; }
+.btn-outline-success:hover { background: #f0fdf4; }
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .form-group { margin-bottom: 14px; }

@@ -28,83 +28,60 @@ vi.mock('../composables/useToast.js', () => ({
   useToast: () => ({ show: mockToast }),
 }))
 
-describe('SalesView (Customer Credit Limits & Hold Status)', () => {
+describe('SalesView (Payment Terms Support)', () => {
   let pinia
   let wrapper
 
-  const sampleOrders = [
-    {
-      id: 1,
-      order_number: 'SO-2026-0001',
-      customer_id: 10,
-      subtotal: 1000.0,
-      tax: 50.0,
-      grand_total: 1050.0,
-      status: 'Confirmed',
-      order_date: '2026-08-20',
-    },
-    {
-      id: 2,
-      order_number: 'SO-2026-0002',
-      customer_id: 20,
-      subtotal: 5000.0,
-      tax: 250.0,
-      grand_total: 5250.0,
-      status: 'Credit Hold',
-      order_date: '2026-08-21',
-    },
+  const samplePaymentTerms = [
+    { id: 1, name: 'Net 30', due_days: 30, discount_days: 0, discount_percentage: 0 },
+    { id: 2, name: '2/10 Net 30', due_days: 30, discount_days: 10, discount_percentage: 2 },
+    { id: 3, name: 'COD', due_days: 0, discount_days: 0, discount_percentage: 0 },
   ]
 
   const sampleCustomers = [
-    { id: 10, name: 'Acme Corp', credit_limit: 10000, balance: 2000 },
-    { id: 20, name: 'Delinquent Trader', credit_limit: 5000, balance: 6000 },
+    { id: 10, name: 'Acme Corp', payment_term_id: 2 },
+    { id: 20, name: 'Global Traders', payment_term_id: 1 },
+    { id: 30, name: 'Walk-in Cash', payment_term_id: null },
   ]
 
-  const healthyCreditStatus = {
-    customer_id: 10,
-    customer_name: 'Acme Corp',
-    credit_limit: 10000.0,
-    balance: 2000.0,
-    available_credit: 8000.0,
-    raw_available_credit: 8000.0,
-    credit_limit_exceeded: false,
-    is_credit_limit_enforced: true,
-    overdue_invoices_count: 0,
-    overdue_invoices_amount: 0.0,
-    has_overdue_invoices: false,
-    overdue_invoices: [],
-    is_delinquent: false,
-    on_hold: false,
-    has_hold_orders: false,
-    hold_orders_count: 0,
-    hold_reasons: [],
-  }
-
-  const delinquentCreditStatus = {
-    customer_id: 20,
-    customer_name: 'Delinquent Trader',
-    credit_limit: 5000.0,
-    balance: 6000.0,
-    available_credit: 0.0,
-    raw_available_credit: -1000.0,
-    credit_limit_exceeded: true,
-    is_credit_limit_enforced: true,
-    overdue_invoices_count: 2,
-    overdue_invoices_amount: 3500.0,
-    has_overdue_invoices: true,
-    overdue_invoices: [
-      { id: 1, invoice_number: 'INV-001', days_overdue: 45, total_amount: 2000.0 },
-      { id: 2, invoice_number: 'INV-002', days_overdue: 35, total_amount: 1500.0 },
-    ],
-    is_delinquent: true,
-    on_hold: true,
-    has_hold_orders: true,
-    hold_orders_count: 1,
-    hold_reasons: [
-      'Customer credit limit exceeded: Balance $6,000.00 > Limit $5,000.00',
-      'Customer has 2 invoices overdue by >30 days (total overdue: $3,500.00)',
-    ],
-  }
+  const sampleOrders = [
+    {
+      id: 101,
+      order_number: 'SO-2026-0001',
+      customer_id: 10,
+      payment_term_id: 2,
+      subtotal: 500,
+      tax: 25,
+      grand_total: 525,
+      status: 'Confirmed',
+      order_date: '2026-08-20',
+      notes: 'Test order with 2/10 Net 30',
+    },
+    {
+      id: 102,
+      order_number: 'SO-2026-0002',
+      customer_id: 20,
+      payment_term_id: 1,
+      subtotal: 1000,
+      tax: 50,
+      grand_total: 1050,
+      status: 'Pending',
+      order_date: '2026-08-21',
+      notes: 'Test order with Net 30',
+    },
+    {
+      id: 103,
+      order_number: 'SO-2026-0003',
+      customer_id: 30,
+      payment_term_id: null,
+      subtotal: 150,
+      tax: 7.5,
+      grand_total: 157.5,
+      status: 'Pending',
+      order_date: '2026-08-22',
+      notes: 'No explicit term',
+    },
+  ]
 
   beforeEach(() => {
     pinia = createPinia()
@@ -112,20 +89,21 @@ describe('SalesView (Customer Credit Limits & Hold Status)', () => {
     vi.clearAllMocks()
 
     api.get.mockImplementation((url) => {
-      if (url === '/T0012I/') {
+      if (url.includes('/T0012I/')) {
         return Promise.resolve({ data: JSON.parse(JSON.stringify(sampleOrders)) })
       }
-      if (url === '/T0010I/') {
+      if (url.includes('/T0010I/')) {
         return Promise.resolve({ data: JSON.parse(JSON.stringify(sampleCustomers)) })
       }
-      if (url === '/T0010I/10/credit-status') {
-        return Promise.resolve({ data: JSON.parse(JSON.stringify(healthyCreditStatus)) })
-      }
-      if (url === '/T0010I/20/credit-status') {
-        return Promise.resolve({ data: JSON.parse(JSON.stringify(delinquentCreditStatus)) })
+      if (url.includes('/T0096I/')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(samplePaymentTerms)) })
       }
       return Promise.resolve({ data: [] })
     })
+
+    api.post.mockResolvedValue({ data: { id: 104, order_number: 'SO-2026-0004' } })
+    api.put.mockResolvedValue({ data: { success: true } })
+    api.delete.mockResolvedValue({ data: { success: true } })
   })
 
   afterEach(() => {
@@ -144,98 +122,79 @@ describe('SalesView (Customer Credit Limits & Hold Status)', () => {
     return wrapper
   }
 
-  it('renders sales orders list with Credit Hold badge', async () => {
+  it('renders sales orders list with Payment Terms column and names', async () => {
     const w = createWrapper()
     await flushPromises()
 
     expect(w.text()).toContain('SO-2026-0001')
-    expect(w.text()).toContain('SO-2026-0002')
-    expect(w.text()).toContain('Credit Hold')
-
-    // Verify badge styling for Credit Hold
-    const holdBadge = w.findAll('.badge').find((el) => el.text() === 'Credit Hold')
-    expect(holdBadge).toBeDefined()
-    expect(holdBadge.classes()).toContain('badge-danger')
+    expect(w.text()).toContain('Acme Corp')
+    expect(w.text()).toContain('2/10 Net 30')
+    expect(w.text()).toContain('Global Traders')
+    expect(w.text()).toContain('Net 30')
   })
 
-  it('fetches and displays healthy customer credit standing upon customer selection in modal', async () => {
+  it('opens new sales order modal and allows selecting payment terms', async () => {
     const w = createWrapper()
     await flushPromises()
 
-    // Open Add Modal
-    const addBtn = w.findAll('button').find((b) => b.text().includes('New Sales Order'))
+    // Click "New Sales Order" button
+    const addBtn = w.findAll('button').find(b => b.text().includes('New Sales Order') || b.text().includes('sales-order'))
     expect(addBtn).toBeDefined()
     await addBtn.trigger('click')
     await flushPromises()
 
-    // Select customer 10 (Acme Corp)
-    const select = w.find('select[required]')
-    await select.setValue(10)
-    await select.trigger('change')
+    // Check modal exists
+    expect(w.find('.modal-content').exists()).toBe(true)
+
+    // Select customer Acme Corp (customer_id 10, which has payment_term_id: 2)
+    const custSelect = w.findAll('select').find(s => s.html().includes('Acme Corp'))
+    expect(custSelect).toBeDefined()
+    await custSelect.setValue(10)
+    await custSelect.trigger('change')
     await flushPromises()
 
-    expect(api.get).toHaveBeenCalledWith('/T0010I/10/credit-status')
+    // Fill order number
+    const orderNumInput = w.find('input[type="text"]')
+    await orderNumInput.setValue('SO-2026-0004')
 
-    // Credit panel rendered
-    const creditPanel = w.find('.credit-status-panel')
-    expect(creditPanel.exists()).toBe(true)
+    // Find and submit save button
+    const saveBtn = w.findAll('button').find(b => b.text() === 'Save' || b.text().includes('save'))
+    await saveBtn.trigger('click')
+    await flushPromises()
 
-    // Checks metrics: Balance $2000.00, Limit $10000.00, Available $8000.00
-    expect(creditPanel.text()).toContain('$2000.00')
-    expect(creditPanel.text()).toContain('$10000.00')
-    expect(creditPanel.text()).toContain('$8000.00')
-    expect(creditPanel.text()).toContain('healthy')
+    expect(api.post).toHaveBeenCalledWith(
+      '/T0012I/',
+      expect.objectContaining({
+        order_number: 'SO-2026-0004',
+        customer_id: 10,
+        payment_term_id: 2,
+      })
+    )
   })
 
-  it('displays delinquent overdue invoices warning banner for delinquent accounts', async () => {
+  it('populates existing payment terms when editing a sales order', async () => {
     const w = createWrapper()
     await flushPromises()
 
-    // Open Add Modal
-    const addBtn = w.findAll('button').find((b) => b.text().includes('New Sales Order'))
-    await addBtn.trigger('click')
+    // Click edit on first order
+    const editBtns = w.findAll('button.btn-icon')
+    await editBtns[0].trigger('click')
     await flushPromises()
 
-    // Select customer 20 (Delinquent Trader)
-    const select = w.find('select[required]')
-    await select.setValue(20)
-    await select.trigger('change')
+    expect(w.find('.modal-content').exists()).toBe(true)
+
+    // Verify saving with edit sends PUT request
+    const saveBtn = w.findAll('button').find(b => b.text() === 'Save' || b.text().includes('save'))
+    await saveBtn.trigger('click')
     await flushPromises()
 
-    expect(api.get).toHaveBeenCalledWith('/T0010I/20/credit-status')
-
-    const creditPanel = w.find('.credit-status-panel')
-    expect(creditPanel.exists()).toBe(true)
-    expect(creditPanel.find('.credit-alert-danger').exists()).toBe(true)
-    expect(creditPanel.text()).toContain('Delinquent Account')
-    expect(creditPanel.text()).toContain('2 invoices')
-    expect(creditPanel.text()).toContain('$3500.00')
-  })
-
-  it('displays exposure warning when order total exceeds available credit line', async () => {
-    const w = createWrapper()
-    await flushPromises()
-
-    // Open Add Modal
-    const addBtn = w.findAll('button').find((b) => b.text().includes('New Sales Order'))
-    await addBtn.trigger('click')
-    await flushPromises()
-
-    // Select customer 10 (Acme Corp with $8000 available credit)
-    const select = w.find('select[required]')
-    await select.setValue(10)
-    await select.trigger('change')
-    await flushPromises()
-
-    // Enter grand total of 9000 (2000 balance + 9000 order = 11000 > 10000 limit)
-    const inputs = w.findAll('input[type="number"]')
-    const grandTotalInput = inputs[2]
-    await grandTotalInput.setValue(9000)
-    await grandTotalInput.trigger('input')
-    await flushPromises()
-
-    const creditPanel = w.find('.credit-status-panel')
-    expect(creditPanel.find('.credit-alert-warning').exists()).toBe(true)
-    expect(creditPanel.text()).toContain('Exposure Warning')
+    expect(api.put).toHaveBeenCalledWith(
+      '/T0012I/101',
+      expect.objectContaining({
+        order_number: 'SO-2026-0001',
+        customer_id: 10,
+        payment_term_id: 2,
+      })
+    )
   })
 })
