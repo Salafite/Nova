@@ -521,3 +521,228 @@ def test_verify_and_reconcile_session_unpaid_not_reconciled(settlement_service):
         assert res["payment_status"] == "unpaid"
 
 
+def test_create_invoice_checkout_session_custom_urls(settlement_service, mock_portal_repo):
+    with patch("modules.portal.services.stripe_settlement_service.create_settlement_checkout_session") as mock_stripe_create:
+        mock_stripe_create.return_value = {
+            "session_id": "cs_test_custom_url",
+            "url": "https://checkout.stripe.com/pay/cs_test_custom_url",
+            "amount": 500.0,
+            "amount_cents": 50000,
+            "currency": "usd",
+            "settlement_type": "invoice",
+            "status": "open",
+        }
+
+        req = InvoiceCheckoutSessionRequest(
+            invoice_id=42,
+            success_url="https://portal.mycompany.com/success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url="https://portal.mycompany.com/cancel",
+        )
+
+        resp = settlement_service.create_invoice_checkout_session(
+            customer_id=10,
+            request=req,
+            user_email="buyer@acme.com",
+        )
+
+        assert resp.session_id == "cs_test_custom_url"
+        mock_stripe_create.assert_called_once()
+        kwargs = mock_stripe_create.call_args[1]
+        assert kwargs["success_url"] == "https://portal.mycompany.com/success?session_id={CHECKOUT_SESSION_ID}"
+        assert kwargs["cancel_url"] == "https://portal.mycompany.com/cancel"
+
+
+def test_create_balance_settlement_session_custom_urls(settlement_service, mock_portal_repo):
+    with patch("modules.portal.services.stripe_settlement_service.create_settlement_checkout_session") as mock_stripe_create:
+        mock_stripe_create.return_value = {
+            "session_id": "cs_test_bal_custom",
+            "url": "https://checkout.stripe.com/pay/cs_test_bal_custom",
+            "amount": 800.0,
+            "amount_cents": 80000,
+            "currency": "usd",
+            "settlement_type": "balance",
+            "status": "open",
+        }
+
+        req = BalanceSettlementCheckoutRequest(
+            amount=800.0,
+            success_url="https://portal.mycompany.com/success",
+            cancel_url="https://portal.mycompany.com/cancel",
+        )
+
+        resp = settlement_service.create_balance_settlement_session(
+            customer_id=10,
+            request=req,
+            user_email="buyer@acme.com",
+        )
+
+        assert resp.session_id == "cs_test_bal_custom"
+        kwargs = mock_stripe_create.call_args[1]
+        assert kwargs["success_url"] == "https://portal.mycompany.com/success"
+        assert kwargs["cancel_url"] == "https://portal.mycompany.com/cancel"
+
+
+def test_portal_repo_reconcile_partial_invoice_payment():
+    """Test that paying less than invoice total sets invoice status to 'Partially Paid'."""
+    from modules.portal.repositories.portal_repo import PortalRepository
+
+    repo = PortalRepository()
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+    mock_cur.fetchone.side_effect = [
+        None,  # idempotency
+        {"id": 10, "name": "Acme", "balance": 1500.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
+        {"id": 60, "payment_date": date(2026, 8, 23), "invoice_id": 42, "partner_id": 10, "amount": 200.0, "payment_method": "Stripe Card", "reference": "pi_part_123", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": "pi_part_123", "stripe_checkout_session_id": "cs_part_123", "payment_link": None, "created_at": None},  # payment
+        {"total_paid": 200.0},   # total paid so far
+        {"total_amount": 500.0}, # invoice total is 500
+        {"id": 42, "total_amount": 500.0, "status": "Partially Paid"}, # invoice updated
+        {"balance": 1300.0},     # customer balance
+        {"id": 1},               # Bank account
+        {"id": 2},               # AR account
+        {"id": 305, "entry_date": date(2026, 8, 23), "reference": "JE-STRIPE-60", "description": "Stripe receipt", "status": "Posted", "created_at": None},
+        {"id": 1009},
+        {"id": 1010},
+    ]
+
+    with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("modules.portal.repositories.portal_repo.release_connection"):
+        result = repo.reconcile_settlement_transaction(
+            customer_id=10,
+            amount=200.0,
+            settlement_type="invoice",
+            invoice_id=42,
+            session_id="cs_part_123",
+            payment_intent_id="pi_part_123",
+            payment_method="Stripe Card",
+        )
+
+    assert result["reconciled"] is True
+    assert result["amount"] == 200.0
+    assert result["new_customer_balance"] == 1300.0
+    assert result["journal_entry_id"] == 305
+
+
+def test_portal_repo_reconcile_general_balance_open_invoices_auto_paid():
+    """Test general balance settlement where unpaid invoices are auto-marked Paid if covered."""
+    from modules.portal.repositories.portal_repo import PortalRepository
+
+    repo = PortalRepository()
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+    mock_cur.fetchone.side_effect = [
+        None,  # idempotency
+        {"id": 10, "name": "Acme", "balance": 600.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
+        {"id": 70, "payment_date": date(2026, 8, 23), "invoice_id": None, "partner_id": 10, "amount": 600.0, "payment_method": "Stripe Card", "reference": "pi_bal_70", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": "pi_bal_70", "stripe_checkout_session_id": "cs_bal_70", "payment_link": None, "created_at": None},
+        # total_paid for open invoice 1
+        {"total_paid": 300.0},
+        # update invoice 1
+        {"id": 10},
+        # customer balance
+        {"balance": 0.0},
+        {"id": 1},
+        {"id": 2},
+        {"id": 310, "entry_date": date(2026, 8, 23), "reference": "JE-STRIPE-70", "description": "Stripe receipt", "status": "Posted", "created_at": None},
+        {"id": 1015},
+        {"id": 1016},
+    ]
+
+    mock_cur.fetchall.side_effect = [
+        [{"id": 10, "total_amount": 300.0}], # open invoices query
+    ]
+
+    with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("modules.portal.repositories.portal_repo.release_connection"):
+        result = repo.reconcile_settlement_transaction(
+            customer_id=10,
+            amount=600.0,
+            settlement_type="balance",
+            invoice_id=None,
+            invoice_ids=None,
+            session_id="cs_bal_70",
+            payment_intent_id="pi_bal_70",
+            payment_method="Stripe Card",
+        )
+
+    assert result["reconciled"] is True
+    assert result["payment_id"] == 70
+    assert result["new_customer_balance"] == 0.0
+    assert result["invoices_updated"] == [10]
+
+
+def test_portal_repo_reconcile_db_error_triggers_rollback():
+    """Test that a database exception during reconciliation triggers a rollback and raises."""
+    from modules.portal.repositories.portal_repo import PortalRepository
+
+    repo = PortalRepository()
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+    mock_cur.fetchone.side_effect = [
+        None,  # idempotency check with session_id
+        {"id": 10, "name": "Acme", "balance": 1000.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},
+        Exception("Database disk error during payment insertion"),
+    ]
+
+    with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("modules.portal.repositories.portal_repo.release_connection"):
+        with pytest.raises(Exception, match="Database disk error"):
+            repo.reconcile_settlement_transaction(
+                customer_id=10,
+                amount=500.0,
+                settlement_type="invoice",
+                invoice_id=42,
+                session_id="cs_test_err_rollback",
+            )
+
+    mock_conn.rollback.assert_called_once()
+
+
+def test_stripe_settlement_service_default_init():
+    service = StripeSettlementService()
+    assert service.portal_repo is not None
+
+
+def test_reconcile_checkout_session_missing_amount():
+    from modules.portal.services.stripe_settlement_service import StripeSettlementService
+    mock_repo = MagicMock()
+    service = StripeSettlementService(portal_repo=mock_repo)
+
+    mock_repo.reconcile_settlement_transaction.return_value = {
+        "reconciled": True,
+        "payment_id": 99,
+    }
+
+    session_data = {
+        "id": "cs_test_fallback_amt",
+        "amount_total": 0,
+        "payment_method_types": ["card"],
+        "metadata": {
+            "customer_id": "10",
+            "settlement_type": "invoice",
+            "invoice_id": "42",
+            "amount": "150.75",
+        },
+    }
+
+    res = service.reconcile_checkout_session(session_data)
+    assert res["reconciled"] is True
+    mock_repo.reconcile_settlement_transaction.assert_called_once_with(
+        customer_id=10,
+        amount=150.75,
+        settlement_type="invoice",
+        invoice_id=42,
+        invoice_ids=None,
+        session_id="cs_test_fallback_amt",
+        payment_intent_id=None,
+        payment_method="Stripe Card",
+        payment_link=None,
+    )
+
+
+
+

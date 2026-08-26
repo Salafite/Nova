@@ -1223,7 +1223,10 @@ class PortalRepository:
                                 """,
                                 (o_id,),
                             )
-                            invoices_updated.append(o_id)
+                            inv_res = cur.fetchone()
+                            if inv_res:
+                                res_id = inv_res.get("id", o_id) if isinstance(inv_res, dict) else o_id
+                                invoices_updated.append(res_id)
 
                 # 5. Decrement Customer Balance in T0010
                 update_cust_query = f"""
