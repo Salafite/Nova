@@ -9,6 +9,7 @@ from packages.database.sequence import (
     generate_document_number,
     generate_invoice_number,
     generate_pick_list_number,
+    generate_stock_transfer_number,
     set_sequence_value,
     reset_sequence,
     get_current_sequence_value,
@@ -216,6 +217,23 @@ class TestDedicatedGenerators:
             num = generate_pick_list_number(conn=mock_conn, schema='Nova', prefix='PICK', padding=4)
             assert num == 'PICK-0250'
             mock_get_next.assert_called_once_with('seq_pick_list_number', conn=mock_conn, schema='Nova')
+
+    def test_generate_stock_transfer_number_defaults(self):
+        with patch('packages.database.sequence.get_next_sequence_value', return_value=1) as mock_get_next:
+            num = generate_stock_transfer_number()
+            assert num == 'TRF-00001'
+            mock_get_next.assert_called_once_with(
+                DOCUMENT_SEQUENCES['stock_transfer'],
+                conn=None,
+                schema=None
+            )
+
+    def test_generate_stock_transfer_number_custom_args(self):
+        mock_conn = MagicMock()
+        with patch('packages.database.sequence.get_next_sequence_value', return_value=75) as mock_get_next:
+            num = generate_stock_transfer_number(conn=mock_conn, schema='Nova', prefix='TRANSFER', padding=6)
+            assert num == 'TRANSFER-000075'
+            mock_get_next.assert_called_once_with('seq_stock_transfer_number', conn=mock_conn, schema='Nova')
 
 
 # ============================================================================

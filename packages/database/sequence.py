@@ -10,12 +10,14 @@ logger = logging.getLogger(__name__)
 DOCUMENT_SEQUENCES = {
     'invoice': 'seq_invoice_number',
     'pick_list': 'seq_pick_list_number',
+    'stock_transfer': 'seq_stock_transfer_number',
 }
 
 # Standard document prefix mappings
 DOCUMENT_PREFIXES = {
     'invoice': 'INV',
     'pick_list': 'PKL',
+    'stock_transfer': 'TRF',
 }
 
 
@@ -133,6 +135,25 @@ def generate_pick_list_number(
     Generate the next concurrency-safe pick list number (e.g. PKL-00001).
     """
     seq_name = DOCUMENT_SEQUENCES.get('pick_list', 'seq_pick_list_number')
+    return generate_document_number(
+        sequence_name=seq_name,
+        prefix=prefix,
+        padding=padding,
+        conn=conn,
+        schema=schema,
+    )
+
+
+def generate_stock_transfer_number(
+    conn=None,
+    schema: Optional[str] = None,
+    prefix: str = "TRF",
+    padding: int = 5,
+) -> str:
+    """
+    Generate the next concurrency-safe stock transfer number (e.g. TRF-00001).
+    """
+    seq_name = DOCUMENT_SEQUENCES.get('stock_transfer', 'seq_stock_transfer_number')
     return generate_document_number(
         sequence_name=seq_name,
         prefix=prefix,
