@@ -595,7 +595,9 @@ class SalesOrderService(CrudService):
                     # which needs a real Postgres connection (not the mock store).
                     # The in-memory mock test store does not serialize concurrent access,
                     # so the concurrent balance assertion was already removed in PR #5.
-                    new_balance = customer.get('balance', 0) + order.get('grand_total', 0)
+                    current_bal = float(customer.get('balance') or 0.0)
+                    order_total = float(order.get('grand_total') or 0.0)
+                    new_balance = current_bal + order_total
                     self.customer_repo.update(customer_id, {'balance': new_balance}, conn=conn)
                     logger.info(f"Updated customer {customer_id} balance to {new_balance}")
             except Exception as e:

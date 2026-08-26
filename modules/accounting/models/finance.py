@@ -152,6 +152,7 @@ class PaymentCreate(BaseModel):
     amount: float = Field(..., gt=0)
     payment_method: str = Field(..., max_length=50) # Cash, Bank Transfer, Card
     reference: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
     status: str = 'Completed'
 
 class PaymentUpdate(BaseModel):
@@ -161,6 +162,7 @@ class PaymentUpdate(BaseModel):
     amount: Optional[float] = Field(None, gt=0)
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
     status: Optional[str] = None
 
 class PaymentResponse(AuditMixin):
@@ -171,4 +173,6 @@ class PaymentResponse(AuditMixin):
     amount: float
     payment_method: str
     reference: Optional[str]
+    notes: Optional[str] = None
     status: str
+

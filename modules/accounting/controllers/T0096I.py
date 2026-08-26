@@ -35,3 +35,11 @@ def seed_standard_payment_terms():
     """Seed standard payment terms into the database for the active tenant."""
     return service.seed_standard_terms()
 
+
+# Ensure static routes (e.g. /standard-terms, /default, /seed-standard) are evaluated before /{id}
+router.routes = (
+    [r for r in router.routes if '{id}' not in getattr(r, 'path', '')]
+    + [r for r in router.routes if '{id}' in getattr(r, 'path', '')]
+)
+
+
