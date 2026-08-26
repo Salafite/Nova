@@ -315,3 +315,97 @@ class TestPortalPricingService:
             service.get_customer_profile(customer_id=999)
 
         assert exc_info.value.status_code == 404
+
+    def test_resolve_line_items_pricing_mixed_items(self, service):
+        service.repo.get_product.side_effect = lambda pid, conn=None: {
+            101: {"name": "Olive Oil 5L", "sku": "OIL-5L", "uom_name": "Bottle"},
+            102: {"name": "Flour 25kg", "sku": "FLOUR-25K", "uom_name": "Bag"},
+        }.get(pid)
+
+        service.repo.resolve_contracted_price.side_effect = lambda customer_id, product_id, qty=1.0, conn=None: {
+            101: {"unit_price": 40.0, "base_price": 50.0, "is_contracted": True, "product_name": "Olive Oil 5L"},
+            102: {"unit_price": 30.0, "base_price": 30.0, "is_contracted": False, "product_name": "Flour 25kg"},
+        }.get(product_id, {})
+
+        raw_items = [
+            {"product_id": 101, "qty": 3.0, "notes": "Cold pressed"},
+            {"product_id": 102, "qty": 2.0, "notes": None},
+        ]
+
+        resolved = service.resolve_line_items_pricing(customer_id=42, items=raw_items)
+
+        assert len(resolved) == 2
+        # Item 1: 3 * $40.0 = $120.0
+        assert resolved[0]["line_number"] == 1
+        assert resolved[0]["product_id"] == 101
+        assert resolved[0]["product_code"] == "OIL-5L"
+        assert resolved[0]["product_name"] == "Olive Oil 5L"
+        assert resolved[0]["uom_name"] == "Bottle"
+        assert resolved[0]["qty"] == 3.0
+        assert resolved[0]["unit_price"] == 40.0
+        assert resolved[0]["base_price"] == 50.0
+        assert resolved[0]["line_total"] == 120.0
+        assert resolved[0]["is_contracted"] is True
+        assert resolved[0]["notes"] == "Cold pressed"
+
+        # Item 2: 2 * $30.0 = $60.0
+        assert resolved[1]["line_number"] == 2
+        assert resolved[1]["product_id"] == 102
+        assert resolved[1]["product_code"] == "FLOUR-25K"
+        assert resolved[1]["qty"] == 2.0
+        assert resolved[1]["unit_price"] == 30.0
+        assert resolved[1]["line_total"] == 60.0
+        assert resolved[1]["is_contracted"] is False
+
+    def test_get_catalog_category_id_resolution(self, service):
+        service.repo.get_categories.return_value = [
+            {"id": 1, "category_name": "Produce", "item_count": 8},
+            {"id": 2, "category_name": "Bakery", "item_count": 4},
+        ]
+        service.repo.get_catalog.return_value = (
+            [],
+            0,
+            [
+                {"id": 1, "category_name": "Produce", "item_count": 8},
+                {"id": 2, "category_name": "Bakery", "item_count": 4},
+            ],
+            {"min_order_amount": 100.0, "order_cutoff_time": "22:00:00"},
+        )
+
+        query = PortalCatalogQuery(category_id=2, search=None)
+        res = service.get_catalog(customer_id=42, query=query)
+
+        service.repo.get_catalog.assert_called_once_with(
+            customer_id=42,
+            category="Bakery",
+            search=None,
+            in_stock_only=False,
+            page=1,
+            limit=50,
+            conn=None,
+        )
+        assert res.total == 0
+        assert len(res.categories) == 2
+        assert res.categories[1].category_name == "Bakery"
+
+    def test_get_categories_service(self, service):
+        service.repo.get_categories.return_value = [
+            {"id": 1, "category_name": "Dairy", "item_count": 10}
+        ]
+
+        cats = service.get_categories()
+        assert len(cats) == 1
+        assert cats[0].category_name == "Dairy"
+        assert cats[0].item_count == 10
+
+    def test_resolve_contracted_price_nonexistent_product(self, service):
+        repo = PortalRepository()
+        with patch.object(repo, "get_customer", return_value={"id": 10}), \
+             patch.object(repo, "get_product", return_value=None):
+
+            res = repo.resolve_contracted_price(customer_id=10, product_id=9999)
+            assert res["product_id"] == 9999
+            assert res["base_price"] == 0.0
+            assert res["unit_price"] == 0.0
+            assert res["is_contracted"] is False
+
