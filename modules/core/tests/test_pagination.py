@@ -312,3 +312,113 @@ class TestPaginationCORSHeaders:
         assert 'X-Page-Offset' in expose_headers or 'x-page-offset' in expose_headers.lower()
         assert 'Link' in expose_headers or 'link' in expose_headers.lower()
 
+
+class TestCustomTCodeControllerPagination:
+    def setup_method(self):
+        clear_current_tenant()
+
+    def teardown_method(self):
+        clear_current_tenant()
+
+    def test_t0025i_settings_pagination(self):
+        from modules.administration.controllers.T0025I import router, service
+
+        app = FastAPI()
+        app.include_router(router)
+        client = TestClient(app)
+
+        user = {'id': 1, 'username': 'admin', 'role': 'Admin', 'permissions': ['ADMIN_VIEW', '*'], 'business_id': 1}
+        token = create_access_token(1, business_id=1)
+
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch.object(service, 'list_by_group', return_value=[{'id': 1, 'setting_key': 'site_name', 'setting_value': 'Nova', 'description': 'Site', 'setting_group': 'General', 'is_active': True}]) as mock_list, \
+             patch.object(service, 'count', return_value=75):
+            resp = client.get('/api/T0025I/?limit=20&offset=40&order_by=setting_key', headers={'Authorization': f'Bearer {token}'})
+            assert resp.status_code == 200
+            assert resp.headers.get('X-Total-Count') == '75'
+            assert resp.headers.get('X-Page-Limit') == '20'
+            assert resp.headers.get('X-Page-Offset') == '40'
+            assert 'Link' in resp.headers
+            assert 'rel="first"' in resp.headers['Link']
+            assert 'rel="prev"' in resp.headers['Link']
+            assert 'rel="next"' in resp.headers['Link']
+            assert 'rel="last"' in resp.headers['Link']
+            mock_list.assert_called_once_with(group=None, limit=20, offset=40, order_by='setting_key')
+
+    def test_t0100i_module_registry_pagination(self):
+        from modules.administration.controllers.T0100I import router, service
+
+        app = FastAPI()
+        app.include_router(router)
+        client = TestClient(app)
+
+        user = {'id': 1, 'username': 'admin', 'role': 'Admin', 'permissions': ['ADMIN_VIEW', '*'], 'business_id': 1}
+        token = create_access_token(1, business_id=1)
+
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch.object(service, 'list', return_value=[{'id': 1, 'module_key': 'crm', 'name': 'CRM', 'name_ar': None, 'description': None, 'description_ar': None, 'version': '1.0', 'author': None, 'icon': None, 'category': None, 'is_core': True, 'is_active': True, 'installed_at': None, 'dependencies': None}]) as mock_list, \
+             patch.object(service, 'count', return_value=120):
+            resp = client.get('/api/T0100I/?limit=10&offset=20&order_by=module_key', headers={'Authorization': f'Bearer {token}'})
+            assert resp.status_code == 200
+            assert resp.headers.get('X-Total-Count') == '120'
+            assert resp.headers.get('X-Page-Limit') == '10'
+            assert resp.headers.get('X-Page-Offset') == '20'
+            assert 'rel="first"' in resp.headers.get('Link', '')
+            assert 'rel="prev"' in resp.headers.get('Link', '')
+            assert 'rel="next"' in resp.headers.get('Link', '')
+            assert 'rel="last"' in resp.headers.get('Link', '')
+            mock_list.assert_called_once_with(limit=10, offset=20, order_by='module_key')
+
+    def test_t0024i_categories_pagination(self):
+        from modules.inventory.controllers.T0024I import router
+
+        app = FastAPI()
+        app.include_router(router)
+        client = TestClient(app)
+
+        user = {'id': 1, 'username': 'admin', 'role': 'Admin', 'permissions': ['PRODUCTS_VIEW', '*'], 'business_id': 1}
+        token = create_access_token(1, business_id=1)
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        mock_cur.fetchone.return_value = (35,)
+        mock_cur.fetchall.return_value = [('Beverages',), ('Snacks',)]
+
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch('modules.inventory.controllers.T0024I.get_connection', return_value=mock_conn), \
+             patch('modules.inventory.controllers.T0024I.release_connection'):
+            resp = client.get('/api/categories/?limit=25&offset=0&order_by=name', headers={'Authorization': f'Bearer {token}'})
+            assert resp.status_code == 200
+            assert resp.json() == [{'name': 'Beverages'}, {'name': 'Snacks'}]
+            assert resp.headers.get('X-Total-Count') == '35'
+            assert resp.headers.get('X-Page-Limit') == '25'
+            assert resp.headers.get('X-Page-Offset') == '0'
+            assert 'rel="next"' in resp.headers.get('Link', '')
+
+    def test_t0010i_customer_sub_endpoints_pagination(self):
+        from modules.crm.controllers.T0010I import router, repo
+
+        app = FastAPI()
+        app.include_router(router)
+        client = TestClient(app)
+
+        user = {'id': 1, 'username': 'admin', 'role': 'Admin', 'permissions': ['*'], 'business_id': 1}
+        token = create_access_token(1, business_id=1)
+
+        with patch('packages.auth.deps.get_user_by_id', return_value=user), \
+             patch.object(repo, 'get', return_value={'id': 5, 'name': 'Acme Corp'}), \
+             patch('modules.crm.controllers.T0010I.CrudRepository') as mock_crud_cls:
+            mock_pay_repo = MagicMock()
+            mock_pay_repo.list.return_value = [{'id': 1, 'amount': 100.0}]
+            mock_pay_repo.count.return_value = 45
+            mock_crud_cls.return_value = mock_pay_repo
+
+            resp = client.get('/api/T0010I/5/payments?limit=15&offset=0', headers={'Authorization': f'Bearer {token}'})
+            assert resp.status_code == 200
+            assert resp.headers.get('X-Total-Count') == '45'
+            assert resp.headers.get('X-Page-Limit') == '15'
+            assert resp.headers.get('X-Page-Offset') == '0'
+            assert 'rel="next"' in resp.headers.get('Link', '')
+
+

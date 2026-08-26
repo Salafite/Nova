@@ -1,8 +1,9 @@
 import logging
 from typing import Optional, List, Dict, Any
 from datetime import date
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Request, Response
 from packages.auth.deps import require_permission, get_current_user
+from modules.core.controllers.base import apply_pagination_headers
 from ..models.commission import (
     CommissionRuleCreate,
     CommissionRuleUpdate,
@@ -120,17 +121,28 @@ def generate_commission_payouts(
 
 @router.get('/rules')
 def list_commission_rules(
+    response: Response,
+    request: Request,
     sales_rep_id: Optional[int] = Query(None, description='Filter rules for sales rep'),
     is_active: Optional[bool] = Query(None, description='Filter active/inactive rules'),
-    limit: int = Query(100, ge=1, le=500),
-    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500, description="Maximum number of records to return (1-500, default 50)"),
+    offset: int = Query(0, ge=0, description="Number of records to skip (default 0)"),
 ):
     """
     Lists commission configuration plans and rate rules.
     """
+    limit = min(max(1, limit), 500) if limit is not None else 50
+    offset = max(0, offset) if offset is not None else 0
     items, total = default_commission_service.list_rules(
         sales_rep_id=sales_rep_id,
         is_active=is_active,
+        limit=limit,
+        offset=offset,
+    )
+    apply_pagination_headers(
+        response=response,
+        request=request,
+        total_count=total,
         limit=limit,
         offset=offset,
     )
@@ -200,21 +212,32 @@ def delete_commission_rule(rule_id: int):
 
 @router.get('/payouts')
 def list_commission_payouts(
+    response: Response,
+    request: Request,
     sales_rep_id: Optional[int] = Query(None, description='Filter payouts by sales rep ID'),
     payout_status: Optional[str] = Query(None, alias='status', description='Filter by status: Pending, Approved, Paid, Cancelled'),
     period_start: Optional[date] = Query(None, description='Filter payouts from period start date'),
     period_end: Optional[date] = Query(None, description='Filter payouts to period end date'),
-    limit: int = Query(100, ge=1, le=500),
-    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500, description="Maximum number of records to return (1-500, default 50)"),
+    offset: int = Query(0, ge=0, description="Number of records to skip (default 0)"),
 ):
     """
     Lists commission payout ledger records.
     """
+    limit = min(max(1, limit), 500) if limit is not None else 50
+    offset = max(0, offset) if offset is not None else 0
     items, total = default_commission_service.list_payouts(
         sales_rep_id=sales_rep_id,
         status=payout_status,
         period_start=period_start,
         period_end=period_end,
+        limit=limit,
+        offset=offset,
+    )
+    apply_pagination_headers(
+        response=response,
+        request=request,
+        total_count=total,
         limit=limit,
         offset=offset,
     )
