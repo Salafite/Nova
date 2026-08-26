@@ -64,9 +64,11 @@ END $$;
 
 CREATE SEQUENCE IF NOT EXISTS "Nova".seq_invoice_number START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE IF NOT EXISTS "Nova".seq_pick_list_number START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS "Nova".seq_stock_transfer_number START WITH 1 INCREMENT BY 1;
 
 COMMENT ON SEQUENCE "Nova".seq_invoice_number IS 'Concurrency-safe atomic sequence for generating unique invoice numbers (INV-XXXXX)';
 COMMENT ON SEQUENCE "Nova".seq_pick_list_number IS 'Concurrency-safe atomic sequence for generating unique pick list numbers (PKL-XXXXX)';
+COMMENT ON SEQUENCE "Nova".seq_stock_transfer_number IS 'Concurrency-safe atomic sequence for generating unique stock transfer numbers (TRF-XXXXX)';
 
 -- ============================================================
 -- MASTER DATA TABLES
@@ -229,18 +231,24 @@ CREATE INDEX IF NOT EXISTS idx_t0007_business_id_id ON "Nova".t0007(business_id,
 
 
 CREATE TABLE IF NOT EXISTS "Nova".t0008 (
-    id          SERIAL PRIMARY KEY,
-    name        VARCHAR(200) NOT NULL,
-    location    VARCHAR(200),
-    is_active   BOOLEAN NOT NULL DEFAULT true,
+    id            SERIAL PRIMARY KEY,
+    name          VARCHAR(200) NOT NULL,
+    location      VARCHAR(200),
+    warehouse_type VARCHAR(50) DEFAULT 'Standard',
+    is_virtual    BOOLEAN NOT NULL DEFAULT false,
+    is_active     BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_by  INT,
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_by  INT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by    INT,
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by    INT,
     update_number INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0008.warehouse_type IS 'Warehouse classification: Central Hub | Regional DC | Retail Branch | In-Transit Virtual | Standard';
+COMMENT ON COLUMN "Nova".t0008.is_virtual IS 'Flag indicating if warehouse is a virtual location (e.g. In-Transit virtual warehouse)';
 COMMENT ON COLUMN "Nova".t0008.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0008_warehouse_type ON "Nova".t0008(warehouse_type);
+CREATE INDEX IF NOT EXISTS idx_t0008_is_virtual ON "Nova".t0008(is_virtual);
 CREATE INDEX IF NOT EXISTS idx_t0008_business_id ON "Nova".t0008(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0008_business_id_id ON "Nova".t0008(business_id, id);
 
@@ -252,15 +260,18 @@ CREATE TABLE IF NOT EXISTS "Nova".t0009 (
     warehouse_id   INT NOT NULL REFERENCES "Nova".t0008(id),
     qty            NUMERIC(12,2) NOT NULL DEFAULT 0,
     reserved_qty   NUMERIC(12,2) NOT NULL DEFAULT 0,
+    in_transit_qty NUMERIC(12,2) NOT NULL DEFAULT 0,
     reorder_level  NUMERIC(12,2) NOT NULL DEFAULT 0,
-    business_id   INT REFERENCES "Nova".t0059(id),
+    business_id    INT REFERENCES "Nova".t0059(id),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by     INT,
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by     INT,
     update_number  INT NOT NULL DEFAULT 1
 );
+COMMENT ON COLUMN "Nova".t0009.in_transit_qty IS 'Quantity of inventory currently in-transit to/from this warehouse';
 COMMENT ON COLUMN "Nova".t0009.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0009_in_transit_qty ON "Nova".t0009(in_transit_qty);
 CREATE INDEX IF NOT EXISTS idx_t0009_business_id ON "Nova".t0009(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0009_business_id_id ON "Nova".t0009(business_id, id);
 
@@ -3469,6 +3480,99 @@ COMMENT ON COLUMN "Nova".t0107.business_id IS 'Tenant / business organization id
 CREATE INDEX IF NOT EXISTS idx_t0107_code ON "Nova".t0107(code);
 CREATE INDEX IF NOT EXISTS idx_t0107_business_id ON "Nova".t0107(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0107_business_id_id ON "Nova".t0107(business_id, id);
+
+-- Stock Transfers (Header)
+CREATE TABLE IF NOT EXISTS "Nova".t0108 (
+    id                       SERIAL PRIMARY KEY,
+    transfer_number          VARCHAR(50) NOT NULL UNIQUE,
+    source_warehouse_id      INT NOT NULL REFERENCES "Nova".t0008(id),
+    destination_warehouse_id INT NOT NULL REFERENCES "Nova".t0008(id),
+    status                   VARCHAR(30) NOT NULL DEFAULT 'Draft',
+    transfer_date            DATE NOT NULL DEFAULT CURRENT_DATE,
+    expected_delivery_date   DATE,
+    carrier                  VARCHAR(100),
+    tracking_number          VARCHAR(100),
+    dispatched_at            TIMESTAMPTZ,
+    dispatched_by            INT REFERENCES "Nova".t0021(id),
+    received_at              TIMESTAMPTZ,
+    received_by              INT REFERENCES "Nova".t0021(id),
+    notes                    TEXT,
+    is_active                BOOLEAN NOT NULL DEFAULT true,
+    business_id              INT REFERENCES "Nova".t0059(id),
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by               INT,
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by               INT,
+    update_number            INT NOT NULL DEFAULT 1,
+    CONSTRAINT chk_t0108_warehouses_differ CHECK (source_warehouse_id <> destination_warehouse_id)
+);
+COMMENT ON TABLE "Nova".t0108 IS 'Stock Transfer Orders — Inter-warehouse transfers and branch replenishment';
+COMMENT ON COLUMN "Nova".t0108.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0108.transfer_number IS 'Unique transfer order reference (TRF-XXXXX)';
+COMMENT ON COLUMN "Nova".t0108.source_warehouse_id IS 'Originating dispatch warehouse (FK to t0008)';
+COMMENT ON COLUMN "Nova".t0108.destination_warehouse_id IS 'Receiving destination warehouse (FK to t0008)';
+COMMENT ON COLUMN "Nova".t0108.status IS 'Transfer status: Draft | Pending | In Transit | Received | Partially Received | Cancelled';
+COMMENT ON COLUMN "Nova".t0108.transfer_date IS 'Date transfer order was requested';
+COMMENT ON COLUMN "Nova".t0108.expected_delivery_date IS 'Estimated arrival date at destination';
+COMMENT ON COLUMN "Nova".t0108.carrier IS 'Logistics carrier or transport provider';
+COMMENT ON COLUMN "Nova".t0108.tracking_number IS 'Carrier shipment tracking / waybill number';
+COMMENT ON COLUMN "Nova".t0108.dispatched_at IS 'Timestamp when transfer was dispatched from source';
+COMMENT ON COLUMN "Nova".t0108.dispatched_by IS 'User who dispatched transfer (FK to t0021)';
+COMMENT ON COLUMN "Nova".t0108.received_at IS 'Timestamp when transfer was received at destination';
+COMMENT ON COLUMN "Nova".t0108.received_by IS 'User who confirmed receipt (FK to t0021)';
+COMMENT ON COLUMN "Nova".t0108.notes IS 'Transfer instructions or notes';
+COMMENT ON COLUMN "Nova".t0108.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0108_transfer_number ON "Nova".t0108(transfer_number);
+CREATE INDEX IF NOT EXISTS idx_t0108_source_warehouse ON "Nova".t0108(source_warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_t0108_dest_warehouse ON "Nova".t0108(destination_warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_t0108_status ON "Nova".t0108(status);
+CREATE INDEX IF NOT EXISTS idx_t0108_transfer_date ON "Nova".t0108(transfer_date);
+CREATE INDEX IF NOT EXISTS idx_t0108_business_id ON "Nova".t0108(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0108_business_id_id ON "Nova".t0108(business_id, id);
+
+-- Stock Transfer Lines
+CREATE TABLE IF NOT EXISTS "Nova".t0109 (
+    id             SERIAL PRIMARY KEY,
+    transfer_id    INT NOT NULL REFERENCES "Nova".t0108(id) ON DELETE CASCADE,
+    product_id     INT NOT NULL REFERENCES "Nova".t0003(id),
+    qty_requested  NUMERIC(12,2) NOT NULL CHECK (qty_requested > 0),
+    qty_dispatched NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (qty_dispatched >= 0),
+    qty_received   NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (qty_received >= 0),
+    qty_lost       NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (qty_lost >= 0),
+    loss_reason    VARCHAR(100),
+    loss_notes     TEXT,
+    batch_id       INT REFERENCES "Nova".t0087(id),
+    batch_number   VARCHAR(100),
+    line_number    INT NOT NULL DEFAULT 1,
+    notes          TEXT,
+    is_active      BOOLEAN NOT NULL DEFAULT true,
+    business_id    INT REFERENCES "Nova".t0059(id),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by     INT,
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by     INT,
+    update_number  INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0109 IS 'Stock Transfer Lines — Itemized product quantities, transit and loss tracking';
+COMMENT ON COLUMN "Nova".t0109.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0109.transfer_id IS 'Reference to Stock Transfer header (FK to t0108)';
+COMMENT ON COLUMN "Nova".t0109.product_id IS 'Reference to Product (FK to t0003)';
+COMMENT ON COLUMN "Nova".t0109.qty_requested IS 'Quantity requested to transfer';
+COMMENT ON COLUMN "Nova".t0109.qty_dispatched IS 'Quantity dispatched from source warehouse';
+COMMENT ON COLUMN "Nova".t0109.qty_received IS 'Quantity received at destination warehouse';
+COMMENT ON COLUMN "Nova".t0109.qty_lost IS 'Quantity lost, damaged, or unaccounted during transit';
+COMMENT ON COLUMN "Nova".t0109.loss_reason IS 'Reason code for discrepancy / loss (e.g. Transit Damage, Spillage, Theft, Expired, Other)';
+COMMENT ON COLUMN "Nova".t0109.loss_notes IS 'Notes or explanation regarding transit loss / discrepancy';
+COMMENT ON COLUMN "Nova".t0109.batch_id IS 'Batch/lot reference if FEFO/batch-tracked (FK to t0087)';
+COMMENT ON COLUMN "Nova".t0109.batch_number IS 'Batch number identifier string';
+COMMENT ON COLUMN "Nova".t0109.line_number IS 'Sequential line item number in transfer order';
+COMMENT ON COLUMN "Nova".t0109.notes IS 'Line notes';
+COMMENT ON COLUMN "Nova".t0109.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+CREATE INDEX IF NOT EXISTS idx_t0109_transfer_id ON "Nova".t0109(transfer_id);
+CREATE INDEX IF NOT EXISTS idx_t0109_product_id ON "Nova".t0109(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0109_batch_id ON "Nova".t0109(batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0109_business_id ON "Nova".t0109(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0109_business_id_id ON "Nova".t0109(business_id, id);
 
 COMMIT;
 CREATE INDEX IF NOT EXISTS idx_t0021_customer_id ON "Nova".t0021(customer_id);
