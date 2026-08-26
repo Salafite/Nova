@@ -165,6 +165,11 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'Portal Invoices': 'PORTAL_PAY',
     'T0025 - Global Settings': 'ADMIN_VIEW',
     'T0100 - Module Registry': 'ADMIN_VIEW',
+    '/api/inventory/replenishment': 'INVENTORY_VIEW',
+    '/api/purchasing/restock': 'PURCHASING_VIEW',
+    'Inventory - Inter-Branch Replenishment': 'INVENTORY_VIEW',
+    'Purchasing - Proactive Demand Restock': 'PURCHASING_VIEW',
+    'Replenishment': 'INVENTORY_VIEW',
     'Field Sales Mobile': 'FIELD_SALES_MOBILE',
     'Field Sales': 'FIELD_SALES_MOBILE',
 }
