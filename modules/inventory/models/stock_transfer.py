@@ -1,6 +1,8 @@
 """
 Nova ERP — Stock Transfers & Inter-Branch Replenishment Pydantic Models (Inventory Domain)
 """
+from datetime import date
+from typing import Optional
 from modules.warehouse.models.stock_transfer import (
     StockTransferLineCreate,
     StockTransferLineUpdate,

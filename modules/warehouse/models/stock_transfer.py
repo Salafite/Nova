@@ -107,7 +107,7 @@ class StockTransferResponse(AuditMixin):
     destination_warehouse_id: int
     destination_warehouse_name: Optional[str] = None
     status: str
-    transfer_date: date
+    transfer_date: Optional[date] = None
     expected_delivery_date: Optional[date] = None
     carrier: Optional[str] = None
     tracking_number: Optional[str] = None
