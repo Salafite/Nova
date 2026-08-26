@@ -3,6 +3,8 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PortalCatalogView from '../views/portal/PortalCatalogView.vue'
 import PortalCartCheckoutView from '../views/portal/PortalCartCheckoutView.vue'
+import PortalOrdersView from '../views/portal/PortalOrdersView.vue'
+import PortalOrderDetailView from '../views/portal/PortalOrderDetailView.vue'
 import { usePortalStore } from '../stores/portal.js'
 import { api } from '../api/client.js'
 
@@ -17,10 +19,15 @@ vi.mock('../api/client.js', () => ({
 
 // Mock vue-router
 const mockPush = vi.fn()
+const mockRoute = {
+  params: { id: '501' },
+}
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  useRoute: () => mockRoute,
   RouterLink: {
     name: 'RouterLink',
     props: ['to'],
@@ -28,7 +35,7 @@ vi.mock('vue-router', () => ({
   },
 }))
 
-describe('Portal Catalog & Checkout Views', () => {
+describe('Portal Views Suite', () => {
   let pinia
   let portalStore
 
@@ -86,6 +93,75 @@ describe('Portal Catalog & Checkout Views', () => {
     message: 'Order before 22:00 for next-day delivery',
   }
 
+  const mockOrders = [
+    {
+      id: 501,
+      order_number: 'SO-20260825-001',
+      customer_id: 10,
+      customer_name: 'Artisan Cafe Ltd',
+      status: 'Confirmed',
+      order_date: '2026-08-25',
+      requested_delivery_date: '2026-08-26',
+      subtotal: 147.00,
+      tax: 0.00,
+      grand_total: 147.00,
+      notes: 'Deliver to rear kitchen entrance',
+      lines: [
+        {
+          id: 1,
+          sales_order_id: 501,
+          product_id: 101,
+          product_code: 'COF-001',
+          product_name: 'Espresso Roast Beans 1kg',
+          uom_name: 'Bag',
+          qty: 6,
+          unit_price: 24.50,
+          line_total: 147.00,
+        },
+      ],
+    },
+    {
+      id: 502,
+      order_number: 'SO-20260820-002',
+      customer_id: 10,
+      customer_name: 'Artisan Cafe Ltd',
+      status: 'Delivered',
+      order_date: '2026-08-20',
+      requested_delivery_date: '2026-08-21',
+      subtotal: 76.00,
+      tax: 0.00,
+      grand_total: 76.00,
+      notes: 'Morning delivery',
+      lines: [
+        {
+          id: 2,
+          sales_order_id: 502,
+          product_id: 102,
+          product_code: 'OAT-002',
+          product_name: 'Barista Oat Milk 1L',
+          uom_name: 'Carton',
+          qty: 20,
+          unit_price: 3.80,
+          line_total: 76.00,
+        },
+      ],
+    },
+    {
+      id: 503,
+      order_number: 'SO-20260815-003',
+      customer_id: 10,
+      customer_name: 'Artisan Cafe Ltd',
+      status: 'Cancelled',
+      order_date: '2026-08-15',
+      requested_delivery_date: '2026-08-16',
+      subtotal: 50.00,
+      tax: 0.00,
+      grand_total: 50.00,
+      notes: 'Cancelled duplicate order',
+      lines: [],
+    },
+  ]
+
   beforeEach(() => {
     pinia = createPinia()
     setActivePinia(pinia)
@@ -111,6 +187,19 @@ describe('Portal Catalog & Checkout Views', () => {
       if (url === '/portal/cutoff-status') {
         return Promise.resolve({ data: mockCutoff })
       }
+      if (url === '/portal/orders') {
+        return Promise.resolve({
+          data: {
+            items: mockOrders,
+            total: 3,
+            page: 1,
+            limit: 20,
+          },
+        })
+      }
+      if (url === '/portal/orders/501') {
+        return Promise.resolve({ data: mockOrders[0] })
+      }
       return Promise.resolve({ data: {} })
     })
 
@@ -120,6 +209,9 @@ describe('Portal Catalog & Checkout Views', () => {
     portalStore.categories = [...mockCategories]
     portalStore.accountSummary = { ...mockSummary }
     portalStore.cutoffStatus = { ...mockCutoff }
+    portalStore.orders = [...mockOrders]
+    portalStore.ordersTotal = 3
+    portalStore.currentOrder = { ...mockOrders[0] }
     portalStore.cart = []
   })
 
@@ -308,6 +400,211 @@ describe('Portal Catalog & Checkout Views', () => {
       expect(wrapper.find('.order-success-modal').exists()).toBe(true)
       expect(wrapper.text()).toContain('Replenishment Order Submitted!')
       expect(wrapper.text()).toContain('SO-2026-0777')
+    })
+  })
+
+  // ------------------------------------------------------------------------
+  // PortalOrdersView Tests
+  // ------------------------------------------------------------------------
+  describe('PortalOrdersView', () => {
+    it('renders metrics summary cards, status tabs, and order history table', () => {
+      const wrapper = mount(PortalOrdersView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      expect(wrapper.text()).toContain('Order History & Replenishment')
+      expect(wrapper.text()).toContain('Total Orders')
+      expect(wrapper.text()).toContain('SO-20260825-001')
+      expect(wrapper.text()).toContain('SO-20260820-002')
+      expect(wrapper.text()).toContain('$147.00')
+      expect(wrapper.text()).toContain('Confirmed')
+      expect(wrapper.text()).toContain('Delivered')
+    })
+
+    it('filters orders by search query', async () => {
+      const wrapper = mount(PortalOrdersView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const searchInput = wrapper.find('.search-input')
+      await searchInput.setValue('SO-20260825-001')
+
+      expect(wrapper.text()).toContain('SO-20260825-001')
+      expect(wrapper.text()).not.toContain('SO-20260820-002')
+    })
+
+    it('opens 1-click reorder modal and executes reorder', async () => {
+      const wrapper = mount(PortalOrdersView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const reorderBtn = wrapper.findAll('.btn-reorder')[0]
+      expect(reorderBtn.exists()).toBe(true)
+      await reorderBtn.trigger('click')
+
+      expect(wrapper.find('.reorder-modal-card').exists()).toBe(true)
+      expect(wrapper.text()).toContain('SO-20260825-001')
+      expect(wrapper.text()).toContain('Espresso Roast Beans 1kg')
+
+      const reorderSpy = vi.spyOn(portalStore, 'reorderPastOrder').mockResolvedValueOnce({
+        id: 999,
+        order_number: 'SO-20260827-0999',
+      })
+
+      const submitReorderBtn = wrapper.find('.modal-footer .btn-primary')
+      await submitReorderBtn.trigger('click')
+
+      expect(reorderSpy).toHaveBeenCalledWith(501, expect.any(Object))
+    })
+
+    it('loads order lines into replenishment cart when cart mode chosen in reorder modal', async () => {
+      const wrapper = mount(PortalOrdersView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const reorderBtn = wrapper.findAll('.btn-reorder')[0]
+      await reorderBtn.trigger('click')
+
+      // Switch to cart mode
+      const cartRadio = wrapper.findAll('input[type="radio"]')[1]
+      await cartRadio.setValue()
+
+      const submitBtn = wrapper.find('.modal-footer .btn-primary')
+      await submitBtn.trigger('click')
+
+      expect(portalStore.cart).toHaveLength(1)
+      expect(portalStore.cart[0].product_id).toBe(101)
+      expect(portalStore.cart[0].qty).toBe(6)
+      expect(mockPush).toHaveBeenCalledWith('/portal/cart')
+    })
+
+    it('opens cancel modal and executes cancellation for pending/confirmed order', async () => {
+      const wrapper = mount(PortalOrdersView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const cancelBtn = wrapper.find('.btn-cancel')
+      expect(cancelBtn.exists()).toBe(true)
+      await cancelBtn.trigger('click')
+
+      expect(wrapper.find('.cancel-modal-card').exists()).toBe(true)
+
+      const cancelSpy = vi.spyOn(portalStore, 'cancelOrder').mockResolvedValueOnce({
+        id: 501,
+        status: 'Cancelled',
+      })
+
+      const confirmCancelBtn = wrapper.find('.cancel-modal-card .btn-danger')
+      await confirmCancelBtn.trigger('click')
+
+      expect(cancelSpy).toHaveBeenCalledWith(501, '')
+    })
+  })
+
+  // ------------------------------------------------------------------------
+  // PortalOrderDetailView Tests
+  // ------------------------------------------------------------------------
+  describe('PortalOrderDetailView', () => {
+    it('renders order header, fulfillment tracker steps, summary cards, and itemized lines table', () => {
+      const wrapper = mount(PortalOrderDetailView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      expect(wrapper.text()).toContain('Replenishment Order #SO-20260825-001')
+      expect(wrapper.text()).toContain('Fulfillment & Delivery Progress')
+      expect(wrapper.text()).toContain('Fulfillment & Delivery Details')
+      expect(wrapper.text()).toContain('Payment & Invoice Summary')
+      expect(wrapper.text()).toContain('Itemized Order Line Items (1)')
+      expect(wrapper.text()).toContain('Espresso Roast Beans 1kg')
+      expect(wrapper.text()).toContain('COF-001')
+      expect(wrapper.text()).toContain('$147.00')
+      expect(wrapper.find('.fulfillment-tracker-card').exists()).toBe(true)
+    })
+
+    it('loads items directly into replenishment cart from detail view', async () => {
+      const wrapper = mount(PortalOrderDetailView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const loadCartBtn = wrapper.find('.btn-action-secondary')
+      expect(loadCartBtn.exists()).toBe(true)
+      await loadCartBtn.trigger('click')
+
+      expect(portalStore.cart).toHaveLength(1)
+      expect(portalStore.cart[0].product_id).toBe(101)
+      expect(portalStore.cart[0].qty).toBe(6)
+      expect(mockPush).toHaveBeenCalledWith('/portal/cart')
+    })
+
+    it('opens reorder modal from detail view and executes 1-click reorder', async () => {
+      const wrapper = mount(PortalOrderDetailView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const reorderBtn = wrapper.find('.btn-action-primary')
+      await reorderBtn.trigger('click')
+
+      expect(wrapper.find('.reorder-modal-card').exists()).toBe(true)
+
+      const reorderSpy = vi.spyOn(portalStore, 'reorderPastOrder').mockResolvedValueOnce({
+        id: 998,
+        order_number: 'SO-20260827-0998',
+      })
+
+      const confirmBtn = wrapper.find('.modal-footer .btn-primary')
+      await confirmBtn.trigger('click')
+
+      expect(reorderSpy).toHaveBeenCalledWith(501, expect.any(Object))
+      expect(mockPush).toHaveBeenCalledWith('/portal/orders/998')
+    })
+
+    it('cancels order from detail view and updates view', async () => {
+      const wrapper = mount(PortalOrderDetailView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const cancelBtn = wrapper.find('.btn-action-danger')
+      expect(cancelBtn.exists()).toBe(true)
+      await cancelBtn.trigger('click')
+
+      expect(wrapper.find('.cancel-modal-card').exists()).toBe(true)
+
+      const cancelSpy = vi.spyOn(portalStore, 'cancelOrder').mockResolvedValueOnce({
+        id: 501,
+        status: 'Cancelled',
+      })
+
+      const confirmCancelBtn = wrapper.find('.cancel-modal-card .btn-danger')
+      await confirmCancelBtn.trigger('click')
+
+      expect(cancelSpy).toHaveBeenCalledWith(501, '')
     })
   })
 })
