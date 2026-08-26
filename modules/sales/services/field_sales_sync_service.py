@@ -523,52 +523,54 @@ class FieldSalesSyncService:
                         else:
                             avail_qty = 0.0
 
-                    if avail_qty <= 0.0:
-                        substitutes = self.get_suggested_substitutes(
-                            product_id=pid,
-                            category=product.get("category"),
-                            warehouse_id=warehouse_id,
-                            limit=3,
-                            conn=conn,
-                        )
-                        conflicts.append(
-                            LineConflictDetail(
-                                line_number=line.line_number,
+                    is_backorder = bool(line.notes and '[BACKORDER]' in str(line.notes))
+                    if not is_backorder:
+                        if avail_qty <= 0.0:
+                            substitutes = self.get_suggested_substitutes(
                                 product_id=pid,
-                                product_name=line.product_name,
-                                conflict_type=ConflictType.OUT_OF_STOCK.value,
-                                requested_qty=line.qty,
-                                available_qty=0.0,
-                                requested_price=line.unit_price,
-                                current_price=_to_float(product.get("price")),
-                                message=f"Product '{line.product_name}' (SKU: {line.sku or pid}) is out of stock.",
-                                suggested_action=ResolutionAction.SUBSTITUTE.value,
-                                suggested_substitutes=substitutes,
+                                category=product.get("category"),
+                                warehouse_id=warehouse_id,
+                                limit=3,
+                                conn=conn,
                             )
-                        )
-                    elif avail_qty < line.qty:
-                        substitutes = self.get_suggested_substitutes(
-                            product_id=pid,
-                            category=product.get("category"),
-                            warehouse_id=warehouse_id,
-                            limit=3,
-                            conn=conn,
-                        )
-                        conflicts.append(
-                            LineConflictDetail(
-                                line_number=line.line_number,
+                            conflicts.append(
+                                LineConflictDetail(
+                                    line_number=line.line_number,
+                                    product_id=pid,
+                                    product_name=line.product_name,
+                                    conflict_type=ConflictType.OUT_OF_STOCK.value,
+                                    requested_qty=line.qty,
+                                    available_qty=0.0,
+                                    requested_price=line.unit_price,
+                                    current_price=_to_float(product.get("price")),
+                                    message=f"Product '{line.product_name}' (SKU: {line.sku or pid}) is out of stock.",
+                                    suggested_action=ResolutionAction.SUBSTITUTE.value,
+                                    suggested_substitutes=substitutes,
+                                )
+                            )
+                        elif avail_qty < line.qty:
+                            substitutes = self.get_suggested_substitutes(
                                 product_id=pid,
-                                product_name=line.product_name,
-                                conflict_type=ConflictType.INSUFFICIENT_QTY.value,
-                                requested_qty=line.qty,
-                                available_qty=avail_qty,
-                                requested_price=line.unit_price,
-                                current_price=_to_float(product.get("price")),
-                                message=f"Insufficient stock for '{line.product_name}'. Requested {line.qty}, only {avail_qty} available.",
-                                suggested_action=ResolutionAction.ADJUST_QTY.value,
-                                suggested_substitutes=substitutes,
+                                category=product.get("category"),
+                                warehouse_id=warehouse_id,
+                                limit=3,
+                                conn=conn,
                             )
-                        )
+                            conflicts.append(
+                                LineConflictDetail(
+                                    line_number=line.line_number,
+                                    product_id=pid,
+                                    product_name=line.product_name,
+                                    conflict_type=ConflictType.INSUFFICIENT_QTY.value,
+                                    requested_qty=line.qty,
+                                    available_qty=avail_qty,
+                                    requested_price=line.unit_price,
+                                    current_price=_to_float(product.get("price")),
+                                    message=f"Insufficient stock for '{line.product_name}'. Requested {line.qty}, only {avail_qty} available.",
+                                    suggested_action=ResolutionAction.ADJUST_QTY.value,
+                                    suggested_substitutes=substitutes,
+                                )
+                            )
 
                     # 3. Price check if price list is configured
                     if price_list_id:
