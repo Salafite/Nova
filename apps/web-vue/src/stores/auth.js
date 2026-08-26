@@ -93,7 +93,9 @@ export const useAuthStore = defineStore('auth', {
       }
       return this.permissions.includes(p) ||
         this.permissions.includes(p.toUpperCase()) ||
-        this.permissions.includes(p.toLowerCase())
+        this.permissions.includes(p.toLowerCase()) ||
+        this.permissions.includes(`${p.toUpperCase()}_VIEW`) ||
+        (p.toUpperCase().endsWith('_VIEW') && this.permissions.includes(p.toUpperCase().replace('_VIEW', '').toLowerCase()))
     }
   }
 })
