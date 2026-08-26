@@ -5,6 +5,9 @@ import PortalCatalogView from '../views/portal/PortalCatalogView.vue'
 import PortalCartCheckoutView from '../views/portal/PortalCartCheckoutView.vue'
 import PortalOrdersView from '../views/portal/PortalOrdersView.vue'
 import PortalOrderDetailView from '../views/portal/PortalOrderDetailView.vue'
+import PortalDashboardView from '../views/portal/PortalDashboardView.vue'
+import PortalInvoicesView from '../views/portal/PortalInvoicesView.vue'
+import PortalPaymentResultView from '../views/portal/PortalPaymentResultView.vue'
 import { usePortalStore } from '../stores/portal.js'
 import { api } from '../api/client.js'
 
@@ -21,6 +24,7 @@ vi.mock('../api/client.js', () => ({
 const mockPush = vi.fn()
 const mockRoute = {
   params: { id: '501' },
+  query: {},
 }
 
 vi.mock('vue-router', () => ({
@@ -162,11 +166,58 @@ describe('Portal Views Suite', () => {
     },
   ]
 
+  const mockInvoices = [
+    {
+      id: 301,
+      invoice_number: 'INV-2026-0301',
+      partner_id: 10,
+      customer_name: 'Artisan Cafe Ltd',
+      sales_order_id: 501,
+      sales_order_number: 'SO-20260825-001',
+      issue_date: '2026-08-25',
+      due_date: '2026-09-25',
+      total_amount: 147.00,
+      paid_amount: 0.00,
+      balance_due: 147.00,
+      status: 'Unpaid',
+    },
+    {
+      id: 302,
+      invoice_number: 'INV-2026-0302',
+      partner_id: 10,
+      customer_name: 'Artisan Cafe Ltd',
+      sales_order_id: 502,
+      sales_order_number: 'SO-20260820-002',
+      issue_date: '2026-08-20',
+      due_date: '2026-09-20',
+      total_amount: 76.00,
+      paid_amount: 76.00,
+      balance_due: 0.00,
+      status: 'Paid',
+    },
+    {
+      id: 303,
+      invoice_number: 'INV-2026-0303',
+      partner_id: 10,
+      customer_name: 'Artisan Cafe Ltd',
+      sales_order_id: null,
+      sales_order_number: null,
+      issue_date: '2026-07-01',
+      due_date: '2026-08-01',
+      total_amount: 303.00,
+      paid_amount: 0.00,
+      balance_due: 303.00,
+      status: 'Unpaid',
+    },
+  ]
+
   beforeEach(() => {
     pinia = createPinia()
     setActivePinia(pinia)
     portalStore = usePortalStore()
     mockPush.mockClear()
+    mockRoute.params = { id: '501' }
+    mockRoute.query = {}
     vi.clearAllMocks()
 
     api.get.mockImplementation(url => {
@@ -200,6 +251,30 @@ describe('Portal Views Suite', () => {
       if (url === '/portal/orders/501') {
         return Promise.resolve({ data: mockOrders[0] })
       }
+      if (url === '/portal/invoices') {
+        return Promise.resolve({
+          data: {
+            items: mockInvoices,
+            total: 3,
+            page: 1,
+            limit: 20,
+          },
+        })
+      }
+      if (url.startsWith('/portal/settlement/session/')) {
+        return Promise.resolve({
+          data: {
+            session_id: 'cs_test_123',
+            status: 'complete',
+            payment_status: 'paid',
+            amount_total: 14700,
+            currency: 'usd',
+            customer_email: 'buyer@artisancafe.com',
+            customer_id: 10,
+            invoice_id: 301,
+          },
+        })
+      }
       return Promise.resolve({ data: {} })
     })
 
@@ -212,6 +287,8 @@ describe('Portal Views Suite', () => {
     portalStore.orders = [...mockOrders]
     portalStore.ordersTotal = 3
     portalStore.currentOrder = { ...mockOrders[0] }
+    portalStore.invoices = [...mockInvoices]
+    portalStore.invoicesTotal = 3
     portalStore.cart = []
   })
 
@@ -605,6 +682,339 @@ describe('Portal Views Suite', () => {
       await confirmCancelBtn.trigger('click')
 
       expect(cancelSpy).toHaveBeenCalledWith(501, '')
+    })
+  })
+
+  // ------------------------------------------------------------------------
+  // PortalDashboardView Tests
+  // ------------------------------------------------------------------------
+  describe('PortalDashboardView', () => {
+    it('renders hero welcome, company name, meta tags, and financial KPI summary cards', () => {
+      const wrapper = mount(PortalDashboardView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      expect(wrapper.text()).toContain('Welcome back')
+      expect(wrapper.text()).toContain('Artisan Cafe Ltd')
+      expect(wrapper.text()).toContain('Outstanding Balance')
+      expect(wrapper.text()).toContain('Available Credit')
+      expect(wrapper.text()).toContain('$2500.00')
+      expect(wrapper.text()).toContain('Next Scheduled Delivery')
+      expect(wrapper.text()).toContain('Orders in Fulfillment')
+      expect(wrapper.text()).toContain('Recent Orders & 1-Click Reorder')
+      expect(wrapper.text()).toContain('Open Invoices & Settlement')
+    })
+
+    it('renders recent orders and open invoices list items', () => {
+      const wrapper = mount(PortalDashboardView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      expect(wrapper.text()).toContain('SO-20260825-001')
+      expect(wrapper.text()).toContain('INV-2026-0301')
+      expect(wrapper.text()).toContain('INV-2026-0303')
+    })
+
+    it('opens single invoice payment modal and initiates Stripe checkout', async () => {
+      const wrapper = mount(PortalDashboardView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const payBtn = wrapper.findAll('.btn-mini-pay')[0]
+      expect(payBtn.exists()).toBe(true)
+      await payBtn.trigger('click')
+
+      expect(wrapper.text()).toContain('Settle Invoice Online')
+      expect(wrapper.text()).toContain('INV-2026-0301')
+
+      const sessionSpy = vi.spyOn(portalStore, 'createInvoiceCheckoutSession').mockResolvedValueOnce({
+        session_id: 'cs_test_inv_301',
+        checkout_url: 'https://checkout.stripe.com/pay/cs_test_inv_301',
+      })
+
+      const proceedBtn = wrapper.find('.modal-footer .btn-primary')
+      await proceedBtn.trigger('click')
+
+      expect(sessionSpy).toHaveBeenCalledWith(301, expect.any(Object))
+    })
+
+    it('opens balance settlement modal from hero/kpi and initiates balance Stripe checkout', async () => {
+      const wrapper = mount(PortalDashboardView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const payBalanceBtn = wrapper.find('.btn-kpi-pay')
+      expect(payBalanceBtn.exists()).toBe(true)
+      await payBalanceBtn.trigger('click')
+
+      expect(wrapper.text()).toContain('Settle Account Balance')
+
+      const balanceSessionSpy = vi.spyOn(portalStore, 'createBalanceCheckoutSession').mockResolvedValueOnce({
+        session_id: 'cs_test_bal_999',
+        checkout_url: 'https://checkout.stripe.com/pay/cs_test_bal_999',
+      })
+
+      const proceedBtn = wrapper.find('.modal-footer .btn-primary')
+      await proceedBtn.trigger('click')
+
+      expect(balanceSessionSpy).toHaveBeenCalledWith(expect.any(Number), expect.any(Object))
+    })
+
+    it('quick adds contracted product from dashboard highlight carousel to cart', async () => {
+      const wrapper = mount(PortalDashboardView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const quickAddBtn = wrapper.find('.btn-quick-add')
+      expect(quickAddBtn.exists()).toBe(true)
+      await quickAddBtn.trigger('click')
+
+      expect(portalStore.cart).toHaveLength(1)
+      expect(portalStore.cart[0].product_id).toBe(101)
+      expect(portalStore.cart[0].qty).toBe(1)
+    })
+  })
+
+  // ------------------------------------------------------------------------
+  // PortalInvoicesView Tests
+  // ------------------------------------------------------------------------
+  describe('PortalInvoicesView', () => {
+    it('renders financial metrics, status tabs, search bar, and invoices table', () => {
+      const wrapper = mount(PortalInvoicesView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      expect(wrapper.text()).toContain('Invoices & Online Settlement')
+      expect(wrapper.text()).toContain('Total Balance Due')
+      expect(wrapper.text()).toContain('Settled Invoices')
+      expect(wrapper.text()).toContain('Payment Methods')
+      expect(wrapper.text()).toContain('INV-2026-0301')
+      expect(wrapper.text()).toContain('INV-2026-0302')
+      expect(wrapper.text()).toContain('INV-2026-0303')
+      expect(wrapper.text()).toContain('$147.00')
+      expect(wrapper.text()).toContain('$76.00')
+      expect(wrapper.text()).toContain('Paid')
+      expect(wrapper.text()).toContain('Unpaid')
+    })
+
+    it('filters invoices by search query and status tabs', async () => {
+      const wrapper = mount(PortalInvoicesView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      // Search filter
+      const searchInput = wrapper.find('.filter-search-input')
+      await searchInput.setValue('INV-2026-0302')
+
+      expect(wrapper.text()).toContain('INV-2026-0302')
+      expect(wrapper.text()).not.toContain('INV-2026-0301')
+
+      // Clear search
+      await searchInput.setValue('')
+
+      // Status tab: Unpaid
+      const unpaidTab = wrapper.findAll('.status-tab-btn')[1]
+      await unpaidTab.trigger('click')
+
+      expect(wrapper.text()).toContain('INV-2026-0301')
+      expect(wrapper.text()).toContain('INV-2026-0303')
+      expect(wrapper.text()).not.toContain('INV-2026-0302')
+
+      // Status tab: Paid
+      const paidTab = wrapper.findAll('.status-tab-btn')[2]
+      await paidTab.trigger('click')
+
+      expect(wrapper.text()).toContain('INV-2026-0302')
+      expect(wrapper.text()).not.toContain('INV-2026-0301')
+    })
+
+    it('downloads PDF invoice when PDF button is clicked', async () => {
+      const wrapper = mount(PortalInvoicesView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const pdfSpy = vi.spyOn(portalStore, 'downloadInvoicePdf').mockResolvedValueOnce(true)
+
+      const pdfBtn = wrapper.findAll('.btn-action-pdf')[0]
+      expect(pdfBtn.exists()).toBe(true)
+      await pdfBtn.trigger('click')
+
+      expect(pdfSpy).toHaveBeenCalledWith(301)
+    })
+
+    it('opens single invoice payment modal and proceeds to Stripe checkout', async () => {
+      const wrapper = mount(PortalInvoicesView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const payBtn = wrapper.findAll('.btn-action-pay')[0]
+      expect(payBtn.exists()).toBe(true)
+      await payBtn.trigger('click')
+
+      expect(wrapper.text()).toContain('Settle Invoice Online')
+      expect(wrapper.text()).toContain('INV-2026-0301')
+
+      const checkoutSpy = vi.spyOn(portalStore, 'createInvoiceCheckoutSession').mockResolvedValueOnce({
+        session_id: 'cs_test_301',
+        checkout_url: 'https://checkout.stripe.com/pay/cs_test_301',
+      })
+
+      const proceedBtn = wrapper.find('.modal-footer .btn-primary')
+      await proceedBtn.trigger('click')
+
+      expect(checkoutSpy).toHaveBeenCalledWith(301, expect.any(Object))
+    })
+
+    it('opens balance settlement modal from header action and proceeds to checkout', async () => {
+      const wrapper = mount(PortalInvoicesView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      const settleBalanceBtn = wrapper.find('.btn-pay-balance-hero')
+      expect(settleBalanceBtn.exists()).toBe(true)
+      await settleBalanceBtn.trigger('click')
+
+      expect(wrapper.text()).toContain('Settle Full Account Balance')
+
+      const balanceSpy = vi.spyOn(portalStore, 'createBalanceCheckoutSession').mockResolvedValueOnce({
+        session_id: 'cs_test_bal_full',
+        checkout_url: 'https://checkout.stripe.com/pay/cs_test_bal_full',
+      })
+
+      const proceedBtn = wrapper.find('.modal-footer .btn-primary')
+      await proceedBtn.trigger('click')
+
+      expect(balanceSpy).toHaveBeenCalledWith(expect.any(Number), expect.any(Object))
+    })
+  })
+
+  // ------------------------------------------------------------------------
+  // PortalPaymentResultView Tests
+  // ------------------------------------------------------------------------
+  describe('PortalPaymentResultView', () => {
+    it('verifies payment session and displays success state with reconciled amount', async () => {
+      mockRoute.query = { session_id: 'cs_test_123', invoice_id: '301' }
+
+      const wrapper = mount(PortalPaymentResultView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      // Wait for async verifyPayment
+      await new Promise(resolve => setTimeout(resolve, 50))
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.text()).toContain('Payment Successful & Reconciled!')
+      expect(wrapper.text()).toContain('$147.00')
+      expect(wrapper.text()).toContain('buyer@artisancafe.com')
+      expect(wrapper.text()).toContain('cs_test_123')
+      expect(wrapper.text()).toContain('#301')
+      expect(wrapper.text()).toContain('Nova ERP accounts receivable records and balancing journal entries have been registered')
+    })
+
+    it('downloads invoice PDF receipt from payment result page', async () => {
+      mockRoute.query = { session_id: 'cs_test_123', invoice_id: '301' }
+
+      const wrapper = mount(PortalPaymentResultView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+      await wrapper.vm.$nextTick()
+
+      const downloadPdfSpy = vi.spyOn(portalStore, 'downloadInvoicePdf').mockResolvedValueOnce(true)
+
+      const downloadBtn = wrapper.find('.btn-result-download')
+      expect(downloadBtn.exists()).toBe(true)
+      await downloadBtn.trigger('click')
+
+      expect(downloadPdfSpy).toHaveBeenCalledWith('301')
+    })
+
+    it('displays ACH processing state when status is processing/unpaid', async () => {
+      mockRoute.query = { session_id: 'cs_test_ach_456' }
+
+      api.get.mockImplementation(url => {
+        if (url.startsWith('/portal/settlement/session/')) {
+          return Promise.resolve({
+            data: {
+              session_id: 'cs_test_ach_456',
+              status: 'processing',
+              payment_status: 'unpaid',
+              amount_total: 50000,
+              currency: 'usd',
+            },
+          })
+        }
+        return Promise.resolve({ data: {} })
+      })
+
+      const wrapper = mount(PortalPaymentResultView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.text()).toContain('ACH Bank Transfer Initiated')
+      expect(wrapper.text()).toContain('2-4 business days')
+      expect(wrapper.text()).toContain('$500.00')
+    })
+
+    it('displays cancelled state when status query indicates cancellation', async () => {
+      mockRoute.query = { status: 'cancelled' }
+
+      const wrapper = mount(PortalPaymentResultView, {
+        global: {
+          plugins: [pinia],
+          stubs: { RouterLink: { template: '<a><slot /></a>' } },
+        },
+      })
+
+      await new Promise(resolve => setTimeout(resolve, 50))
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.text()).toContain('Payment Not Completed')
+      expect(wrapper.text()).toContain('cancelled')
+      expect(wrapper.find('.state-error').exists()).toBe(true)
     })
   })
 })
