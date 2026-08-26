@@ -59,7 +59,12 @@ class DatabaseCleaner:
             return conn, False
         if self.harness is not None:
             c = self.harness.get_connection(schema=self.schema)
-            c.autocommit = autocommit
+            try:
+                if c.status != psycopg2.extensions.STATUS_READY:
+                    c.rollback()
+                c.autocommit = autocommit
+            except Exception:
+                pass
             return c, True
         # Standalone direct connection
         c = get_direct_connection(config=self.config, schema=self.schema, autocommit=autocommit)
@@ -212,16 +217,13 @@ class DatabaseCleaner:
             if not target_seqs:
                 return 0
 
+            clean_seqs = [s.lower().replace('"', '') for s in target_seqs]
             with c.cursor() as cur:
-                for seq in target_seqs:
-                    clean_seq = seq.lower().replace('"', '')
-                    try:
-                        cur.execute(
-                            f'ALTER SEQUENCE "{self.schema}"."{clean_seq}" RESTART WITH %s;',
-                            (start_value,)
-                        )
-                    except Exception as e:
-                        logger.warning(f"Could not reset sequence {clean_seq}: {e}")
+                sql_stmts = " ".join(
+                    f'ALTER SEQUENCE "{self.schema}"."{s}" RESTART WITH {int(start_value)};'
+                    for s in clean_seqs
+                )
+                cur.execute(sql_stmts)
             return len(target_seqs)
         finally:
             if should_release:
@@ -335,10 +337,75 @@ class DatabaseCleaner:
 
     def get_dirty_tables(self, conn=None) -> List[str]:
         """
-        Find tables in the schema that contain one or more rows.
+        Find tables in the schema that contain one or more rows in a single fast query.
         """
-        counts = self.get_table_counts(conn=conn)
-        return [t for t, cnt in counts.items() if cnt > 0]
+        c, should_release = self._get_connection(conn=conn, autocommit=True)
+        try:
+            with c.cursor() as cur:
+                cur.execute(
+                    f"""
+                    DO $$
+                    DECLARE
+                        r record;
+                        c bigint;
+                        dirty text[] := ARRAY[]::text[];
+                    BEGIN
+                        FOR r IN SELECT table_name FROM information_schema.tables WHERE table_schema = '{self.schema}' AND table_type = 'BASE TABLE' AND table_name != '_schema_migrations' LOOP
+                            EXECUTE format('SELECT count(*) FROM "{self.schema}".%I', r.table_name) INTO c;
+                            IF c > 0 THEN
+                                dirty := array_append(dirty, r.table_name);
+                            END IF;
+                        END LOOP;
+                        DROP TABLE IF EXISTS _dirty_tables_tmp;
+                        CREATE TEMP TABLE _dirty_tables_tmp AS SELECT unnest(dirty) AS tbl;
+                    END $$;
+                    SELECT tbl FROM _dirty_tables_tmp;
+                    """
+                )
+                dirty = [r[0] for r in cur.fetchall() if r[0] not in self.excluded_tables]
+                return dirty
+        finally:
+            if should_release:
+                if self.harness is not None:
+                    self.harness.release_connection(c)
+                else:
+                    c.close()
+
+    def reset_dirty_sequences(self, start_value: int = 1, conn=None) -> int:
+        """
+        Reset only sequences that have actually been advanced / modified.
+        """
+        c, should_release = self._get_connection(conn=conn, autocommit=True)
+        try:
+            with c.cursor() as cur:
+                try:
+                    cur.execute(
+                        """
+                        SELECT sequencename
+                        FROM pg_sequences
+                        WHERE schemaname = %s AND (last_value IS NOT NULL AND last_value > 1);
+                        """,
+                        (self.schema,)
+                    )
+                    dirty_seqs = [r[0] for r in cur.fetchall()]
+                except Exception:
+                    dirty_seqs = list(KNOWN_SEQUENCES)
+
+                if not dirty_seqs:
+                    return 0
+
+                sql_stmts = " ".join(
+                    f'ALTER SEQUENCE "{self.schema}"."{s}" RESTART WITH {int(start_value)};'
+                    for s in dirty_seqs
+                )
+                cur.execute(sql_stmts)
+                return len(dirty_seqs)
+        finally:
+            if should_release:
+                if self.harness is not None:
+                    self.harness.release_connection(c)
+                else:
+                    c.close()
 
     def clean_dirty_tables(self, reset_sequences: bool = True, conn=None) -> float:
         """
@@ -349,12 +416,12 @@ class DatabaseCleaner:
             dirty = self.get_dirty_tables(conn=c)
             if not dirty:
                 if reset_sequences:
-                    self.reset_sequences(conn=c)
+                    self.reset_dirty_sequences(conn=c)
                 return 0.0
             
             elapsed = self.truncate_tables(tables=dirty, restart_identity=True, cascade=True, conn=c)
             if reset_sequences:
-                self.reset_sequences(conn=c)
+                self.reset_dirty_sequences(conn=c)
             return elapsed
         finally:
             if should_release:
@@ -381,6 +448,11 @@ def transactional_isolation(conn=None, harness: Optional[DatabaseHarness] = None
         conn = h.get_connection()
         should_release = True
 
+    if conn.status != psycopg2.extensions.STATUS_READY:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
     prev_autocommit = conn.autocommit
     conn.autocommit = False
     try:
@@ -391,7 +463,11 @@ def transactional_isolation(conn=None, harness: Optional[DatabaseHarness] = None
         except Exception as e:
             logger.warning(f"Error during transactional rollback: {e}")
         finally:
-            conn.autocommit = prev_autocommit
+            try:
+                if prev_autocommit is not None:
+                    conn.autocommit = prev_autocommit
+            except Exception:
+                pass
             if should_release:
                 h.release_connection(conn)
 

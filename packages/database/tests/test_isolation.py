@@ -100,9 +100,10 @@ class TestDatabaseCleanerUnit:
 
         cnt = cleaner.reset_sequences(conn=mock_conn, start_value=1)
         assert cnt == 2
-        assert mock_cur.execute.call_count == 2
-        first_call_sql = mock_cur.execute.call_args_list[0][0][0]
-        assert 'ALTER SEQUENCE "Nova"."seq_invoice_number" RESTART WITH %s;' == first_call_sql
+        assert mock_cur.execute.call_count == 1
+        executed_sql = mock_cur.execute.call_args[0][0]
+        assert 'ALTER SEQUENCE "Nova"."seq_invoice_number" RESTART WITH 1;' in executed_sql
+        assert 'ALTER SEQUENCE "Nova"."seq_pick_list_number" RESTART WITH 1;' in executed_sql
 
 
 # ============================================================================
@@ -127,8 +128,8 @@ class TestDatabaseCleanerRealPostgres:
             )
             cur.execute(
                 """
-                INSERT INTO "Nova"."t0003" (business_id, product_code, name, base_uom, is_active)
-                VALUES (101, 'ISO-PROD-01', 'Isolation Test Product', 'EA', TRUE);
+                INSERT INTO "Nova"."t0003" (business_id, sku, name, is_active)
+                VALUES (101, 'ISO-PROD-01', 'Isolation Test Product', TRUE);
                 """
             )
         real_db_conn.commit()
@@ -137,7 +138,7 @@ class TestDatabaseCleanerRealPostgres:
         with real_db_conn.cursor() as cur:
             cur.execute('SELECT count(*) FROM "Nova"."t0059" WHERE id = 101;')
             assert cur.fetchone()[0] == 1
-            cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE product_code = 'ISO-PROD-01';')
+            cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE sku = \'ISO-PROD-01\';')
             assert cur.fetchone()[0] == 1
 
         # 2. Truncate specific tables
@@ -148,7 +149,7 @@ class TestDatabaseCleanerRealPostgres:
         with real_db_conn.cursor() as cur:
             cur.execute('SELECT count(*) FROM "Nova"."t0059" WHERE id = 101;')
             assert cur.fetchone()[0] == 0
-            cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE product_code = 'ISO-PROD-01';')
+            cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE sku = \'ISO-PROD-01\';')
             assert cur.fetchone()[0] == 0
 
     def test_real_truncate_all_and_sequence_reset(self, real_db_conn):
@@ -204,9 +205,9 @@ class TestDatabaseCleanerRealPostgres:
             )
             cur.execute(
                 """
-                INSERT INTO "Nova"."t0003" (business_id, product_code, name, base_uom, is_active)
-                VALUES (301, 'PROD-ALPHA', 'Alpha Product', 'EA', TRUE),
-                       (302, 'PROD-BETA', 'Beta Product', 'EA', TRUE);
+                INSERT INTO "Nova"."t0003" (business_id, sku, name, is_active)
+                VALUES (301, 'PROD-ALPHA', 'Alpha Product', TRUE),
+                       (302, 'PROD-BETA', 'Beta Product', TRUE);
                 """
             )
         real_db_conn.commit()
@@ -239,7 +240,7 @@ class TestTransactionAndSavepointIsolation:
         # Initial check: no product with code 'TX-PROD-99'
         with real_harness.connection() as conn:
             with conn.cursor() as cur:
-                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE product_code = 'TX-PROD-99';')
+                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE sku = \'TX-PROD-99\';')
                 assert cur.fetchone()[0] == 0
 
         # Execute inside transactional isolation
@@ -254,17 +255,17 @@ class TestTransactionAndSavepointIsolation:
                 )
                 cur.execute(
                     """
-                    INSERT INTO "Nova"."t0003" (business_id, product_code, name, base_uom, is_active)
-                    VALUES (401, 'TX-PROD-99', 'Transaction Product', 'EA', TRUE);
+                    INSERT INTO "Nova"."t0003" (business_id, sku, name, is_active)
+                    VALUES (401, 'TX-PROD-99', 'Transaction Product', TRUE);
                     """
                 )
-                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE product_code = 'TX-PROD-99';')
+                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE sku = \'TX-PROD-99\';')
                 assert cur.fetchone()[0] == 1
 
         # After exiting context, all changes must be rolled back
         with real_harness.connection() as conn:
             with conn.cursor() as cur:
-                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE product_code = 'TX-PROD-99';')
+                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE sku = \'TX-PROD-99\';')
                 assert cur.fetchone()[0] == 0
                 cur.execute('SELECT count(*) FROM "Nova"."t0059" WHERE id = 401;')
                 assert cur.fetchone()[0] == 0
@@ -286,16 +287,16 @@ class TestTransactionAndSavepointIsolation:
             with real_db_conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO "Nova"."t0003" (business_id, product_code, name, base_uom, is_active)
-                    VALUES (501, 'SP-PROD-01', 'Savepoint Product', 'EA', TRUE);
+                    INSERT INTO "Nova"."t0003" (business_id, sku, name, is_active)
+                    VALUES (501, 'SP-PROD-01', 'Savepoint Product', TRUE);
                     """
                 )
-                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE product_code = 'SP-PROD-01';')
+                cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE sku = \'SP-PROD-01\';')
                 assert cur.fetchone()[0] == 1
 
         # 3. After savepoint exit: product is rolled back, but tenant remains
         with real_db_conn.cursor() as cur:
-            cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE product_code = 'SP-PROD-01';')
+            cur.execute('SELECT count(*) FROM "Nova"."t0003" WHERE sku = \'SP-PROD-01\';')
             assert cur.fetchone()[0] == 0
             cur.execute('SELECT count(*) FROM "Nova"."t0059" WHERE id = 501;')
             assert cur.fetchone()[0] == 1
@@ -315,8 +316,8 @@ class TestTransactionAndSavepointIsolation:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        INSERT INTO "Nova"."t0003" (business_id, product_code, name, base_uom, is_active)
-                        VALUES (%s, 'T-PROD-CTX', 'Context Product', 'EA', TRUE);
+                        INSERT INTO "Nova"."t0003" (business_id, sku, name, is_active)
+                        VALUES (%s, 'T-PROD-CTX', 'Context Product', TRUE);
                         """,
                         (tid,)
                     )
@@ -372,8 +373,8 @@ def test_isolated_tenant_fixture(isolated_tenant, real_db_conn):
     with real_db_conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO "Nova"."t0003" (business_id, product_code, name, base_uom, is_active)
-            VALUES (%s, 'FIX-PROD', 'Fixture Product', 'EA', TRUE);
+            INSERT INTO "Nova"."t0003" (business_id, sku, name, is_active)
+            VALUES (%s, 'FIX-PROD', 'Fixture Product', TRUE);
             """,
             (tid,)
         )
