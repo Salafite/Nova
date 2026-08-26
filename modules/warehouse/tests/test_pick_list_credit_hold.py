@@ -74,7 +74,8 @@ class TestPickListCreditHoldProtection:
         self.pl_repo.get.return_value = {'id': 50, 'pick_list_number': 'PL-00050', 'sales_order_id': 103, 'status': 'Pending'}
         self.pli_repo.list.return_value = []
 
-        result = self.service.create_from_order(sales_order_id=103)
+        with patch('modules.warehouse.services.pick_list_service.generate_pick_list_number', return_value='PL-00050'):
+            result = self.service.create_from_order(sales_order_id=103)
         assert result is not None
         assert self.pl_repo.create.called
 

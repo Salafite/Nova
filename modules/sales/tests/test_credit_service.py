@@ -282,3 +282,101 @@ def test_get_customer_credit_status():
     assert status["has_hold_orders"] is True
     assert status["hold_orders_count"] == 1
     assert len(status["hold_reasons"]) == 1
+
+
+def test_evaluate_order_credit_zero_limit_not_enforced():
+    mock_cust_repo = MagicMock()
+    mock_inv_repo = MagicMock()
+    mock_order_repo = MagicMock()
+
+    service = CreditService(
+        customer_repo=mock_cust_repo,
+        invoice_repo=mock_inv_repo,
+        order_repo=mock_order_repo,
+    )
+
+    mock_cust_repo.get.return_value = {
+        "id": 50,
+        "name": "Enterprise Unlimited",
+        "credit_limit": 0.0,
+        "balance": 100000.0,
+    }
+    mock_inv_repo.list.return_value = []
+
+    res = service.evaluate_order_credit(customer_id=50, order_amount=50000.0)
+    assert res["is_hold_required"] is False
+    assert res["credit_limit_exceeded"] is False
+    assert res["available_credit"] == 0.0
+
+
+def test_evaluate_order_credit_exact_boundary():
+    mock_cust_repo = MagicMock()
+    mock_inv_repo = MagicMock()
+    mock_order_repo = MagicMock()
+
+    service = CreditService(
+        customer_repo=mock_cust_repo,
+        invoice_repo=mock_inv_repo,
+        order_repo=mock_order_repo,
+    )
+
+    mock_cust_repo.get.return_value = {
+        "id": 51,
+        "name": "Boundary Test Customer",
+        "credit_limit": 10000.0,
+        "balance": 8000.0,
+    }
+    mock_inv_repo.list.return_value = []
+
+    # Exposure = 8000 + 2000 = 10000 == limit -> Not exceeded
+    res = service.evaluate_order_credit(customer_id=51, order_amount=2000.0)
+    assert res["is_hold_required"] is False
+    assert res["credit_limit_exceeded"] is False
+
+    # Exposure = 8000 + 2000.01 = 10000.01 > limit -> Exceeded
+    res2 = service.evaluate_order_credit(customer_id=51, order_amount=2000.01)
+    assert res2["is_hold_required"] is True
+    assert res2["credit_limit_exceeded"] is True
+
+
+def test_evaluate_order_credit_customer_not_found():
+    mock_cust_repo = MagicMock()
+    mock_inv_repo = MagicMock()
+    mock_order_repo = MagicMock()
+
+    service = CreditService(
+        customer_repo=mock_cust_repo,
+        invoice_repo=mock_inv_repo,
+        order_repo=mock_order_repo,
+    )
+    mock_cust_repo.get.return_value = None
+
+    res = service.evaluate_order_credit(customer_id=999, order_amount=100.0)
+    assert res["is_hold_required"] is False
+    assert res["customer_name"] == "Unknown"
+
+    status = service.get_customer_credit_status(customer_id=999)
+    assert status is None
+
+
+def test_get_overdue_invoices_skips_invalid_dates_and_statuses():
+    mock_cust_repo = MagicMock()
+    mock_inv_repo = MagicMock()
+    mock_order_repo = MagicMock()
+
+    service = CreditService(
+        customer_repo=mock_cust_repo,
+        invoice_repo=mock_inv_repo,
+        order_repo=mock_order_repo,
+    )
+
+    mock_inv_repo.list.return_value = [
+        {"id": 1, "partner_id": 60, "due_date": None, "status": "Issued"},
+        {"id": 2, "partner_id": 60, "due_date": "not-a-date", "status": "Issued"},
+        {"id": 3, "partner_id": 60, "due_date": "2026-01-01", "status": "Paid"},
+        {"id": 4, "partner_id": 60, "due_date": "2026-01-01", "status": "Cancelled"},
+    ]
+
+    overdue = service.get_overdue_invoices(customer_id=60, as_of_date=date(2026, 8, 25))
+    assert len(overdue) == 0
+
