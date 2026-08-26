@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 import psycopg2.extras
 
 from packages.database.connection import get_connection, release_connection
+from modules.core.context import get_current_tenant
 from modules.sales.models.field_sales import (
     ConflictResolutionItem,
     ConflictType,
@@ -195,6 +196,7 @@ class FieldSalesSyncService:
 
                 order_date = order.order_date or date.today()
                 offline_created_at = order.offline_created_at or _get_utc_now()
+                tenant_id = get_current_tenant()
 
                 # Insert into T0012 (Sales Orders)
                 cur.execute(
@@ -202,9 +204,10 @@ class FieldSalesSyncService:
                     INSERT INTO {self._get_table("t0012")} (
                         order_number, customer_id, warehouse_id, subtotal, tax, grand_total,
                         status, order_date, notes, price_list_id, tax_rate_id, payment_term_id,
-                        client_order_uuid, is_offline_sync, sync_status, offline_created_at, sales_rep_id
+                        client_order_uuid, is_offline_sync, sync_status, offline_created_at, sales_rep_id,
+                        business_id
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, 'Pending', %s, %s, %s, %s, %s, %s, true, 'Synced', %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'Pending', %s, %s, %s, %s, %s, %s, true, 'Synced', %s, %s, %s)
                     RETURNING id
                     """,
                     (
@@ -222,6 +225,7 @@ class FieldSalesSyncService:
                         order.client_order_uuid,
                         offline_created_at,
                         order.sales_rep_id,
+                        tenant_id,
                     ),
                 )
                 created_row = cur.fetchone()
@@ -233,9 +237,10 @@ class FieldSalesSyncService:
                     cur.execute(
                         f"""
                         INSERT INTO {self._get_table("t0013")} (
-                            sales_order_id, product_id, product_name, uom_id, qty, unit_price, line_total, line_number
+                            sales_order_id, product_id, product_name, uom_id, qty, unit_price, line_total, line_number,
+                            business_id
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
                         (
                             order_id,
@@ -246,6 +251,7 @@ class FieldSalesSyncService:
                             line.unit_price,
                             line_total,
                             line.line_number,
+                            tenant_id,
                         ),
                     )
 

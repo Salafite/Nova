@@ -451,15 +451,16 @@ class TestRealPostgresPartialFulfillmentAndBackorderSplitting:
 
         wh = wh_repo.create({'name': 'Field Sync WH', 'is_active': True})
         cust = cust_repo.create({'name': 'Field Customer', 'credit_limit': 20000.0, 'balance': 0.0, 'is_active': True})
-        prod = prod_repo.create({'name': 'Specialty Olive Tapenade', 'sku': 'TAPENADE-100G', 'price': 15.0, 'is_active': True})
+        prod = prod_repo.create({'name': 'Specialty Olive Tapenade', 'sku': 'TAPENADE-100G-SYNC', 'price': 15.0, 'is_active': True})
 
         stock_repo.create({'product_id': prod['id'], 'warehouse_id': wh['id'], 'qty': 10.0, 'reserved_qty': 0.0})
 
         sync_svc = FieldSalesSyncService()
 
+        client_uuid = f'uuid-backorder-test-{isolated_tenant}'
         # Order submission with 30 units (10 available)
         submission = FieldSalesOrderSubmission(
-            client_order_uuid='uuid-backorder-test-001',
+            client_order_uuid=client_uuid,
             customer_id=cust['id'],
             warehouse_id=wh['id'],
             lines=[
@@ -477,7 +478,7 @@ class TestRealPostgresPartialFulfillmentAndBackorderSplitting:
 
         # Resolve conflict by choosing BACKORDER action
         resolve_req = FieldSalesResolveConflictRequest(
-            client_order_uuid='uuid-backorder-test-001',
+            client_order_uuid=client_uuid,
             order_data=submission,
             resolutions=[
                 ConflictResolutionItem(
@@ -495,7 +496,7 @@ class TestRealPostgresPartialFulfillmentAndBackorderSplitting:
         # Verify in PostgreSQL
         db_order = order_repo.get(result.server_order_id)
         assert db_order is not None
-        assert db_order['client_order_uuid'] == 'uuid-backorder-test-001'
+        assert db_order['client_order_uuid'] == client_uuid
 
         lines = line_repo.list(filters={'sales_order_id': result.server_order_id})
         assert len(lines) == 1
