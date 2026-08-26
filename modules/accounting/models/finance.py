@@ -157,6 +157,10 @@ class PaymentCreate(BaseModel):
     reference: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
     status: str = 'Completed'
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
+    business_id: Optional[int] = None
 
 class PaymentUpdate(BaseModel):
     payment_date: Optional[date] = None
@@ -167,6 +171,9 @@ class PaymentUpdate(BaseModel):
     reference: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
     status: Optional[str] = None
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 class PaymentResponse(AuditMixin):
     id: int
@@ -178,4 +185,7 @@ class PaymentResponse(AuditMixin):
     reference: Optional[str]
     notes: Optional[str] = None
     status: str
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
