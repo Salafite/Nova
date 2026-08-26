@@ -171,6 +171,89 @@ class TestReplenishmentServiceSuggestions:
         res_norm = self.service.get_replenishment_suggestions(priority='Normal')
         assert all(it['priority'] == 'Normal' for it in res_norm['items'])
 
+    def test_reorder_level_zero_or_negative_skipped(self):
+        """Products with zero or negative reorder levels do not trigger replenishment suggestions."""
+        self.stock_repo.list.return_value = [
+            {'id': 1, 'product_id': 101, 'warehouse_id': 1, 'qty': 500.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+            # Zero reorder level
+            {'id': 2, 'product_id': 101, 'warehouse_id': 3, 'qty': 0.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 0.0},
+            # Negative reorder level
+            {'id': 3, 'product_id': 102, 'warehouse_id': 3, 'qty': 0.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': -5.0},
+        ]
+
+        result = self.service.get_replenishment_suggestions(warehouse_id=3)
+        assert result['total_suggestions'] == 0
+        assert len(result['items']) == 0
+
+    def test_min_deficit_threshold_filtering(self):
+        """When min_deficit is specified, suggestions with smaller deficits are excluded."""
+        self.stock_repo.list.return_value = [
+            {'id': 1, 'product_id': 101, 'warehouse_id': 1, 'qty': 500.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+            # Deficit = 40 - 35 = 5.0
+            {'id': 2, 'product_id': 101, 'warehouse_id': 3, 'qty': 35.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 40.0},
+            # Deficit = 50 - 10 = 40.0
+            {'id': 3, 'product_id': 102, 'warehouse_id': 3, 'qty': 10.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 50.0},
+        ]
+
+        # Filter with min_deficit = 10.0 -> item 101 (deficit 5) excluded, item 102 (deficit 40) included
+        result = self.service.get_replenishment_suggestions(warehouse_id=3, min_deficit=10.0)
+        assert result['total_suggestions'] == 1
+        assert result['items'][0]['product_id'] == 102
+
+    def test_custom_safety_stock_and_target_coverage_tuning(self):
+        """Custom safety_stock_ratio and target_coverage_multiplier alter calculations accurately."""
+        self.stock_repo.list.return_value = [
+            {'id': 1, 'product_id': 101, 'warehouse_id': 1, 'qty': 500.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+            # Reorder level 100, available 60, in-transit 0 -> effective 60
+            {'id': 2, 'product_id': 101, 'warehouse_id': 3, 'qty': 60.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+        ]
+
+        # Custom: safety_ratio = 0.8 (safety = 80), target_coverage = 2.0 (target = max(100+80, 100*2) = 200)
+        # Suggested transfer = 200 - 60 = 140
+        result = self.service.get_replenishment_suggestions(
+            warehouse_id=3,
+            safety_stock_ratio=0.8,
+            target_coverage_multiplier=2.0,
+        )
+
+        assert result['total_suggestions'] == 1
+        item = result['items'][0]
+        assert item['safety_stock'] == 80.0
+        assert item['suggested_transfer_qty'] == 140.0
+        assert item['priority'] == 'Critical'  # available 60 < safety 80
+
+    def test_inactive_products_and_warehouses_excluded(self):
+        """Inactive products and inactive warehouses are excluded from replenishment calculations."""
+        self.wh_repo.list.return_value = [
+            {'id': 1, 'name': 'Central Main Hub', 'warehouse_type': 'Central Hub', 'is_virtual': False, 'is_active': True},
+            {'id': 3, 'name': 'Branch Store North', 'warehouse_type': 'Retail Branch', 'is_virtual': False, 'is_active': False},  # Inactive
+        ]
+        self.product_repo.list.return_value = [
+            {'id': 101, 'name': 'Organic Milk 1L', 'sku': 'MLK-001', 'category': 'Dairy', 'is_active': False},  # Inactive
+        ]
+
+        result = self.service.get_replenishment_suggestions()
+        assert result['total_suggestions'] == 0
+
+    def test_suggestions_sorting_by_priority_and_deficit(self):
+        """Suggestions are sorted in order: Critical -> High -> Normal -> Low, then by deficit descending."""
+        self.stock_repo.list.return_value = [
+            {'id': 1, 'product_id': 101, 'warehouse_id': 1, 'qty': 500.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+            # Critical: available 0 < safety 25, deficit 100
+            {'id': 2, 'product_id': 101, 'warehouse_id': 3, 'qty': 0.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+            # Normal: effective 70 < reorder 100 (safety 25), deficit 30
+            {'id': 3, 'product_id': 102, 'warehouse_id': 3, 'qty': 70.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+            # High: effective 35 < reorder 100 * 0.5 (safety 25), deficit 65 (available 35 >= safety 25)
+            {'id': 4, 'product_id': 103, 'warehouse_id': 3, 'qty': 35.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 100.0},
+        ]
+        self.product_repo.list.return_value = self.products
+
+        result = self.service.get_replenishment_suggestions(warehouse_id=3, safety_stock_ratio=0.25)
+        priorities = [it['priority'] for it in result['items']]
+        assert priorities[0] == 'Critical'
+        assert priorities[1] == 'High'
+        assert priorities[2] == 'Normal'
+
 
 class TestSourceWarehouseMatching:
     def setup_method(self):
@@ -361,6 +444,50 @@ class TestOneClickTransferGeneration:
         payload = {
             'items': [
                 {'product_id': 101, 'source_warehouse_id': 1, 'destination_warehouse_id': 1, 'suggested_transfer_qty': 20.0},
+            ]
+        }
+        result = self.service.generate_transfers(payload)
+        assert result['transfers_created'] == 0
+        assert self.transfer_service.create_transfer.call_count == 0
+
+    def test_generate_transfers_with_pydantic_schema_object(self):
+        """Passing ReplenishmentGenerateRequest Pydantic object works seamlessly."""
+        self.transfer_service.create_transfer.return_value = {
+            'id': 201,
+            'transfer_number': 'TRF-00201',
+            'source_warehouse_id': 1,
+            'destination_warehouse_id': 3,
+            'status': 'Draft',
+            'lines': [{'product_id': 101, 'qty_requested': 25.0}],
+        }
+
+        req = ReplenishmentGenerateRequest(
+            source_warehouse_id=1,
+            destination_warehouse_id=3,
+            carrier="Nova Fleet Express",
+            notes="Pydantic schema test transfer",
+            items=[
+                ReplenishmentGenerateItem(
+                    product_id=101,
+                    source_warehouse_id=1,
+                    destination_warehouse_id=3,
+                    suggested_transfer_qty=25.0,
+                )
+            ],
+        )
+
+        result = self.service.generate_transfers(req)
+        assert result['transfers_created'] == 1
+        assert result['transfer_ids'] == [201]
+        assert result['transfer_numbers'] == ['TRF-00201']
+        assert self.transfer_service.create_transfer.call_count == 1
+
+    def test_generate_transfers_zero_quantity_items_skipped(self):
+        """Items with zero or negative suggested quantities are ignored during transfer generation."""
+        payload = {
+            'items': [
+                {'product_id': 101, 'source_warehouse_id': 1, 'destination_warehouse_id': 3, 'suggested_transfer_qty': 0.0},
+                {'product_id': 102, 'source_warehouse_id': 1, 'destination_warehouse_id': 3, 'suggested_transfer_qty': -10.0},
             ]
         }
         result = self.service.generate_transfers(payload)
