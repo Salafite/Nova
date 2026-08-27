@@ -351,32 +351,21 @@ class DatabaseCleaner:
     def get_dirty_tables(self, conn=None) -> List[str]:
         """
         Find tables in the schema that contain one or more rows in a single fast query.
+        Uses cached table list and EXISTS subqueries for sub-millisecond execution.
         """
         c, should_release = self._get_connection(conn=conn, autocommit=True)
         try:
+            tables = [t for t in self.get_all_tables(conn=c) if t not in self.excluded_tables]
+            if not tables:
+                return []
+            union_branches = [
+                f"SELECT '{t}' AS tbl WHERE EXISTS (SELECT 1 FROM \"{self.schema}\".\"{t}\" LIMIT 1)"
+                for t in tables
+            ]
+            query = " UNION ALL ".join(union_branches)
             with c.cursor() as cur:
-                cur.execute(
-                    f"""
-                    DO $$
-                    DECLARE
-                        r record;
-                        c bigint;
-                        dirty text[] := ARRAY[]::text[];
-                    BEGIN
-                        FOR r IN SELECT table_name FROM information_schema.tables WHERE table_schema = '{self.schema}' AND table_type = 'BASE TABLE' AND table_name != '_schema_migrations' LOOP
-                            EXECUTE format('SELECT count(*) FROM "{self.schema}".%I', r.table_name) INTO c;
-                            IF c > 0 THEN
-                                dirty := array_append(dirty, r.table_name);
-                            END IF;
-                        END LOOP;
-                        DROP TABLE IF EXISTS _dirty_tables_tmp;
-                        CREATE TEMP TABLE _dirty_tables_tmp AS SELECT unnest(dirty) AS tbl;
-                    END $$;
-                    SELECT tbl FROM _dirty_tables_tmp;
-                    """
-                )
-                dirty = [r[0] for r in cur.fetchall() if r[0] not in self.excluded_tables]
-                return dirty
+                cur.execute(query)
+                return [r[0] for r in cur.fetchall()]
         finally:
             if should_release:
                 if self.harness is not None:

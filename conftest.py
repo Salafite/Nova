@@ -14,6 +14,8 @@ os.environ.setdefault('DB_SSLMODE', 'prefer')
 os.environ.setdefault('ACCESS_TOKEN_EXPIRE_MINUTES', '1440')
 os.environ.setdefault('REFRESH_TOKEN_EXPIRE_DAYS', '7')
 os.environ.setdefault('ALLOWED_ORIGINS', '*')
+os.environ.setdefault('REDIS_MOCK', 'true')
+os.environ.setdefault('REDIS_USE_MOCK', 'true')
 
 _mock_pool = MagicMock()
 _mock_conn = MagicMock()

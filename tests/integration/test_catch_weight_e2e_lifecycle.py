@@ -124,6 +124,7 @@ class MockE2EConnection:
     """Mock connection satisfying database transaction calls."""
     def __init__(self):
         self.is_closed = False
+        self._is_mock = True
 
     def cursor(self, cursor_factory=None):
         return MockE2ECursor()

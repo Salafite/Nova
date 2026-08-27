@@ -1,8 +1,12 @@
 """
 Pytest configuration and fixtures for integration and end-to-end testing against real PostgreSQL.
 """
+import os
 from typing import Generator, Any, Dict
 import pytest
+
+os.environ.setdefault('REDIS_MOCK', 'true')
+os.environ.setdefault('REDIS_USE_MOCK', 'true')
 from packages.database.harness import (
     DatabaseHarness,
     get_db_config,

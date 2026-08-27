@@ -258,6 +258,7 @@ class FieldSalesSyncService:
                 # Deduct inventory stock in T0009 and record movement in T0064
                 if warehouse_id:
                     for line in order.lines:
+                        is_bo = bool(line.notes and '[BACKORDER]' in str(line.notes)) or bool(order.notes and '[BACKORDER]' in str(order.notes))
                         self._deduct_stock_and_record_movement(
                             cur=cur,
                             product_id=line.product_id,
@@ -265,6 +266,7 @@ class FieldSalesSyncService:
                             qty=line.qty,
                             order_id=order_id,
                             order_number=order_number,
+                            is_backorder=is_bo,
                         )
 
                 # Update Customer Balance in T0010
@@ -956,6 +958,7 @@ class FieldSalesSyncService:
         qty: float,
         order_id: int,
         order_number: str,
+        is_backorder: bool = False,
     ) -> None:
         """Atomically deduct stock from T0009 and record movement in T0064."""
         cur.execute(
@@ -971,33 +974,41 @@ class FieldSalesSyncService:
         if stock_row:
             current_qty = _to_float(stock_row["qty"])
             if current_qty < qty:
-                raise ValueError(f"Insufficient stock for product {product_id}: requested {qty}, available {current_qty}")
-            new_balance = current_qty - qty
+                if is_backorder:
+                    deduct_qty = max(0.0, current_qty)
+                else:
+                    raise ValueError(f"Insufficient stock for product {product_id}: requested {qty}, available {current_qty}")
+            else:
+                deduct_qty = qty
+            new_balance = max(0.0, current_qty - deduct_qty)
             cur.execute(
                 f'UPDATE {self._get_table("t0009")} SET qty = %s WHERE id = %s',
                 (new_balance, stock_row["id"]),
             )
         else:
+            if is_backorder:
+                return
             raise ValueError(f"No stock record found for product {product_id} in warehouse {warehouse_id}")
 
         # Record movement in T0064
-        cur.execute(
-            f"""
-            INSERT INTO {self._get_table("t0064")} (
-                product_id, warehouse_id, movement_type, reference_type,
-                reference_id, qty_change, balance_after, description
+        if deduct_qty > 0:
+            cur.execute(
+                f"""
+                INSERT INTO {self._get_table("t0064")} (
+                    product_id, warehouse_id, movement_type, reference_type,
+                    reference_id, qty_change, balance_after, description
+                )
+                VALUES (%s, %s, 'Sale', 'sales_order', %s, %s, %s, %s)
+                """,
+                (
+                    product_id,
+                    warehouse_id,
+                    order_id,
+                    -deduct_qty,
+                    new_balance,
+                    f"Field Sales Order #{order_number}",
+                ),
             )
-            VALUES (%s, %s, 'Sale', 'sales_order', %s, %s, %s, %s)
-            """,
-            (
-                product_id,
-                warehouse_id,
-                order_id,
-                -qty,
-                new_balance,
-                f"Field Sales Order #{order_number}",
-            ),
-        )
 
 
 field_sales_sync_service = FieldSalesSyncService()
