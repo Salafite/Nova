@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, Union
 import psycopg2.extras
 
 from packages.database.connection import get_connection, release_connection
-from modules.core.context import get_current_tenant
 from modules.sales.models.field_sales import (
     ConflictResolutionItem,
     ConflictType,
@@ -196,7 +195,6 @@ class FieldSalesSyncService:
 
                 order_date = order.order_date or date.today()
                 offline_created_at = order.offline_created_at or _get_utc_now()
-                tenant_id = get_current_tenant()
 
                 # Insert into T0012 (Sales Orders)
                 cur.execute(
@@ -204,10 +202,9 @@ class FieldSalesSyncService:
                     INSERT INTO {self._get_table("t0012")} (
                         order_number, customer_id, warehouse_id, subtotal, tax, grand_total,
                         status, order_date, notes, price_list_id, tax_rate_id, payment_term_id,
-                        client_order_uuid, is_offline_sync, sync_status, offline_created_at, sales_rep_id,
-                        business_id
+                        client_order_uuid, is_offline_sync, sync_status, offline_created_at, sales_rep_id
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, 'Pending', %s, %s, %s, %s, %s, %s, true, 'Synced', %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'Pending', %s, %s, %s, %s, %s, %s, true, 'Synced', %s, %s)
                     RETURNING id
                     """,
                     (
@@ -225,7 +222,6 @@ class FieldSalesSyncService:
                         order.client_order_uuid,
                         offline_created_at,
                         order.sales_rep_id,
-                        tenant_id,
                     ),
                 )
                 created_row = cur.fetchone()
@@ -237,10 +233,9 @@ class FieldSalesSyncService:
                     cur.execute(
                         f"""
                         INSERT INTO {self._get_table("t0013")} (
-                            sales_order_id, product_id, product_name, uom_id, qty, unit_price, line_total, line_number,
-                            business_id
+                            sales_order_id, product_id, product_name, uom_id, qty, unit_price, line_total, line_number
                         )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         """,
                         (
                             order_id,
@@ -251,14 +246,12 @@ class FieldSalesSyncService:
                             line.unit_price,
                             line_total,
                             line.line_number,
-                            tenant_id,
                         ),
                     )
 
                 # Deduct inventory stock in T0009 and record movement in T0064
                 if warehouse_id:
                     for line in order.lines:
-                        is_bo = bool(line.notes and '[BACKORDER]' in str(line.notes)) or bool(order.notes and '[BACKORDER]' in str(order.notes))
                         self._deduct_stock_and_record_movement(
                             cur=cur,
                             product_id=line.product_id,
@@ -266,7 +259,6 @@ class FieldSalesSyncService:
                             qty=line.qty,
                             order_id=order_id,
                             order_number=order_number,
-                            is_backorder=is_bo,
                         )
 
                 # Update Customer Balance in T0010
@@ -300,28 +292,9 @@ class FieldSalesSyncService:
                 conn.rollback()
             except Exception:
                 pass
-            err_msg = str(e)
-            logger.warning(
-                f"Failed to commit order {order.client_order_uuid}: {err_msg}"
+            logger.error(
+                f"Failed to commit order {order.client_order_uuid}: {e}", exc_info=True
             )
-            if "insufficient stock" in err_msg.lower() or "no stock record" in err_msg.lower():
-                return OrderSyncResult(
-                    client_order_uuid=order.client_order_uuid,
-                    status=SyncStatus.CONFLICT.value,
-                    is_duplicate=False,
-                    conflicts=[
-                        LineConflictDetail(
-                            line_number=1,
-                            product_id=order.lines[0].product_id if order.lines else 0,
-                            product_name=order.lines[0].product_name if order.lines else "",
-                            conflict_type=ConflictType.INSUFFICIENT_QTY.value,
-                            requested_qty=order.lines[0].qty if order.lines else 0.0,
-                            available_qty=0.0,
-                            message=err_msg,
-                        )
-                    ],
-                    message=f"Stock conflict detected during commit: {err_msg}",
-                )
             return OrderSyncResult(
                 client_order_uuid=order.client_order_uuid,
                 status=SyncStatus.FAILED.value,
@@ -550,54 +523,52 @@ class FieldSalesSyncService:
                         else:
                             avail_qty = 0.0
 
-                    is_backorder = bool(line.notes and '[BACKORDER]' in str(line.notes))
-                    if not is_backorder:
-                        if avail_qty <= 0.0:
-                            substitutes = self.get_suggested_substitutes(
+                    if avail_qty <= 0.0:
+                        substitutes = self.get_suggested_substitutes(
+                            product_id=pid,
+                            category=product.get("category"),
+                            warehouse_id=warehouse_id,
+                            limit=3,
+                            conn=conn,
+                        )
+                        conflicts.append(
+                            LineConflictDetail(
+                                line_number=line.line_number,
                                 product_id=pid,
-                                category=product.get("category"),
-                                warehouse_id=warehouse_id,
-                                limit=3,
-                                conn=conn,
+                                product_name=line.product_name,
+                                conflict_type=ConflictType.OUT_OF_STOCK.value,
+                                requested_qty=line.qty,
+                                available_qty=0.0,
+                                requested_price=line.unit_price,
+                                current_price=_to_float(product.get("price")),
+                                message=f"Product '{line.product_name}' (SKU: {line.sku or pid}) is out of stock.",
+                                suggested_action=ResolutionAction.SUBSTITUTE.value,
+                                suggested_substitutes=substitutes,
                             )
-                            conflicts.append(
-                                LineConflictDetail(
-                                    line_number=line.line_number,
-                                    product_id=pid,
-                                    product_name=line.product_name,
-                                    conflict_type=ConflictType.OUT_OF_STOCK.value,
-                                    requested_qty=line.qty,
-                                    available_qty=0.0,
-                                    requested_price=line.unit_price,
-                                    current_price=_to_float(product.get("price")),
-                                    message=f"Product '{line.product_name}' (SKU: {line.sku or pid}) is out of stock.",
-                                    suggested_action=ResolutionAction.SUBSTITUTE.value,
-                                    suggested_substitutes=substitutes,
-                                )
-                            )
-                        elif avail_qty < line.qty:
-                            substitutes = self.get_suggested_substitutes(
+                        )
+                    elif avail_qty < line.qty:
+                        substitutes = self.get_suggested_substitutes(
+                            product_id=pid,
+                            category=product.get("category"),
+                            warehouse_id=warehouse_id,
+                            limit=3,
+                            conn=conn,
+                        )
+                        conflicts.append(
+                            LineConflictDetail(
+                                line_number=line.line_number,
                                 product_id=pid,
-                                category=product.get("category"),
-                                warehouse_id=warehouse_id,
-                                limit=3,
-                                conn=conn,
+                                product_name=line.product_name,
+                                conflict_type=ConflictType.INSUFFICIENT_QTY.value,
+                                requested_qty=line.qty,
+                                available_qty=avail_qty,
+                                requested_price=line.unit_price,
+                                current_price=_to_float(product.get("price")),
+                                message=f"Insufficient stock for '{line.product_name}'. Requested {line.qty}, only {avail_qty} available.",
+                                suggested_action=ResolutionAction.ADJUST_QTY.value,
+                                suggested_substitutes=substitutes,
                             )
-                            conflicts.append(
-                                LineConflictDetail(
-                                    line_number=line.line_number,
-                                    product_id=pid,
-                                    product_name=line.product_name,
-                                    conflict_type=ConflictType.INSUFFICIENT_QTY.value,
-                                    requested_qty=line.qty,
-                                    available_qty=avail_qty,
-                                    requested_price=line.unit_price,
-                                    current_price=_to_float(product.get("price")),
-                                    message=f"Insufficient stock for '{line.product_name}'. Requested {line.qty}, only {avail_qty} available.",
-                                    suggested_action=ResolutionAction.ADJUST_QTY.value,
-                                    suggested_substitutes=substitutes,
-                                )
-                            )
+                        )
 
                     # 3. Price check if price list is configured
                     if price_list_id:
@@ -813,15 +784,8 @@ class FieldSalesSyncService:
             for idx, line in enumerate(resolved_lines, start=1):
                 line.line_number = idx
 
-            has_backorder = any(line.notes and '[BACKORDER]' in line.notes for line in resolved_lines)
-            current_order_notes = order_data.notes or ''
-            if has_backorder and '[BACKORDER]' not in current_order_notes:
-                updated_order_notes = f"[BACKORDER] {current_order_notes}".strip()
-            else:
-                updated_order_notes = current_order_notes
-
-            # Update order submission with resolved lines and notes
-            resolved_order = order_data.model_copy(update={"lines": resolved_lines, "notes": updated_order_notes})
+            # Update order submission with resolved lines
+            resolved_order = order_data.model_copy(update={"lines": resolved_lines})
 
             # Sync the resolved order
             return self._sync_single_order_transaction(resolved_order, conn=conn)
@@ -884,7 +848,6 @@ class FieldSalesSyncService:
 
     def _generate_order_number(self, cur, order_date: Optional[date] = None, prefix: str = "FSO") -> str:
         """Generate a sequential, date-formatted order number (e.g. FSO-20260822-0001)."""
-        import uuid
         d = order_date or date.today()
         today_str = d.strftime("%Y%m%d")
         pattern = f"{prefix}-{today_str}-%"
@@ -895,11 +858,7 @@ class FieldSalesSyncService:
         )
         row = cur.fetchone()
         count = (row["cnt"] if row and "cnt" in row else 0) + 1
-        candidate = f"{prefix}-{today_str}-{count:04d}"
-        if self._is_order_number_taken(candidate, cur):
-            rand_suffix = uuid.uuid4().hex[:6].upper()
-            candidate = f"{prefix}-{today_str}-{rand_suffix}"
-        return candidate
+        return f"{prefix}-{today_str}-{count:04d}"
 
     def _calculate_order_totals(
         self,
@@ -958,7 +917,6 @@ class FieldSalesSyncService:
         qty: float,
         order_id: int,
         order_number: str,
-        is_backorder: bool = False,
     ) -> None:
         """Atomically deduct stock from T0009 and record movement in T0064."""
         cur.execute(
@@ -973,42 +931,39 @@ class FieldSalesSyncService:
 
         if stock_row:
             current_qty = _to_float(stock_row["qty"])
-            if current_qty < qty:
-                if is_backorder:
-                    deduct_qty = max(0.0, current_qty)
-                else:
-                    raise ValueError(f"Insufficient stock for product {product_id}: requested {qty}, available {current_qty}")
-            else:
-                deduct_qty = qty
-            new_balance = max(0.0, current_qty - deduct_qty)
+            new_balance = max(0.0, current_qty - qty)
             cur.execute(
                 f'UPDATE {self._get_table("t0009")} SET qty = %s WHERE id = %s',
                 (new_balance, stock_row["id"]),
             )
         else:
-            if is_backorder:
-                return
-            raise ValueError(f"No stock record found for product {product_id} in warehouse {warehouse_id}")
-
-        # Record movement in T0064
-        if deduct_qty > 0:
+            new_balance = 0.0
             cur.execute(
                 f"""
-                INSERT INTO {self._get_table("t0064")} (
-                    product_id, warehouse_id, movement_type, reference_type,
-                    reference_id, qty_change, balance_after, description
-                )
-                VALUES (%s, %s, 'Sale', 'sales_order', %s, %s, %s, %s)
+                INSERT INTO {self._get_table("t0009")} (product_id, warehouse_id, qty)
+                VALUES (%s, %s, %s)
                 """,
-                (
-                    product_id,
-                    warehouse_id,
-                    order_id,
-                    -deduct_qty,
-                    new_balance,
-                    f"Field Sales Order #{order_number}",
-                ),
+                (product_id, warehouse_id, new_balance),
             )
+
+        # Record movement in T0064
+        cur.execute(
+            f"""
+            INSERT INTO {self._get_table("t0064")} (
+                product_id, warehouse_id, movement_type, reference_type,
+                reference_id, qty_change, balance_after, description
+            )
+            VALUES (%s, %s, 'Sale', 'sales_order', %s, %s, %s, %s)
+            """,
+            (
+                product_id,
+                warehouse_id,
+                order_id,
+                -qty,
+                new_balance,
+                f"Field Sales Order #{order_number}",
+            ),
+        )
 
 
 field_sales_sync_service = FieldSalesSyncService()
