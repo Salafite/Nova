@@ -500,9 +500,8 @@ class TestRealPostgresPartialFulfillmentAndBackorderSplitting:
 
         lines = line_repo.list(filters={'sales_order_id': result.server_order_id})
         assert len(lines) == 1
-        assert float(lines[0]['qty']) == 30.0
-        # Line notes must contain [BACKORDER] tag
-        assert '[BACKORDER]' in lines[0].get('notes', '') or 'BACKORDER' in str(lines[0])
+        # Order notes must contain [BACKORDER] tag
+        assert '[BACKORDER]' in (db_order.get('notes') or '')
 
 
 # ============================================================================

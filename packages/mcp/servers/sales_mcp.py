@@ -337,16 +337,25 @@ def _recalculate_order_catch_weight(id: int):
     return _orders_svc.recalculate_order_catch_weight(id)
 
 
-def _update_order_status(id: int, status: str):
-    return _orders_svc.update(id, {"status": status})
+def _update_order_status(id: int = None, status: str = None, order_id: int = None):
+    oid = id if id is not None else order_id
+    if oid is None:
+        raise ValueError("Missing order id")
+    return _orders_svc.update(oid, {"status": status})
 
 
-def _confirm_order(id: int):
-    return _orders_svc.update(id, {"status": "Confirmed"})
+def _confirm_order(id: int = None, order_id: int = None):
+    oid = id if id is not None else order_id
+    if oid is None:
+        raise ValueError("Missing order id")
+    return _orders_svc.update(oid, {"status": "Confirmed"})
 
 
-def _cancel_order(id: int):
-    return _orders_svc.update(id, {"status": "Cancelled"})
+def _cancel_order(id: int = None, order_id: int = None):
+    oid = id if id is not None else order_id
+    if oid is None:
+        raise ValueError("Missing order id")
+    return _orders_svc.update(oid, {"status": "Cancelled"})
 
 
 def _list_customers(limit: int = 50):

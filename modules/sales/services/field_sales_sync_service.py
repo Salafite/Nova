@@ -298,9 +298,28 @@ class FieldSalesSyncService:
                 conn.rollback()
             except Exception:
                 pass
-            logger.error(
-                f"Failed to commit order {order.client_order_uuid}: {e}", exc_info=True
+            err_msg = str(e)
+            logger.warning(
+                f"Failed to commit order {order.client_order_uuid}: {err_msg}"
             )
+            if "insufficient stock" in err_msg.lower() or "no stock record" in err_msg.lower():
+                return OrderSyncResult(
+                    client_order_uuid=order.client_order_uuid,
+                    status=SyncStatus.CONFLICT.value,
+                    is_duplicate=False,
+                    conflicts=[
+                        LineConflictDetail(
+                            line_number=1,
+                            product_id=order.lines[0].product_id if order.lines else 0,
+                            product_name=order.lines[0].product_name if order.lines else "",
+                            conflict_type=ConflictType.INSUFFICIENT_QTY.value,
+                            requested_qty=order.lines[0].qty if order.lines else 0.0,
+                            available_qty=0.0,
+                            message=err_msg,
+                        )
+                    ],
+                    message=f"Stock conflict detected during commit: {err_msg}",
+                )
             return OrderSyncResult(
                 client_order_uuid=order.client_order_uuid,
                 status=SyncStatus.FAILED.value,
@@ -792,8 +811,15 @@ class FieldSalesSyncService:
             for idx, line in enumerate(resolved_lines, start=1):
                 line.line_number = idx
 
-            # Update order submission with resolved lines
-            resolved_order = order_data.model_copy(update={"lines": resolved_lines})
+            has_backorder = any(line.notes and '[BACKORDER]' in line.notes for line in resolved_lines)
+            current_order_notes = order_data.notes or ''
+            if has_backorder and '[BACKORDER]' not in current_order_notes:
+                updated_order_notes = f"[BACKORDER] {current_order_notes}".strip()
+            else:
+                updated_order_notes = current_order_notes
+
+            # Update order submission with resolved lines and notes
+            resolved_order = order_data.model_copy(update={"lines": resolved_lines, "notes": updated_order_notes})
 
             # Sync the resolved order
             return self._sync_single_order_transaction(resolved_order, conn=conn)
@@ -944,20 +970,15 @@ class FieldSalesSyncService:
 
         if stock_row:
             current_qty = _to_float(stock_row["qty"])
-            new_balance = max(0.0, current_qty - qty)
+            if current_qty < qty:
+                raise ValueError(f"Insufficient stock for product {product_id}: requested {qty}, available {current_qty}")
+            new_balance = current_qty - qty
             cur.execute(
                 f'UPDATE {self._get_table("t0009")} SET qty = %s WHERE id = %s',
                 (new_balance, stock_row["id"]),
             )
         else:
-            new_balance = 0.0
-            cur.execute(
-                f"""
-                INSERT INTO {self._get_table("t0009")} (product_id, warehouse_id, qty)
-                VALUES (%s, %s, %s)
-                """,
-                (product_id, warehouse_id, new_balance),
-            )
+            raise ValueError(f"No stock record found for product {product_id} in warehouse {warehouse_id}")
 
         # Record movement in T0064
         cur.execute(
