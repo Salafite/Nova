@@ -1,53 +1,36 @@
+"""
+Pytest configuration and fixtures for integration and end-to-end testing against real PostgreSQL.
+"""
 import os
 from typing import Generator, Any, Dict
-from unittest.mock import MagicMock, patch
 import pytest
 
-os.environ.setdefault('SECRET_KEY', 'test-secret-key-for-pytest-32-bytes-long!!')
-os.environ.setdefault('DB_HOST', 'localhost')
-os.environ.setdefault('DB_PORT', '5432')
-os.environ.setdefault('DB_NAME', 'nova_erp')
-os.environ.setdefault('DB_USER', 'nova')
-os.environ.setdefault('DB_PASSWORD', 'nova_secret')
-os.environ.setdefault('DB_SCHEMA', 'Nova')
-os.environ.setdefault('DB_SSLMODE', 'prefer')
-os.environ.setdefault('ACCESS_TOKEN_EXPIRE_MINUTES', '1440')
-os.environ.setdefault('REFRESH_TOKEN_EXPIRE_DAYS', '7')
-os.environ.setdefault('ALLOWED_ORIGINS', '*')
 os.environ.setdefault('REDIS_MOCK', 'true')
 os.environ.setdefault('REDIS_USE_MOCK', 'true')
-
-_mock_pool = MagicMock()
-_mock_conn = MagicMock()
-_mock_pool.getconn.return_value = _mock_conn
-
-_pool_patcher = patch('psycopg2.pool.SimpleConnectionPool', return_value=_mock_pool)
-_pool_patcher.start()
+from packages.database.harness import (
+    DatabaseHarness,
+    get_db_config,
+    get_shared_harness,
+    close_shared_harness,
+    is_postgres_available,
+    get_direct_connection,
+)
+from packages.database.apply_schema import ensure_schema_provisioned
 
 
 @pytest.fixture(scope="session")
 def db_config():
     """Returns the resolved test database configuration."""
-    from packages.database.harness import get_db_config
     return get_db_config()
 
 
 @pytest.fixture(scope="session")
-def real_harness(db_config):
+def real_harness(db_config) -> Generator[DatabaseHarness, None, None]:
     """
     Session-scoped DatabaseHarness connected to real PostgreSQL.
-    Automatically ensures the full Nova schema (T0001-T0107, sequences, constraints)
-    is provisioned and verified before tests run.
+    Automatically provisions and verifies full schema before tests execute.
     Skips tests if PostgreSQL is not reachable when requested.
     """
-    from packages.database.harness import (
-        get_shared_harness,
-        close_shared_harness,
-        is_postgres_available,
-        get_direct_connection,
-    )
-    from packages.database.apply_schema import ensure_schema_provisioned
-
     if not is_postgres_available(db_config):
         pytest.skip(f"Real PostgreSQL instance is not reachable at {db_config['host']}:{db_config['port']}")
 
@@ -59,7 +42,7 @@ def real_harness(db_config):
     except Exception as e:
         pytest.skip(f"Failed to provision schema on real PostgreSQL: {e}")
 
-    harness = get_shared_harness(minconn=1, maxconn=60, config=db_config)
+    harness = get_shared_harness(minconn=1, maxconn=50, config=db_config)
     try:
         yield harness
     finally:
@@ -72,7 +55,6 @@ def provisioned_schema(real_harness, db_config) -> Dict[str, Any]:
     Session-scoped fixture guaranteeing schema 'Nova', tables (T0001-T0107),
     sequences, and constraints are provisioned and verified.
     """
-    from packages.database.harness import get_direct_connection
     from packages.database.verify_schema import verify_schema
     
     conn = get_direct_connection(config=db_config)
@@ -90,7 +72,7 @@ def real_db_pool(real_harness):
 
 
 @pytest.fixture(scope="function")
-def real_db(real_harness) -> Generator[Any, None, None]:
+def real_db(real_harness) -> Generator[DatabaseHarness, None, None]:
     """
     Function-scoped fixture that safely bypasses root mock patches for the duration of the test,
     pointing `packages.database.connection._pool` to the real PostgreSQL connection pool.

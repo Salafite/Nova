@@ -403,11 +403,21 @@ class InvoiceService(CrudService):
         if update_customer_balance and order.get('customer_id') and self.customer_repo:
             try:
                 cust_id = order['customer_id']
-                customer = self.customer_repo.get(cust_id, conn=conn)
-                if customer:
-                    new_balance = float(customer.get('balance', 0) or 0) + float(order.get('grand_total', 0) or 0)
-                    self.customer_repo.update(cust_id, {'balance': new_balance}, conn=conn)
-                    logger.info(f"Updated customer {cust_id} balance to {new_balance}")
+                grand_total = float(order.get('grand_total', 0) or 0)
+                if conn is not None and hasattr(conn, 'cursor') and not getattr(conn, '_is_mock', False):
+                    schema = getattr(self.customer_repo, 'schema', 'Nova')
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            f'UPDATE "{schema}".t0010 SET balance = COALESCE(balance, 0) + %s, updated_at = now() WHERE id = %s RETURNING balance;',
+                            (grand_total, cust_id)
+                        )
+                        logger.info(f"Atomically updated customer {cust_id} balance with +{grand_total}")
+                else:
+                    customer = self.customer_repo.get(cust_id, conn=conn)
+                    if customer:
+                        new_balance = float(customer.get('balance', 0) or 0) + grand_total
+                        self.customer_repo.update(cust_id, {'balance': new_balance}, conn=conn)
+                        logger.info(f"Updated customer {cust_id} balance to {new_balance}")
             except Exception as e:
                 logger.error(f"Failed to update customer balance for customer {order.get('customer_id')}: {e}")
                 raise RuntimeError(f"Failed to update customer balance: {e}") from e

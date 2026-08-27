@@ -144,9 +144,13 @@ class StockMovementService:
         stock = _get_stock(product_id, warehouse_id, conn=conn)
         if not stock:
             raise HTTPException(400, f'No stock record for product {product_id} in warehouse {warehouse_id}')
-        current_reserved = stock.get('reserved_qty', 0)
-        new_reserved = max(0, current_reserved - qty)
-        new_qty = max(0, stock['qty'] - qty)
+        qty_val = float(qty) if qty is not None else 0.0
+        current_qty = float(stock.get('qty', 0) or 0)
+        current_reserved = float(stock.get('reserved_qty', 0) or 0)
+        if current_qty < qty_val:
+            raise HTTPException(400, f'Insufficient stock for product {product_id}: available {current_qty}, requested {qty_val}')
+        new_reserved = max(0.0, current_reserved - qty_val)
+        new_qty = max(0.0, current_qty - qty_val)
         STOCK_REPO.update(stock['id'], {'qty': new_qty, 'reserved_qty': new_reserved}, conn=conn)
         return self.repo.create({
             'product_id': product_id,
@@ -154,7 +158,7 @@ class StockMovementService:
             'movement_type': 'Deduct',
             'reference_type': reference_type,
             'reference_id': reference_id,
-            'qty_change': -qty,
+            'qty_change': -qty_val,
             'balance_after': new_qty,
             'description': f'Deducted {qty} for {reference_type} #{reference_id}',
         }, conn=conn)

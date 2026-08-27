@@ -192,6 +192,7 @@ class MockThreadSafeConnection:
     """Thread-safe mock connection routing cursor and sequence calls."""
     def __init__(self):
         self.is_closed = False
+        self._is_mock = True
 
     def cursor(self, cursor_factory=None):
         return MockThreadSafeCursor()

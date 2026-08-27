@@ -238,6 +238,9 @@ def _list_pick(status: str = None, sales_order_id: int = None, limit: int = 50):
     if sales_order_id: filters["sales_order_id"] = sales_order_id
     return _pick_svc.list(filters=filters or None, limit=limit)
 
+_list_pick_lists = _list_pick
+
+
 def _get_pick_list(id: int):
     if hasattr(_pick_svc, 'get_with_items'):
         return _pick_svc.get_with_items(id)

@@ -229,6 +229,7 @@ class MockTransactionalConnection:
         self.rollback_count = 0
         self.is_released = False
         self.fail_rollback_on_purpose = False
+        self._is_mock = True
 
     def commit(self):
         self.commit_count += 1

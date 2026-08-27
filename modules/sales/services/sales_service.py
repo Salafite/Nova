@@ -261,8 +261,10 @@ class SalesOrderService(CrudService):
                     if credit_check and credit_check.get('is_hold_required'):
                         hold_reason = credit_check.get('hold_reason', 'Customer credit limit exceeded')
                 else:
-                    new_balance = customer.get('balance', 0) + payload.get('grand_total', 0)
-                    credit_limit = customer.get('credit_limit', 0)
+                    curr_balance = float(customer.get('balance') or 0)
+                    grand_total = float(payload.get('grand_total') or 0)
+                    new_balance = curr_balance + grand_total
+                    credit_limit = float(customer.get('credit_limit') or 0)
                     if credit_limit > 0 and new_balance > credit_limit:
                         hold_reason = f"Customer credit limit exceeded (${new_balance:,.2f} > Limit ${credit_limit:,.2f})"
 

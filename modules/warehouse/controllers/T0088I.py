@@ -37,3 +37,8 @@ def get_batch_trace(id: int):
     except Exception as e:
         raise HTTPException(500, str(e))
 
+
+# Ensure specific static routes (/recall-report) are evaluated before parameterized /{id}
+router.routes.sort(key=lambda r: 1 if getattr(r, 'path', '').endswith('/{id}') else 0)
+
+

@@ -59,14 +59,15 @@ class BatchNumberService(CrudService):
         batch = self.repo.get_for_update(id_val, conn=conn) if conn else self.get(id_val)
         if not batch:
             raise ValueError('Batch not found')
-        new_qty = batch['quantity'] + qty
+        curr_qty = float(batch.get('quantity') or 0)
+        new_qty = curr_qty + float(qty)
         if new_qty < 0:
             raise ValueError('Resulting quantity cannot be below 0')
         payload = {'quantity': new_qty}
         if new_qty == 0:
             payload['status'] = 'Depleted'
-        elif batch['quantity'] > 0 and new_qty > 0 and batch['status'] not in ('Expired',):
-            payload['status'] = 'Available' if batch.get('quantity', 0) == 0 else 'Partially Used'
+        elif curr_qty > 0 and new_qty > 0 and batch.get('status') not in ('Expired',):
+            payload['status'] = 'Available' if curr_qty == 0 else 'Partially Used'
         return self.update(id_val, payload, conn=conn)
 
     def allocate_fefo_lots(self, product_id: int, warehouse_id: int = None, qty_needed: float = 0.0, conn=None) -> list[dict]:

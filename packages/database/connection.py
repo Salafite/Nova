@@ -17,7 +17,7 @@ _pool = SimpleConnectionPool(
 def get_connection():
     import time
     last_err = None
-    for attempt in range(3):
+    for attempt in range(10):
         conn = None
         try:
             conn = _pool.getconn()
@@ -26,10 +26,14 @@ def get_connection():
             return conn
         except Exception as e:
             if conn is not None:
-                _pool.putconn(conn)
+                try:
+                    _pool.putconn(conn)
+                except Exception:
+                    pass
             last_err = e
-            if 'closed unexpectedly' in str(e) or 'timeout' in str(e).lower():
-                time.sleep(1 * (attempt + 1))
+            err_str = str(e).lower()
+            if 'exhausted' in err_str or 'closed unexpectedly' in err_str or 'timeout' in err_str or 'too many clients' in err_str:
+                time.sleep(0.02 * (attempt + 1))
                 continue
             raise
     raise last_err
