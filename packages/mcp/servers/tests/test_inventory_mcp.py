@@ -24,7 +24,8 @@ def mock_svc():
                         _warehouses_svc=MagicMock(),
                         _uoms_svc=MagicMock(),
                         _brands_svc=MagicMock(),
-                        _stock_svc=MagicMock()):
+                        _stock_svc=MagicMock(),
+                        _replenishment_svc=MagicMock()):
         yield
 
 
@@ -213,6 +214,133 @@ class TestListHelpers:
         assert inventory_mcp._list_brands() == [{"id": 1, "name": "NovaBrand"}]
 
 
+class TestReplenishmentSuggestions:
+    def test_list_replenishment_suggestions_default(self, mock_svc):
+        mock_resp = {
+            "total_suggestions": 1,
+            "critical_count": 1,
+            "high_count": 0,
+            "items": [{
+                "product_id": 1,
+                "product_name": "Test Product",
+                "destination_warehouse_id": 2,
+                "suggested_transfer_qty": 50.0,
+                "source_warehouse_id": 1,
+                "priority": "Critical",
+            }],
+        }
+        inventory_mcp._replenishment_svc.get_replenishment_suggestions.return_value = mock_resp
+        result = inventory_mcp._list_replenishment_suggestions()
+        assert result == mock_resp
+        inventory_mcp._replenishment_svc.get_replenishment_suggestions.assert_called_once_with(
+            warehouse_id=None,
+            source_warehouse_id=None,
+            product_id=None,
+            category=None,
+            priority=None,
+            min_deficit=0.0,
+            safety_stock_ratio=0.5,
+            target_coverage_multiplier=1.5,
+        )
+
+    def test_list_replenishment_suggestions_with_filters(self, mock_svc):
+        mock_resp = {"total_suggestions": 0, "critical_count": 0, "high_count": 0, "items": []}
+        inventory_mcp._replenishment_svc.get_replenishment_suggestions.return_value = mock_resp
+        result = inventory_mcp._list_replenishment_suggestions(
+            warehouse_id=2,
+            source_warehouse_id=1,
+            product_id=5,
+            category="Dairy",
+            priority="Critical",
+            min_deficit=10.0,
+            safety_stock_ratio=0.6,
+            target_coverage_multiplier=2.0,
+        )
+        assert result == mock_resp
+        inventory_mcp._replenishment_svc.get_replenishment_suggestions.assert_called_once_with(
+            warehouse_id=2,
+            source_warehouse_id=1,
+            product_id=5,
+            category="Dairy",
+            priority="Critical",
+            min_deficit=10.0,
+            safety_stock_ratio=0.6,
+            target_coverage_multiplier=2.0,
+        )
+
+    def test_list_replenishment_suggestions_alias_destination_warehouse_id(self, mock_svc):
+        mock_resp = {"total_suggestions": 0, "items": []}
+        inventory_mcp._replenishment_svc.get_replenishment_suggestions.return_value = mock_resp
+        result = inventory_mcp._list_replenishment_suggestions(destination_warehouse_id=3)
+        assert result == mock_resp
+        inventory_mcp._replenishment_svc.get_replenishment_suggestions.assert_called_once_with(
+            warehouse_id=3,
+            source_warehouse_id=None,
+            product_id=None,
+            category=None,
+            priority=None,
+            min_deficit=0.0,
+            safety_stock_ratio=0.5,
+            target_coverage_multiplier=1.5,
+        )
+
+
+class TestGenerateReplenishmentTransfers:
+    def test_generate_replenishment_transfers(self, mock_svc):
+        mock_resp = {
+            "transfers_created": 1,
+            "transfer_ids": [101],
+            "transfer_numbers": ["TRF-20260826-0001"],
+            "transfers": [{"id": 101, "transfer_number": "TRF-20260826-0001", "status": "Draft"}],
+        }
+        inventory_mcp._replenishment_svc.generate_transfers.return_value = mock_resp
+        items = [{"product_id": 1, "destination_warehouse_id": 2, "source_warehouse_id": 1, "suggested_transfer_qty": 50.0}]
+        result = inventory_mcp._generate_replenishment_transfers(
+            destination_warehouse_id=2,
+            source_warehouse_id=1,
+            items=items,
+            carrier="FastLogistics",
+            notes="Auto replen",
+        )
+        assert result == mock_resp
+        inventory_mcp._replenishment_svc.generate_transfers.assert_called_once_with(
+            payload={
+                "destination_warehouse_id": 2,
+                "source_warehouse_id": 1,
+                "items": items,
+                "transfer_date": None,
+                "expected_delivery_date": None,
+                "carrier": "FastLogistics",
+                "notes": "Auto replen",
+            },
+            user_id=None,
+        )
+
+    def test_generate_replenishment_transfers_with_user_context(self, mock_svc):
+        mock_resp = {
+            "transfers_created": 1,
+            "transfer_ids": [102],
+            "transfer_numbers": ["TRF-20260826-0002"],
+            "transfers": [{"id": 102, "transfer_number": "TRF-20260826-0002"}],
+        }
+        inventory_mcp._replenishment_svc.generate_transfers.return_value = mock_resp
+        with patch("packages.mcp.servers.inventory_mcp.get_current_user", return_value={"id": 7, "username": "warehouse_manager"}):
+            result = inventory_mcp._generate_replenishment_transfers(destination_warehouse_id=2)
+            assert result == mock_resp
+            inventory_mcp._replenishment_svc.generate_transfers.assert_called_once_with(
+                payload={
+                    "destination_warehouse_id": 2,
+                    "source_warehouse_id": None,
+                    "items": None,
+                    "transfer_date": None,
+                    "expected_delivery_date": None,
+                    "carrier": None,
+                    "notes": None,
+                },
+                user_id=7,
+            )
+
+
 class TestRegisterTools:
     def test_registers_all_tools_and_resources(self, clear_registry):
         register_tools()
@@ -229,5 +357,8 @@ class TestRegisterTools:
         assert "list_warehouses" in tool_names
         assert "list_uoms" in tool_names
         assert "list_brands" in tool_names
+        assert "list_replenishment_suggestions" in tool_names
+        assert "generate_replenishment_transfers" in tool_names
         resource_uris = [r.uri for r in list_resources()]
         assert "nova://inventory/products" in resource_uris
+        assert "nova://inventory/replenishment-suggestions" in resource_uris

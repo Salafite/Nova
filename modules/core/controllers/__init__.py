@@ -17,4 +17,7 @@ for f in sorted(modules_dir.rglob('controllers/T*I.py')):
 
 
 from modules.purchasing.controllers.restock_controller import router as restock_router
+from modules.inventory.controllers.replenishment_controller import router as replenishment_router
+from modules.warehouse.controllers.T0108I import router as t0108_router
+from modules.warehouse.controllers.T0111I import router as t0111_router
 

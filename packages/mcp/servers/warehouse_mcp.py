@@ -2,6 +2,11 @@ from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.warehouse.services.batch_number_service import BatchNumberService
 from modules.warehouse.services.pick_list_service import PickListService, PL_REPO, PLI_REPO
+from modules.warehouse.services.stock_transfer_service import (
+    StockTransferService,
+    TRANSFER_REPO,
+    TRANSFER_LINE_REPO,
+)
 from packages.mcp.registry import register_tool, register_resource
 from packages.mcp.types import Tool, Resource
 
@@ -17,6 +22,10 @@ _batch_svc = BatchNumberService(_batch_repo)
 
 _pick_repo = PL_REPO
 _pick_svc = PickListService(repo=_pick_repo, pli_repo=PLI_REPO)
+
+_transfer_repo = TRANSFER_REPO
+_transfer_line_repo = TRANSFER_LINE_REPO
+_transfer_svc = StockTransferService(repo=_transfer_repo, line_repo=_transfer_line_repo)
 
 
 def register_tools():
@@ -87,9 +96,119 @@ def register_tools():
             "product_id": {"type": "integer", "description": "Optional product ID filter"},
         },
     }), _get_batch_recall_report)
+    register_tool(Tool(name="list_stock_transfers", description="List stock transfers with line summaries, with optional filtering by status or warehouse", input_schema={
+        "type": "object", "properties": {
+            "status": {"type": "string", "description": "Filter by status: Draft, In Transit, Received, Partially Received, Cancelled"},
+            "source_warehouse_id": {"type": "integer", "description": "Filter by source warehouse ID"},
+            "destination_warehouse_id": {"type": "integer", "description": "Filter by destination warehouse ID"},
+            "limit": {"type": "integer", "description": "Maximum records to return (default 50)"},
+            "offset": {"type": "integer", "description": "Offset for pagination (default 0)"},
+        },
+    }), _list_stock_transfers)
+    register_tool(Tool(name="get_stock_transfer", description="Get stock transfer details by ID including itemized lines, quantities, and warehouse info", input_schema={
+        "type": "object", "properties": {
+            "id": {"type": "integer", "description": "Stock transfer ID"},
+        },
+        "required": ["id"],
+    }), _get_stock_transfer)
+    register_tool(Tool(name="create_stock_transfer", description="Create a new multi-warehouse stock transfer order with line items in Draft status", input_schema={
+        "type": "object", "properties": {
+            "source_warehouse_id": {"type": "integer", "description": "Source warehouse ID"},
+            "destination_warehouse_id": {"type": "integer", "description": "Destination warehouse ID"},
+            "lines": {
+                "type": "array",
+                "description": "Itemized transfer line items",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "product_id": {"type": "integer", "description": "Product ID"},
+                        "qty_requested": {"type": "number", "description": "Requested quantity to transfer"},
+                        "batch_id": {"type": "integer", "description": "Optional source batch ID"},
+                        "batch_number": {"type": "string", "description": "Optional batch/lot number"},
+                        "notes": {"type": "string", "description": "Line notes"},
+                    },
+                    "required": ["product_id", "qty_requested"],
+                },
+            },
+            "transfer_number": {"type": "string", "description": "Optional transfer order number"},
+            "transfer_date": {"type": "string", "description": "Transfer date (YYYY-MM-DD)"},
+            "expected_delivery_date": {"type": "string", "description": "Expected delivery date (YYYY-MM-DD)"},
+            "carrier": {"type": "string", "description": "Logistics carrier name"},
+            "tracking_number": {"type": "string", "description": "Carrier tracking number"},
+            "notes": {"type": "string", "description": "Transfer header notes"},
+        },
+        "required": ["source_warehouse_id", "destination_warehouse_id", "lines"],
+    }), _create_stock_transfer)
+    register_tool(Tool(name="dispatch_stock_transfer", description="Dispatch a stock transfer from source warehouse into in-transit status, deducting source stock and incrementing destination in-transit quantity", input_schema={
+        "type": "object", "properties": {
+            "id": {"type": "integer", "description": "Stock transfer ID"},
+            "transfer_id": {"type": "integer", "description": "Alternative stock transfer ID parameter"},
+            "carrier": {"type": "string", "description": "Logistics carrier name"},
+            "tracking_number": {"type": "string", "description": "Carrier tracking number"},
+            "dispatched_by": {"type": "integer", "description": "User ID performing dispatch"},
+            "dispatched_at": {"type": "string", "description": "Dispatch timestamp (ISO format)"},
+            "notes": {"type": "string", "description": "Dispatch notes"},
+            "lines": {
+                "type": "array",
+                "description": "Itemized line dispatch quantities (optional; defaults to requested quantities)",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "line_id": {"type": "integer", "description": "Transfer line ID"},
+                        "qty_dispatched": {"type": "number", "description": "Actual dispatched quantity"},
+                        "batch_id": {"type": "integer", "description": "Batch ID"},
+                        "batch_number": {"type": "string", "description": "Batch number"},
+                    },
+                },
+            },
+        },
+    }), _dispatch_stock_transfer)
+    register_tool(Tool(name="receive_stock_transfer", description="Receive a stock transfer at destination warehouse, moving items from in-transit to available inventory and logging any transit loss/damage discrepancies", input_schema={
+        "type": "object", "properties": {
+            "id": {"type": "integer", "description": "Stock transfer ID"},
+            "transfer_id": {"type": "integer", "description": "Alternative stock transfer ID parameter"},
+            "received_by": {"type": "integer", "description": "User ID receiving items"},
+            "received_at": {"type": "string", "description": "Receipt timestamp (ISO format)"},
+            "notes": {"type": "string", "description": "Receipt notes"},
+            "lines": {
+                "type": "array",
+                "description": "Itemized line receipt quantities and discrepancy details",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "line_id": {"type": "integer", "description": "Transfer line ID"},
+                        "qty_received": {"type": "number", "description": "Actual received quantity"},
+                        "qty_lost": {"type": "number", "description": "Quantity lost or damaged in transit"},
+                        "loss_reason": {"type": "string", "description": "Discrepancy / loss reason code (e.g. Damage, Theft, Expired, Missing, Spillage)"},
+                        "loss_notes": {"type": "string", "description": "Discrepancy notes"},
+                        "batch_id": {"type": "integer", "description": "Batch ID"},
+                        "batch_number": {"type": "string", "description": "Batch number"},
+                    },
+                },
+            },
+            "losses": {
+                "type": "array",
+                "description": "Optional loss / damage discrepancy records",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "line_id": {"type": "integer"},
+                        "product_id": {"type": "integer"},
+                        "qty_lost": {"type": "number"},
+                        "loss_reason": {"type": "string"},
+                        "loss_notes": {"type": "string"},
+                    },
+                },
+            },
+        },
+    }), _receive_stock_transfer)
     register_resource(
         Resource(uri="nova://warehouse/pick-lists", name="All Pick Lists", description="List of all warehouse pick lists"),
         _list_pick,
+    )
+    register_resource(
+        Resource(uri="nova://warehouse/stock-transfers", name="All Stock Transfers", description="List of all stock transfers and inter-warehouse shipments"),
+        _list_stock_transfers,
     )
 
 
@@ -172,6 +291,133 @@ def _get_batch_recall_report(batch_number: str = None, batch_id: int = None, pro
         return _batch_svc.get_recall_report(batch_number=batch_number, batch_id=batch_id, product_id=product_id)
     except Exception as e:
         return {"error": str(e)}
+
+
+def _list_stock_transfers(
+    status: str = None,
+    source_warehouse_id: int = None,
+    destination_warehouse_id: int = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    filters = {}
+    if status:
+        filters["status"] = status
+    if source_warehouse_id:
+        filters["source_warehouse_id"] = source_warehouse_id
+    if destination_warehouse_id:
+        filters["destination_warehouse_id"] = destination_warehouse_id
+    if hasattr(_transfer_svc, 'list_with_lines'):
+        return _transfer_svc.list_with_lines(filters=filters or None, limit=limit, offset=offset)
+    return _transfer_svc.list(filters=filters or None, limit=limit, offset=offset)
+
+
+def _get_stock_transfer(id: int):
+    if hasattr(_transfer_svc, 'get_transfer_with_lines'):
+        return _transfer_svc.get_transfer_with_lines(id)
+    return _transfer_svc.get(id)
+
+
+def _create_stock_transfer(
+    source_warehouse_id: int,
+    destination_warehouse_id: int,
+    lines: list = None,
+    items: list = None,
+    transfer_number: str = None,
+    transfer_date: str = None,
+    expected_delivery_date: str = None,
+    carrier: str = None,
+    tracking_number: str = None,
+    notes: str = None,
+    **kwargs,
+):
+    transfer_lines = lines if lines is not None else (items or [])
+    payload = {
+        "source_warehouse_id": source_warehouse_id,
+        "destination_warehouse_id": destination_warehouse_id,
+        "lines": transfer_lines,
+    }
+    if transfer_number:
+        payload["transfer_number"] = transfer_number
+    if transfer_date:
+        payload["transfer_date"] = transfer_date
+    if expected_delivery_date:
+        payload["expected_delivery_date"] = expected_delivery_date
+    if carrier:
+        payload["carrier"] = carrier
+    if tracking_number:
+        payload["tracking_number"] = tracking_number
+    if notes:
+        payload["notes"] = notes
+    for k, v in kwargs.items():
+        if v is not None and k not in payload:
+            payload[k] = v
+    if hasattr(_transfer_svc, 'create_transfer'):
+        return _transfer_svc.create_transfer(payload)
+    return _transfer_svc.create(payload)
+
+
+def _dispatch_stock_transfer(
+    id: int = None,
+    transfer_id: int = None,
+    carrier: str = None,
+    tracking_number: str = None,
+    dispatched_by: int = None,
+    dispatched_at: str = None,
+    notes: str = None,
+    lines: list = None,
+    **kwargs,
+):
+    target_id = id or transfer_id or kwargs.get("transfer_order_id")
+    if not target_id:
+        raise ValueError("Transfer ID (id or transfer_id) is required")
+    dispatch_data = {}
+    if carrier:
+        dispatch_data["carrier"] = carrier
+    if tracking_number:
+        dispatch_data["tracking_number"] = tracking_number
+    if dispatched_by:
+        dispatch_data["dispatched_by"] = dispatched_by
+    if dispatched_at:
+        dispatch_data["dispatched_at"] = dispatched_at
+    if notes:
+        dispatch_data["notes"] = notes
+    if lines is not None:
+        dispatch_data["lines"] = lines
+    for k, v in kwargs.items():
+        if v is not None and k not in dispatch_data:
+            dispatch_data[k] = v
+    return _transfer_svc.dispatch_transfer(target_id, dispatch_data=dispatch_data or None)
+
+
+def _receive_stock_transfer(
+    id: int = None,
+    transfer_id: int = None,
+    received_by: int = None,
+    received_at: str = None,
+    notes: str = None,
+    lines: list = None,
+    losses: list = None,
+    **kwargs,
+):
+    target_id = id or transfer_id or kwargs.get("transfer_order_id")
+    if not target_id:
+        raise ValueError("Transfer ID (id or transfer_id) is required")
+    receive_data = {}
+    if received_by:
+        receive_data["received_by"] = received_by
+    if received_at:
+        receive_data["received_at"] = received_at
+    if notes:
+        receive_data["notes"] = notes
+    if lines is not None:
+        receive_data["lines"] = lines
+    if losses is not None:
+        receive_data["losses"] = losses
+    for k, v in kwargs.items():
+        if v is not None and k not in receive_data:
+            receive_data[k] = v
+    return _transfer_svc.receive_transfer(target_id, receive_data=receive_data or None)
 
 
 def main():

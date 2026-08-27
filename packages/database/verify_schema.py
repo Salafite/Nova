@@ -57,7 +57,7 @@ def verify_schema(conn=None) -> dict:
         ORDER BY table_name
     """)
     tables = [r[0] for r in cur.fetchall()]
-    expected_tables = [f"t{i:04d}" for i in range(1, 108)]
+    expected_tables = [f"t{i:04d}" for i in range(1, 110)]
     missing_tables = [t for t in expected_tables if t not in tables]
     if missing_tables:
         errors.append(f"Missing tables ({len(missing_tables)}): {missing_tables}")

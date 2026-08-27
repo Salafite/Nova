@@ -73,6 +73,30 @@ describe('nav store', () => {
     expect(fieldSalesItem.icon).toBe('point_of_sale')
   })
 
+  it('includes stock-transfers in navigation fallback items with correct metadata', () => {
+    const store = useNavStore()
+    const fallback = store.getFallback()
+    const transferItem = fallback.find(i => i.id === 'stock-transfers')
+    expect(transferItem).toBeDefined()
+    expect(transferItem.label).toBe('Stock Transfers')
+    expect(transferItem.label_ar).toBe('تحويلات المخزون')
+    expect(transferItem.module).toBe('stock-transfers')
+    expect(transferItem.permission).toBe('WAREHOUSE_VIEW')
+    expect(transferItem.icon).toBe('sync_alt')
+  })
+
+  it('includes inventory-replenishment in navigation fallback items with correct metadata', () => {
+    const store = useNavStore()
+    const fallback = store.getFallback()
+    const replenishmentItem = fallback.find(i => i.id === 'inventory-replenishment')
+    expect(replenishmentItem).toBeDefined()
+    expect(replenishmentItem.label).toBe('Replenishment')
+    expect(replenishmentItem.label_ar).toBe('إعادة التموين')
+    expect(replenishmentItem.module).toBe('inventory-replenishment')
+    expect(replenishmentItem.permission).toBe('INVENTORY_VIEW')
+    expect(replenishmentItem.icon).toBe('auto_mode')
+  })
+
   it('setNavStyle updates the style', () => {
     const store = useNavStore()
     store.setNavStyle('compact')

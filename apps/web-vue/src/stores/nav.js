@@ -37,6 +37,8 @@ export const useNavStore = defineStore('nav', {
           { id: 'serial-numbers', icon: 'qr_code', label: 'Serial Numbers', label_ar: 'الأرقام التسلسلية', permission: 'INVENTORY_VIEW', module: 'serial-numbers' },
           { id: 'inventory', icon: 'warehouse', label: 'Stock Levels', label_ar: 'مستويات المخزون', permission: 'INVENTORY_VIEW', module: 'inventory' },
           { id: 'warehouses', icon: 'factory', label: 'Warehouses', label_ar: 'المستودعات', permission: 'WAREHOUSE_VIEW', module: 'warehouses' },
+          { id: 'stock-transfers', icon: 'sync_alt', label: 'Stock Transfers', label_ar: 'تحويلات المخزون', permission: 'WAREHOUSE_VIEW', module: 'stock-transfers' },
+          { id: 'inventory-replenishment', icon: 'auto_mode', label: 'Replenishment', label_ar: 'إعادة التموين', permission: 'INVENTORY_VIEW', module: 'inventory-replenishment' },
           { id: 'stock-movements', icon: 'swap_vert', label: 'Stock Movements', label_ar: 'حركات المخزون', permission: 'INVENTORY_VIEW', module: 'stock-movements' },
           { id: 'stock-adjustments', icon: 'swipe_up_alt', label: 'Stock Adjustments', label_ar: 'تسوية المخزون', permission: 'INVENTORY_VIEW', module: 'stock-adjustments' },
           { id: 'inventory-counts', icon: 'fact_check', label: 'Inventory Counts', label_ar: 'جرد المخزون', permission: 'INVENTORY_VIEW', module: 'inventory-counts' },

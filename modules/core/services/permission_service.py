@@ -108,7 +108,9 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0104': 'ADMIN_MIGRATION',     # Data Migration
     'T0105': 'INVENTORY_VIEW',     # Inventory Counts
     'T0106': 'INVENTORY_VIEW',     # Inventory Count Items
-    'T0109': 'SALES_VIEW',         # Commission Rules
+    'T0107': 'PRODUCTS_VIEW',      # Product Types
+    'T0108': 'WAREHOUSE_VIEW',     # Stock Transfers
+    'T0109': 'WAREHOUSE_VIEW',     # Stock Transfer Lines
     'T0110': 'SALES_VIEW',         # Commission Payouts
 }
 
@@ -151,6 +153,10 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'Sales Commissions': 'SALES_VIEW',
     'T0109 - Commission Rules': 'SALES_VIEW',
     'T0110 - Commission Payouts': 'SALES_VIEW',
+    'T0108 - Stock Transfers': 'WAREHOUSE_VIEW',
+    'T0109 - Stock Transfer Lines': 'WAREHOUSE_VIEW',
+    '/api/T0108I': 'WAREHOUSE_VIEW',
+    '/api/T0109I': 'WAREHOUSE_VIEW',
     'Admin User Preferences': 'ADMIN_VIEW',
     'Stock Adjustments': 'INVENTORY_VIEW',
     'POS': 'POS_VIEW',
@@ -159,6 +165,11 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'Portal Invoices': 'PORTAL_PAY',
     'T0025 - Global Settings': 'ADMIN_VIEW',
     'T0100 - Module Registry': 'ADMIN_VIEW',
+    '/api/inventory/replenishment': 'INVENTORY_VIEW',
+    '/api/purchasing/restock': 'PURCHASING_VIEW',
+    'Inventory - Inter-Branch Replenishment': 'INVENTORY_VIEW',
+    'Purchasing - Proactive Demand Restock': 'PURCHASING_VIEW',
+    'Replenishment': 'INVENTORY_VIEW',
     'Field Sales Mobile': 'FIELD_SALES_MOBILE',
     'Field Sales': 'FIELD_SALES_MOBILE',
 }

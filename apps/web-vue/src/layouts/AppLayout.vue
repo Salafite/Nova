@@ -171,7 +171,8 @@ const inventoryRouteNames = new Set([
   'inventory-overview', 'products', 'product-detail', 'categories', 'barcodes', 'attributes',
   'uom', 'uom-conversions', 'inventory', 'inventory-counts', 'stock-movements',
   'stock-adjustments', 'batch-numbers', 'serial-numbers', 'warehouses', 'pick-lists',
-  'pick-list-detail', 'goods-receipt', 'inventory-reports', 'inventory-config',
+  'pick-list-detail', 'stock-transfers', 'stock-transfer-detail', 'inventory-replenishment',
+  'replenishment', 'goods-receipt', 'inventory-reports', 'inventory-config',
 ])
 
 const isGrid = computed(() => navStore.navStyle === 'grid')

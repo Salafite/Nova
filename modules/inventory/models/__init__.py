@@ -17,3 +17,11 @@ from modules.inventory.models.warehouse import (
 from modules.inventory.models.stock_level import (
     StockLevelCreate, StockLevelUpdate, StockLevelResponse,
 )
+from modules.inventory.models.stock_transfer import (
+    StockTransferLineCreate, StockTransferLineUpdate, StockTransferLineResponse,
+    StockTransferCreate, StockTransferUpdate, StockTransferResponse,
+    StockTransferDispatchLine, StockTransferDispatch,
+    StockTransferLossDetail, StockTransferReceiveLine, StockTransferReceive,
+    ReplenishmentSuggestionItem, ReplenishmentSuggestionResponse,
+    ReplenishmentGenerateItem, ReplenishmentGenerateRequest, ReplenishmentGenerateResponse,
+)

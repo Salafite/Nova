@@ -172,6 +172,103 @@ class TestWarehouseMcp:
         result = warehouse_mcp._get_batch_recall_report()
         assert "error" in result
 
+    def test_list_stock_transfers(self):
+        mod = warehouse_mcp
+        mock_transfer = {"id": 1, "transfer_number": "TRF-20260826-0001", "status": "In Transit"}
+        with patch.object(mod, "_transfer_svc", MagicMock()) as mock:
+            mock.list_with_lines.return_value = [mock_transfer]
+            result = mod._list_stock_transfers(status="In Transit", source_warehouse_id=1, destination_warehouse_id=2)
+            assert result == [mock_transfer]
+            mock.list_with_lines.assert_called_once_with(
+                filters={"status": "In Transit", "source_warehouse_id": 1, "destination_warehouse_id": 2},
+                limit=50,
+                offset=0,
+            )
+
+    def test_get_stock_transfer(self):
+        mod = warehouse_mcp
+        mock_detail = {
+            "id": 1,
+            "transfer_number": "TRF-20260826-0001",
+            "status": "In Transit",
+            "lines": [{"id": 10, "product_id": 5, "qty_requested": 100}],
+        }
+        with patch.object(mod, "_transfer_svc", MagicMock()) as mock:
+            mock.get_transfer_with_lines.return_value = mock_detail
+            result = mod._get_stock_transfer(1)
+            assert result == mock_detail
+            mock.get_transfer_with_lines.assert_called_once_with(1)
+
+    def test_create_stock_transfer(self):
+        mod = warehouse_mcp
+        mock_created = {"id": 1, "transfer_number": "TRF-20260826-0001", "status": "Draft"}
+        with patch.object(mod, "_transfer_svc", MagicMock()) as mock:
+            mock.create_transfer.return_value = mock_created
+            lines = [{"product_id": 101, "qty_requested": 50.0}]
+            result = mod._create_stock_transfer(
+                source_warehouse_id=1,
+                destination_warehouse_id=2,
+                lines=lines,
+                carrier="FastLogistics",
+                tracking_number="TRACK-123",
+                notes="Priority transfer",
+            )
+            assert result == mock_created
+            mock.create_transfer.assert_called_once_with({
+                "source_warehouse_id": 1,
+                "destination_warehouse_id": 2,
+                "lines": lines,
+                "carrier": "FastLogistics",
+                "tracking_number": "TRACK-123",
+                "notes": "Priority transfer",
+            })
+
+    def test_dispatch_stock_transfer(self):
+        mod = warehouse_mcp
+        mock_dispatched = {"id": 1, "status": "In Transit", "carrier": "Express Freight"}
+        with patch.object(mod, "_transfer_svc", MagicMock()) as mock:
+            mock.dispatch_transfer.return_value = mock_dispatched
+            lines = [{"line_id": 10, "qty_dispatched": 50.0}]
+            result = mod._dispatch_stock_transfer(
+                id=1,
+                carrier="Express Freight",
+                tracking_number="EXP-999",
+                dispatched_by=3,
+                lines=lines,
+            )
+            assert result == mock_dispatched
+            mock.dispatch_transfer.assert_called_once_with(
+                1,
+                dispatch_data={
+                    "carrier": "Express Freight",
+                    "tracking_number": "EXP-999",
+                    "dispatched_by": 3,
+                    "lines": lines,
+                },
+            )
+
+    def test_receive_stock_transfer(self):
+        mod = warehouse_mcp
+        mock_received = {"id": 1, "status": "Received"}
+        with patch.object(mod, "_transfer_svc", MagicMock()) as mock:
+            mock.receive_transfer.return_value = mock_received
+            lines = [{"line_id": 10, "qty_received": 48.0, "qty_lost": 2.0, "loss_reason": "Damage"}]
+            result = mod._receive_stock_transfer(
+                id=1,
+                received_by=4,
+                lines=lines,
+                notes="2 units damaged during transport",
+            )
+            assert result == mock_received
+            mock.receive_transfer.assert_called_once_with(
+                1,
+                receive_data={
+                    "received_by": 4,
+                    "notes": "2 units damaged during transport",
+                    "lines": lines,
+                },
+            )
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools, list_resources
@@ -185,6 +282,12 @@ class TestWarehouseMcp:
         assert "approve_pick_tolerance" in names
         assert "check_pick_list_discrepancies" in names
         assert "get_batch_recall_report" in names
+        assert "list_stock_transfers" in names
+        assert "get_stock_transfer" in names
+        assert "create_stock_transfer" in names
+        assert "dispatch_stock_transfer" in names
+        assert "receive_stock_transfer" in names
         uris = [r.uri for r in list_resources()]
         assert "nova://warehouse/pick-lists" in uris
+        assert "nova://warehouse/stock-transfers" in uris
 
