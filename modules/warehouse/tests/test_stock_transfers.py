@@ -861,7 +861,7 @@ class TestStockTransferMultiTenantIsolation:
             }
         ])
 
-        self.line_repo = InMemoryMockRepo('T0109', [
+        self.line_repo = InMemoryMockRepo('T0111', [
             {'id': 101, 'transfer_id': 1, 'product_id': 500, 'qty_requested': 50.0, 'qty_dispatched': 50.0, 'business_id': 1},
             {'id': 102, 'transfer_id': 2, 'product_id': 600, 'qty_requested': 30.0, 'qty_dispatched': 0.0, 'business_id': 2},
             {'id': 103, 'transfer_id': 3, 'product_id': 500, 'qty_requested': 25.0, 'qty_dispatched': 0.0, 'business_id': 1},

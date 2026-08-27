@@ -1,5 +1,5 @@
 """
-Nova ERP — Unit & Integration Tests for Stock Transfer Controllers (T0108I & T0109I)
+Nova ERP — Unit & Integration Tests for Stock Transfer Controllers (T0108I & T0111I)
 """
 import pytest
 from unittest.mock import MagicMock, patch
@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from modules.warehouse.controllers.T0108I import router as t0108_router, service as t0108_service
-from modules.warehouse.controllers.T0109I import router as t0109_router, service as t0109_service
+from modules.warehouse.controllers.T0111I import router as t0111_router, service as t0111_service
 from packages.auth.deps import get_current_user
 
 
@@ -22,7 +22,7 @@ def test_app_and_client():
         'permissions': ['*'],
     }
     app.include_router(t0108_router)
-    app.include_router(t0109_router)
+    app.include_router(t0111_router)
     return app, TestClient(app)
 
 
@@ -285,8 +285,8 @@ class TestStockTransferHeaderControllerT0108I:
                 assert resp.status_code == 204
 
 
-class TestStockTransferLinesControllerT0109I:
-    """Test suite for T0109I Stock Transfer Lines Controller."""
+class TestStockTransferLinesControllerT0111I:
+    """Test suite for T0111I Stock Transfer Lines Controller."""
 
     def test_list_lines(self, test_app_and_client):
         _, client = test_app_and_client
@@ -294,8 +294,8 @@ class TestStockTransferLinesControllerT0109I:
             {'id': 1, 'transfer_id': 1, 'product_id': 101, 'qty_requested': 50.0, 'qty_dispatched': 50.0, 'qty_received': 50.0, 'qty_lost': 0.0, 'is_active': True},
             {'id': 2, 'transfer_id': 1, 'product_id': 102, 'qty_requested': 30.0, 'qty_dispatched': 30.0, 'qty_received': 28.0, 'qty_lost': 2.0, 'loss_reason': 'Transit Damage', 'is_active': True},
         ]
-        with patch.object(t0109_service.repo, 'list', return_value=mock_lines):
-            resp = client.get('/api/T0109I/')
+        with patch.object(t0111_service.repo, 'list', return_value=mock_lines):
+            resp = client.get('/api/T0111I/')
             assert resp.status_code == 200
             data = resp.json()
             assert len(data) == 2
@@ -313,8 +313,8 @@ class TestStockTransferLinesControllerT0109I:
             'qty_lost': 0.0,
             'is_active': True,
         }
-        with patch.object(t0109_service, 'get', return_value=mock_line):
-            resp = client.get('/api/T0109I/1')
+        with patch.object(t0111_service, 'get', return_value=mock_line):
+            resp = client.get('/api/T0111I/1')
             assert resp.status_code == 200
             data = resp.json()
             assert data['id'] == 1
@@ -332,9 +332,9 @@ class TestStockTransferLinesControllerT0109I:
             'qty_lost': 0.0,
             'is_active': True,
         }
-        with patch.object(t0109_service, 'create', return_value=mock_created):
+        with patch.object(t0111_service, 'create', return_value=mock_created):
             payload = {'transfer_id': 1, 'product_id': 103, 'qty_requested': 15.0}
-            resp = client.post('/api/T0109I/', json=payload)
+            resp = client.post('/api/T0111I/', json=payload)
             assert resp.status_code == 201
             data = resp.json()
             assert data['id'] == 3

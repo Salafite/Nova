@@ -1,6 +1,6 @@
 """
 Tests for main application router registration, RBAC permissions, and tenant isolation
-for Stock Transfers (T0108I), Stock Transfer Lines (T0109I), and Inter-Branch Replenishment controllers.
+for Stock Transfers (T0108I), Stock Transfer Lines (T0111I), and Inter-Branch Replenishment controllers.
 """
 from unittest.mock import patch, MagicMock
 import pytest
@@ -40,10 +40,10 @@ def test_main_app_routes_registered():
     assert "/api/T0108I/{id}/lines" in paths
     assert "/api/T0108I/{id}/lines/{line_id}" in paths
 
-    # T0109I endpoints
-    assert "/api/T0109I/" in paths
-    assert "/api/T0109I/count" in paths
-    assert "/api/T0109I/{id}" in paths
+    # T0111I endpoints
+    assert "/api/T0111I/" in paths
+    assert "/api/T0111I/count" in paths
+    assert "/api/T0111I/{id}" in paths
 
     # Replenishment endpoints
     assert "/api/inventory/replenishment/suggestions" in paths

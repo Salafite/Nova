@@ -1,5 +1,5 @@
 """
-Nova ERP — Stock Transfer Lines REST Controller (T0109I)
+Nova ERP — Stock Transfer Lines REST Controller (T0111I)
 CRUD operations and line-item management for multi-warehouse stock transfers.
 """
 from modules.warehouse.models.stock_transfer import (
@@ -12,7 +12,7 @@ from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
 
 repo = CrudRepository(
-    'T0109',
+    'T0111',
     business_columns=[
         'id', 'transfer_id', 'product_id', 'qty_requested', 'qty_dispatched',
         'qty_received', 'qty_lost', 'loss_reason', 'loss_notes', 'batch_id',
@@ -22,8 +22,8 @@ repo = CrudRepository(
 service = CrudService(repo)
 
 router = create_crud_router(
-    '/api/T0109I',
-    'T0109 - Stock Transfer Lines',
+    '/api/T0111I',
+    'T0111 - Stock Transfer Lines',
     service,
     StockTransferLineCreate,
     StockTransferLineUpdate,

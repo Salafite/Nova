@@ -29,7 +29,7 @@ TRANSFER_REPO = CrudRepository(
 )
 
 TRANSFER_LINE_REPO = CrudRepository(
-    'T0109',
+    'T0111',
     business_columns=[
         'id', 'transfer_id', 'product_id', 'qty_requested', 'qty_dispatched',
         'qty_received', 'qty_lost', 'loss_reason', 'loss_notes', 'batch_id',

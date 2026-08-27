@@ -110,7 +110,7 @@ BEGIN
 END $$;
 
 -- 5. Stock Transfer Lines Table (T0109)
-CREATE TABLE IF NOT EXISTS "Nova".t0109 (
+CREATE TABLE IF NOT EXISTS "Nova".t0111 (
     id             SERIAL PRIMARY KEY,
     transfer_id    INT NOT NULL REFERENCES "Nova".t0108(id) ON DELETE CASCADE,
     product_id     INT NOT NULL REFERENCES "Nova".t0003(id),
@@ -133,32 +133,32 @@ CREATE TABLE IF NOT EXISTS "Nova".t0109 (
     update_number  INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0109 IS 'Stock Transfer Lines — Itemized product quantities, transit and loss tracking';
-COMMENT ON COLUMN "Nova".t0109.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0109.transfer_id IS 'Reference to Stock Transfer header (FK to t0108)';
-COMMENT ON COLUMN "Nova".t0109.product_id IS 'Reference to Product (FK to t0003)';
-COMMENT ON COLUMN "Nova".t0109.qty_requested IS 'Quantity requested to transfer';
-COMMENT ON COLUMN "Nova".t0109.qty_dispatched IS 'Quantity dispatched from source warehouse';
-COMMENT ON COLUMN "Nova".t0109.qty_received IS 'Quantity received at destination warehouse';
-COMMENT ON COLUMN "Nova".t0109.qty_lost IS 'Quantity lost, damaged, or unaccounted during transit';
-COMMENT ON COLUMN "Nova".t0109.loss_reason IS 'Reason code for discrepancy / loss (e.g. Transit Damage, Spillage, Theft, Expired, Other)';
-COMMENT ON COLUMN "Nova".t0109.loss_notes IS 'Notes or explanation regarding transit loss / discrepancy';
-COMMENT ON COLUMN "Nova".t0109.batch_id IS 'Batch/lot reference if FEFO/batch-tracked (FK to t0087)';
-COMMENT ON COLUMN "Nova".t0109.batch_number IS 'Batch number identifier string';
-COMMENT ON COLUMN "Nova".t0109.line_number IS 'Sequential line item number in transfer order';
-COMMENT ON COLUMN "Nova".t0109.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0111 IS 'Stock Transfer Lines — Itemized product quantities, transit and loss tracking';
+COMMENT ON COLUMN "Nova".t0111.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0111.transfer_id IS 'Reference to Stock Transfer header (FK to t0108)';
+COMMENT ON COLUMN "Nova".t0111.product_id IS 'Reference to Product (FK to t0003)';
+COMMENT ON COLUMN "Nova".t0111.qty_requested IS 'Quantity requested to transfer';
+COMMENT ON COLUMN "Nova".t0111.qty_dispatched IS 'Quantity dispatched from source warehouse';
+COMMENT ON COLUMN "Nova".t0111.qty_received IS 'Quantity received at destination warehouse';
+COMMENT ON COLUMN "Nova".t0111.qty_lost IS 'Quantity lost, damaged, or unaccounted during transit';
+COMMENT ON COLUMN "Nova".t0111.loss_reason IS 'Reason code for discrepancy / loss (e.g. Transit Damage, Spillage, Theft, Expired, Other)';
+COMMENT ON COLUMN "Nova".t0111.loss_notes IS 'Notes or explanation regarding transit loss / discrepancy';
+COMMENT ON COLUMN "Nova".t0111.batch_id IS 'Batch/lot reference if FEFO/batch-tracked (FK to t0087)';
+COMMENT ON COLUMN "Nova".t0111.batch_number IS 'Batch number identifier string';
+COMMENT ON COLUMN "Nova".t0111.line_number IS 'Sequential line item number in transfer order';
+COMMENT ON COLUMN "Nova".t0111.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0109_transfer_id ON "Nova".t0109(transfer_id);
-CREATE INDEX IF NOT EXISTS idx_t0109_product_id ON "Nova".t0109(product_id);
-CREATE INDEX IF NOT EXISTS idx_t0109_batch_id ON "Nova".t0109(batch_id);
-CREATE INDEX IF NOT EXISTS idx_t0109_business_id ON "Nova".t0109(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0109_business_id_id ON "Nova".t0109(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0111_transfer_id ON "Nova".t0111(transfer_id);
+CREATE INDEX IF NOT EXISTS idx_t0111_product_id ON "Nova".t0111(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0111_batch_id ON "Nova".t0111(batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0111_business_id ON "Nova".t0111(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0111_business_id_id ON "Nova".t0111(business_id, id);
 
 -- 6. Grant Readonly Permissions to AI / MCP Role
 DO $$ BEGIN
     IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'nova_readonly') THEN
         GRANT SELECT ON "Nova".t0108 TO nova_readonly;
-        GRANT SELECT ON "Nova".t0109 TO nova_readonly;
+        GRANT SELECT ON "Nova".t0111 TO nova_readonly;
     END IF;
 END $$;
 
