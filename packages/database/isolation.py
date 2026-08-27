@@ -289,9 +289,10 @@ class DatabaseCleaner:
                                 f'DELETE FROM "{self.schema}"."{tbl}" WHERE "business_id" = %s;',
                                 (business_id,)
                             )
+                            deleted_rc = cur.rowcount
                             cur.execute(f"RELEASE SAVEPOINT sp_del_{tbl};")
-                            if cur.rowcount > 0:
-                                deleted_counts[tbl] = deleted_counts.get(tbl, 0) + cur.rowcount
+                            if deleted_rc > 0:
+                                deleted_counts[tbl] = deleted_counts.get(tbl, 0) + deleted_rc
                         except Exception as e:
                             try:
                                 cur.execute(f"ROLLBACK TO SAVEPOINT sp_del_{tbl}; RELEASE SAVEPOINT sp_del_{tbl};")

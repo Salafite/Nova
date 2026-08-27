@@ -91,7 +91,7 @@ class TestGetConnection:
     def test_transient_error_exhausts_retries_and_releases_all(
         self, mock_sleep, mock_pool
     ):
-        conns = [MagicMock(name=f"conn{i}") for i in range(3)]
+        conns = [MagicMock(name=f"conn{i}") for i in range(10)]
         for conn in conns:
             cursor = MagicMock()
             cursor.execute.side_effect = Exception("connection closed unexpectedly")
@@ -102,8 +102,8 @@ class TestGetConnection:
         with pytest.raises(Exception, match="closed unexpectedly"):
             get_connection()
 
-        assert mock_pool.getconn.call_count == 3
-        assert mock_pool.putconn.call_count == 3
+        assert mock_pool.getconn.call_count == 10
+        assert mock_pool.putconn.call_count == 10
         for conn in conns:
             mock_pool.putconn.assert_any_call(conn)
 
