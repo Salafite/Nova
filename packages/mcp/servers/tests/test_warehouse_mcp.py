@@ -269,6 +269,30 @@ class TestWarehouseMcp:
                 },
             )
 
+    def test_get_batch_number(self):
+        mod = warehouse_mcp
+        mock_batch = {"id": 1, "batch_number": "BT-001", "expiry_date": "2026-12-31"}
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.get.return_value = mock_batch
+            result = mod._get_batch_number(1)
+            assert result == mock_batch
+            mock.get.assert_called_once_with(1)
+
+    def test_allocate_fefo_lots(self):
+        mod = warehouse_mcp
+        mock_allocations = [
+            {"batch_id": 1, "batch_number": "BT-001", "expiry_date": "2026-06-01", "quantity": 10.0}
+        ]
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.allocate_fefo_lots.return_value = mock_allocations
+            result = mod._allocate_fefo_lots(product_id=101, qty_needed=10.0, warehouse_id=1)
+            assert result == mock_allocations
+            mock.allocate_fefo_lots.assert_called_once_with(
+                product_id=101,
+                warehouse_id=1,
+                qty_needed=10.0,
+            )
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools, list_resources
@@ -276,6 +300,8 @@ class TestWarehouseMcp:
         assert "list_goods_receipts" in names
         assert "list_serial_numbers" in names
         assert "list_batch_numbers" in names
+        assert "get_batch_number" in names
+        assert "allocate_fefo_lots" in names
         assert "list_pick_lists" in names
         assert "get_pick_list" in names
         assert "pick_item" in names
@@ -290,4 +316,5 @@ class TestWarehouseMcp:
         uris = [r.uri for r in list_resources()]
         assert "nova://warehouse/pick-lists" in uris
         assert "nova://warehouse/stock-transfers" in uris
+        assert "nova://warehouse/batches" in uris
 

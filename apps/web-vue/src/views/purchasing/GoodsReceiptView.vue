@@ -226,9 +226,14 @@
                 <h4 class="section-title">{{ t('line-items-batch', 'Line Items & Batch Information') }}</h4>
                 <p class="section-desc">{{ t('line-items-desc', 'Capture batch/lot numbers and expiration dates for perishable and tracked inventory.') }}</p>
               </div>
-              <button type="button" class="btn-outline btn-sm" @click="addLine">
-                <span class="material-symbols-outlined">add</span> {{ t('add-line', 'Add Item') }}
-              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-outline btn-sm" @click="generateAllBatches" :title="t('gen-all-batches-title', 'Generate batch numbers for lines missing them')">
+                  <span class="material-symbols-outlined icon-xs">qr_code_2</span> {{ t('gen-all-batches', 'Auto Batch') }}
+                </button>
+                <button type="button" class="btn-outline btn-sm" @click="addLine">
+                  <span class="material-symbols-outlined">add</span> {{ t('add-line', 'Add Item') }}
+                </button>
+              </div>
             </div>
 
             <div v-if="!form.lines.length" class="empty-lines-box">
@@ -240,9 +245,9 @@
                 <thead>
                   <tr>
                     <th style="width: 25%">{{ t('product', 'Product') }} <span class="text-red-500">*</span></th>
-                    <th style="width: 12%">{{ t('qty-ordered', 'Ordered') }}</th>
-                    <th style="width: 12%">{{ t('qty-rcvd', 'Received') }} <span class="text-red-500">*</span></th>
-                    <th style="width: 20%">{{ t('batch-lot', 'Batch / Lot #') }}</th>
+                    <th style="width: 10%">{{ t('qty-ordered', 'Ordered') }}</th>
+                    <th style="width: 10%">{{ t('qty-rcvd', 'Received') }} <span class="text-red-500">*</span></th>
+                    <th style="width: 24%">{{ t('batch-lot', 'Batch / Lot #') }}</th>
                     <th style="width: 14%">{{ t('mfg-date', 'Mfg Date') }}</th>
                     <th style="width: 14%">{{ t('exp-date', 'Expiry Date') }}</th>
                     <th style="width: 3%"></th>
@@ -270,13 +275,27 @@
                           class="form-input form-input-sm batch-input"
                           placeholder="e.g. LOT-2026-A1"
                         />
+                        <button
+                          type="button"
+                          class="btn-gen-batch"
+                          @click="generateBatchForLine(line, idx)"
+                          :title="t('gen-batch', 'Auto-generate batch number')"
+                        >
+                          <span class="material-symbols-outlined icon-xs">autorenew</span>
+                        </button>
                       </div>
                     </td>
                     <td>
                       <input type="date" v-model="line.manufacturing_date" class="form-input form-input-sm date-input" />
                     </td>
                     <td>
-                      <input type="date" v-model="line.expiry_date" class="form-input form-input-sm date-input" />
+                      <input
+                        type="date"
+                        v-model="line.expiry_date"
+                        class="form-input form-input-sm date-input"
+                        :class="{ 'border-red-500': line.batch_number && line.batch_number.trim() && !line.expiry_date }"
+                        :title="line.batch_number && line.batch_number.trim() && !line.expiry_date ? t('exp-required-tooltip', 'Expiration date required when batch number is specified') : ''"
+                      />
                     </td>
                     <td class="text-center">
                       <button type="button" class="btn-icon btn-icon-danger" @click="removeLine(idx)" :title="t('remove-line', 'Remove')">
@@ -542,6 +561,22 @@ function removeLine(index) {
   form.value.lines.splice(index, 1)
 }
 
+function generateBatchForLine(line, idx) {
+  const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const seq = String((idx !== undefined ? idx : form.value.lines.indexOf(line)) + 1).padStart(3, '0')
+  line.batch_number = `LOT-${d}-${seq}`
+}
+
+function generateAllBatches() {
+  const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  form.value.lines.forEach((line, idx) => {
+    if (!line.batch_number || !line.batch_number.trim()) {
+      const seq = String(idx + 1).padStart(3, '0')
+      line.batch_number = `LOT-${d}-${seq}`
+    }
+  })
+}
+
 function onProductChange(line) {
   if (!line.product_id) return
   const p = products.value.find(x => x.id === line.product_id)
@@ -554,6 +589,22 @@ async function saveItem() {
   if (!form.value.receipt_number || !form.value.receipt_number.trim()) {
     toast(t('receipt-num-required', 'Receipt number is required'), 'error')
     return
+  }
+
+  const validLines = form.value.lines.filter(l => l.product_id || (l.product_name && l.product_name.trim()))
+
+  if (!validLines.length) {
+    toast(t('at-least-one-line', 'At least one line item is required'), 'error')
+    return
+  }
+
+  // Validate that any line with a batch number has an expiration date specified
+  for (const line of validLines) {
+    const batchNum = line.batch_number ? String(line.batch_number).trim() : ''
+    if (batchNum && !line.expiry_date) {
+      toast(t('batch-exp-required', `Expiration date is required for batch '${batchNum}'`), 'error')
+      return
+    }
   }
 
   saving.value = true
@@ -777,6 +828,10 @@ select.form-input { appearance: auto; }
 .lines-editor-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
 .lines-editor-table tr:last-child td { border-bottom: none; }
 .batch-input { font-family: monospace; font-weight: 600; color: #5d3fd3; }
+.batch-input-wrap { display: flex; align-items: center; gap: 4px; }
+.btn-gen-batch { display: inline-flex; align-items: center; justify-content: center; padding: 4px 6px; background: #f3f0ff; color: #5d3fd3; border: 1px solid #ddd6fe; border-radius: 6px; cursor: pointer; transition: background 0.15s; }
+.btn-gen-batch:hover { background: #ede9fe; }
+.border-red-500 { border-color: #ef4444 !important; }
 .date-input { font-size: 11px; }
 
 .flex { display: flex; }
