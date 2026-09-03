@@ -1352,6 +1352,7 @@ async function submitReceive() {
       loss_notes: l.loss_notes || null,
       batch_id: l.batch_id || null,
       batch_number: l.batch_number || null,
+      expiration_date: l.expiration_date || null,
     }))
 
     const payloadLosses = receiveForm.lines
@@ -2061,6 +2062,67 @@ onMounted(() => {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
+}
+
+/* Receiving Barcode Scanner & Table Highlights */
+.barcode-scanner-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-surface-hover);
+  border: 1px dashed var(--color-primary);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.barcode-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.barcode-icon {
+  font-size: 24px;
+  color: var(--color-primary);
+}
+
+.barcode-input {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.scan-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.scan-feedback.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.scan-feedback.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.row-scanned-highlight {
+  background-color: #e0f2fe !important;
+  transition: background-color 0.3s ease;
+}
+
+.row-verified {
+  border-left: 3px solid #16a34a;
+}
+
+.date-input-sm {
+  font-size: 11px;
+  padding: 2px 4px;
 }
 
 .row-loss-highlight {
