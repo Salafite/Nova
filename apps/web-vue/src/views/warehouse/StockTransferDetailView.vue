@@ -934,6 +934,12 @@ const editingLine = ref(null)
 const targetLine = ref(null)
 const cancelReason = ref('')
 
+// Rapid Barcode Scanning & Verification State
+const barcodeQuery = ref('')
+const scanFeedback = ref(null)
+const lastScannedLineId = ref(null)
+const barcodeInputRef = ref(null)
+
 // Form States
 const dispatchForm = reactive({
   carrier: '',
@@ -1214,19 +1220,26 @@ async function submitDispatch() {
 function openReceiveModal() {
   if (!transfer.value) return
   receiveForm.notes = ''
+  barcodeQuery.value = ''
+  scanFeedback.value = null
+  lastScannedLineId.value = null
+
   receiveForm.lines = (transfer.value.lines || []).map(l => {
     const dispQty = l.qty_dispatched > 0 ? l.qty_dispatched : l.qty_requested
     return {
       line_id: l.id,
       product_id: l.product_id,
+      product_code: l.product_code || '',
       product_name: l.product_name,
       batch_id: l.batch_id,
-      batch_number: l.batch_number,
+      batch_number: l.batch_number || '',
+      expiration_date: l.expiration_date || l.expiry_date || '',
       qty_dispatched: dispQty,
       qty_received: dispQty,
       qty_lost: 0,
       loss_reason: '',
-      loss_notes: ''
+      loss_notes: '',
+      verified: false,
     }
   })
   showReceiveModal.value = true
@@ -1238,7 +1251,68 @@ function receiveAllInFull() {
     l.qty_lost = 0
     l.loss_reason = ''
     l.loss_notes = ''
+    l.verified = true
   })
+  scanFeedback.value = {
+    type: 'success',
+    message: t('all-received-full-msg', 'All items set to full dispatched quantity.')
+  }
+}
+
+function resetForScanToCount() {
+  receiveForm.lines.forEach(l => {
+    l.qty_received = 0
+    l.qty_lost = l.qty_dispatched
+    l.loss_reason = ''
+    l.loss_notes = ''
+    l.verified = false
+  })
+  lastScannedLineId.value = null
+  scanFeedback.value = {
+    type: 'success',
+    message: t('reset-scan-msg', 'Quantities reset to 0. Ready for rapid barcode scanning.')
+  }
+}
+
+function handleBarcodeScan() {
+  if (!barcodeQuery.value) return
+  const query = barcodeQuery.value.trim().toLowerCase()
+
+  // Find matching line by product_code, SKU, batch_number, product_name or line_id
+  const line = receiveForm.lines.find(l => {
+    const prodCode = (l.product_code || '').toLowerCase()
+    const prodName = (l.product_name || '').toLowerCase()
+    const batchNo = (l.batch_number || '').toLowerCase()
+    const prod = products.value.find(p => p.id === l.product_id)
+    const sku = (prod?.sku || '').toLowerCase()
+
+    return (
+      prodCode === query ||
+      sku === query ||
+      batchNo === query ||
+      prodName.includes(query) ||
+      String(l.line_id) === query
+    )
+  })
+
+  if (line) {
+    if (line.qty_received < line.qty_dispatched) {
+      line.qty_received = Number((line.qty_received + 1).toFixed(3))
+    }
+    onReceivedQtyChange(line)
+    line.verified = true
+    lastScannedLineId.value = line.line_id
+    scanFeedback.value = {
+      type: 'success',
+      message: t('scanned-success-msg', `Scanned: ${line.product_name} (Received: ${line.qty_received}/${line.qty_dispatched})`)
+    }
+  } else {
+    scanFeedback.value = {
+      type: 'error',
+      message: t('scanned-not-found-msg', `No matching product, barcode, or lot number found for '${barcodeQuery.value}'`)
+    }
+  }
+  barcodeQuery.value = ''
 }
 
 function onReceivedQtyChange(rLine) {
