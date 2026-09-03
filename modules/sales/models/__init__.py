@@ -20,6 +20,12 @@ from modules.sales.models.sales_return import (
 from modules.sales.models.price_list import (
     PriceListCreate, PriceListUpdate, PriceListResponse,
     PriceListItemCreate, PriceListItemUpdate, PriceListItemResponse,
+    VolumeTierBreakCreate, VolumeTierBreakUpdate, VolumeTierBreakResponse,
+    CustomerGroupPriceListCreate, CustomerGroupPriceListUpdate, CustomerGroupPriceListResponse,
+    CustomerContractCreate, CustomerContractUpdate, CustomerContractResponse,
+    PromotionalRuleCreate, PromotionalRuleUpdate, PromotionalRuleResponse,
+    PriceCalculateLineRequest, PriceCalculateRequest, PriceCalculateLineResponse,
+    PromotionalRewardItem, PriceCalculateResponse,
 )
 from modules.sales.models.tax import (
     TaxRateCreate, TaxRateUpdate, TaxRateResponse,
