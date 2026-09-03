@@ -5,7 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from packages.auth.deps import require_permission
 from packages.database.connection import get_connection, release_connection
 from modules.core.context import get_current_tenant
-from modules.pos.models.pos import PosCheckoutRequest, PosCheckoutResponse
+from modules.pos.models.pos import (
+    PosCheckoutRequest,
+    PosCheckoutResponse,
+    PosPaymentSplit,
+    PosReceiptData,
+    PosReceiptItem,
+)
 
 router = APIRouter(prefix='/api/pos', tags=['POS'], dependencies=[Depends(require_permission('POS_VIEW'))])
 
@@ -19,6 +25,17 @@ def process_pos_checkout(request: PosCheckoutRequest) -> PosCheckoutResponse:
     subtotal = round(sum(item.qty * item.unit_price for item in request.cart_items), 2)
     tax = round(subtotal * 0.05, 2)
     grand_total = round(subtotal + tax, 2)
+
+    # Process payments breakdown
+    payments = request.payments if request.payments else [
+        PosPaymentSplit(payment_method=request.payment_method or "Cash", amount=grand_total)
+    ]
+    total_tendered = request.amount_tendered if request.amount_tendered is not None else round(sum(p.amount for p in payments), 2)
+    if total_tendered < grand_total:
+        total_tendered = grand_total
+    change_due = round(max(0.0, total_tendered - grand_total), 2)
+
+    cust_id = request.customer_id if request.customer_id is not None else 1
 
     conn = get_connection()
     try:
@@ -49,19 +66,19 @@ def process_pos_checkout(request: PosCheckoutRequest) -> PosCheckoutResponse:
             cur.execute(
                 """
                 INSERT INTO "Nova".t0012 (order_number, customer_id, warehouse_id, subtotal, tax, grand_total, status, order_date, notes, business_id)
-                VALUES (%s, 1, %s, %s, %s, %s, 'Paid', CURRENT_DATE, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, 'Paid', CURRENT_DATE, %s, %s)
                 RETURNING id
                 """,
-                (order_number, request.warehouse_id, subtotal, tax, grand_total, notes_content, tenant_id)
+                (order_number, cust_id, request.warehouse_id, subtotal, tax, grand_total, notes_content, tenant_id)
             )
         else:
             cur.execute(
                 """
                 INSERT INTO "Nova".t0012 (order_number, customer_id, warehouse_id, subtotal, tax, grand_total, status, order_date, notes)
-                VALUES (%s, 1, %s, %s, %s, %s, 'Paid', CURRENT_DATE, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, 'Paid', CURRENT_DATE, %s)
                 RETURNING id
                 """,
-                (order_number, request.warehouse_id, subtotal, tax, grand_total, notes_content)
+                (order_number, cust_id, request.warehouse_id, subtotal, tax, grand_total, notes_content)
             )
         order_row = cur.fetchone()
         order_id = order_row['id']
@@ -149,11 +166,45 @@ def process_pos_checkout(request: PosCheckoutRequest) -> PosCheckoutResponse:
     finally:
         release_connection(conn)
 
+    receipt_items = [
+        PosReceiptItem(
+            product_id=item.product_id,
+            product_name=item.product_name,
+            qty=item.qty,
+            unit_price=item.unit_price,
+            line_total=round(item.qty * item.unit_price, 2)
+        ) for item in request.cart_items
+    ]
+
+    receipt_data = PosReceiptData(
+        order_id=order_id,
+        order_number=order_number,
+        order_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        customer_name=request.customer_name,
+        customer_id=cust_id,
+        warehouse_id=request.warehouse_id,
+        items=receipt_items,
+        subtotal=subtotal,
+        tax=tax,
+        grand_total=grand_total,
+        amount_tendered=total_tendered,
+        change_due=change_due,
+        payments=payments,
+        cashier_name="Cashier",
+        business_name="Nova Wholesale Depot"
+    )
+
     return PosCheckoutResponse(
         success=True,
         order_id=order_id,
         order_number=order_number,
+        subtotal=subtotal,
+        tax=tax,
         grand_total=grand_total,
+        amount_tendered=total_tendered,
+        change_due=change_due,
+        payments=payments,
+        receipt=receipt_data,
         message=f"POS order {order_number} created successfully"
     )
 
