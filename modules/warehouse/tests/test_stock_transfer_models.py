@@ -322,3 +322,20 @@ def test_stock_level_in_transit_qty():
     )
     assert sl_resp.in_transit_qty == 25.0
     assert sl_resp.available_qty == 90.0
+
+
+def test_tenant_mixin_inheritance():
+    from modules.core.models.base import TenantMixin
+    from modules.warehouse.models.warehouse import WarehouseCreate, WarehouseUpdate, InventoryCreate, InventoryUpdate
+
+    assert issubclass(StockTransferCreate, TenantMixin)
+    assert issubclass(StockTransferUpdate, TenantMixin)
+    assert issubclass(StockTransferLineCreate, TenantMixin)
+    assert issubclass(StockTransferLineUpdate, TenantMixin)
+    assert issubclass(StockTransferResponse, TenantMixin)
+    assert issubclass(StockTransferLineResponse, TenantMixin)
+    assert issubclass(WarehouseCreate, TenantMixin)
+    assert issubclass(WarehouseUpdate, TenantMixin)
+    assert issubclass(InventoryCreate, TenantMixin)
+    assert issubclass(InventoryUpdate, TenantMixin)
+

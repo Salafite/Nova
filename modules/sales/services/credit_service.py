@@ -167,6 +167,72 @@ class CreditService(CrudService):
         overdue_list.sort(key=lambda x: x['days_overdue'], reverse=True)
         return overdue_list
 
+    def get_aging_breakdown(
+        self,
+        customer_id: int,
+        as_of_date: Optional[Union[date, str]] = None,
+        conn=None,
+    ) -> Dict[str, Any]:
+        """
+        Calculate overdue invoice aging breakdown (>30, >60, >90 days) for a customer.
+
+        :param customer_id: Customer ID (partner_id in t0090)
+        :param as_of_date: Reference date for aging calculation (default today)
+        :param conn: Optional active DB connection
+        :return: Dictionary of aging bucket amounts and counts
+        """
+        ref_date = _parse_date(as_of_date) or date.today()
+        invoices = self.invoice_repo.list(filters={'partner_id': customer_id}, conn=conn)
+
+        buckets = {
+            'current': 0.0,
+            'overdue_1_30': 0.0,
+            'overdue_31_60': 0.0,
+            'overdue_61_90': 0.0,
+            'overdue_90_plus': 0.0,
+            'total_overdue': 0.0,
+            'overdue_30_plus_amount': 0.0,
+            'overdue_30_plus_count': 0,
+            'overdue_60_plus_amount': 0.0,
+            'overdue_60_plus_count': 0,
+        }
+
+        for inv in invoices:
+            status = inv.get('status')
+            if status in ('Paid', 'Cancelled'):
+                continue
+
+            due = _parse_date(inv.get('due_date'))
+            if not due:
+                continue
+
+            amt = _to_float(inv.get('total_amount', 0.0))
+            if due >= ref_date:
+                buckets['current'] += amt
+            else:
+                days = (ref_date - due).days
+                if days <= 30:
+                    buckets['overdue_1_30'] += amt
+                elif days <= 60:
+                    buckets['overdue_31_60'] += amt
+                elif days <= 90:
+                    buckets['overdue_61_90'] += amt
+                else:
+                    buckets['overdue_90_plus'] += amt
+
+                buckets['total_overdue'] += amt
+                if days > 30:
+                    buckets['overdue_30_plus_amount'] += amt
+                    buckets['overdue_30_plus_count'] += 1
+                if days > 60:
+                    buckets['overdue_60_plus_amount'] += amt
+                    buckets['overdue_60_plus_count'] += 1
+
+        for k in ['current', 'overdue_1_30', 'overdue_31_60', 'overdue_61_90', 'overdue_90_plus', 'total_overdue', 'overdue_30_plus_amount', 'overdue_60_plus_amount']:
+            buckets[k] = round(buckets[k], 2)
+
+        return buckets
+
     def get_customer_credit_status(
         self,
         customer_id: int,
@@ -201,6 +267,10 @@ class CreditService(CrudService):
         overdue_invoices_count = len(overdue_invoices)
         overdue_invoices_amount = sum(inv['total_amount'] for inv in overdue_invoices)
         has_overdue_invoices = overdue_invoices_count > 0
+
+        overdue_60 = [inv for inv in overdue_invoices if inv['days_overdue'] > 60]
+        overdue_60_count = len(overdue_60)
+        overdue_60_amount = sum(inv['total_amount'] for inv in overdue_60)
 
         # Check existing orders on Credit Hold
         hold_orders = []
@@ -238,6 +308,8 @@ class CreditService(CrudService):
             'is_credit_limit_enforced': bool(credit_limit > 0),
             'overdue_invoices_count': overdue_invoices_count,
             'overdue_invoices_amount': round(overdue_invoices_amount, 2),
+            'overdue_60_count': overdue_60_count,
+            'overdue_60_amount': round(overdue_60_amount, 2),
             'has_overdue_invoices': has_overdue_invoices,
             'overdue_invoices': overdue_invoices,
             'is_delinquent': is_delinquent,

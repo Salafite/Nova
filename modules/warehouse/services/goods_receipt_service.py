@@ -21,6 +21,7 @@ class GoodsReceiptService(CrudService):
     def create(self, payload: dict):
         result = super().create(payload)
         if result and str(payload.get('status', '')).capitalize() == 'Completed':
+            self._validate_batch_expiry_dates(result['id'])
             self._record_stock_movements(result['id'])
             self._advance_po_status(result['id'])
             self._register_batches(result['id'])
@@ -28,12 +29,25 @@ class GoodsReceiptService(CrudService):
 
     def update(self, id_val, payload: dict):
         old = self.repo.get(id_val)
+        is_completing = str(payload.get('status', '')).capitalize() == 'Completed' and (not old or str(old.get('status', '')).capitalize() != 'Completed')
+        if is_completing:
+            self._validate_batch_expiry_dates(id_val)
         result = super().update(id_val, payload)
         if old and str(payload.get('status', '')).capitalize() == 'Completed' and str(old.get('status', '')).capitalize() != 'Completed':
             self._record_stock_movements(id_val)
             self._advance_po_status(id_val)
             self._register_batches(id_val)
         return result
+
+    def _validate_batch_expiry_dates(self, receipt_id):
+        lines = self.line_repo.list(filters={'receipt_id': receipt_id})
+        for line in lines:
+            batch_number = line.get('batch_number')
+            if batch_number and str(batch_number).strip():
+                expiry_date = line.get('expiry_date')
+                if not expiry_date:
+                    batch_num_clean = str(batch_number).strip()
+                    raise ValueError(f"Expiration date is required for batch '{batch_num_clean}'")
 
     def _record_stock_movements(self, receipt_id):
         receipt = self.repo.get(receipt_id)
@@ -93,6 +107,7 @@ class GoodsReceiptService(CrudService):
             self.po_repo.update(po_id, {'status': 'Partially Received'})
 
     def _register_batches(self, receipt_id):
+        self._validate_batch_expiry_dates(receipt_id)
         receipt = self.repo.get(receipt_id)
         warehouse_id = (receipt.get('warehouse_id') if receipt else None) or 1
         lines = self.line_repo.list(filters={'receipt_id': receipt_id})

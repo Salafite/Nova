@@ -53,6 +53,20 @@ def register_tools():
             "warehouse_id": {"type": "integer"}, "limit": {"type": "integer"},
         },
     }), _list_batch)
+    register_tool(Tool(name="get_batch_number", description="Get details of a specific batch/lot number by ID", input_schema={
+        "type": "object", "properties": {
+            "id": {"type": "integer", "description": "Batch ID"},
+        },
+        "required": ["id"],
+    }), _get_batch_number)
+    register_tool(Tool(name="allocate_fefo_lots", description="Allocate non-expired inventory batches for a product using First-Expired-First-Out (FEFO) rules", input_schema={
+        "type": "object", "properties": {
+            "product_id": {"type": "integer", "description": "Product ID to allocate lots for"},
+            "qty_needed": {"type": "number", "description": "Required quantity to allocate"},
+            "warehouse_id": {"type": "integer", "description": "Optional warehouse ID filter"},
+        },
+        "required": ["product_id", "qty_needed"],
+    }), _allocate_fefo_lots)
     register_tool(Tool(name="list_pick_lists", description="List pick lists", input_schema={
         "type": "object", "properties": {
             "status": {"type": "string"}, "sales_order_id": {"type": "integer"},
@@ -239,6 +253,10 @@ def register_tools():
         Resource(uri="nova://warehouse/stock-transfers", name="All Stock Transfers", description="List of all stock transfers and inter-warehouse shipments"),
         _list_stock_transfers,
     )
+    register_resource(
+        Resource(uri="nova://warehouse/batches", name="All Batch Numbers", description="List of all product batch/lot numbers"),
+        _list_batch,
+    )
 
 
 def _list_gr(status: str = None, purchase_order_id: int = None, limit: int = 50):
@@ -260,6 +278,18 @@ def _list_batch(product_id: int = None, status: str = None, warehouse_id: int = 
     if status: filters["status"] = status
     if warehouse_id: filters["warehouse_id"] = warehouse_id
     return _batch_svc.list(filters=filters or None, limit=limit)
+
+def _get_batch_number(id: int):
+    try:
+        return _batch_svc.get(id)
+    except Exception as e:
+        return {"error": str(e)}
+
+def _allocate_fefo_lots(product_id: int, qty_needed: float, warehouse_id: int = None):
+    try:
+        return _batch_svc.allocate_fefo_lots(product_id=product_id, warehouse_id=warehouse_id, qty_needed=qty_needed)
+    except Exception as e:
+        return {"error": str(e)}
 
 def _list_pick(status: str = None, sales_order_id: int = None, limit: int = 50):
     filters = {}

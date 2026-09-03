@@ -269,62 +269,29 @@ class TestWarehouseMcp:
                 },
             )
 
-    def test_verify_barcode(self):
+    def test_get_batch_number(self):
         mod = warehouse_mcp
-        mock_product = {"id": 101, "name": "Sharp Cheddar 500g", "sku": "CHED-500", "barcode": "5012345678900"}
-        with patch.object(mod, "find_product_by_barcode", return_value=mock_product):
-            result = mod._verify_barcode("5012345678900")
-            assert result["valid"] is True
-            assert result["matched"] is True
-            assert result["product"]["name"] == "Sharp Cheddar 500g"
+        mock_batch = {"id": 1, "batch_number": "BT-001", "expiry_date": "2026-12-31"}
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.get.return_value = mock_batch
+            result = mod._get_batch_number(1)
+            assert result == mock_batch
+            mock.get.assert_called_once_with(1)
 
-    def test_verify_pick_barcode_valid(self):
+    def test_allocate_fefo_lots(self):
         mod = warehouse_mcp
-        mock_item = {
-            "id": 10,
-            "product_id": 101,
-            "product_name": "Sharp Cheddar 500g",
-            "product_sku": "CHED-500",
-            "qty_ordered": 5.0,
-            "qty_picked": 2.0,
-            "allocated_batch_number": "LOT-99",
-        }
-        mock_pick_list = {"id": 1, "items": [mock_item]}
-        mock_product = {"id": 101, "name": "Sharp Cheddar 500g", "sku": "CHED-500", "barcode": "5012345678900"}
-        with patch.object(mod, "_pick_svc", MagicMock()) as mock_pick, patch.object(mod, "find_product_by_barcode", return_value=mock_product):
-            mock_pick.get_with_items.return_value = mock_pick_list
-            result = mod._verify_pick_barcode(pick_list_id=1, barcode="(01)05012345678900(10)LOT-99")
-            assert result["valid"] is True
-            assert result["matched"] is True
-            assert result["item_id"] == 10
-            assert result["batch_matched"] is True
-            assert result["batch_number"] == "LOT-99"
-
-    def test_verify_pick_barcode_mismatch(self):
-        mod = warehouse_mcp
-        mock_pick_list = {"id": 1, "items": [{"id": 10, "product_id": 999, "product_sku": "OTHER"}]}
-        with patch.object(mod, "_pick_svc", MagicMock()) as mock_pick, patch.object(mod, "find_product_by_barcode", return_value=None), patch.object(mod, "_products_repo", MagicMock()) as mock_repo:
-            mock_pick.get_with_items.return_value = mock_pick_list
-            mock_repo.list.return_value = []
-            result = mod._verify_pick_barcode(pick_list_id=1, barcode="9999999999999")
-            assert result["valid"] is False
-            assert result["matched"] is False
-            assert "does not match" in result["error"]
-
-    def test_verify_goods_receipt_barcode(self):
-        mod = warehouse_mcp
-        mock_receipt = {
-            "id": 10,
-            "items": [{"id": 5, "product_id": 101, "barcode": "5012345678900"}],
-        }
-        mock_product = {"id": 101, "name": "Sharp Cheddar 500g", "sku": "CHED-500", "barcode": "5012345678900"}
-        with patch.object(mod, "_gr_svc", MagicMock()) as mock_gr, patch.object(mod, "find_product_by_barcode", return_value=mock_product):
-            mock_gr.get_with_items.return_value = mock_receipt
-            result = mod._verify_goods_receipt_barcode(receipt_id=10, barcode="(01)05012345678900(10)BATCH-2026(17)261231")
-            assert result["valid"] is True
-            assert result["matched"] is True
-            assert result["extracted_batch_number"] == "BATCH-2026"
-            assert result["extracted_expiry_date"] == "261231"
+        mock_allocations = [
+            {"batch_id": 1, "batch_number": "BT-001", "expiry_date": "2026-06-01", "quantity": 10.0}
+        ]
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.allocate_fefo_lots.return_value = mock_allocations
+            result = mod._allocate_fefo_lots(product_id=101, qty_needed=10.0, warehouse_id=1)
+            assert result == mock_allocations
+            mock.allocate_fefo_lots.assert_called_once_with(
+                product_id=101,
+                warehouse_id=1,
+                qty_needed=10.0,
+            )
 
     def test_register_tools(self):
         register_tools()
@@ -333,6 +300,8 @@ class TestWarehouseMcp:
         assert "list_goods_receipts" in names
         assert "list_serial_numbers" in names
         assert "list_batch_numbers" in names
+        assert "get_batch_number" in names
+        assert "allocate_fefo_lots" in names
         assert "list_pick_lists" in names
         assert "get_pick_list" in names
         assert "pick_item" in names
@@ -344,11 +313,8 @@ class TestWarehouseMcp:
         assert "create_stock_transfer" in names
         assert "dispatch_stock_transfer" in names
         assert "receive_stock_transfer" in names
-        assert "verify_barcode" in names
-        assert "verify_pick_barcode" in names
-        assert "verify_goods_receipt_barcode" in names
         uris = [r.uri for r in list_resources()]
         assert "nova://warehouse/pick-lists" in uris
         assert "nova://warehouse/stock-transfers" in uris
-
+        assert "nova://warehouse/batches" in uris
 

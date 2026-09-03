@@ -258,6 +258,66 @@ describe('StockTransferDetailView (Multi-Warehouse Transfer Execution)', () => {
     expect(recInputs[1].element.value).toBe('40')
   })
 
+  it('handles rapid barcode scanning in receive modal', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    const recBtn = w.findAll('button').find(b => b.text().includes('Receive Transfer'))
+    await recBtn.trigger('click')
+    await flushPromises()
+
+    // Reset quantities to 0 for scan-to-count
+    const resetBtn = w.findAll('button').find(b => b.text().includes('Reset for Scan-to-Count'))
+    expect(resetBtn).toBeDefined()
+    await resetBtn.trigger('click')
+    await flushPromises()
+
+    let recInputs = w.findAll('.rec-qty-input')
+    expect(recInputs[0].element.value).toBe('0')
+
+    // Scan SKU-DAIRY-01
+    const barcodeInput = w.find('.barcode-input')
+    expect(barcodeInput.exists()).toBe(true)
+    await barcodeInput.setValue('SKU-DAIRY-01')
+    await barcodeInput.trigger('keydown.enter')
+    await flushPromises()
+
+    // Verify quantity incremented to 1 and scan feedback shown
+    recInputs = w.findAll('.rec-qty-input')
+    expect(recInputs[0].element.value).toBe('1')
+    expect(w.find('.scan-feedback.success').exists()).toBe(true)
+    expect(w.text()).toContain('Fresh Milk 1L')
+
+    // Scan invalid barcode
+    await barcodeInput.setValue('INVALID-BARCODE-999')
+    await barcodeInput.trigger('keydown.enter')
+    await flushPromises()
+
+    expect(w.find('.scan-feedback.error').exists()).toBe(true)
+    expect(w.text()).toContain("No matching product, barcode, or lot number found for 'INVALID-BARCODE-999'")
+  })
+
+  it('handles "Reset for Scan-to-Count" action in receive modal', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    const recBtn = w.findAll('button').find(b => b.text().includes('Receive Transfer'))
+    await recBtn.trigger('click')
+    await flushPromises()
+
+    const resetBtn = w.findAll('button').find(b => b.text().includes('Reset for Scan-to-Count'))
+    await resetBtn.trigger('click')
+    await flushPromises()
+
+    const recInputs = w.findAll('.rec-qty-input')
+    expect(recInputs[0].element.value).toBe('0')
+    expect(recInputs[1].element.value).toBe('0')
+
+    const lostInputs = w.findAll('.lost-qty-input')
+    expect(lostInputs[0].element.value).toBe('60')
+    expect(lostInputs[1].element.value).toBe('40')
+  })
+
   it('opens cancel modal and submits cancellation', async () => {
     api.post.mockResolvedValueOnce({
       data: {

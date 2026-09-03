@@ -523,3 +523,82 @@ class TestStockTransferServiceLineOperations:
         result = self.service.delete_line(2)
         assert result['success'] is True
         self.line_repo.delete.assert_called_once_with(2)
+
+
+class TestStockTransferServiceReplenishment:
+    def setup_method(self):
+        self.transfer_repo = MagicMock()
+        self.line_repo = MagicMock()
+        self.stock_service = MagicMock()
+        self.wh_repo = MagicMock()
+        self.product_repo = MagicMock()
+        self.stock_repo = MagicMock()
+
+        self.service = StockTransferService(
+            repo=self.transfer_repo,
+            line_repo=self.line_repo,
+            stock_service=self.stock_service,
+            wh_repo=self.wh_repo,
+            product_repo=self.product_repo,
+            stock_repo=self.stock_repo,
+        )
+
+    def test_get_replenishment_suggestions_calculates_deficits(self):
+        self.wh_repo.list.return_value = [
+            {'id': 1, 'name': 'Main Central Hub', 'warehouse_type': 'Central Hub', 'is_virtual': False, 'is_active': True},
+            {'id': 2, 'name': 'North Branch', 'warehouse_type': 'Branch', 'is_virtual': False, 'is_active': True},
+        ]
+        self.product_repo.list.return_value = [
+            {'id': 101, 'sku': 'SKU-101', 'name': 'Widget A', 'category': 'General', 'is_active': True}
+        ]
+        self.stock_repo.list.return_value = [
+            {'product_id': 101, 'warehouse_id': 1, 'qty': 200.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 50.0},
+            {'product_id': 101, 'warehouse_id': 2, 'qty': 5.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 50.0},
+        ]
+
+        result = self.service.get_replenishment_suggestions(warehouse_id=2)
+
+        assert result['total_suggestions'] == 1
+        assert result['critical_count'] == 1
+        item = result['items'][0]
+        assert item['product_id'] == 101
+        assert item['destination_warehouse_id'] == 2
+        assert item['source_warehouse_id'] == 1
+        assert item['priority'] == 'Critical'
+        assert item['suggested_transfer_qty'] > 0
+
+    def test_generate_replenishment_transfers_creates_orders(self):
+        self.wh_repo.list.return_value = [
+            {'id': 1, 'name': 'Main Central Hub', 'warehouse_type': 'Central Hub', 'is_virtual': False, 'is_active': True},
+            {'id': 2, 'name': 'North Branch', 'warehouse_type': 'Branch', 'is_virtual': False, 'is_active': True},
+        ]
+        self.wh_repo.get.side_effect = lambda wh_id, **kwargs: {
+            1: {'id': 1, 'name': 'Main Central Hub', 'warehouse_type': 'Central Hub'},
+            2: {'id': 2, 'name': 'North Branch', 'warehouse_type': 'Branch'},
+        }.get(wh_id)
+        self.product_repo.list.return_value = [
+            {'id': 101, 'sku': 'SKU-101', 'name': 'Widget A', 'is_active': True}
+        ]
+        self.stock_repo.list.return_value = [
+            {'product_id': 101, 'warehouse_id': 1, 'qty': 200.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 50.0},
+            {'product_id': 101, 'warehouse_id': 2, 'qty': 5.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0, 'reorder_level': 50.0},
+        ]
+
+        self.transfer_repo.create.return_value = {'id': 501, 'transfer_number': 'TRF-501', 'status': 'Draft'}
+        self.transfer_repo.get.return_value = {'id': 501, 'transfer_number': 'TRF-501', 'status': 'Draft'}
+        self.line_repo.list.return_value = []
+
+        payload = {
+            'destination_warehouse_id': 2,
+            'source_warehouse_id': 1,
+            'items': [
+                {'product_id': 101, 'source_warehouse_id': 1, 'destination_warehouse_id': 2, 'suggested_transfer_qty': 70.0}
+            ]
+        }
+
+        with patch('modules.warehouse.services.stock_transfer_service.generate_stock_transfer_number', return_value='TRF-501'):
+            res = self.service.generate_replenishment_transfers(payload)
+
+        assert res['transfers_created'] == 1
+        assert res['transfer_numbers'] == ['TRF-501']
+
