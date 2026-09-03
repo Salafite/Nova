@@ -117,7 +117,8 @@ def customer_invoices(
     return invoices
 
 
-def customer_credit_status(id: int, user: dict = None):
+@router.get('/{id}/credit-status')
+def customer_credit_status(id: int, user: dict = Depends(get_current_user)):
     customer = credit_service.customer_repo.get(id)
     if not customer:
         raise HTTPException(404, f"Customer {id} not found")
@@ -162,4 +163,5 @@ def customer_credit_status(id: int, user: dict = None):
         'has_hold_orders': hold_orders_count > 0,
         'hold_orders_count': hold_orders_count,
         'hold_reasons': hold_reasons,
+        'overdue_invoices': overdue_invoices,
     }
