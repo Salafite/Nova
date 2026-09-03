@@ -7,9 +7,15 @@ from modules.warehouse.services.stock_transfer_service import (
     TRANSFER_REPO,
     TRANSFER_LINE_REPO,
 )
+from modules.inventory.services.barcode_service import parse_barcode_string, find_product_by_barcode
+from packages.database.connection import get_connection, release_connection
+from modules.core.context import get_current_tenant
 from packages.mcp.registry import register_tool, register_resource
 from packages.mcp.types import Tool, Resource
 
+
+_products_repo = CrudRepository('T0003', business_columns=['id', 'name', 'sku', 'barcode', 'description', 'price', 'is_active', 'is_catch_weight', 'nominal_weight', 'tolerance_pct'])
+_products_svc = CrudService(_products_repo)
 
 _gr_repo = CrudRepository('T0075', business_columns=['id', 'receipt_number', 'purchase_order_id', 'receipt_date', 'warehouse_id', 'status', 'notes'])
 _gr_svc = CrudService(_gr_repo)
@@ -202,6 +208,29 @@ def register_tools():
             },
         },
     }), _receive_stock_transfer)
+    register_tool(Tool(name="verify_barcode", description="Parse and verify a raw barcode string (EAN-13, UPC-A, Code 128, GS1-128) against the product master catalog and return parsed GS1 metadata (GTIN, batch, expiry, serial) along with matching product details.", input_schema={
+        "type": "object", "properties": {
+            "barcode": {"type": "string", "description": "Scanned raw barcode string (EAN-13, UPC-A, Code 128, GS1-128)"},
+        },
+        "required": ["barcode"],
+    }), _verify_barcode)
+    register_tool(Tool(name="verify_pick_barcode", description="Verify a scanned barcode against a warehouse pick list to confirm item matching, validate batch/lot numbers against allocated FEFO batches, check expiry, and verify quantities.", input_schema={
+        "type": "object", "properties": {
+            "pick_list_id": {"type": "integer", "description": "Pick list ID"},
+            "barcode": {"type": "string", "description": "Scanned raw barcode string"},
+            "qty": {"type": "number", "description": "Quantity scanned or picked (default 1.0)"},
+        },
+        "required": ["pick_list_id", "barcode"],
+    }), _verify_pick_barcode)
+    register_tool(Tool(name="verify_goods_receipt_barcode", description="Verify a scanned barcode for inbound goods receiving, matching against goods receipt or purchase order lines, extracting GS1-128 batch and expiry metadata, and validating receiving quantities.", input_schema={
+        "type": "object", "properties": {
+            "barcode": {"type": "string", "description": "Scanned raw barcode string"},
+            "receipt_id": {"type": "integer", "description": "Goods receipt ID (optional)"},
+            "purchase_order_id": {"type": "integer", "description": "Purchase order ID (optional)"},
+            "qty": {"type": "number", "description": "Quantity received (default 1.0)"},
+        },
+        "required": ["barcode"],
+    }), _verify_goods_receipt_barcode)
     register_resource(
         Resource(uri="nova://warehouse/pick-lists", name="All Pick Lists", description="List of all warehouse pick lists"),
         _list_pick,
@@ -421,6 +450,201 @@ def _receive_stock_transfer(
         if v is not None and k not in receive_data:
             receive_data[k] = v
     return _transfer_svc.receive_transfer(target_id, receive_data=receive_data or None)
+
+
+def _verify_barcode(barcode: str):
+    if not barcode:
+        return {"valid": False, "error": "Barcode string is required"}
+    parsed = parse_barcode_string(barcode)
+    product = None
+    try:
+        conn = get_connection()
+        try:
+            product = find_product_by_barcode(conn, barcode, tenant_id=get_current_tenant())
+        finally:
+            release_connection(conn)
+    except Exception:
+        product = None
+
+    if not product and hasattr(_products_repo, 'list'):
+        try:
+            candidates = parsed.get("candidates", [])
+            for cand in candidates:
+                prods = _products_repo.list(filters={"barcode": cand}, limit=1)
+                if not prods:
+                    prods = _products_repo.list(filters={"sku": cand}, limit=1)
+                if prods:
+                    product = prods[0]
+                    break
+        except Exception:
+            pass
+
+    matched = product is not None
+    prod_name = ""
+    if matched:
+        prod_name = product.get("name") if isinstance(product, dict) else getattr(product, "name", "")
+    return {
+        "valid": matched,
+        "matched": matched,
+        "raw_barcode": barcode,
+        "parsed_barcode": parsed,
+        "product": product,
+        "message": f"Barcode matched product '{prod_name}'" if matched else f"No product found matching barcode '{barcode}'"
+    }
+
+
+def _verify_pick_barcode(pick_list_id: int, barcode: str, qty: float = 1.0):
+    if not pick_list_id or not barcode:
+        return {"valid": False, "error": "pick_list_id and barcode are required"}
+    
+    pick_list = _get_pick_list(pick_list_id)
+    if not pick_list or (isinstance(pick_list, dict) and "error" in pick_list):
+        return {"valid": False, "error": f"Pick list #{pick_list_id} not found"}
+
+    verification = _verify_barcode(barcode)
+    parsed = verification.get("parsed_barcode", parse_barcode_string(barcode))
+    product = verification.get("product")
+    candidates = parsed.get("candidates", [barcode])
+
+    items = []
+    if isinstance(pick_list, dict):
+        items = pick_list.get("items", []) or pick_list.get("lines", [])
+    elif hasattr(pick_list, "items"):
+        items = pick_list.items
+
+    matched_item = None
+    for item in items:
+        item_dict = item if isinstance(item, dict) else (item.to_dict() if hasattr(item, "to_dict") else vars(item))
+        prod_id = product.get("id") if isinstance(product, dict) else getattr(product, "id", None) if product else None
+        if prod_id and (item_dict.get("product_id") == prod_id):
+            matched_item = item_dict
+            break
+        item_barcode = str(item_dict.get("barcode") or item_dict.get("gtin") or "").strip()
+        item_sku = str(item_dict.get("product_sku") or item_dict.get("sku") or "").strip()
+        if (item_barcode and item_barcode in candidates) or (item_sku and item_sku in candidates):
+            matched_item = item_dict
+            break
+
+    if not matched_item:
+        return {
+            "valid": False,
+            "matched": False,
+            "pick_list_id": pick_list_id,
+            "raw_barcode": barcode,
+            "parsed_barcode": parsed,
+            "product": product,
+            "error": f"Scanned barcode '{barcode}' does not match any item on pick list #{pick_list_id}",
+            "message": f"Barcode rejection: Product not found in pick list #{pick_list_id}"
+        }
+
+    batch_number = parsed.get("batch_number")
+    expiry_date = parsed.get("expiry_date")
+    batch_valid = True
+    batch_warning = None
+    
+    allocated_batch = matched_item.get("allocated_batch_number") or matched_item.get("batch_number")
+    if batch_number and allocated_batch:
+        if batch_number != allocated_batch:
+            batch_valid = False
+            batch_warning = f"Scanned batch '{batch_number}' does not match allocated FEFO batch '{allocated_batch}'"
+
+    is_expired = False
+    if expiry_date:
+        try:
+            from datetime import datetime
+            exp_str = str(expiry_date)
+            if len(exp_str) == 6 and exp_str.isdigit():
+                exp_year = int("20" + exp_str[:2])
+                exp_month = int(exp_str[2:4])
+                exp_day = int(exp_str[4:6])
+                exp_dt = datetime(exp_year, exp_month, exp_day, 23, 59, 59)
+            elif "-" in exp_str:
+                exp_dt = datetime.strptime(exp_str[:10], "%Y-%m-%d")
+            else:
+                exp_dt = None
+            if exp_dt and exp_dt < datetime.now():
+                is_expired = True
+        except Exception:
+            pass
+
+    qty_ordered = float(matched_item.get("qty_ordered") or matched_item.get("quantity") or 0)
+    qty_picked = float(matched_item.get("qty_picked") or 0)
+    remaining_qty = max(0.0, qty_ordered - qty_picked)
+    over_picked = (qty_picked + qty) > qty_ordered
+
+    prod_name = matched_item.get("product_name") or (product.get("name") if isinstance(product, dict) else getattr(product, "name", "")) if product else "Item"
+    return {
+        "valid": True,
+        "matched": True,
+        "pick_list_id": pick_list_id,
+        "item_id": matched_item.get("id"),
+        "item": matched_item,
+        "raw_barcode": barcode,
+        "parsed_barcode": parsed,
+        "product": product,
+        "qty_scanned": qty,
+        "qty_picked": qty_picked,
+        "qty_ordered": qty_ordered,
+        "remaining_qty": remaining_qty,
+        "over_picked": over_picked,
+        "batch_number": batch_number,
+        "allocated_batch_number": allocated_batch,
+        "batch_matched": batch_valid,
+        "batch_warning": batch_warning,
+        "is_expired": is_expired,
+        "message": f"Valid pick scan for product '{prod_name}'"
+    }
+
+
+def _verify_goods_receipt_barcode(barcode: str, receipt_id: int = None, purchase_order_id: int = None, qty: float = 1.0):
+    if not barcode:
+        return {"valid": False, "error": "Barcode string is required"}
+    
+    verification = _verify_barcode(barcode)
+    parsed = verification.get("parsed_barcode", parse_barcode_string(barcode))
+    product = verification.get("product")
+    candidates = parsed.get("candidates", [barcode])
+
+    receipt = None
+    lines = []
+    if receipt_id:
+        if hasattr(_gr_svc, "get_with_items"):
+            receipt = _gr_svc.get_with_items(receipt_id)
+        else:
+            receipt = _gr_svc.get(receipt_id)
+        if isinstance(receipt, dict):
+            lines = receipt.get("items", []) or receipt.get("lines", [])
+    
+    matched_line = None
+    if lines:
+        for line in lines:
+            line_dict = line if isinstance(line, dict) else (line.to_dict() if hasattr(line, "to_dict") else vars(line))
+            prod_id = product.get("id") if isinstance(product, dict) else getattr(product, "id", None) if product else None
+            if prod_id and line_dict.get("product_id") == prod_id:
+                matched_line = line_dict
+                break
+            line_barcode = str(line_dict.get("barcode") or "").strip()
+            line_sku = str(line_dict.get("product_sku") or line_dict.get("sku") or "").strip()
+            if (line_barcode and line_barcode in candidates) or (line_sku and line_sku in candidates):
+                matched_line = line_dict
+                break
+
+    prod_name = (product.get("name") if isinstance(product, dict) else getattr(product, "name", "")) if product else barcode
+    return {
+        "valid": product is not None,
+        "matched": product is not None and (not receipt_id or matched_line is not None),
+        "receipt_id": receipt_id,
+        "purchase_order_id": purchase_order_id,
+        "raw_barcode": barcode,
+        "parsed_barcode": parsed,
+        "product": product,
+        "matched_line": matched_line,
+        "extracted_batch_number": parsed.get("batch_number"),
+        "extracted_expiry_date": parsed.get("expiry_date"),
+        "extracted_serial_number": parsed.get("serial_number"),
+        "qty_scanned": qty,
+        "message": f"Goods receipt barcode scan verified for '{prod_name}'" if product else f"Unrecognized goods receipt barcode '{barcode}'"
+    }
 
 
 def main():

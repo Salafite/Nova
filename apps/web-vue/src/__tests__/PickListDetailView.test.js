@@ -2,6 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import PickListDetailView from '../views/warehouse/PickListDetailView.vue'
+import { useScanFeedback } from '../composables/useScanFeedback.js'
 import { api } from '../api/client.js'
 
 // Mock api
@@ -107,6 +108,7 @@ describe('PickListDetailView (Catch-Weight & Dual UOM)', () => {
     pinia = createPinia()
     setActivePinia(pinia)
     vi.clearAllMocks()
+    useScanFeedback().flashState.value = null
 
     api.get.mockImplementation((url) => {
       if (url.includes('/T0101I/1/detail')) {
@@ -281,4 +283,352 @@ describe('PickListDetailView (Catch-Weight & Dual UOM)', () => {
     )
     expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('approved successfully'), 'success')
   })
+
+  it('performs real-time barcode lookup and increments item pick quantity on valid scan with success feedback', async () => {
+    api.post.mockResolvedValue({
+      data: {
+        id: 11,
+        qty_picked: 1,
+        picked_batch_id: 301,
+        picked_batch_number: 'BATCH-CW-001',
+        catch_weight_actual: 40.0,
+      }
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    const scanInput = w.find('.scanner-input')
+    expect(scanInput.exists()).toBe(true)
+
+    // Type valid product ID / barcode '501' (Cheddar Cheese Block)
+    await scanInput.setValue('501')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/T0101I/1/pick-item/11',
+      expect.objectContaining({
+        qty_picked: 1,
+      })
+    )
+    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('Scanned 501 - picked line #1'), 'success')
+  })
+
+  it('triggers warning feedback when scanning an item that is already fully picked', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    // Item 502 (line 2) is already fully picked (qty_picked: 5, qty_ordered: 5)
+    const scanInput = w.find('.scanner-input')
+    await scanInput.setValue('502')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+
+    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('is already fully picked'), 'warning')
+  })
+
+  it('rejects mismatched barcode scan with error feedback, opens warning modal, and prevents staging', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    const scanInput = w.find('.scanner-input')
+    expect(scanInput.exists()).toBe(true)
+
+    // Scan an unallocated/unknown barcode
+    await scanInput.setValue('UNKNOWN-BARCODE-999')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+
+    // 1. Error toast / feedback triggered
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.stringContaining('Barcode scan mismatch: "UNKNOWN-BARCODE-999" is not in this pick list!'),
+      'error'
+    )
+
+    // 2. Mismatch warning modal teleported to document.body
+    const modal = document.body.querySelector('.modal-overlay')
+    expect(modal).toBeTruthy()
+    expect(document.body.textContent).toContain('Barcode Scan Mismatch Warning')
+    expect(document.body.textContent).toContain('Unrecognized or Mismatched Item')
+    expect(document.body.textContent).toContain('UNKNOWN-BARCODE-999')
+    expect(document.body.textContent).toContain('Item staging prevented to avoid wrong item shipment.')
+
+    // 3. Click Acknowledge & Dismiss button
+    const dismissBtn = document.body.querySelector('.btn-danger-action')
+    expect(dismissBtn).toBeTruthy()
+    dismissBtn.click()
+    await flushPromises()
+
+    // Modal dismissed
+    expect(document.body.querySelector('.modal-dialog-warning')).toBeNull()
+
+    // 4. Verify no item pick API post call was made
+    expect(api.post).not.toHaveBeenCalledWith(
+      expect.stringContaining('/pick-item/'),
+      expect.anything()
+    )
+  })
+
+  it('validates GS1-128 barcode with valid GTIN, allocated FEFO batch, and unexpired date', async () => {
+    api.post.mockResolvedValue({
+      data: {
+        id: 11,
+        qty_picked: 1,
+        picked_batch_id: 301,
+        picked_batch_number: 'BATCH-CW-001',
+        catch_weight_actual: 40.0,
+      }
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    const scanInput = w.find('.scanner-input')
+    // GS1-128 formatted barcode: product ID 501, allocated batch BATCH-CW-001, expiry 2026-12-31
+    await scanInput.setValue('(01)501(10)BATCH-CW-001(17)261231')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/T0101I/1/pick-item/11',
+      expect.objectContaining({
+        qty_picked: 1,
+        picked_batch_id: 301,
+        picked_batch_number: 'BATCH-CW-001'
+      })
+    )
+    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('picked line #1'), 'success')
+  })
+
+  it('rejects GS1-128 barcode scan with EXPIRED expiration date and prevents picking', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    const scanInput = w.find('.scanner-input')
+    // GS1-128 formatted barcode with expired date AI(17)200101 (2020-01-01)
+    await scanInput.setValue('(01)501(10)BATCH-CW-001(17)200101')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+
+    // Error feedback toast
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.stringContaining('Scanned batch is EXPIRED (2020-01-01)! Cannot pick expired items.'),
+      'error'
+    )
+
+    // Warning modal displayed
+    const modal = document.body.querySelector('.modal-overlay')
+    expect(modal).toBeTruthy()
+    expect(document.body.textContent).toContain('Expired: 2020-01-01')
+
+    // No pick API call made
+    expect(api.post).not.toHaveBeenCalledWith(
+      expect.stringContaining('/pick-item/'),
+      expect.anything()
+    )
+  })
+
+  it('rejects GS1-128 barcode scan with unallocated batch number not in stock for item', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    const scanInput = w.find('.scanner-input')
+    // GS1-128 barcode with unallocated batch number UNALLOCATED-LOT-999
+    await scanInput.setValue('(01)501(10)UNALLOCATED-LOT-999(17)261231')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+
+    // Error feedback toast
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.stringContaining('Scanned lot "UNALLOCATED-LOT-999" is not allocated or available in warehouse stock for Cheddar Cheese Block (Nominal 20kg)!'),
+      'error'
+    )
+
+    // Warning modal displayed
+    const modal = document.body.querySelector('.modal-overlay')
+    expect(modal).toBeTruthy()
+    expect(document.body.textContent).toContain('Unallocated Lot: UNALLOCATED-LOT-999')
+
+    // No pick API call made
+    expect(api.post).not.toHaveBeenCalledWith(
+      expect.stringContaining('/pick-item/'),
+      expect.anything()
+    )
+  })
+
+  it('supports alternative available batch selection with FEFO warning notice on GS1 scan', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/T0101I/1/detail')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(samplePickListDetail)) })
+      }
+      if (url.includes('/T0008I/')) {
+        return Promise.resolve({ data: sampleWarehouses })
+      }
+      if (url.includes('/available-batches')) {
+        return Promise.resolve({
+          data: [
+            { id: 305, batch_number: 'BATCH-ALT-005', expiry_date: '2027-01-01', quantity: 50 }
+          ]
+        })
+      }
+      return Promise.resolve({ data: [] })
+    })
+
+    api.post.mockResolvedValue({
+      data: {
+        id: 11,
+        qty_picked: 1,
+        picked_batch_id: 305,
+        picked_batch_number: 'BATCH-ALT-005',
+        catch_weight_actual: 40.0,
+      }
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    const scanInput = w.find('.scanner-input')
+    // Scan alternative batch BATCH-ALT-005
+    await scanInput.setValue('(01)501(10)BATCH-ALT-005(17)270101')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+
+    // Warning notice for FEFO override
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.stringContaining('FEFO Warning: Scanned lot "BATCH-ALT-005" overrides allocated lot "BATCH-CW-001".'),
+      'warning'
+    )
+
+    // Pick API call includes alternative batch id 305 and batch number BATCH-ALT-005
+    expect(api.post).toHaveBeenCalledWith(
+      '/T0101I/1/pick-item/11',
+      expect.objectContaining({
+        qty_picked: 1,
+        picked_batch_id: 305,
+        picked_batch_number: 'BATCH-ALT-005'
+      })
+    )
+  })
+
+  it('toggles audio mute button and updates scan sound state', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    const muteBtn = w.find('button[title*="audio"]')
+    expect(muteBtn.exists()).toBe(true)
+    expect(muteBtn.find('.material-symbols-outlined').text()).toBe('volume_up')
+
+    // Click mute button
+    await muteBtn.trigger('click')
+    await flushPromises()
+
+    // Icon updates to volume_off
+    expect(muteBtn.find('.material-symbols-outlined').text()).toBe('volume_off')
+  })
+
+  it('opens camera scanner modal and processes scanned barcode from camera modal', async () => {
+    api.post.mockResolvedValue({
+      data: {
+        id: 11,
+        qty_picked: 1,
+        picked_batch_id: 301,
+        picked_batch_number: 'BATCH-CW-001',
+      }
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    // Click camera scan button
+    const cameraBtn = w.find('.btn-camera-trigger')
+    expect(cameraBtn.exists()).toBe(true)
+    await cameraBtn.trigger('click')
+    await flushPromises()
+
+    // CameraBarcodeScannerModal component exists
+    const modalComp = w.findComponent({ name: 'CameraBarcodeScannerModal' })
+    expect(modalComp.exists()).toBe(true)
+    expect(modalComp.props('modelValue')).toBe(true)
+
+    // Emit scan event from camera modal
+    await modalComp.vm.$emit('scan', null, '501')
+    await flushPromises()
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/T0101I/1/pick-item/11',
+      expect.objectContaining({
+        qty_picked: 1
+      })
+    )
+  })
+
+  it('handles hardware USB/Bluetooth barcode scanner rapid keydown buffer and triggers pick', async () => {
+    api.post.mockResolvedValue({
+      data: {
+        id: 11,
+        qty_picked: 1,
+        picked_batch_id: 301,
+        picked_batch_number: 'BATCH-CW-001',
+      }
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    // Simulate rapid hardware scanner key strokes: '5', '0', '1', 'Enter'
+    const now = Date.now()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '5', timeStamp: now }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '0', timeStamp: now + 5 }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '1', timeStamp: now + 10 }))
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', timeStamp: now + 15 }))
+    await flushPromises()
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/T0101I/1/pick-item/11',
+      expect.objectContaining({
+        qty_picked: 1
+      })
+    )
+  })
+
+  it('applies flash-success state on valid scan and flash-error on mismatch scan', async () => {
+    api.post.mockResolvedValue({
+      data: {
+        id: 11,
+        qty_picked: 1,
+      }
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    const scanCard = w.find('.scanner-card')
+    expect(scanCard.classes()).not.toContain('flash-success')
+    expect(scanCard.classes()).not.toContain('flash-error')
+
+    // Set initial pickQty to 0 so scan increments to 1 instead of hitting fully picked warning
+    const pickInputs = w.findAll('.pick-input')
+    await pickInputs[0].setValue(0)
+
+    // 1. Scan valid barcode '501'
+    const scanInput = w.find('.scanner-input')
+    await scanInput.setValue('501')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+    await w.vm.$nextTick()
+
+    expect(scanCard.classes()).toContain('flash-success')
+
+    // 2. Scan mismatched barcode
+    await scanInput.setValue('WRONG-BARCODE-000')
+    await scanInput.trigger('keyup.enter')
+    await flushPromises()
+    await w.vm.$nextTick()
+
+    expect(scanCard.classes()).toContain('flash-error')
+  })
 })
+
+
+
