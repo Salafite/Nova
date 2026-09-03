@@ -56,6 +56,7 @@ from modules.purchasing.controllers.restock_controller import router as restock_
 from modules.bi.controllers.executive_analytics_controller import router as executive_analytics_router
 from modules.bi.controllers.executive_export_controller import router as executive_export_router
 from modules.sales.controllers.commission_controller import router as commission_router
+from modules.sales.controllers.delivery_routes_controller import router as delivery_routes_router, alias_router as delivery_routes_alias_router
 
 from contextlib import asynccontextmanager
 
@@ -109,6 +110,8 @@ app.include_router(restock_router)
 app.include_router(executive_analytics_router)
 app.include_router(executive_export_router)
 app.include_router(commission_router)
+app.include_router(delivery_routes_router)
+app.include_router(delivery_routes_alias_router)
 
 mcp_server = McpServer(name="NovaERP", version="1.0")
 register_database_mcp()
