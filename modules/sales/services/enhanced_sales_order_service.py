@@ -29,7 +29,6 @@ class EnhancedSalesOrderService(SalesOrderService):
         self.price_list_item_repo = price_list_item_repo or CrudRepository('T0084', business_columns=['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
         self.tax_rate_repo = tax_rate_repo or CrudRepository('T0085', business_columns=['id', 'name', 'code', 'rate', 'type'])
 
-
     def _dispatch_ws_broadcast(self, **kwargs):
         pass
 

@@ -20,6 +20,15 @@
           </div>
         </div>
         <div class="flex gap-2 items-center">
+          <button
+            v-if="pickList.status === 'In Progress'"
+            class="btn-secondary flex items-center gap-1"
+            @click="showCameraScanner = true"
+            :title="t('open-camera-scanner', 'Open Camera Barcode Scanner')"
+          >
+            <span class="material-symbols-outlined icon-xs">photo_camera</span>
+            {{ t('camera-scan', 'Camera Scan') }}
+          </button>
           <button v-if="hasUnapprovedDiscrepancies" class="btn-warning" @click="openSupervisorApprovalModal(null)" :title="t('approve-all-discrepancies-hint', 'Approve out-of-tolerance weight discrepancies')">
             <span class="material-symbols-outlined icon-xs">verified_user</span>
             {{ t('approve-discrepancies', 'Approve Discrepancies') }} ({{ discrepantItems.length }})
@@ -113,11 +122,27 @@
       </div>
 
       <!-- Quick Barcode / Lot Scanner Bar for In Progress Picking -->
-      <div v-if="pickList.status === 'In Progress'" class="scanner-card mb-4">
+      <div v-if="pickList.status === 'In Progress'" class="scanner-card mb-4" :class="{ 'flash-success': flashState === 'success', 'flash-error': flashState === 'error' }">
         <div class="flex items-center gap-3">
           <span class="material-symbols-outlined scanner-icon">qr_code_scanner</span>
           <div class="flex-1">
-            <label class="scanner-label">{{ t('quick-scan', 'Quick Lot / Barcode Scan') }}</label>
+            <div class="flex justify-between items-center mb-1">
+              <label class="scanner-label">{{ t('quick-scan', 'USB / Bluetooth & Camera Barcode Scanner') }}</label>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="badge badge-scanner-active" :title="t('scanner-listener-active', 'Hardware scanner listener active')">
+                  <span class="status-pulse"></span>
+                  {{ t('scanner-ready', 'Scanner Active') }}
+                </span>
+                <button
+                  type="button"
+                  class="btn-icon btn-xs"
+                  @click="soundEnabled = !soundEnabled"
+                  :title="soundEnabled ? t('mute-audio', 'Mute scan audio') : t('unmute-audio', 'Unmute scan audio')"
+                >
+                  <span class="material-symbols-outlined icon-xs">{{ soundEnabled ? 'volume_up' : 'volume_off' }}</span>
+                </button>
+              </div>
+            </div>
             <div class="flex gap-2">
               <input
                 type="text"
@@ -128,6 +153,9 @@
               />
               <button class="btn-secondary" @click="onGlobalScan" :disabled="!globalScan.trim()">
                 <span class="material-symbols-outlined">search</span> {{ t('match-lot', 'Match & Pick') }}
+              </button>
+              <button class="btn-primary btn-camera-trigger" @click="showCameraScanner = true" :title="t('open-camera', 'Scan via Camera')">
+                <span class="material-symbols-outlined icon-xs">photo_camera</span> {{ t('camera', 'Camera') }}
               </button>
             </div>
           </div>
@@ -512,6 +540,50 @@
           </div>
         </div>
       </Teleport>
+
+      <!-- Camera Barcode Scanner Modal -->
+      <CameraBarcodeScannerModal
+        v-model="showCameraScanner"
+        @scan="(parsed, raw) => handleBarcodeScan(parsed, raw)"
+      />
+
+      <!-- Barcode Scan Mismatch Warning Modal -->
+      <Teleport to="body">
+        <div v-if="showMismatchModal" class="modal-overlay" @click.self="showMismatchModal = false">
+          <div class="modal-dialog modal-dialog-warning" :dir="dir">
+            <div class="modal-header header-danger">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-red">warning</span>
+                <h3 class="modal-title text-red">{{ t('barcode-mismatch-title', 'Barcode Scan Mismatch Warning') }}</h3>
+              </div>
+              <button class="modal-close" @click="showMismatchModal = false">&times;</button>
+            </div>
+            <div class="modal-body text-center py-6">
+              <div class="mismatch-icon-wrap mb-3">
+                <span class="material-symbols-outlined icon-mismatch">qr_code_scanner</span>
+              </div>
+              <h4 class="font-bold text-lg text-slate-800 mb-2">
+                {{ t('unrecognized-barcode', 'Unrecognized or Mismatched Item') }}
+              </h4>
+              <p class="text-sm text-slate-600 mb-4">
+                {{ t('mismatch-desc', 'Scanned barcode does not match any allocated line item or lot in this pick list:') }}
+              </p>
+              <div class="scanned-code-box mb-4">
+                <code>{{ lastMismatchedCode }}</code>
+              </div>
+              <div class="alert-warning-box">
+                <span class="material-symbols-outlined icon-xs">block</span>
+                <span>{{ t('staging-prevented', 'Item staging prevented to avoid wrong item shipment.') }}</span>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-primary btn-danger-action" @click="showMismatchModal = false">
+                {{ t('acknowledge-dismiss', 'Acknowledge & Dismiss') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </template>
   </div>
 </template>
@@ -524,11 +596,31 @@ import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
 import SkeletonCard from '../../components/SkeletonCard.vue'
 import ErrorState from '../../components/ErrorState.vue'
+import { useBarcodeScanner } from '../../composables/useBarcodeScanner.js'
+import { useScanFeedback } from '../../composables/useScanFeedback.js'
+import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal.vue'
+import { parseBarcode } from '../../utils/barcodeParser.js'
 
 const route = useRoute()
 const router = useRouter()
 const { show: toast } = useToast()
 const { t, dir } = useI18n()
+
+// Scan feedback & hardware scanner listeners
+const feedback = useScanFeedback()
+const { flashState, notifySuccess, notifyError, notifyWarning, soundEnabled } = feedback
+
+const showCameraScanner = ref(false)
+const showMismatchModal = ref(false)
+const lastMismatchedCode = ref('')
+
+const scanner = useBarcodeScanner({
+  onScan: (parsedBarcode, rawString) => {
+    handleBarcodeScan(parsedBarcode, rawString)
+  },
+  ignoreInputs: false,
+  endKeys: ['Enter']
+})
 
 const loading = ref(true)
 const completing = ref(false)
@@ -796,56 +888,169 @@ function onScanLot(item) {
   state.scanInput = ''
 }
 
-function onGlobalScan() {
-  const code = globalScan.value.trim()
-  if (!code) return
+function handleBarcodeScan(parsed, rawString) {
+  if (pickList.value?.status !== 'In Progress') {
+    toast(t('picking-not-in-progress', 'Picking is not in progress'), 'warning')
+    return
+  }
 
-  const lowerCode = code.toLowerCase()
+  const rawCode = (rawString || (typeof parsed === 'string' ? parsed : parsed?.raw) || '').trim()
+  if (!rawCode) return
+
+  const parsedObj = (typeof parsed === 'object' && parsed !== null) ? parsed : parseBarcode(rawCode)
+
+  const gtin = parsedObj.gtin || parsedObj.code || rawCode
+  const aiBatch = parsedObj.aiData?.['10'] || parsedObj.batchNumber || null
+  const aiExpiry = parsedObj.aiData?.['17'] || parsedObj.expiryDate || null
+
   let matchedItem = null
   let matchedBatch = null
 
-  // 1. Try matching with available lots or suggested lot across items
-  for (const item of items.value) {
-    const batches = availableBatches.value[item.id] || []
-    const b = batches.find(x => (x.batch_number || '').toLowerCase() === lowerCode)
-    if (b) {
-      matchedItem = item
-      matchedBatch = b
-      break
-    }
-    if ((item.batch_number || '').toLowerCase() === lowerCode) {
-      matchedItem = item
-      break
+  const normRaw = rawCode.toLowerCase().replace(/^0+/, '')
+  const normGtin = (gtin || '').toLowerCase().replace(/^0+/, '')
+
+  // 1. Check direct match by product barcode, GTIN, product_id, sku
+  matchedItem = items.value.find(i => {
+    const pCode = (i.barcode || i.product_barcode || i.gtin || i.sku || '').toLowerCase()
+    const normPCode = pCode.replace(/^0+/, '')
+    const rCode = rawCode.toLowerCase()
+    const gCode = (gtin || '').toLowerCase()
+    return (
+      (pCode && (pCode === rCode || pCode === gCode || (normPCode && (normPCode === normRaw || normPCode === normGtin)))) ||
+      String(i.product_id) === rawCode ||
+      String(i.product_id) === gtin ||
+      (normRaw && String(i.product_id) === normRaw)
+    )
+  })
+
+  // 2. If not found by product identifier, check lot / batch number (GS1 AI 10 or rawCode)
+  const targetBatch = (aiBatch || rawCode).toLowerCase()
+  if (!matchedItem) {
+    for (const item of items.value) {
+      const batches = availableBatches.value[item.id] || []
+      const b = batches.find(x => (x.batch_number || '').toLowerCase() === targetBatch)
+      if (b) {
+        matchedItem = item
+        matchedBatch = b
+        break
+      }
+      if ((item.batch_number || '').toLowerCase() === targetBatch) {
+        matchedItem = item
+        break
+      }
     }
   }
 
-  // 2. If not found by lot, try matching by product name / ID
+  // 3. Fallback fuzzy search by product name
   if (!matchedItem) {
+    const lowerRaw = rawCode.toLowerCase()
     matchedItem = items.value.find(i =>
-      String(i.product_id) === code ||
-      (i.product_name && i.product_name.toLowerCase().includes(lowerCode))
+      i.product_name && i.product_name.toLowerCase().includes(lowerRaw)
     )
   }
 
+  // Evaluate match result
   if (matchedItem) {
     const state = lineState[matchedItem.id]
     if (state) {
+      // 1. GS1 Expiry Date Validation (AI 17 / AI 15)
+      if (aiExpiry && isExpired(aiExpiry)) {
+        lastMismatchedCode.value = `${rawCode} (Expired: ${aiExpiry})`
+        showMismatchModal.value = true
+        notifyError(t('scanned-batch-expired', `Scanned batch is EXPIRED (${aiExpiry})! Cannot pick expired items.`))
+        globalScan.value = ''
+        return
+      }
+
+      // 2. GS1 Batch / Lot FEFO Validation
+      const batches = availableBatches.value[matchedItem.id] || []
+
       if (matchedBatch) {
+        if (matchedBatch.expiry_date && isExpired(matchedBatch.expiry_date)) {
+          lastMismatchedCode.value = `${rawCode} (Expired Lot: ${matchedBatch.batch_number})`
+          showMismatchModal.value = true
+          notifyError(t('scanned-batch-expired', `Lot "${matchedBatch.batch_number}" is EXPIRED (${formatDate(matchedBatch.expiry_date)})! Cannot pick expired items.`))
+          globalScan.value = ''
+          return
+        }
+
         state.selectedBatchId = matchedBatch.id
         state.selectedBatchNumber = matchedBatch.batch_number
+
+        if (matchedItem.batch_number && (matchedBatch.batch_number || '').toLowerCase() !== matchedItem.batch_number.toLowerCase()) {
+          notifyWarning(t('fefo-lot-override-notice', `FEFO Warning: Scanned lot "${matchedBatch.batch_number}" overrides allocated lot "${matchedItem.batch_number}".`))
+        }
+      } else if (aiBatch) {
+        const normAiBatch = aiBatch.toLowerCase()
+        const isAllocatedMatch = matchedItem.batch_number && matchedItem.batch_number.toLowerCase() === normAiBatch
+        const foundAi = batches.find(b => (b.batch_number || '').toLowerCase() === normAiBatch)
+
+        if (isAllocatedMatch) {
+          state.selectedBatchId = matchedItem.batch_id || null
+          state.selectedBatchNumber = matchedItem.batch_number
+        } else if (foundAi) {
+          if (foundAi.expiry_date && isExpired(foundAi.expiry_date)) {
+            lastMismatchedCode.value = `${rawCode} (Expired Lot: ${foundAi.batch_number})`
+            showMismatchModal.value = true
+            notifyError(t('scanned-batch-expired', `Lot "${foundAi.batch_number}" is EXPIRED (${formatDate(foundAi.expiry_date)})! Cannot pick expired items.`))
+            globalScan.value = ''
+            return
+          }
+
+          state.selectedBatchId = foundAi.id
+          state.selectedBatchNumber = foundAi.batch_number
+          notifyWarning(t('fefo-lot-override-notice', `FEFO Warning: Scanned lot "${foundAi.batch_number}" overrides allocated lot "${matchedItem.batch_number}".`))
+        } else if (batches.length > 0 || matchedItem.batch_number) {
+          // Scanned GS1 batch number does not exist in allocated or available warehouse stock for this item
+          lastMismatchedCode.value = `${rawCode} (Unallocated Lot: ${aiBatch})`
+          showMismatchModal.value = true
+          notifyError(t('unallocated-gs1-batch', `Scanned lot "${aiBatch}" is not allocated or available in warehouse stock for ${matchedItem.product_name || 'this item'}!`))
+          globalScan.value = ''
+          return
+        } else {
+          // Custom/external lot barcode
+          state.selectedBatchId = null
+          state.selectedBatchNumber = aiBatch
+        }
       }
-      state.pickQty = matchedItem.qty_ordered
-      if (isCatchWeightItem(matchedItem) && (state.catchWeightActual === '' || state.catchWeightActual === null)) {
-        state.catchWeightActual = matchedItem.nominal_weight
+
+      // Check if item is already fully picked
+      if ((matchedItem.qty_picked >= matchedItem.qty_ordered || state.pickQty >= matchedItem.qty_ordered) && matchedItem.qty_ordered > 0) {
+        notifyWarning(t('item-already-picked', `Item "${matchedItem.product_name || 'item'}" is already fully picked`))
+        globalScan.value = ''
+        return
       }
+
+      // Increment pick quantity by 1 unit (up to qty_ordered)
+      const currentPicked = Math.max(matchedItem.qty_picked || 0, state.pickQty || 0)
+      state.pickQty = Math.min(matchedItem.qty_ordered, currentPicked + 1)
+
+      // Handle catch-weight default weight if not set
+      if (isCatchWeightItem(matchedItem) && (state.catchWeightActual === '' || state.catchWeightActual === null || state.catchWeightActual === undefined)) {
+        if (matchedItem.nominal_weight !== null && matchedItem.nominal_weight !== undefined) {
+          state.catchWeightActual = matchedItem.nominal_weight
+        }
+      }
+
+      // Save pick and trigger audio/visual confirmation
       savePick(matchedItem)
-      toast(`Scanned code matched for "${matchedItem.product_name || 'item'}"`, 'success')
+      notifySuccess(t('scan-pick-success', `Scanned ${rawCode} - picked line #${matchedItem.line_number} (${matchedItem.product_name || 'item'})`))
       globalScan.value = ''
       return
     }
   }
 
-  toast(`No matching item or lot found for "${code}"`, 'error')
+  // No match found -> Trigger Error Buzzer & Mismatch Warning Modal
+  lastMismatchedCode.value = rawCode
+  showMismatchModal.value = true
+  notifyError(t('scan-mismatch-error', `Barcode scan mismatch: "${rawCode}" is not in this pick list!`))
+  globalScan.value = ''
+}
+
+function onGlobalScan() {
+  const code = globalScan.value.trim()
+  if (!code) return
+  handleBarcodeScan(null, code)
 }
 
 async function savePick(item) {
@@ -1215,5 +1420,28 @@ select.form-input { appearance: auto; }
 [dir="rtl"] .col-num { text-align: left; }
 [dir="rtl"] .summary-table th { text-align: right; }
 [dir="rtl"] .scale-uom-badge { border-left: none; border-right: 1px solid #e2e8f0; }
+
+/* Scanner status badge & pulse */
+.badge-scanner-active { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.status-pulse { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+/* Camera trigger button */
+.btn-camera-trigger { background: #0284c7; color: #fff; }
+.btn-camera-trigger:hover { background: #0369a1; }
+
+/* Visual Flash States */
+.scanner-card.flash-success { border-color: #22c55e !important; box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); background: #f0fdf4 !important; transition: all 0.2s ease; }
+.scanner-card.flash-error { border-color: #ef4444 !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); background: #fef2f2 !important; transition: all 0.2s ease; }
+
+/* Mismatch Warning Modal */
+.modal-dialog-warning { max-width: 480px; }
+.header-danger { background: #fef2f2; border-bottom: 1px solid #fee2e2; }
+.mismatch-icon-wrap { width: 56px; height: 56px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.icon-mismatch { font-size: 32px; }
+.scanned-code-box { background: #f1f5f9; padding: 8px 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: inline-block; font-family: monospace; font-size: 15px; color: #0f172a; }
+.alert-warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; color: #92400e; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-danger-action { background: #dc2626; color: #fff; border: none; }
+.btn-danger-action:hover { background: #b91c1c; }
 </style>
 

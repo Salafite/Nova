@@ -2454,6 +2454,16 @@ CREATE TABLE IF NOT EXISTS "Nova".t0077 (
     actual_delivery_date DATE,
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     notes TEXT,
+    recipient_signature TEXT,
+    delivery_photo_url TEXT,
+    pod_timestamp TIMESTAMPTZ,
+    delivery_location VARCHAR(255),
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    cod_cash_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+    cod_check_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+    cod_check_number VARCHAR(100),
+    cod_check_bank VARCHAR(100),
+    driver_id INT REFERENCES "Nova".t0021(id),
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2475,6 +2485,17 @@ COMMENT ON COLUMN "Nova".t0077.freight_cost IS 'Actual freight / transport cost 
 COMMENT ON COLUMN "Nova".t0077.delivery_route IS 'Assigned delivery route / zone';
 COMMENT ON COLUMN "Nova".t0077.actual_delivery_date IS 'Actual date order delivery completed';
 COMMENT ON COLUMN "Nova".t0077.status IS 'Status';
+COMMENT ON COLUMN "Nova".t0077.notes IS 'Notes';
+COMMENT ON COLUMN "Nova".t0077.recipient_signature IS 'Base64 image data or URI of recipient digital signature';
+COMMENT ON COLUMN "Nova".t0077.delivery_photo_url IS 'URI/URL to photo proof of delivery';
+COMMENT ON COLUMN "Nova".t0077.pod_timestamp IS 'Timestamp when proof of delivery was submitted/captured';
+COMMENT ON COLUMN "Nova".t0077.delivery_location IS 'GPS coordinates or delivery location description';
+COMMENT ON COLUMN "Nova".t0077.payment_status IS 'COD payment status (e.g. Pending, Collected, In Transit, Reconciled)';
+COMMENT ON COLUMN "Nova".t0077.cod_cash_amount IS 'Cash amount collected by driver at delivery time';
+COMMENT ON COLUMN "Nova".t0077.cod_check_amount IS 'Check amount collected by driver at delivery time';
+COMMENT ON COLUMN "Nova".t0077.cod_check_number IS 'Check identifier/number for COD payment';
+COMMENT ON COLUMN "Nova".t0077.cod_check_bank IS 'Bank name associated with COD check payment';
+COMMENT ON COLUMN "Nova".t0077.driver_id IS 'Assigned delivery driver (FK to T0021 user table)';
 COMMENT ON COLUMN "Nova".t0077.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0077_sales_order_id ON "Nova".t0077(sales_order_id);
 CREATE INDEX IF NOT EXISTS idx_t0077_warehouse_id ON "Nova".t0077(warehouse_id);
@@ -2482,6 +2503,8 @@ CREATE INDEX IF NOT EXISTS idx_t0077_status ON "Nova".t0077(status);
 CREATE INDEX IF NOT EXISTS idx_t0077_active ON "Nova".t0077(is_active);
 CREATE INDEX IF NOT EXISTS idx_t0077_delivery_route ON "Nova".t0077(delivery_route);
 CREATE INDEX IF NOT EXISTS idx_t0077_actual_delivery_date ON "Nova".t0077(actual_delivery_date);
+CREATE INDEX IF NOT EXISTS idx_t0077_driver_id ON "Nova".t0077(driver_id);
+CREATE INDEX IF NOT EXISTS idx_t0077_payment_status ON "Nova".t0077(payment_status);
 
 -- Sales Delivery Lines
 CREATE TABLE IF NOT EXISTS "Nova".t0078 (

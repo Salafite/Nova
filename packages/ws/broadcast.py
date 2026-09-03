@@ -43,3 +43,29 @@ async def order_credit_hold_placed(
         },
     )
 
+
+async def order_credit_hold_released(
+    business_id: int,
+    order_id: int,
+    order_number: str,
+    customer_id: int = None,
+    customer_name: str = None,
+    released_by: str = None,
+    release_reason: str = None,
+    new_status: str = 'Approved',
+):
+    await order_manager.broadcast(
+        f'orders:{business_id}',
+        'order_credit_hold_released',
+        {
+            'order_id': order_id,
+            'order_number': order_number,
+            'customer_id': customer_id,
+            'customer_name': customer_name,
+            'released_by': released_by,
+            'release_reason': release_reason,
+            'status': new_status,
+        },
+    )
+
+
