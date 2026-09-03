@@ -249,6 +249,46 @@ def register_tools():
         _reject_credit_hold,
     )
     register_tool(
+        Tool(name="get_field_sales_catalog", description="Get mobile catalog bundle for field sales offline caching", input_schema={
+            "type": "object",
+            "properties": {
+                "delta_timestamp": {"type": "string", "description": "ISO timestamp of last sync for delta updates"},
+                "warehouse_id": {"type": "integer", "description": "Warehouse ID filter"},
+                "sales_rep_id": {"type": "integer", "description": "Sales rep user ID filter"},
+            },
+        }),
+        _get_field_sales_catalog,
+    )
+    register_tool(
+        Tool(name="sync_offline_orders", description="Sync a batch of offline field sales orders to the server", input_schema={
+            "type": "object",
+            "properties": {
+                "orders": {
+                    "type": "array",
+                    "description": "List of field sales order submissions",
+                    "items": {"type": "object"},
+                },
+                "device_id": {"type": "string", "description": "Client device identifier"},
+            },
+            "required": ["orders"],
+        }),
+        _sync_offline_orders,
+    )
+    register_tool(
+        Tool(name="check_offline_order_conflicts", description="Validate offline field sales orders against live inventory for stock/pricing conflicts", input_schema={
+            "type": "object",
+            "properties": {
+                "orders": {
+                    "type": "array",
+                    "description": "List of field sales order submissions to validate",
+                    "items": {"type": "object"},
+                },
+            },
+            "required": ["orders"],
+        }),
+        _check_offline_order_conflicts,
+    )
+    register_tool(
         Tool(name="capture_proof_of_delivery", description="Capture recipient signature, photo proof, location, and timestamp for a delivery drop-off", input_schema={
             "type": "object",
             "properties": {
@@ -475,6 +515,36 @@ def _reject_credit_hold(id: int, reason: str = ""):
         user_name=user_name,
         reason=reason,
     )
+
+
+def _get_field_sales_catalog(delta_timestamp: str = None, warehouse_id: int = None, sales_rep_id: int = None):
+    from modules.sales.services.field_sales_catalog_service import field_sales_catalog_service
+    bundle = field_sales_catalog_service.get_mobile_catalog(
+        delta_timestamp=delta_timestamp,
+        warehouse_id=warehouse_id,
+        sales_rep_id=sales_rep_id,
+    )
+    return bundle.model_dump() if hasattr(bundle, "model_dump") else bundle.dict()
+
+
+def _sync_offline_orders(orders: list, device_id: str = None):
+    from modules.sales.services.field_sales_sync_service import field_sales_sync_service
+    user = get_current_user()
+    user_id = user.get("id") if user else None
+    if user_id:
+        for order in orders:
+            if isinstance(order, dict) and not order.get("sales_rep_id"):
+                order["sales_rep_id"] = user_id
+    payload = {"device_id": device_id, "orders": orders}
+    result = field_sales_sync_service.sync_batch(payload)
+    return result.model_dump() if hasattr(result, "model_dump") else result.dict()
+
+
+def _check_offline_order_conflicts(orders: list):
+    from modules.sales.services.field_sales_sync_service import field_sales_sync_service
+    payload = {"orders": orders}
+    result = field_sales_sync_service.validate_batch(payload)
+    return result.model_dump() if hasattr(result, "model_dump") else result.dict()
 
 
 def _capture_proof_of_delivery(
