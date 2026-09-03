@@ -137,9 +137,10 @@ def check_record_ownership(
 
 
 
-def create_crud_router(prefix: str, tag: str, service: CrudService, create_schema=None, update_schema=None, response_model=None):
+def create_crud_router(prefix: str, tag: str, service: CrudService, create_schema=None, update_schema=None, response_model=None, router: Optional[APIRouter] = None):
     perm = get_required_permission(prefix=prefix, tag=tag)
-    router = APIRouter(prefix=prefix, tags=[tag], dependencies=[Depends(require_permission(perm))])
+    if router is None:
+        router = APIRouter(prefix=prefix, tags=[tag], dependencies=[Depends(require_permission(perm))])
 
     table_name = tag.split(' - ')[0] if ' - ' in tag else tag
     audit_repo = CrudRepository('T0023', pk='id', business_columns=['id', 'table_name', 'record_id', 'action', 'changed_data', 'changed_by', 'changed_at'])
