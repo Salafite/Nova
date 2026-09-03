@@ -1,5 +1,5 @@
 -- Nova ERP — Electronic Check Clearing & Bank Statement Reconciliation
--- Migration 024: Bank Statements (T0108), Statement Transactions (T0109), Check Clearing Records (T0110)
+-- Migration 024: Bank Statements (T0116), Statement Transactions (T0117), Check Clearing Records (T0118)
 BEGIN;
 
 -- 1. Sequences for Bank Statements and Check Clearing Records
@@ -9,8 +9,8 @@ COMMENT ON SEQUENCE "Nova".seq_bank_statement_number IS 'Atomic sequence for gen
 CREATE SEQUENCE IF NOT EXISTS "Nova".seq_check_clearing_number START WITH 1 INCREMENT BY 1;
 COMMENT ON SEQUENCE "Nova".seq_check_clearing_number IS 'Atomic sequence for generating unique check clearing transaction numbers (CLR-XXXXX)';
 
--- 2. Bank Statements Master Table (T0108)
-CREATE TABLE IF NOT EXISTS "Nova".t0108 (
+-- 2. Bank Statements Master Table (T0116)
+CREATE TABLE IF NOT EXISTS "Nova".t0116 (
     id                      SERIAL PRIMARY KEY,
     statement_number        VARCHAR(50) NOT NULL UNIQUE,
     bank_name               VARCHAR(100) NOT NULL,
@@ -38,28 +38,28 @@ CREATE TABLE IF NOT EXISTS "Nova".t0108 (
     update_number           INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0108 IS 'Bank Statements — Uploaded OFX/CSV bank statement files for reconciliation';
-COMMENT ON COLUMN "Nova".t0108.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0108.statement_number IS 'Unique bank statement identification code (STMT-XXXXX)';
-COMMENT ON COLUMN "Nova".t0108.bank_name IS 'Name of the issuing bank / financial institution';
-COMMENT ON COLUMN "Nova".t0108.account_number IS 'Bank account number associated with the statement';
-COMMENT ON COLUMN "Nova".t0108.statement_date IS 'Statement generation or import date';
-COMMENT ON COLUMN "Nova".t0108.opening_balance IS 'Opening account balance as reported on statement';
-COMMENT ON COLUMN "Nova".t0108.closing_balance IS 'Closing account balance as reported on statement';
-COMMENT ON COLUMN "Nova".t0108.file_type IS 'Source file format: OFX | QFX | CSV';
-COMMENT ON COLUMN "Nova".t0108.status IS 'Statement processing status: Uploaded | Processing | Matched | Reconciled | Cancelled';
-COMMENT ON COLUMN "Nova".t0108.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0116 IS 'Bank Statements — Uploaded OFX/CSV bank statement files for reconciliation';
+COMMENT ON COLUMN "Nova".t0116.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0116.statement_number IS 'Unique bank statement identification code (STMT-XXXXX)';
+COMMENT ON COLUMN "Nova".t0116.bank_name IS 'Name of the issuing bank / financial institution';
+COMMENT ON COLUMN "Nova".t0116.account_number IS 'Bank account number associated with the statement';
+COMMENT ON COLUMN "Nova".t0116.statement_date IS 'Statement generation or import date';
+COMMENT ON COLUMN "Nova".t0116.opening_balance IS 'Opening account balance as reported on statement';
+COMMENT ON COLUMN "Nova".t0116.closing_balance IS 'Closing account balance as reported on statement';
+COMMENT ON COLUMN "Nova".t0116.file_type IS 'Source file format: OFX | QFX | CSV';
+COMMENT ON COLUMN "Nova".t0116.status IS 'Statement processing status: Uploaded | Processing | Matched | Reconciled | Cancelled';
+COMMENT ON COLUMN "Nova".t0116.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0108_statement_number ON "Nova".t0108(statement_number);
-CREATE INDEX IF NOT EXISTS idx_t0108_statement_date ON "Nova".t0108(statement_date);
-CREATE INDEX IF NOT EXISTS idx_t0108_status ON "Nova".t0108(status);
-CREATE INDEX IF NOT EXISTS idx_t0108_business_id ON "Nova".t0108(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0108_business_id_id ON "Nova".t0108(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0116_statement_number ON "Nova".t0116(statement_number);
+CREATE INDEX IF NOT EXISTS idx_t0116_statement_date ON "Nova".t0116(statement_date);
+CREATE INDEX IF NOT EXISTS idx_t0116_status ON "Nova".t0116(status);
+CREATE INDEX IF NOT EXISTS idx_t0116_business_id ON "Nova".t0116(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0116_business_id_id ON "Nova".t0116(business_id, id);
 
--- 3. Statement Transactions Table (T0109)
-CREATE TABLE IF NOT EXISTS "Nova".t0109 (
+-- 3. Statement Transactions Table (T0117)
+CREATE TABLE IF NOT EXISTS "Nova".t0117 (
     id                      SERIAL PRIMARY KEY,
-    statement_id            INT NOT NULL REFERENCES "Nova".t0108(id) ON DELETE CASCADE,
+    statement_id            INT NOT NULL REFERENCES "Nova".t0116(id) ON DELETE CASCADE,
     transaction_date        DATE NOT NULL,
     fit_id                  VARCHAR(100),
     check_number            VARCHAR(50),
@@ -80,31 +80,31 @@ CREATE TABLE IF NOT EXISTS "Nova".t0109 (
     update_number           INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0109 IS 'Statement Transactions — Individual line-item transactions parsed from bank statements';
-COMMENT ON COLUMN "Nova".t0109.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0109.statement_id IS 'Parent bank statement reference (FK to t0108)';
-COMMENT ON COLUMN "Nova".t0109.transaction_date IS 'Bank posting / clear date';
-COMMENT ON COLUMN "Nova".t0109.fit_id IS 'Financial Institution Transaction ID (OFX unique identifier)';
-COMMENT ON COLUMN "Nova".t0109.check_number IS 'Extracted check number';
-COMMENT ON COLUMN "Nova".t0109.amount IS 'Transaction amount (positive for deposit, negative for withdrawal)';
-COMMENT ON COLUMN "Nova".t0109.match_status IS 'Reconciliation match status: Pending | Matched | Cleared | Bounced | Unmatched';
-COMMENT ON COLUMN "Nova".t0109.matched_payment_id IS 'Matched Nova ERP payment record (FK to t0027)';
-COMMENT ON COLUMN "Nova".t0109.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0117 IS 'Statement Transactions — Individual line-item transactions parsed from bank statements';
+COMMENT ON COLUMN "Nova".t0117.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0117.statement_id IS 'Parent bank statement reference (FK to t0116)';
+COMMENT ON COLUMN "Nova".t0117.transaction_date IS 'Bank posting / clear date';
+COMMENT ON COLUMN "Nova".t0117.fit_id IS 'Financial Institution Transaction ID (OFX unique identifier)';
+COMMENT ON COLUMN "Nova".t0117.check_number IS 'Extracted check number';
+COMMENT ON COLUMN "Nova".t0117.amount IS 'Transaction amount (positive for deposit, negative for withdrawal)';
+COMMENT ON COLUMN "Nova".t0117.match_status IS 'Reconciliation match status: Pending | Matched | Cleared | Bounced | Unmatched';
+COMMENT ON COLUMN "Nova".t0117.matched_payment_id IS 'Matched Nova ERP payment record (FK to t0027)';
+COMMENT ON COLUMN "Nova".t0117.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0109_statement_id ON "Nova".t0109(statement_id);
-CREATE INDEX IF NOT EXISTS idx_t0109_check_number ON "Nova".t0109(check_number);
-CREATE INDEX IF NOT EXISTS idx_t0109_transaction_date ON "Nova".t0109(transaction_date);
-CREATE INDEX IF NOT EXISTS idx_t0109_match_status ON "Nova".t0109(match_status);
-CREATE INDEX IF NOT EXISTS idx_t0109_matched_payment_id ON "Nova".t0109(matched_payment_id);
-CREATE INDEX IF NOT EXISTS idx_t0109_business_id ON "Nova".t0109(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0109_business_id_id ON "Nova".t0109(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0117_statement_id ON "Nova".t0117(statement_id);
+CREATE INDEX IF NOT EXISTS idx_t0117_check_number ON "Nova".t0117(check_number);
+CREATE INDEX IF NOT EXISTS idx_t0117_transaction_date ON "Nova".t0117(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_t0117_match_status ON "Nova".t0117(match_status);
+CREATE INDEX IF NOT EXISTS idx_t0117_matched_payment_id ON "Nova".t0117(matched_payment_id);
+CREATE INDEX IF NOT EXISTS idx_t0117_business_id ON "Nova".t0117(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0117_business_id_id ON "Nova".t0117(business_id, id);
 
--- 4. Check Clearing Records Table (T0110)
-CREATE TABLE IF NOT EXISTS "Nova".t0110 (
+-- 4. Check Clearing Records Table (T0118)
+CREATE TABLE IF NOT EXISTS "Nova".t0118 (
     id                      SERIAL PRIMARY KEY,
     clearing_number         VARCHAR(50) NOT NULL UNIQUE,
     payment_id              INT REFERENCES "Nova".t0027(id),
-    statement_transaction_id INT REFERENCES "Nova".t0109(id) ON DELETE SET NULL,
+    statement_transaction_id INT REFERENCES "Nova".t0117(id) ON DELETE SET NULL,
     customer_id             INT REFERENCES "Nova".t0010(id),
     check_number            VARCHAR(50) NOT NULL,
     bank_name               VARCHAR(100),
@@ -127,35 +127,35 @@ CREATE TABLE IF NOT EXISTS "Nova".t0110 (
     update_number           INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0110 IS 'Check Clearing Records — Detailed tracking of check status, clearing events, and bounced check workflows';
-COMMENT ON COLUMN "Nova".t0110.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0110.clearing_number IS 'Unique check clearing record identifier (CLR-XXXXX)';
-COMMENT ON COLUMN "Nova".t0110.payment_id IS 'Associated Nova ERP payment reference (FK to t0027)';
-COMMENT ON COLUMN "Nova".t0110.statement_transaction_id IS 'Associated bank statement transaction line (FK to t0109)';
-COMMENT ON COLUMN "Nova".t0110.customer_id IS 'Associated customer reference (FK to t0010)';
-COMMENT ON COLUMN "Nova".t0110.check_number IS 'Check number';
-COMMENT ON COLUMN "Nova".t0110.status IS 'Check status: Pending | Matched | Cleared | Bounced | Unmatched';
-COMMENT ON COLUMN "Nova".t0110.penalty_fee IS 'NSF / bounced check penalty fee assessed';
-COMMENT ON COLUMN "Nova".t0110.credit_hold_triggered IS 'Flag indicating if customer credit hold was automatically triggered on bounce';
-COMMENT ON COLUMN "Nova".t0110.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0118 IS 'Check Clearing Records — Detailed tracking of check status, clearing events, and bounced check workflows';
+COMMENT ON COLUMN "Nova".t0118.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0118.clearing_number IS 'Unique check clearing record identifier (CLR-XXXXX)';
+COMMENT ON COLUMN "Nova".t0118.payment_id IS 'Associated Nova ERP payment reference (FK to t0027)';
+COMMENT ON COLUMN "Nova".t0118.statement_transaction_id IS 'Associated bank statement transaction line (FK to t0117)';
+COMMENT ON COLUMN "Nova".t0118.customer_id IS 'Associated customer reference (FK to t0010)';
+COMMENT ON COLUMN "Nova".t0118.check_number IS 'Check number';
+COMMENT ON COLUMN "Nova".t0118.status IS 'Check status: Pending | Matched | Cleared | Bounced | Unmatched';
+COMMENT ON COLUMN "Nova".t0118.penalty_fee IS 'NSF / bounced check penalty fee assessed';
+COMMENT ON COLUMN "Nova".t0118.credit_hold_triggered IS 'Flag indicating if customer credit hold was automatically triggered on bounce';
+COMMENT ON COLUMN "Nova".t0118.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0110_clearing_number ON "Nova".t0110(clearing_number);
-CREATE INDEX IF NOT EXISTS idx_t0110_payment_id ON "Nova".t0110(payment_id);
-CREATE INDEX IF NOT EXISTS idx_t0110_statement_transaction_id ON "Nova".t0110(statement_transaction_id);
-CREATE INDEX IF NOT EXISTS idx_t0110_customer_id ON "Nova".t0110(customer_id);
-CREATE INDEX IF NOT EXISTS idx_t0110_check_number ON "Nova".t0110(check_number);
-CREATE INDEX IF NOT EXISTS idx_t0110_status ON "Nova".t0110(status);
-CREATE INDEX IF NOT EXISTS idx_t0110_clearing_date ON "Nova".t0110(clearing_date);
-CREATE INDEX IF NOT EXISTS idx_t0110_issue_date ON "Nova".t0110(issue_date);
-CREATE INDEX IF NOT EXISTS idx_t0110_business_id ON "Nova".t0110(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0110_business_id_id ON "Nova".t0110(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0118_clearing_number ON "Nova".t0118(clearing_number);
+CREATE INDEX IF NOT EXISTS idx_t0118_payment_id ON "Nova".t0118(payment_id);
+CREATE INDEX IF NOT EXISTS idx_t0118_statement_transaction_id ON "Nova".t0118(statement_transaction_id);
+CREATE INDEX IF NOT EXISTS idx_t0118_customer_id ON "Nova".t0118(customer_id);
+CREATE INDEX IF NOT EXISTS idx_t0118_check_number ON "Nova".t0118(check_number);
+CREATE INDEX IF NOT EXISTS idx_t0118_status ON "Nova".t0118(status);
+CREATE INDEX IF NOT EXISTS idx_t0118_clearing_date ON "Nova".t0118(clearing_date);
+CREATE INDEX IF NOT EXISTS idx_t0118_issue_date ON "Nova".t0118(issue_date);
+CREATE INDEX IF NOT EXISTS idx_t0118_business_id ON "Nova".t0118(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0118_business_id_id ON "Nova".t0118(business_id, id);
 
 -- 5. Grant Readonly Permissions to AI / MCP Role
 DO $$ BEGIN
     IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'nova_readonly') THEN
-        GRANT SELECT ON "Nova".t0108 TO nova_readonly;
-        GRANT SELECT ON "Nova".t0109 TO nova_readonly;
-        GRANT SELECT ON "Nova".t0110 TO nova_readonly;
+        GRANT SELECT ON "Nova".t0116 TO nova_readonly;
+        GRANT SELECT ON "Nova".t0117 TO nova_readonly;
+        GRANT SELECT ON "Nova".t0118 TO nova_readonly;
     END IF;
 END $$;
 

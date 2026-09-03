@@ -10,8 +10,8 @@ from modules.core.services.base import CrudService
 service = CrudService(CHECK_CLEARING_RECORD_REPO)
 
 router = create_crud_router(
-    '/api/T0110I',
-    'T0110 - Check Clearing Records',
+    '/api/T0118I',
+    'T0118 - Check Clearing Records',
     service,
     CheckClearingRecordCreate,
     CheckClearingRecordUpdate,

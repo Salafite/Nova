@@ -5,7 +5,7 @@ from modules.core.models.base import AuditMixin
 from modules.core.repositories.base import CrudRepository
 
 
-# Bank Statement (T0108)
+# Bank Statement (T0116)
 class BankStatementCreate(BaseModel):
     statement_number: Optional[str] = Field(None, max_length=50)
     bank_name: str = Field(..., max_length=100)
@@ -68,7 +68,7 @@ class BankStatementResponse(AuditMixin):
     notes: Optional[str] = None
 
 
-# Statement Transaction (T0109)
+# Statement Transaction (T0117)
 class StatementTransactionCreate(BaseModel):
     statement_id: int
     transaction_date: date
@@ -116,7 +116,7 @@ class StatementTransactionResponse(AuditMixin):
     notes: Optional[str] = None
 
 
-# Check Clearing Record (T0110)
+# Check Clearing Record (T0118)
 class CheckClearingRecordCreate(BaseModel):
     clearing_number: Optional[str] = Field(None, max_length=50)
     payment_id: Optional[int] = None
@@ -178,7 +178,7 @@ class CheckClearingRecordResponse(AuditMixin):
 
 # CrudRepositories
 BANK_STATEMENT_REPO = CrudRepository(
-    'T0108',
+    'T0116',
     business_columns=[
         'id', 'statement_number', 'bank_name', 'account_number', 'statement_date',
         'start_date', 'end_date', 'opening_balance', 'closing_balance',
@@ -189,7 +189,7 @@ BANK_STATEMENT_REPO = CrudRepository(
 )
 
 STATEMENT_TRANSACTION_REPO = CrudRepository(
-    'T0109',
+    'T0117',
     business_columns=[
         'id', 'statement_id', 'transaction_date', 'fit_id', 'check_number',
         'payee_name', 'memo', 'amount', 'transaction_type', 'match_status',
@@ -198,7 +198,7 @@ STATEMENT_TRANSACTION_REPO = CrudRepository(
 )
 
 CHECK_CLEARING_RECORD_REPO = CrudRepository(
-    'T0110',
+    'T0118',
     business_columns=[
         'id', 'clearing_number', 'payment_id', 'statement_transaction_id',
         'customer_id', 'check_number', 'bank_name', 'payee_payer', 'amount',

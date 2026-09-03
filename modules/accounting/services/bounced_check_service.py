@@ -70,16 +70,16 @@ class BouncedCheckService(CrudService):
     ) -> Dict[str, Any]:
         """
         Process a bounced customer check transaction:
-        1. Update check clearing record (T0110) status to 'Bounced' with reason & penalty fee.
+        1. Update check clearing record (T0118) status to 'Bounced' with reason & penalty fee.
         2. Update payment (T0091) status to 'Bounced'.
         3. Reopen original customer invoice balance (T0090) to status 'Issued'.
         4. Revert customer balance credit (T0010), adding back payment amount + penalty fee.
-        5. Update bank statement transaction (T0109) match_status to 'Bounced' if linked.
+        5. Update bank statement transaction (T0117) match_status to 'Bounced' if linked.
 
         Args:
-            clearing_record_id: ID of check clearing record (T0110).
+            clearing_record_id: ID of check clearing record (T0118).
             payment_id: ID of Nova payment (T0091).
-            statement_transaction_id: ID of bank statement transaction (T0109).
+            statement_transaction_id: ID of bank statement transaction (T0117).
             check_number: Check number if searching by check number.
             bounced_date: Date check bounced (defaults to today).
             bounced_reason: Reason check bounced (e.g. NSF, Stop Payment).
@@ -94,7 +94,7 @@ class BouncedCheckService(CrudService):
         bounced_d = _parse_date(bounced_date) or date.today()
         penalty_amt = round(max(0.0, float(penalty_fee or 0.0)), 2)
 
-        # 1. Resolve Check Clearing Record (T0110)
+        # 1. Resolve Check Clearing Record (T0118)
         clearing_record: Optional[Dict[str, Any]] = None
 
         if clearing_record_id:
@@ -196,7 +196,7 @@ class BouncedCheckService(CrudService):
                     f"(reverted payment: ${payment_amount:.2f}, penalty fee: ${penalty_amt:.2f})"
                 )
 
-        # 5. Update Statement Transaction (T0109) if linked
+        # 5. Update Statement Transaction (T0117) if linked
         if statement_transaction_id and self.statement_transaction_repo:
             stmt_txn = self.statement_transaction_repo.get(statement_transaction_id, **kwargs)
             if stmt_txn:
@@ -207,7 +207,7 @@ class BouncedCheckService(CrudService):
                 )
                 logger.info(f"Statement transaction {statement_transaction_id} match_status set to Bounced")
 
-        # 6. Upsert / Update Check Clearing Record (T0110)
+        # 6. Upsert / Update Check Clearing Record (T0118)
         clearing_data = {
             'payment_id': payment_id,
             'statement_transaction_id': statement_transaction_id,
