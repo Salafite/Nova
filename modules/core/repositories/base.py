@@ -129,7 +129,7 @@ class CrudRepository:
 
         return clauses, params
 
-    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None, business_id: Optional[int] = None):
+    def list(self, filters: dict = None, order_by: str = None, limit: int = None, offset: int = None, conn=None, business_id: Optional[int] = None, for_update: bool = False):
         should_release = False
         if conn is None:
             conn = get_connection()
@@ -152,7 +152,10 @@ class CrudRepository:
                 clauses.extend(filter_clauses)
                 params.extend(filter_params)
 
-            order = self._sanitize_order_by(order_by)
+            if for_update and not order_by:
+                order = f'ORDER BY "{self.pk}" ASC'
+            else:
+                order = self._sanitize_order_by(order_by)
             sql = f'SELECT * FROM {self.qualified} WHERE {" AND ".join(clauses)} {order}'
 
             if limit is not None:
@@ -170,6 +173,9 @@ class CrudRepository:
                     params.append(offset_val)
                 except (ValueError, TypeError):
                     pass
+
+            if for_update:
+                sql += ' FOR UPDATE'
 
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, params)
@@ -212,7 +218,7 @@ class CrudRepository:
         finally:
             release_connection(conn)
 
-    def get_for_update(self, id_val, conn=None):
+    def get_for_update(self, id_val, conn=None, business_id: Optional[int] = None):
         """SELECT ... FOR UPDATE - locks the row until the transaction commits or rolls back.
 
         Requires an active transaction (conn must be provided or will be acquired).
@@ -224,9 +230,16 @@ class CrudRepository:
             should_release = True
         released = False
         try:
-            sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" = %s FOR UPDATE'
+            tenant_id = business_id if business_id is not None else get_current_tenant()
+            if tenant_id is not None and self._has_business_id():
+                sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" = %s AND "business_id" = %s FOR UPDATE'
+                params = (id_val, tenant_id)
+            else:
+                sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" = %s FOR UPDATE'
+                params = (id_val,)
+
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(sql, (id_val,))
+                cur.execute(sql, params)
                 row = cur.fetchone()
                 return dict(row) if row else None
         except Exception:
@@ -250,6 +263,63 @@ class CrudRepository:
                     conn.rollback()
                 except Exception as rb_err:
                     logger.error(f"Failed to rollback in get_for_update: {rb_err}")
+                    try:
+                        release_connection(conn, close=True)
+                    except Exception:
+                        pass
+                else:
+                    release_connection(conn)
+
+    def get_many_for_update(self, id_vals: list, conn=None, business_id: Optional[int] = None):
+        """SELECT ... FOR UPDATE on multiple primary key values.
+
+        Locks selected rows in sorted primary key order to prevent deadlocks until transaction commits/rolls back.
+        """
+        if not id_vals:
+            return []
+
+        from packages.database.lock_strategy import sort_lock_keys
+        sorted_ids = sort_lock_keys(id_vals)
+
+        should_release = False
+        if conn is None:
+            conn = get_connection()
+            should_release = True
+        released = False
+        try:
+            tenant_id = business_id if business_id is not None else get_current_tenant()
+            placeholders = ', '.join('%s' for _ in sorted_ids)
+            if tenant_id is not None and self._has_business_id():
+                sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" IN ({placeholders}) AND "business_id" = %s ORDER BY "{self.pk}" ASC FOR UPDATE'
+                params = tuple(sorted_ids) + (tenant_id,)
+            else:
+                sql = f'SELECT * FROM {self.qualified} WHERE "{self.pk}" IN ({placeholders}) ORDER BY "{self.pk}" ASC FOR UPDATE'
+                params = tuple(sorted_ids)
+
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, params)
+                return [dict(r) for r in cur.fetchall()]
+        except Exception:
+            if should_release:
+                try:
+                    conn.rollback()
+                except Exception as rb_err:
+                    logger.error(f"Failed to rollback in get_many_for_update: {rb_err}")
+                    try:
+                        release_connection(conn, close=True)
+                    except Exception:
+                        pass
+                    released = True
+                if not released:
+                    release_connection(conn)
+                    released = True
+            raise
+        finally:
+            if should_release and not released:
+                try:
+                    conn.rollback()
+                except Exception as rb_err:
+                    logger.error(f"Failed to rollback in get_many_for_update: {rb_err}")
                     try:
                         release_connection(conn, close=True)
                     except Exception:

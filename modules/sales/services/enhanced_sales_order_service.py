@@ -1,5 +1,6 @@
 from decimal import Decimal
 from modules.core.services.base import CrudService
+from modules.sales.services.sales_service import SalesOrderService, ORDER_REPO, LINE_REPO, CUSTOMER_REPO, INVOICE_REPO, PAYMENT_TERM_REPO
 from modules.core.repositories.base import CrudRepository
 from packages.database.connection import get_connection, release_connection
 
@@ -12,56 +13,22 @@ def _to_decimal(value) -> Decimal:
         return Decimal(0)
 
 
-class EnhancedSalesOrderService(CrudService):
+class EnhancedSalesOrderService(SalesOrderService):
     def __init__(self, repo=None, line_repo=None, price_list_item_repo=None,
                  tax_rate_repo=None, customer_repo=None, inv_repo=None,
                  payment_term_repo=None, credit_service=None, notification_service=None):
-        super().__init__(repo)
-        self.line_repo = line_repo or CrudRepository(
-            'T0013',
-            business_columns=[
-                'id',
-                'sales_order_id',
-                'product_id',
-                'product_name',
-                'uom_id',
-                'qty',
-                'unit_price',
-                'cost_price',
-                'discount',
-                'line_total',
-                'line_number',
-                'is_catch_weight',
-                'pricing_uom_id',
-                'unit_price_pricing_uom',
-                'nominal_weight',
-                'catch_weight_actual',
-                'recalculated_total',
-            ],
+        super().__init__(
+            repo=repo or ORDER_REPO,
+            line_repo=line_repo or LINE_REPO,
+            customer_repo=customer_repo or CUSTOMER_REPO,
+            inv_repo=inv_repo or INVOICE_REPO,
+            payment_term_repo=payment_term_repo or PAYMENT_TERM_REPO,
+            credit_service=credit_service,
+            notification_service=notification_service,
         )
         self.price_list_item_repo = price_list_item_repo or CrudRepository('T0084', business_columns=['id', 'price_list_id', 'product_id', 'unit_price', 'min_qty'])
         self.tax_rate_repo = tax_rate_repo or CrudRepository('T0085', business_columns=['id', 'name', 'code', 'rate', 'type'])
-        self.customer_repo = customer_repo or CrudRepository(
-            'T0010',
-            business_columns=['id', 'name', 'credit_limit', 'balance', 'payment_term_id'],
-        )
-        self.payment_term_repo = payment_term_repo or CrudRepository(
-            'T0096',
-            business_columns=[
-                'id',
-                'name',
-                'code',
-                'description',
-                'due_days',
-                'discount_percentage',
-                'discount_days',
-                'is_active',
-                'is_default',
-            ],
-        )
-        self.inv_repo = inv_repo
-        self.credit_service = credit_service
-        self.notification_service = notification_service
+
 
     def _dispatch_ws_broadcast(self, **kwargs):
         pass
@@ -89,7 +56,7 @@ class EnhancedSalesOrderService(CrudService):
                 except Exception:
                     pass
 
-            order = super().create(order_data, conn=conn)
+            order = CrudService.create(self, order_data, conn=conn)
             subtotal = Decimal(0)
             tax_rate_pct = _to_decimal(self._lookup_tax_rate(order_data.get('tax_rate_id'), conn=conn))
             price_list_id = order_data.get('price_list_id')
@@ -148,52 +115,14 @@ class EnhancedSalesOrderService(CrudService):
             if hold_reason:
                 update_data['status'] = 'Credit Hold'
                 update_data['hold_reason'] = hold_reason
+            elif order_data.get('status'):
+                update_data['status'] = order_data.get('status')
             else:
                 update_data['status'] = 'Pending'
 
             result = super().update(order['id'], update_data, conn=conn)
             if should_release:
                 conn.commit()
-
-            if hold_reason and hasattr(self, 'notification_service') and self.notification_service:
-                try:
-                    customer_name = ''
-                    if customer_id:
-                        try:
-                            customer = self.customer_repo.get(customer_id, conn=conn)
-                            if customer:
-                                customer_name = customer.get('name', '')
-                        except Exception:
-                            pass
-                    self.notification_service.notify_roles(
-                        title=f"Credit Hold: {result.get('order_number', '')}",
-                        message=f"Order {result.get('order_number', '')} placed on credit hold for {customer_name}: {hold_reason}",
-                        notification_type='Credit Hold',
-                        reference_type='SalesOrder',
-                        reference_id=result.get('id'),
-                        roles=['admin'],
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to send credit hold notification: {e}")
-
-            if hold_reason and hasattr(self, '_dispatch_ws_broadcast'):
-                try:
-                    ws_customer_name = ''
-                    if customer_id:
-                        try:
-                            ws_cust = self.customer_repo.get(customer_id, conn=conn)
-                            if ws_cust:
-                                ws_customer_name = ws_cust.get('name', '')
-                        except Exception:
-                            pass
-                    self._dispatch_ws_broadcast(
-                        order_id=result.get('id'),
-                        order_number=result.get('order_number', ''),
-                        status='Credit Hold',
-                        customer_name=ws_customer_name,
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to dispatch WS broadcast: {e}")
 
             return result
         except Exception:

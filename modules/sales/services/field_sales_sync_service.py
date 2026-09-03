@@ -251,7 +251,9 @@ class FieldSalesSyncService:
 
                 # Deduct inventory stock in T0009 and record movement in T0064
                 if warehouse_id:
-                    for line in order.lines:
+                    # Sort lines by product_id to enforce lock ordering and prevent database deadlocks
+                    sorted_lines = sorted(order.lines, key=lambda l: (l.product_id or 0))
+                    for line in sorted_lines:
                         self._deduct_stock_and_record_movement(
                             cur=cur,
                             product_id=line.product_id,
@@ -918,10 +920,11 @@ class FieldSalesSyncService:
         order_id: int,
         order_number: str,
     ) -> None:
-        """Atomically deduct stock from T0009 and record movement in T0064."""
+        """Atomically deduct stock from T0009 and record movement in T0064 under SELECT FOR UPDATE row locking."""
         cur.execute(
             f"""
-            SELECT id, qty FROM {self._get_table("t0009")}
+            SELECT id, qty, COALESCE(reserved_qty, 0) AS reserved_qty
+            FROM {self._get_table("t0009")}
             WHERE product_id = %s AND warehouse_id = %s
             FOR UPDATE
             """,
@@ -929,22 +932,24 @@ class FieldSalesSyncService:
         )
         stock_row = cur.fetchone()
 
-        if stock_row:
-            current_qty = _to_float(stock_row["qty"])
-            new_balance = max(0.0, current_qty - qty)
-            cur.execute(
-                f'UPDATE {self._get_table("t0009")} SET qty = %s WHERE id = %s',
-                (new_balance, stock_row["id"]),
+        if not stock_row:
+            raise ValueError(f"Insufficient stock for product {product_id} in warehouse {warehouse_id}: product not stocked")
+
+        current_qty = _to_float(stock_row["qty"])
+        current_reserved = _to_float(stock_row.get("reserved_qty"))
+        available_qty = current_qty - current_reserved
+
+        if available_qty < qty:
+            raise ValueError(
+                f"Insufficient stock for product {product_id} in warehouse {warehouse_id}: available {available_qty}, requested {qty}"
             )
-        else:
-            new_balance = 0.0
-            cur.execute(
-                f"""
-                INSERT INTO {self._get_table("t0009")} (product_id, warehouse_id, qty)
-                VALUES (%s, %s, %s)
-                """,
-                (product_id, warehouse_id, new_balance),
-            )
+
+        new_balance = current_qty - qty
+        new_reserved = min(current_reserved, new_balance)
+        cur.execute(
+            f'UPDATE {self._get_table("t0009")} SET qty = %s, reserved_qty = %s WHERE id = %s',
+            (new_balance, new_reserved, stock_row["id"]),
+        )
 
         # Record movement in T0064
         cur.execute(

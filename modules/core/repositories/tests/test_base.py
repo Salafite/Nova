@@ -523,3 +523,89 @@ class TestRepositorySanitizationAndPagination:
         assert params == [42, 'Widget', 25, 50]
 
 
+class TestLockingAndTransactions:
+    def test_get_for_update_with_tenant_context(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchone.return_value = {'id': 10, 'name': 'locked_item', 'business_id': 5}
+
+        with tenant_context(5):
+            res = repo.get_for_update(10, conn=mock_db['conn'])
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert 'FOR UPDATE' in sql
+        assert '"business_id" = %s' in sql
+        assert params == (10, 5)
+        assert res == {'id': 10, 'name': 'locked_item', 'business_id': 5}
+
+    def test_get_many_for_update_sorts_ids_for_deadlock_prevention(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.context import tenant_context
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchall.return_value = [{'id': 2}, {'id': 5}, {'id': 9}]
+
+        # Pass IDs out of order
+        with tenant_context(12):
+            res = repo.get_many_for_update([9, 2, 5, 2], conn=mock_db['conn'])
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        params = call_args[0][1]
+        assert 'FOR UPDATE' in sql
+        assert 'ORDER BY "id" ASC' in sql
+        assert '"business_id" = %s' in sql
+        # Verified sorted unique IDs: 2, 5, 9
+        assert params == (2, 5, 9, 12)
+        assert len(res) == 3
+
+    def test_list_for_update(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        mock_db['cursor'].fetchall.return_value = []
+
+        repo.list(filters={'name': 'stock'}, for_update=True, conn=mock_db['conn'])
+
+        call_args = mock_db['cursor'].execute.call_args
+        sql = call_args[0][0]
+        assert 'FOR UPDATE' in sql
+
+    def test_crud_service_for_update_methods(self, mock_db):
+        from modules.core.repositories.base import CrudRepository
+        from modules.core.services.base import CrudService
+
+        repo = CrudRepository('T0001', business_columns=['id', 'name'])
+        svc = CrudService(repo)
+
+        mock_db['cursor'].fetchone.return_value = {'id': 1, 'name': 'test'}
+        mock_db['cursor'].fetchall.return_value = [{'id': 1}, {'id': 2}]
+
+        res_single = svc.get_for_update(1, conn=mock_db['conn'], business_id=99)
+        assert res_single == {'id': 1, 'name': 'test'}
+
+        res_many = svc.get_many_for_update([2, 1], conn=mock_db['conn'], business_id=99)
+        assert res_many == [{'id': 1}, {'id': 2}]
+
+        res_list = svc.list(for_update=True, conn=mock_db['conn'], business_id=99)
+        assert res_list == [{'id': 1}, {'id': 2}]
+
+    def test_db_transaction_context_manager(self, mock_db):
+        from packages.database.connection import db_transaction
+
+        # Existing conn scenario (nested transaction)
+        with db_transaction(mock_db['conn']) as conn:
+            assert conn == mock_db['conn']
+        mock_db['conn'].commit.assert_not_called()
+
+        # Standalone conn scenario
+        with db_transaction() as conn:
+            assert conn == mock_db['conn']
+        mock_db['conn'].commit.assert_called_once()
+
+
+

@@ -276,19 +276,19 @@ def setup_mock_db():
         if c:
             c.is_released = True
 
-    def repo_create(self, payload: dict, conn=None):
+    def repo_create(self, payload: dict, conn=None, *args, **kwargs):
         return test_store.create(self.qualified, payload, pk=self.pk, conn=conn)
 
-    def repo_get(self, id_val, conn=None):
+    def repo_get(self, id_val, conn=None, *args, **kwargs):
         return test_store.get(self.qualified, id_val, pk=self.pk, conn=conn)
 
-    def repo_update(self, id_val, payload: dict, conn=None):
+    def repo_update(self, id_val, payload: dict, conn=None, *args, **kwargs):
         return test_store.update(self.qualified, id_val, payload, pk=self.pk, conn=conn)
 
-    def repo_list(self, filters=None, order_by=None, limit=None, offset=None, conn=None):
+    def repo_list(self, filters=None, order_by=None, limit=None, offset=None, conn=None, *args, **kwargs):
         return test_store.list(self.qualified, filters=filters, order_by=order_by, limit=limit, offset=offset, conn=conn)
 
-    def repo_delete(self, id_val, conn=None):
+    def repo_delete(self, id_val, conn=None, *args, **kwargs):
         return test_store.delete(self.qualified, id_val, pk=self.pk, conn=conn)
 
     with patch('packages.database.connection.get_connection', side_effect=mock_get_conn), \
@@ -301,6 +301,7 @@ def setup_mock_db():
          patch('packages.database.sequence.release_connection', side_effect=mock_rel_conn), \
          patch.object(CrudRepository, 'create', repo_create), \
          patch.object(CrudRepository, 'get', repo_get), \
+         patch.object(CrudRepository, 'get_for_update', repo_get), \
          patch.object(CrudRepository, 'update', repo_update), \
          patch.object(CrudRepository, 'list', repo_list), \
          patch.object(CrudRepository, 'delete', repo_delete):
