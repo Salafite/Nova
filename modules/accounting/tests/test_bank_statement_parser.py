@@ -1,6 +1,41 @@
-import pytest
+"""
+Unit tests for BankStatementParser service (OFX/QFX and CSV bank statement parsing).
+"""
+
 from datetime import date
-from modules.accounting.services.bank_statement_parser import BankStatementParser
+import pytest
+from modules.accounting.services.bank_statement_parser import (
+    BankStatementParser,
+    bank_statement_parser,
+    ParsedStatement,
+    ParsedTransaction,
+    clean_amount,
+    extract_check_number,
+    parse_date_str,
+)
+
+
+def test_clean_amount():
+    assert clean_amount("1500.50") == 1500.50
+    assert clean_amount("-1500.50") == -1500.50
+    assert clean_amount("(1,500.50)") == -1500.50
+    assert clean_amount("$2,450.00") == 2450.00
+    assert clean_amount(None) == 0.0
+
+
+def test_extract_check_number():
+    assert extract_check_number("Payment for invoice CHK 1004") == "1004"
+    assert extract_check_number("CHECK #8821 DISTRIBUTOR INC") == "8821"
+    assert extract_check_number("CK: 5044") == "5044"
+    assert extract_check_number("Ref #99211 payment") == "99211"
+    assert extract_check_number("Regular wire transfer") is None
+
+
+def test_parse_date_str():
+    assert parse_date_str("2026-09-01") == date(2026, 9, 1)
+    assert parse_date_str("20260901120000[0:GMT]") == date(2026, 9, 1)
+    assert parse_date_str("09/01/2026") == date(2026, 9, 1)
+    assert parse_date_str("20260901") == date(2026, 9, 1)
 
 
 def test_parse_ofx_bank_statement():
@@ -82,3 +117,54 @@ def test_parse_csv_bank_statement():
     t3 = parsed['transactions'][2]
     assert t3['check_number'] == '6012'
     assert t3['amount'] == 850.25
+
+
+def test_parse_csv_split_deposit_withdrawal():
+    csv_content = """Posting Date,Chk #,Payee Name,Deposit,Withdrawal
+09/01/2026,7001,Bakery Supplies,,450.00
+09/02/2026,7002,Supermarket Customer,1850.00,
+"""
+
+    statement = bank_statement_parser.parse(csv_content, file_type="CSV")
+
+    assert statement.total_transactions == 2
+    assert statement.total_deposits == 1850.00
+    assert statement.total_withdrawals == 450.00
+
+    t1 = statement.transactions[0]
+    assert t1.amount == -450.00
+    assert t1.check_number == "7001"
+
+    t2 = statement.transactions[1]
+    assert t2.amount == 1850.00
+    assert t2.check_number == "7002"
+
+
+def test_parse_bytes_input():
+    content = b"Date,Check Number,Description,Amount\n2026-09-10,9901,Vendor Check,-300.00\n"
+    statement = bank_statement_parser.parse(content, file_name="statement.csv")
+
+    assert statement.total_transactions == 1
+    assert statement.transactions[0].check_number == "9901"
+    assert statement.transactions[0].amount == -300.00
+
+
+def test_to_dict_format():
+    parsed_tx = ParsedTransaction(
+        transaction_date=date(2026, 9, 1),
+        amount=500.0,
+        check_number="1234",
+    )
+    tx_dict = parsed_tx.to_dict()
+    assert tx_dict["transaction_date"] == date(2026, 9, 1)
+    assert tx_dict["check_number"] == "1234"
+    assert tx_dict["amount"] == 500.0
+
+    parsed_stmt = ParsedStatement(
+        bank_name="Test Bank",
+        account_number="12345",
+        transactions=[parsed_tx],
+    )
+    stmt_dict = parsed_stmt.to_dict()
+    assert stmt_dict["bank_name"] == "Test Bank"
+    assert len(stmt_dict["transactions"]) == 1
