@@ -163,3 +163,60 @@ def test_match_statement_transactions():
             'status': 'Matched',
         },
     )
+
+
+def test_manual_match():
+    stmt_repo = MagicMock()
+    txn_repo = MagicMock()
+    pay_repo = MagicMock()
+
+    txn_repo.get.return_value = {
+        'id': 10,
+        'statement_id': 1,
+        'check_number': '1054',
+        'amount': 1500.50,
+        'transaction_date': date(2026, 1, 15),
+        'payee_name': 'US Foods',
+        'match_status': 'Pending',
+    }
+
+    pay_repo.get.return_value = {
+        'id': 101,
+        'reference': '1054',
+        'amount': 1500.50,
+        'payment_date': date(2026, 1, 15),
+    }
+
+    txn_repo.list.return_value = [
+        {'id': 10, 'statement_id': 1, 'match_status': 'Matched'}
+    ]
+
+    service = CheckMatchingService(
+        repo=txn_repo,
+        bank_statement_repo=stmt_repo,
+        payment_repo=pay_repo,
+    )
+
+    res = service.manual_match(statement_transaction_id=10, payment_id=101)
+
+    assert res['statement_transaction_id'] == 10
+    assert res['matched_payment_id'] == 101
+    assert res['status'] == 'Matched'
+
+    txn_repo.update.assert_called_with(
+        10,
+        {
+            'match_status': 'Matched',
+            'matched_payment_id': 101,
+            'match_score': 1.0,
+        },
+    )
+    stmt_repo.update.assert_called_with(
+        1,
+        {
+            'matched_count': 1,
+            'unmatched_count': 0,
+            'status': 'Matched',
+        },
+    )
+
