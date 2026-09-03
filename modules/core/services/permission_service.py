@@ -112,6 +112,9 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0108': 'WAREHOUSE_VIEW',     # Stock Transfers
     'T0109': 'WAREHOUSE_VIEW',     # Stock Transfer Lines
     'T0110': 'SALES_VIEW',         # Commission Payouts
+    'T0116': 'ACCOUNTING_VIEW',    # Bank Statements
+    'T0117': 'ACCOUNTING_VIEW',    # Statement Transactions
+    'T0118': 'ACCOUNTING_VIEW',    # Check Clearing Records
 }
 
 # Non-T-code custom route and tag mappings
@@ -155,8 +158,14 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'T0110 - Commission Payouts': 'SALES_VIEW',
     'T0108 - Stock Transfers': 'WAREHOUSE_VIEW',
     'T0109 - Stock Transfer Lines': 'WAREHOUSE_VIEW',
+    'T0116 - Bank Statements': 'ACCOUNTING_VIEW',
+    'T0117 - Statement Transactions': 'ACCOUNTING_VIEW',
+    'T0118 - Check Clearing Records': 'ACCOUNTING_VIEW',
     '/api/T0108I': 'WAREHOUSE_VIEW',
     '/api/T0109I': 'WAREHOUSE_VIEW',
+    '/api/T0116I': 'ACCOUNTING_VIEW',
+    '/api/T0117I': 'ACCOUNTING_VIEW',
+    '/api/T0118I': 'ACCOUNTING_VIEW',
     'Admin User Preferences': 'ADMIN_VIEW',
     'Stock Adjustments': 'INVENTORY_VIEW',
     'POS': 'POS_VIEW',
