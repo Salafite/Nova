@@ -152,7 +152,7 @@ class DemandForecastService:
             if conn is None:
                 conn = get_connection()
                 should_release = True
-            sql = f"""
+            sql_stock = f"""
 
                 SELECT
                     product_id,
@@ -165,19 +165,47 @@ class DemandForecastService:
                   {f'AND warehouse_id = %s' if warehouse_id is not None else ''}
                 GROUP BY product_id
             """
-            params = []
+            params_stock = []
             if product_id is not None:
-                params.append(product_id)
+                params_stock.append(product_id)
             if warehouse_id is not None:
-                params.append(warehouse_id)
+                params_stock.append(warehouse_id)
 
+            sql_so = f"""
+
+                SELECT
+                    l.product_id,
+                    COALESCE(SUM(l.qty), 0) AS pending_so_reserved
+                FROM "{self.schema}".t0013 l
+                JOIN "{self.schema}".t0012 o ON l.sales_order_id = o.id
+                WHERE o.status IN ('Pending', 'Confirmed', 'Processing', 'Credit Hold')
+                  {f'AND l.product_id = %s' if product_id is not None else ''}
+                  {f'AND o.warehouse_id = %s' if warehouse_id is not None else ''}
+                GROUP BY l.product_id
+            """
+            params_so = []
+            if product_id is not None:
+                params_so.append(product_id)
+            if warehouse_id is not None:
+                params_so.append(warehouse_id)
+
+            so_reserved_map: Dict[int, float] = {}
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(sql, params)
+                try:
+                    cur.execute(sql_so, params_so)
+                    for row in cur.fetchall():
+                        so_reserved_map[row['product_id']] = float(row['pending_so_reserved'] or 0.0)
+                except Exception as so_err:
+                    logger.warning(f"Error querying pending sales order reservations via SQL: {so_err}")
+
+                cur.execute(sql_stock, params_stock)
                 rows = cur.fetchall()
                 for row in rows:
                     p_id = row['product_id']
                     qty = float(row['total_qty'] or 0.0)
-                    reserved = float(row['total_reserved_qty'] or 0.0)
+                    t0009_reserved = float(row['total_reserved_qty'] or 0.0)
+                    so_reserved = so_reserved_map.get(p_id, 0.0)
+                    reserved = max(t0009_reserved, so_reserved)
                     avail = max(0.0, qty - reserved)
                     reorder_lvl = float(row['reorder_level'] or 0.0)
                     stocks[p_id] = {
@@ -186,6 +214,17 @@ class DemandForecastService:
                         'available_stock': avail,
                         'reorder_level': reorder_lvl,
                     }
+
+                for p_id, so_res in so_reserved_map.items():
+                    if p_id not in stocks:
+                        if product_id is not None and p_id != product_id:
+                            continue
+                        stocks[p_id] = {
+                            'current_stock': 0.0,
+                            'reserved_qty': so_res,
+                            'available_stock': 0.0,
+                            'reorder_level': 0.0,
+                        }
         except Exception as e:
             logger.warning(f"Error querying stock levels via SQL: {e}. Falling back to repo.")
             try:
@@ -194,6 +233,26 @@ class DemandForecastService:
                     filters['product_id'] = product_id
                 if warehouse_id is not None:
                     filters['warehouse_id'] = warehouse_id
+
+                so_reserved_map: Dict[int, float] = {}
+                try:
+                    orders = self.sales_order_repo.list(conn=conn)
+                    pending_order_ids = set()
+                    for o in orders:
+                        if o.get('status') in ('Pending', 'Confirmed', 'Processing', 'Credit Hold'):
+                            if warehouse_id is None or o.get('warehouse_id') == warehouse_id:
+                                pending_order_ids.add(o.get('id'))
+                    if pending_order_ids:
+                        lines = self.sales_line_repo.list(conn=conn)
+                        for line in lines:
+                            so_id = line.get('sales_order_id')
+                            p_id = line.get('product_id')
+                            if so_id in pending_order_ids:
+                                if product_id is None or p_id == product_id:
+                                    so_reserved_map[p_id] = so_reserved_map.get(p_id, 0.0) + float(line.get('qty', 0.0) or 0.0)
+                except Exception as repo_so_e:
+                    logger.warning(f"Fallback pending sales order query failed: {repo_so_e}")
+
                 stock_rows = self.stock_repo.list(filters=filters, conn=conn)
                 for s in stock_rows:
                     p_id = s.get('product_id')
@@ -209,8 +268,22 @@ class DemandForecastService:
                     reorder = float(s.get('reorder_level', 0.0) or 0.0)
                     stocks[p_id]['current_stock'] += qty
                     stocks[p_id]['reserved_qty'] += reserved
-                    stocks[p_id]['available_stock'] = max(0.0, stocks[p_id]['current_stock'] - stocks[p_id]['reserved_qty'])
                     stocks[p_id]['reorder_level'] = max(stocks[p_id]['reorder_level'], reorder)
+
+                for p_id, so_res in so_reserved_map.items():
+                    if p_id not in stocks:
+                        stocks[p_id] = {
+                            'current_stock': 0.0,
+                            'reserved_qty': so_res,
+                            'available_stock': 0.0,
+                            'reorder_level': 0.0,
+                        }
+                    else:
+                        stocks[p_id]['reserved_qty'] = max(stocks[p_id]['reserved_qty'], so_res)
+
+                for p_id, data in stocks.items():
+                    data['available_stock'] = max(0.0, data['current_stock'] - data['reserved_qty'])
+
             except Exception as inner_e:
                 logger.error(f"Fallback stock query failed: {inner_e}")
         finally:
@@ -418,6 +491,7 @@ class DemandForecastService:
             'current_stock': current_stock,
             'reserved_qty': reserved_qty,
             'available_stock': available_stock,
+            'net_available_stock': available_stock,
             'reorder_level': reorder_level,
             'velocity_30d': daily_velocity,
             'total_sold_30d': total_sold,
@@ -494,6 +568,89 @@ class DemandForecastService:
 
         return results
 
+    def get_aggregated_supplier_draft_pos(
+        self,
+        warehouse_id: Optional[int] = None,
+        days: int = DEFAULT_LOOKBACK_DAYS,
+        safety_margin_days: int = DEFAULT_SAFETY_MARGIN_DAYS,
+        target_coverage_days: int = DEFAULT_TARGET_COVERAGE_DAYS,
+        only_at_risk: bool = True,
+        reference_date: Optional[date] = None,
+        conn=None,
+    ) -> List[Dict[str, Any]]:
+        """Group at-risk forecast recommendations into consolidated draft Purchase Orders
+        by primary supplier (mapped via T0103), incorporating supplier lead times and MOQs.
+        """
+        ref_date = reference_date or date.today()
+        forecasts = self.calculate_all_forecasts(
+            warehouse_id=warehouse_id,
+            days=days,
+            safety_margin_days=safety_margin_days,
+            target_coverage_days=target_coverage_days,
+            only_at_risk=only_at_risk,
+            reference_date=ref_date,
+            conn=conn,
+        )
+
+        supplier_groups: Dict[Optional[int], List[Dict[str, Any]]] = {}
+        for item in forecasts:
+            if only_at_risk and not item.get("needs_restock"):
+                continue
+            sup_id = item.get("supplier_id")
+            if sup_id not in supplier_groups:
+                supplier_groups[sup_id] = []
+            supplier_groups[sup_id].append(item)
+
+        urgency_priority = {'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3, 'HEALTHY': 4}
+
+        result = []
+        for sup_id, items in supplier_groups.items():
+            supplier_name = items[0].get("supplier_name") if items and items[0].get("supplier_name") else "Unassigned Supplier"
+            lead_times = [int(it.get("lead_time_days") or DEFAULT_LEAD_TIME_DAYS) for it in items]
+            max_lead_time = max(lead_times) if lead_times else DEFAULT_LEAD_TIME_DAYS
+            expected_date = (ref_date + timedelta(days=max_lead_time)).isoformat()
+
+            total_items = len(items)
+            total_qty = round(sum(float(it.get("suggested_order_qty") or 0.0) for it in items), 2)
+            total_cost = round(sum(float(it.get("estimated_cost") or 0.0) for it in items), 2)
+
+            max_urgency = "HEALTHY"
+            min_priority = 999
+            for it in items:
+                urg = it.get("urgency", "HEALTHY")
+                prio = urgency_priority.get(urg, 4)
+                if prio < min_priority:
+                    min_priority = prio
+                    max_urgency = urg
+
+            notes_lines = [f"Consolidated Draft PO for {supplier_name} ({total_items} items, max lead time: {max_lead_time} days):"]
+            for it in items:
+                notes_lines.append(
+                    f"• {it.get('sku')} ({it.get('product_name')}): {it.get('suggested_order_qty'):.0f} units @ ${it.get('unit_cost'):.2f} (${it.get('estimated_cost'):.2f})"
+                )
+            po_notes = "\n".join(notes_lines)
+
+            result.append({
+                "supplier_id": sup_id,
+                "supplier_name": supplier_name,
+                "lead_time_days": max_lead_time,
+                "expected_date": expected_date,
+                "total_items": total_items,
+                "total_qty": total_qty,
+                "total_estimated_cost": total_cost,
+                "max_urgency": max_urgency,
+                "items": items,
+                "po_notes": po_notes,
+            })
+
+        result.sort(key=lambda x: (
+            urgency_priority.get(x.get("max_urgency", "HEALTHY"), 5),
+            -x.get("total_estimated_cost", 0.0),
+            x.get("supplier_name") or ""
+        ))
+
+        return result
+
     def format_rationale(
         self,
         sku: str,
@@ -529,7 +686,7 @@ class DemandForecastService:
             )
 
         sup_str = f"Supplier '{supplier_name}'" if supplier_name else "Standard supplier"
-        stockout_str = f"projected stockout date is {projected_stockout_date}" if projected_stockout_date else "stock is depleted"
+        stockout_str = "stock is depleted" if available_stock <= 0 else (f"projected stockout date is {projected_stockout_date}" if projected_stockout_date else "stock is depleted")
         days_rem_str = f"{days_of_inventory:.1f} days of supply" if days_of_inventory is not None else "0 days"
 
         lines = [

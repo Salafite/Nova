@@ -1,10 +1,11 @@
 from datetime import date, timedelta
 from typing import Optional, List, Dict, Any
 
+from modules.core.context import get_current_tenant
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.purchasing.services.demand_forecast_service import DemandForecastService
-from packages.mcp.registry import register_tool
+from packages.mcp.registry import register_tool, get_current_user
 from packages.mcp.types import Tool
 
 
@@ -50,7 +51,7 @@ def register_tools():
     register_tool(
         Tool(
             name="calculate_restock_forecast",
-            description="Calculate demand forecasting, 30-day sales velocity, projected stockout dates, supplier lead times, and restock suggestions",
+            description="Calculate demand forecasting, 30-day sales velocity, pending sales order reservations, projected stockout dates, supplier lead times, and restock suggestions (with optional primary supplier grouping)",
             tier="tier1",
             input_schema={
                 "type": "object",
@@ -79,6 +80,10 @@ def register_tools():
                         "type": "boolean",
                         "description": "If true, only return products that currently need restock (default false).",
                     },
+                    "group_by_supplier": {
+                        "type": "boolean",
+                        "description": "If true, returns consolidated draft PO recommendations grouped by primary supplier.",
+                    },
                 },
             },
         ),
@@ -87,18 +92,18 @@ def register_tools():
     register_tool(
         Tool(
             name="propose_draft_purchase_order",
-            description="Propose and generate a draft purchase order for restock based on demand forecasting, supplier lead time, and MOQ",
+            description="Propose and generate a draft purchase order for restock based on demand forecasting, pending sales order reservations, supplier lead time, and MOQ",
             tier="tier2",
             input_schema={
                 "type": "object",
                 "properties": {
                     "product_id": {
                         "type": "integer",
-                        "description": "Product ID to restock (optional if items list is provided)",
+                        "description": "Product ID to restock (optional if supplier_id or items list is provided)",
                     },
                     "supplier_id": {
                         "type": "integer",
-                        "description": "Supplier ID (optional; auto-resolved from preferred supplier mapping if omitted)",
+                        "description": "Supplier ID (optional; auto-resolved from preferred supplier mapping, or used to aggregate all at-risk items for this supplier)",
                     },
                     "qty": {
                         "type": "number",
@@ -165,6 +170,7 @@ def _calculate_restock_forecast(
     safety_margin_days: int = 7,
     target_coverage_days: int = 30,
     only_at_risk: bool = False,
+    group_by_supplier: bool = False,
 ):
     if product_id is not None:
         return _forecast_svc.calculate_sku_forecast(
@@ -173,6 +179,14 @@ def _calculate_restock_forecast(
             days=days or 30,
             safety_margin_days=safety_margin_days or 7,
             target_coverage_days=target_coverage_days or 30,
+        )
+    if group_by_supplier:
+        return _forecast_svc.get_aggregated_supplier_draft_pos(
+            warehouse_id=warehouse_id,
+            days=days or 30,
+            safety_margin_days=safety_margin_days or 7,
+            target_coverage_days=target_coverage_days or 30,
+            only_at_risk=bool(only_at_risk),
         )
     return _forecast_svc.calculate_all_forecasts(
         warehouse_id=warehouse_id,
@@ -256,8 +270,50 @@ def _propose_draft_purchase_order(
             "line_total": round(order_qty * unit_cost, 2),
             "line_number": 1,
         })
+    elif supplier_id is not None:
+        queue = _forecast_svc.get_aggregated_supplier_draft_pos(
+            warehouse_id=warehouse_id,
+            only_at_risk=True,
+        )
+        group = None
+        for g in queue:
+            if g.get("supplier_id") == supplier_id:
+                group = g
+                break
+        if not group:
+            all_queue = _forecast_svc.get_aggregated_supplier_draft_pos(
+                warehouse_id=warehouse_id,
+                only_at_risk=False,
+            )
+            for g in all_queue:
+                if g.get("supplier_id") == supplier_id:
+                    group = g
+                    break
+        if not group or not group.get("items"):
+            raise ValueError(f"No restock items found for supplier ID {supplier_id}.")
+
+        if not expected_date:
+            expected_date = group.get("expected_date")
+        if not forecast_rationale:
+            forecast_rationale = notes or group.get("po_notes", "")
+
+        for idx, item in enumerate(group.get("items", []), start=1):
+            p_id = item.get("product_id")
+            p_name = item.get("product_name", f"Product #{p_id}")
+            p_qty = float(item.get("suggested_order_qty") or 1.0)
+            if p_qty <= 0:
+                p_qty = float(item.get("min_order_qty") or 1.0)
+            p_cost = float(item.get("unit_cost") or 0.0)
+            line_items.append({
+                "product_id": p_id,
+                "product_name": p_name,
+                "qty": p_qty,
+                "unit_price": p_cost,
+                "line_total": round(p_qty * p_cost, 2),
+                "line_number": idx,
+            })
     else:
-        raise ValueError("Either product_id or items must be provided to propose a draft purchase order.")
+        raise ValueError("Either product_id, supplier_id, or items must be provided to propose a draft purchase order.")
 
     if final_supplier_id is None:
         final_supplier_id = 1
