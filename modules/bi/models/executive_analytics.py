@@ -17,6 +17,7 @@ class ExecutiveAnalyticsFilter(BaseModel):
     brand: Optional[str] = None
     sales_rep_id: Optional[int] = None
     customer_id: Optional[int] = None
+    customer_tier: Optional[str] = None
     warehouse_id: Optional[int] = None
     delivery_route: Optional[str] = None
     quadrant: Optional[str] = None
@@ -39,6 +40,8 @@ class ExecutiveMarginSummary(BaseModel):
     freight_cost: float = 0.0
     gross_profit: float = 0.0
     gross_margin_pct: float = 0.0
+    contribution_margin: float = 0.0
+    contribution_margin_pct: float = 0.0
     total_orders: int = 0
     total_customers: int = 0
     average_order_value: float = 0.0
@@ -63,6 +66,8 @@ class CategoryMarginItem(BaseModel):
     freight_cost: float = 0.0
     gross_profit: float = 0.0
     gross_margin_pct: float = 0.0
+    contribution_margin: float = 0.0
+    contribution_margin_pct: float = 0.0
     revenue_share_pct: float = 0.0
     units_sold: float = 0.0
     order_count: int = 0
@@ -89,7 +94,6 @@ class SkuMarginItem(BaseModel):
     units_sold: float = 0.0
     avg_selling_price: float = 0.0
     unit_cost: float = 0.0
-    min_acceptable_price: float = 0.0
     gross_sales: float = 0.0
     discount_amount: float = 0.0
     net_revenue: float = 0.0
@@ -97,6 +101,8 @@ class SkuMarginItem(BaseModel):
     freight_cost: float = 0.0
     gross_profit: float = 0.0
     gross_margin_pct: float = 0.0
+    contribution_margin: float = 0.0
+    contribution_margin_pct: float = 0.0
     is_low_margin: bool = False
 
 
