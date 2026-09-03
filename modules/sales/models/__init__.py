@@ -27,6 +27,9 @@ from modules.sales.models.price_list import (
     PriceCalculateLineRequest, PriceCalculateRequest, PriceCalculateLineResponse,
     PromotionalRewardItem, PriceCalculateResponse,
 )
+from modules.sales.models.promotions import (
+    PromotionCreate, PromotionUpdate, PromotionResponse,
+)
 from modules.sales.models.tax import (
     TaxRateCreate, TaxRateUpdate, TaxRateResponse,
     TaxRuleCreate, TaxRuleUpdate, TaxRuleResponse,
