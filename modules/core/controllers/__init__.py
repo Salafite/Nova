@@ -31,6 +31,12 @@ def _load_all_routers():
     except Exception:
         pass
 
+    try:
+        from modules.accounting.controllers.bank_reconciliation_controller import router as bank_reconciliation_router
+        _all_routers.append(bank_reconciliation_router)
+    except Exception:
+        pass
+
     return _all_routers
 
 
