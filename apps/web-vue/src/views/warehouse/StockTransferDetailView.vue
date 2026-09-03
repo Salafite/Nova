@@ -559,10 +559,41 @@
                 {{ t('route', 'Route') }}:
                 <strong>{{ transfer.source_warehouse_name }}</strong> &rarr; <strong>{{ transfer.destination_warehouse_name }}</strong>
               </div>
-              <button type="button" class="btn-outline btn-sm" @click="receiveAllInFull">
-                <span class="material-symbols-outlined icon-xs">done_all</span>
-                {{ t('receive-all-full', 'Receive All in Full') }}
-              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-outline btn-sm" @click="resetForScanToCount">
+                  <span class="material-symbols-outlined icon-xs">restart_alt</span>
+                  {{ t('reset-scan-count', 'Reset for Scan-to-Count') }}
+                </button>
+                <button type="button" class="btn-outline btn-sm" @click="receiveAllInFull">
+                  <span class="material-symbols-outlined icon-xs">done_all</span>
+                  {{ t('receive-all-full', 'Receive All in Full') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Rapid Barcode Scanner Box -->
+            <div class="barcode-scanner-box">
+              <div class="barcode-input-wrap">
+                <span class="material-symbols-outlined barcode-icon">qr_code_scanner</span>
+                <input
+                  ref="barcodeInputRef"
+                  type="text"
+                  v-model="barcodeQuery"
+                  class="barcode-input form-input"
+                  :placeholder="t('scan-barcode-ph', 'Scan barcode, SKU, or Lot # (e.g. SKU-DAIRY-01, LOT-MILK-202608)...')"
+                  @keydown.enter.prevent="handleBarcodeScan"
+                />
+                <button type="button" class="btn-primary btn-sm" @click="handleBarcodeScan">
+                  <span class="material-symbols-outlined icon-xs">search</span>
+                  {{ t('scan', 'Scan Barcode') }}
+                </button>
+              </div>
+              <div v-if="scanFeedback" class="scan-feedback" :class="scanFeedback.type">
+                <span class="material-symbols-outlined icon-xs">
+                  {{ scanFeedback.type === 'success' ? 'check_circle' : 'error' }}
+                </span>
+                <span>{{ scanFeedback.message }}</span>
+              </div>
             </div>
 
             <!-- Itemized Receiving Lines Table -->
@@ -570,30 +601,52 @@
               <table class="receive-table">
                 <thead>
                   <tr>
-                    <th style="width: 4%;">#</th>
-                    <th style="width: 24%;">{{ t('product', 'Product') }}</th>
-                    <th style="width: 10%;" class="col-num">{{ t('dispatched', 'Dispatched') }}</th>
-                    <th style="width: 12%;" class="col-num">{{ t('qty-received', 'Received') }} <span class="required">*</span></th>
-                    <th style="width: 10%;" class="col-num">{{ t('qty-lost', 'Lost / Short') }}</th>
-                    <th style="width: 20%;">{{ t('loss-reason', 'Loss Reason (if lost > 0)') }}</th>
-                    <th style="width: 20%;">{{ t('loss-notes', 'Loss Notes / Remarks') }}</th>
+                    <th style="width: 3%;">#</th>
+                    <th style="width: 20%;">{{ t('product', 'Product') }}</th>
+                    <th style="width: 14%;">{{ t('batch-expiry', 'Batch & Expiry') }}</th>
+                    <th style="width: 9%;" class="col-num">{{ t('dispatched', 'Dispatched') }}</th>
+                    <th style="width: 11%;" class="col-num">{{ t('qty-received', 'Received') }} <span class="required">*</span></th>
+                    <th style="width: 9%;" class="col-num">{{ t('qty-lost', 'Lost / Short') }}</th>
+                    <th style="width: 17%;">{{ t('loss-reason', 'Loss Reason (if lost > 0)') }}</th>
+                    <th style="width: 17%;">{{ t('loss-notes', 'Loss Notes / Remarks') }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
                     v-for="(rLine, index) in receiveForm.lines"
                     :key="'rec-line-' + index"
-                    :class="{ 'row-loss-highlight': (rLine.qty_lost > 0) }"
+                    :class="{
+                      'row-loss-highlight': (rLine.qty_lost > 0),
+                      'row-scanned-highlight': (lastScannedLineId === rLine.line_id),
+                      'row-verified': rLine.verified
+                    }"
                   >
-                    <!-- Line # -->
-                    <td class="cell-mono">{{ index + 1 }}</td>
+                    <!-- Line # & Verification Checkmark -->
+                    <td class="cell-mono">
+                      <span v-if="rLine.verified" class="material-symbols-outlined icon-xs text-success" title="Verified">check_circle</span>
+                      <span v-else>{{ index + 1 }}</span>
+                    </td>
 
-                    <!-- Product & Batch -->
+                    <!-- Product & SKU Code -->
                     <td>
                       <div class="font-medium text-sm">{{ rLine.product_name || getProductName(rLine.product_id) }}</div>
-                      <div v-if="rLine.batch_number" class="text-xs text-muted flex items-center gap-1 mt-1">
-                        <span class="badge badge-batch badge-xs">{{ rLine.batch_number }}</span>
+                      <div v-if="rLine.product_code" class="text-xs text-muted font-mono">
+                        {{ rLine.product_code }}
                       </div>
+                    </td>
+
+                    <!-- Batch & Expiration Verification -->
+                    <td>
+                      <div v-if="rLine.batch_number" class="badge badge-batch badge-xs mb-1">
+                        <span class="material-symbols-outlined icon-xxs">qr_code_2</span>
+                        {{ rLine.batch_number }}
+                      </div>
+                      <input
+                        type="date"
+                        v-model="rLine.expiration_date"
+                        class="form-input form-input-sm date-input-sm"
+                        :title="t('expiration-date', 'Expiration Date')"
+                      />
                     </td>
 
                     <!-- Dispatched Qty (Read-only reference) -->
