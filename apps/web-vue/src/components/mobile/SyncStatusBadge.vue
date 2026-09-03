@@ -115,13 +115,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useFieldSalesStore } from '../../stores/fieldSales.js'
 import { useToast } from '../../composables/useToast.js'
+import { syncManager, SYNC_EVENTS } from '../../services/syncManager.js'
 
 const store = useFieldSalesStore()
 const { show: toast } = useToast()
 const showDetails = ref(false)
+let unsubscribers = []
 
 const statusClass = computed(() => {
   if (store.isSyncing) return 'pulse-syncing'
@@ -182,7 +184,43 @@ async function handleClearSynced() {
     toast(`Failed to clear synced orders: ${err.message}`, 'error')
   }
 }
+
+onMounted(() => {
+  const unComplete = syncManager.on(SYNC_EVENTS.SYNC_COMPLETE, (res) => {
+    if (res && res.synced_count > 0) {
+      toast(`Successfully synced ${res.synced_count} order${res.synced_count > 1 ? 's' : ''}`, 'success')
+    }
+    if (res && res.conflict_count > 0) {
+      toast(`${res.conflict_count} order${res.conflict_count > 1 ? 's' : ''} require conflict resolution`, 'warning')
+    }
+  })
+
+  const unError = syncManager.on(SYNC_EVENTS.SYNC_ERROR, (evt) => {
+    const errMsg = evt?.error?.message || (typeof evt?.error === 'string' ? evt.error : 'Synchronization failed')
+    toast(`Sync error: ${errMsg}`, 'error')
+  })
+
+  const unOnline = syncManager.on(SYNC_EVENTS.ONLINE, () => {
+    toast('Network restored. Device is online.', 'info')
+  })
+
+  const unOffline = syncManager.on(SYNC_EVENTS.OFFLINE, () => {
+    toast('Network connection lost. Switched to offline mode.', 'warning')
+  })
+
+  unsubscribers = [unComplete, unError, unOnline, unOffline]
+})
+
+onUnmounted(() => {
+  for (const unsub of unsubscribers) {
+    try {
+      unsub()
+    } catch {}
+  }
+  unsubscribers = []
+})
 </script>
+
 
 <style scoped>
 .sync-status-container {
