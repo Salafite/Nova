@@ -198,14 +198,19 @@ def override_credit_hold_endpoint(id: int, body: dict, current_user: dict = Depe
     if order.get('status') != 'Credit Hold':
         raise HTTPException(400, "Only orders in 'Credit Hold' status can be overridden")
 
-    result = service.override_credit_hold(
-        order_id=id,
-        user_id=current_user.get('id'),
-        user_name=current_user.get('username'),
-        reason=body.get('reason', ''),
-        target_status=body.get('target_status', 'Confirmed'),
-    )
-    return result
+    try:
+        result = service.override_credit_hold(
+            order_id=id,
+            user_id=current_user.get('id'),
+            user_name=current_user.get('username'),
+            reason=body.get('reason', ''),
+            target_status=body.get('target_status', 'Confirmed'),
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        _server_error(e, 'override credit hold')
 
 
 @router.post('/{id}/reject-credit-hold')
@@ -228,11 +233,17 @@ def reject_credit_hold_endpoint(id: int, body: dict, current_user: dict = Depend
     if order.get('status') != 'Credit Hold':
         raise HTTPException(400, "Only orders in 'Credit Hold' status can be rejected")
 
-    result = service.reject_credit_hold(
-        order_id=id,
-        user_id=current_user.get('id'),
-        user_name=current_user.get('username'),
-        reason=body.get('reason', ''),
-    )
-    return result
+    try:
+        result = service.reject_credit_hold(
+            order_id=id,
+            user_id=current_user.get('id'),
+            user_name=current_user.get('username'),
+            reason=body.get('reason', ''),
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        _server_error(e, 'reject credit hold')
+
 
