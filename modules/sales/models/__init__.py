@@ -46,4 +46,13 @@ from modules.sales.models.field_sales import (
     ConflictResolutionItem,
     FieldSalesResolveConflictRequest,
 )
+from modules.sales.models.delivery_route import (
+    DeliveryRunCreate, DeliveryRunUpdate, DeliveryRunResponse,
+    DeliveryRunStopCreate, DeliveryRunStopUpdate, DeliveryRunStopResponse,
+    VehicleAssignmentRequest, VehicleAssignmentResponse,
+    DriverManifestItem, DriverManifestResponse,
+    LIFOItemDetail, LIFOStagingStop, LIFOPickListResponse,
+    RoutePlanningQuery, UnassignedOrderResponse,
+)
+
 
