@@ -89,6 +89,7 @@ class SkuMarginItem(BaseModel):
     units_sold: float = 0.0
     avg_selling_price: float = 0.0
     unit_cost: float = 0.0
+    min_acceptable_price: float = 0.0
     gross_sales: float = 0.0
     discount_amount: float = 0.0
     net_revenue: float = 0.0
@@ -106,6 +107,61 @@ class SkuMarginResponse(BaseModel):
     total_skus: int = 0
     low_margin_sku_count: int = 0
     items: List[SkuMarginItem] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Sales Rep Minimum Acceptable Price Boundaries
+# ---------------------------------------------------------------------------
+
+class MinimumPriceBoundaryItem(BaseModel):
+    product_id: int
+    sku_code: Optional[str] = None
+    product_name: str
+    category_name: Optional[str] = None
+    brand_name: Optional[str] = None
+    units_sold: float = 0.0
+    unit_cost: float = 0.0
+    unit_freight: float = 0.0
+    total_unit_cost: float = 0.0
+    target_margin_pct: float = 20.0
+    min_acceptable_price: float = 0.0
+    avg_selling_price: float = 0.0
+    current_margin_pct: float = 0.0
+    is_below_minimum: bool = False
+    price_headroom: float = 0.0
+    status: str = 'Pass'  # 'Pass', 'Warning', 'Violation'
+
+
+class MinimumPriceBoundaryResponse(BaseModel):
+    period: str = 'Monthly'
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+    target_margin_pct: float = 20.0
+    total_skus: int = 0
+    below_minimum_count: int = 0
+    items: List[MinimumPriceBoundaryItem] = Field(default_factory=list)
+
+
+class PriceThresholdValidationRequest(BaseModel):
+    product_id: int
+    proposed_unit_price: float
+    target_margin_pct: float = 20.0
+    customer_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
+
+
+class PriceThresholdValidationResponse(BaseModel):
+    product_id: int
+    sku_code: Optional[str] = None
+    product_name: str
+    unit_cost: float = 0.0
+    proposed_unit_price: float = 0.0
+    target_margin_pct: float = 20.0
+    min_acceptable_price: float = 0.0
+    projected_margin_pct: float = 0.0
+    is_approved: bool = True
+    margin_deficit_pct: float = 0.0
+    message: str
 
 
 class PeriodMarginTrendItem(BaseModel):
