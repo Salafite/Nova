@@ -1,67 +1,70 @@
 from typing import Optional
 from datetime import date
 from pydantic import BaseModel, Field
-from modules.core.models.base import AuditMixin
+from modules.core.models.base import AuditMixin, TenantMixin
 
 
-class WarehouseCreate(BaseModel):
+class WarehouseCreate(TenantMixin):
     name: str = Field(..., max_length=100)
     location: Optional[str] = Field(None, max_length=200)
+    warehouse_type: Optional[str] = Field(default="Standard", max_length=50, description="Warehouse classification: Central Hub | Regional DC | Retail Branch | In-Transit Virtual | Standard")
+    is_virtual: bool = Field(default=False, description="Flag indicating if warehouse is a virtual location")
     is_active: bool = True
-    business_id: Optional[int] = None
 
-class WarehouseUpdate(BaseModel):
+class WarehouseUpdate(TenantMixin):
     name: Optional[str] = Field(None, max_length=100)
     location: Optional[str] = Field(None, max_length=200)
+    warehouse_type: Optional[str] = Field(None, max_length=50)
+    is_virtual: Optional[bool] = None
     is_active: Optional[bool] = None
-    business_id: Optional[int] = None
 
 class WarehouseResponse(AuditMixin):
     id: int
     name: str
     location: Optional[str] = None
+    warehouse_type: Optional[str] = "Standard"
+    is_virtual: bool = False
     is_active: bool
 
 
-class InventoryCreate(BaseModel):
+class InventoryCreate(TenantMixin):
     product_id: int
     warehouse_id: int
     qty: float = Field(default=0, ge=0)
+    in_transit_qty: float = Field(default=0, ge=0)
     reorder_level: float = 10
-    business_id: Optional[int] = None
 
-class InventoryUpdate(BaseModel):
+class InventoryUpdate(TenantMixin):
     product_id: Optional[int] = None
     warehouse_id: Optional[int] = None
     qty: Optional[float] = Field(None, ge=0)
+    in_transit_qty: Optional[float] = Field(None, ge=0)
     reorder_level: Optional[float] = None
-    business_id: Optional[int] = None
 
 class InventoryResponse(AuditMixin):
     id: int
     product_id: int
     warehouse_id: int
     qty: float
+    in_transit_qty: float = 0
     reorder_level: float
 
 
-class GoodsReceiptCreate(BaseModel):
+class GoodsReceiptCreate(TenantMixin):
     receipt_number: str = Field(..., max_length=30)
     purchase_order_id: Optional[int] = None
     receipt_date: Optional[date] = None
     warehouse_id: Optional[int] = None
     status: str = 'Draft'
     notes: Optional[str] = None
-    business_id: Optional[int] = None
 
-class GoodsReceiptUpdate(BaseModel):
+class GoodsReceiptUpdate(TenantMixin):
     receipt_number: Optional[str] = Field(None, max_length=30)
     purchase_order_id: Optional[int] = None
     receipt_date: Optional[date] = None
     warehouse_id: Optional[int] = None
     status: Optional[str] = None
     notes: Optional[str] = None
-    business_id: Optional[int] = None
 
 class GoodsReceiptResponse(AuditMixin):
     id: int
@@ -73,7 +76,7 @@ class GoodsReceiptResponse(AuditMixin):
     notes: Optional[str] = None
 
 
-class GoodsReceiptLineCreate(BaseModel):
+class GoodsReceiptLineCreate(TenantMixin):
     receipt_id: int
     purchase_order_line_id: Optional[int] = None
     product_id: Optional[int] = None
@@ -85,9 +88,8 @@ class GoodsReceiptLineCreate(BaseModel):
     batch_number: Optional[str] = Field(None, max_length=255)
     manufacturing_date: Optional[date] = None
     expiry_date: Optional[date] = None
-    business_id: Optional[int] = None
 
-class GoodsReceiptLineUpdate(BaseModel):
+class GoodsReceiptLineUpdate(TenantMixin):
     receipt_id: Optional[int] = None
     purchase_order_line_id: Optional[int] = None
     product_id: Optional[int] = None
@@ -99,7 +101,6 @@ class GoodsReceiptLineUpdate(BaseModel):
     batch_number: Optional[str] = Field(None, max_length=255)
     manufacturing_date: Optional[date] = None
     expiry_date: Optional[date] = None
-    business_id: Optional[int] = None
 
 class GoodsReceiptLineResponse(AuditMixin):
     id: int

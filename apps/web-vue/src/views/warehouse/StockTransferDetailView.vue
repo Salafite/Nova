@@ -559,10 +559,41 @@
                 {{ t('route', 'Route') }}:
                 <strong>{{ transfer.source_warehouse_name }}</strong> &rarr; <strong>{{ transfer.destination_warehouse_name }}</strong>
               </div>
-              <button type="button" class="btn-outline btn-sm" @click="receiveAllInFull">
-                <span class="material-symbols-outlined icon-xs">done_all</span>
-                {{ t('receive-all-full', 'Receive All in Full') }}
-              </button>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-outline btn-sm" @click="resetForScanToCount">
+                  <span class="material-symbols-outlined icon-xs">restart_alt</span>
+                  {{ t('reset-scan-count', 'Reset for Scan-to-Count') }}
+                </button>
+                <button type="button" class="btn-outline btn-sm" @click="receiveAllInFull">
+                  <span class="material-symbols-outlined icon-xs">done_all</span>
+                  {{ t('receive-all-full', 'Receive All in Full') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Rapid Barcode Scanner Box -->
+            <div class="barcode-scanner-box">
+              <div class="barcode-input-wrap">
+                <span class="material-symbols-outlined barcode-icon">qr_code_scanner</span>
+                <input
+                  ref="barcodeInputRef"
+                  type="text"
+                  v-model="barcodeQuery"
+                  class="barcode-input form-input"
+                  :placeholder="t('scan-barcode-ph', 'Scan barcode, SKU, or Lot # (e.g. SKU-DAIRY-01, LOT-MILK-202608)...')"
+                  @keydown.enter.prevent="handleBarcodeScan"
+                />
+                <button type="button" class="btn-primary btn-sm" @click="handleBarcodeScan">
+                  <span class="material-symbols-outlined icon-xs">search</span>
+                  {{ t('scan', 'Scan Barcode') }}
+                </button>
+              </div>
+              <div v-if="scanFeedback" class="scan-feedback" :class="scanFeedback.type">
+                <span class="material-symbols-outlined icon-xs">
+                  {{ scanFeedback.type === 'success' ? 'check_circle' : 'error' }}
+                </span>
+                <span>{{ scanFeedback.message }}</span>
+              </div>
             </div>
 
             <!-- Itemized Receiving Lines Table -->
@@ -570,30 +601,52 @@
               <table class="receive-table">
                 <thead>
                   <tr>
-                    <th style="width: 4%;">#</th>
-                    <th style="width: 24%;">{{ t('product', 'Product') }}</th>
-                    <th style="width: 10%;" class="col-num">{{ t('dispatched', 'Dispatched') }}</th>
-                    <th style="width: 12%;" class="col-num">{{ t('qty-received', 'Received') }} <span class="required">*</span></th>
-                    <th style="width: 10%;" class="col-num">{{ t('qty-lost', 'Lost / Short') }}</th>
-                    <th style="width: 20%;">{{ t('loss-reason', 'Loss Reason (if lost > 0)') }}</th>
-                    <th style="width: 20%;">{{ t('loss-notes', 'Loss Notes / Remarks') }}</th>
+                    <th style="width: 3%;">#</th>
+                    <th style="width: 20%;">{{ t('product', 'Product') }}</th>
+                    <th style="width: 14%;">{{ t('batch-expiry', 'Batch & Expiry') }}</th>
+                    <th style="width: 9%;" class="col-num">{{ t('dispatched', 'Dispatched') }}</th>
+                    <th style="width: 11%;" class="col-num">{{ t('qty-received', 'Received') }} <span class="required">*</span></th>
+                    <th style="width: 9%;" class="col-num">{{ t('qty-lost', 'Lost / Short') }}</th>
+                    <th style="width: 17%;">{{ t('loss-reason', 'Loss Reason (if lost > 0)') }}</th>
+                    <th style="width: 17%;">{{ t('loss-notes', 'Loss Notes / Remarks') }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
                     v-for="(rLine, index) in receiveForm.lines"
                     :key="'rec-line-' + index"
-                    :class="{ 'row-loss-highlight': (rLine.qty_lost > 0) }"
+                    :class="{
+                      'row-loss-highlight': (rLine.qty_lost > 0),
+                      'row-scanned-highlight': (lastScannedLineId === rLine.line_id),
+                      'row-verified': rLine.verified
+                    }"
                   >
-                    <!-- Line # -->
-                    <td class="cell-mono">{{ index + 1 }}</td>
+                    <!-- Line # & Verification Checkmark -->
+                    <td class="cell-mono">
+                      <span v-if="rLine.verified" class="material-symbols-outlined icon-xs text-success" title="Verified">check_circle</span>
+                      <span v-else>{{ index + 1 }}</span>
+                    </td>
 
-                    <!-- Product & Batch -->
+                    <!-- Product & SKU Code -->
                     <td>
                       <div class="font-medium text-sm">{{ rLine.product_name || getProductName(rLine.product_id) }}</div>
-                      <div v-if="rLine.batch_number" class="text-xs text-muted flex items-center gap-1 mt-1">
-                        <span class="badge badge-batch badge-xs">{{ rLine.batch_number }}</span>
+                      <div v-if="rLine.product_code" class="text-xs text-muted font-mono">
+                        {{ rLine.product_code }}
                       </div>
+                    </td>
+
+                    <!-- Batch & Expiration Verification -->
+                    <td>
+                      <div v-if="rLine.batch_number" class="badge badge-batch badge-xs mb-1">
+                        <span class="material-symbols-outlined icon-xxs">qr_code_2</span>
+                        {{ rLine.batch_number }}
+                      </div>
+                      <input
+                        type="date"
+                        v-model="rLine.expiration_date"
+                        class="form-input form-input-sm date-input-sm"
+                        :title="t('expiration-date', 'Expiration Date')"
+                      />
                     </td>
 
                     <!-- Dispatched Qty (Read-only reference) -->
@@ -881,6 +934,12 @@ const editingLine = ref(null)
 const targetLine = ref(null)
 const cancelReason = ref('')
 
+// Rapid Barcode Scanning & Verification State
+const barcodeQuery = ref('')
+const scanFeedback = ref(null)
+const lastScannedLineId = ref(null)
+const barcodeInputRef = ref(null)
+
 // Form States
 const dispatchForm = reactive({
   carrier: '',
@@ -1161,19 +1220,26 @@ async function submitDispatch() {
 function openReceiveModal() {
   if (!transfer.value) return
   receiveForm.notes = ''
+  barcodeQuery.value = ''
+  scanFeedback.value = null
+  lastScannedLineId.value = null
+
   receiveForm.lines = (transfer.value.lines || []).map(l => {
     const dispQty = l.qty_dispatched > 0 ? l.qty_dispatched : l.qty_requested
     return {
       line_id: l.id,
       product_id: l.product_id,
+      product_code: l.product_code || '',
       product_name: l.product_name,
       batch_id: l.batch_id,
-      batch_number: l.batch_number,
+      batch_number: l.batch_number || '',
+      expiration_date: l.expiration_date || l.expiry_date || '',
       qty_dispatched: dispQty,
       qty_received: dispQty,
       qty_lost: 0,
       loss_reason: '',
-      loss_notes: ''
+      loss_notes: '',
+      verified: false,
     }
   })
   showReceiveModal.value = true
@@ -1185,7 +1251,68 @@ function receiveAllInFull() {
     l.qty_lost = 0
     l.loss_reason = ''
     l.loss_notes = ''
+    l.verified = true
   })
+  scanFeedback.value = {
+    type: 'success',
+    message: t('all-received-full-msg', 'All items set to full dispatched quantity.')
+  }
+}
+
+function resetForScanToCount() {
+  receiveForm.lines.forEach(l => {
+    l.qty_received = 0
+    l.qty_lost = l.qty_dispatched
+    l.loss_reason = ''
+    l.loss_notes = ''
+    l.verified = false
+  })
+  lastScannedLineId.value = null
+  scanFeedback.value = {
+    type: 'success',
+    message: t('reset-scan-msg', 'Quantities reset to 0. Ready for rapid barcode scanning.')
+  }
+}
+
+function handleBarcodeScan() {
+  if (!barcodeQuery.value) return
+  const query = barcodeQuery.value.trim().toLowerCase()
+
+  // Find matching line by product_code, SKU, batch_number, product_name or line_id
+  const line = receiveForm.lines.find(l => {
+    const prodCode = (l.product_code || '').toLowerCase()
+    const prodName = (l.product_name || '').toLowerCase()
+    const batchNo = (l.batch_number || '').toLowerCase()
+    const prod = products.value.find(p => p.id === l.product_id)
+    const sku = (prod?.sku || '').toLowerCase()
+
+    return (
+      prodCode === query ||
+      sku === query ||
+      batchNo === query ||
+      prodName.includes(query) ||
+      String(l.line_id) === query
+    )
+  })
+
+  if (line) {
+    if (line.qty_received < line.qty_dispatched) {
+      line.qty_received = Number((line.qty_received + 1).toFixed(3))
+    }
+    onReceivedQtyChange(line)
+    line.verified = true
+    lastScannedLineId.value = line.line_id
+    scanFeedback.value = {
+      type: 'success',
+      message: t('scanned-success-msg', `Scanned: ${line.product_name} (Received: ${line.qty_received}/${line.qty_dispatched})`)
+    }
+  } else {
+    scanFeedback.value = {
+      type: 'error',
+      message: t('scanned-not-found-msg', `No matching product, barcode, or lot number found for '${barcodeQuery.value}'`)
+    }
+  }
+  barcodeQuery.value = ''
 }
 
 function onReceivedQtyChange(rLine) {
@@ -1225,6 +1352,7 @@ async function submitReceive() {
       loss_notes: l.loss_notes || null,
       batch_id: l.batch_id || null,
       batch_number: l.batch_number || null,
+      expiration_date: l.expiration_date || null,
     }))
 
     const payloadLosses = receiveForm.lines
@@ -1934,6 +2062,67 @@ onMounted(() => {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-light);
   vertical-align: middle;
+}
+
+/* Receiving Barcode Scanner & Table Highlights */
+.barcode-scanner-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-surface-hover);
+  border: 1px dashed var(--color-primary);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.barcode-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.barcode-icon {
+  font-size: 24px;
+  color: var(--color-primary);
+}
+
+.barcode-input {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.scan-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.scan-feedback.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.scan-feedback.error {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.row-scanned-highlight {
+  background-color: #e0f2fe !important;
+  transition: background-color 0.3s ease;
+}
+
+.row-verified {
+  border-left: 3px solid #16a34a;
+}
+
+.date-input-sm {
+  font-size: 11px;
+  padding: 2px 4px;
 }
 
 .row-loss-highlight {

@@ -281,4 +281,105 @@ describe('PickListDetailView (Catch-Weight & Dual UOM)', () => {
     )
     expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('approved successfully'), 'success')
   })
+
+  it('displays FEFO suggested lots and expiration dates in items table', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    expect(w.text()).toContain('BATCH-CW-001')
+    expect(w.text()).toContain('BATCH-STD-002')
+    expect(w.text()).toContain('Suggested Lot (FEFO)')
+  })
+
+  it('supports picker lot selection override from available batches and manual lot scan', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/T0101I/1/detail')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(samplePickListDetail)) })
+      }
+      if (url.includes('/T0008I/')) {
+        return Promise.resolve({ data: sampleWarehouses })
+      }
+      if (url.includes('/available-batches')) {
+        return Promise.resolve({
+          data: [
+            { id: 301, batch_number: 'BATCH-CW-001', expiry_date: '2026-12-31', quantity: 100 },
+            { id: 309, batch_number: 'BATCH-ALT-999', expiry_date: '2026-10-15', quantity: 50 }
+          ]
+        })
+      }
+      return Promise.resolve({ data: [] })
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    // Test dropdown lot selection
+    const lotSelects = w.findAll('.lot-select')
+    expect(lotSelects.length).toBeGreaterThan(0)
+    await lotSelects[0].setValue('309')
+    await flushPromises()
+
+    expect(w.text()).toContain('Picked Lot: BATCH-ALT-999')
+    expect(w.text()).toContain('OVERRIDE')
+
+    // Test manual lot scan override input
+    const batchInput = w.find('.batch-input')
+    await batchInput.setValue('BATCH-SCAN-777')
+    const applyBtn = w.find('.lot-controls .btn-icon')
+    await applyBtn.trigger('click')
+    await flushPromises()
+
+    expect(w.text()).toContain('Picked Lot: BATCH-SCAN-777')
+  })
+
+  it('supports global barcode scanning to match lot and pick item', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/T0101I/1/detail')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(samplePickListDetail)) })
+      }
+      if (url.includes('/T0008I/')) {
+        return Promise.resolve({ data: sampleWarehouses })
+      }
+      if (url.includes('/available-batches')) {
+        return Promise.resolve({
+          data: [
+            { id: 301, batch_number: 'BATCH-CW-001', expiry_date: '2026-12-31', quantity: 100 }
+          ]
+        })
+      }
+      return Promise.resolve({ data: [] })
+    })
+
+    api.post.mockResolvedValue({
+      data: {
+        id: 11,
+        qty_picked: 1,
+        picked_batch_id: 301,
+        picked_batch_number: 'BATCH-CW-001',
+        catch_weight_actual: 40,
+        catch_weight_uom: 'kg',
+        nominal_weight: 40,
+        tolerance_pct: 10
+      }
+    })
+
+    const w = createWrapper()
+    await flushPromises()
+
+    const scannerInput = w.find('.scanner-input')
+    await scannerInput.setValue('BATCH-CW-001')
+    await scannerInput.trigger('keyup.enter')
+    await flushPromises()
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/T0101I/1/pick-item/11',
+      expect.objectContaining({
+        qty_picked: 1,
+        picked_batch_id: 301,
+        picked_batch_number: 'BATCH-CW-001'
+      })
+    )
+    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('picked line'), 'success')
+  })
 })
+

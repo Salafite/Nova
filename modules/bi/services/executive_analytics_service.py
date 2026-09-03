@@ -10,6 +10,10 @@ from ..models.executive_analytics import (
     SkuMarginResponse,
     PeriodMarginTrendItem,
     PeriodMarginTrendResponse,
+    MinimumPriceBoundaryItem,
+    MinimumPriceBoundaryResponse,
+    PriceThresholdValidationRequest,
+    PriceThresholdValidationResponse,
 )
 from ..repositories.executive_analytics_repo import (
     ExecutiveAnalyticsRepository,
@@ -293,6 +297,8 @@ class ExecutiveAnalyticsService:
             margin_pct = round((gross_profit / net_revenue * 100.0), 2) if net_revenue > 0 else 0.0
             asp = round((gross_sales / units_sold), 2) if units_sold > 0 else 0.0
             unit_cost = round((cogs / units_sold), 2) if units_sold > 0 else 0.0
+            unit_freight = round((freight_cost / units_sold), 2) if units_sold > 0 else 0.0
+            min_acceptable_price = round((unit_cost + unit_freight) / (1.0 - 0.20), 2) if units_sold > 0 else 0.0
             is_low = margin_pct < 15.0
 
             if is_low:
@@ -314,6 +320,7 @@ class ExecutiveAnalyticsService:
                     units_sold=units_sold,
                     avg_selling_price=asp,
                     unit_cost=unit_cost,
+                    min_acceptable_price=min_acceptable_price,
                     gross_sales=gross_sales,
                     discount_amount=discount_amount,
                     net_revenue=net_revenue,
@@ -332,6 +339,188 @@ class ExecutiveAnalyticsService:
             total_skus=total_count,
             low_margin_sku_count=low_margin_count,
             items=items,
+        )
+
+    def get_minimum_price_boundaries(
+        self,
+        filters: Union[ExecutiveAnalyticsFilter, Dict[str, Any], None] = None,
+        target_margin_pct: float = 20.0,
+        limit: int = 100,
+        offset: int = 0,
+        conn=None,
+    ) -> MinimumPriceBoundaryResponse:
+        """
+        Computes minimum acceptable price boundaries for SKUs given target gross margin threshold
+        (default 20%), unit cost (COGS), and freight allocation.
+        """
+        flt, start_date, end_date = self._normalize_filter(filters)
+
+        rows, total_count = self.repo.get_sku_margins_data(
+            date_from=start_date,
+            date_to=end_date,
+            product_id=flt.product_id,
+            brand=flt.brand,
+            sales_rep_id=flt.sales_rep_id,
+            customer_id=flt.customer_id,
+            warehouse_id=flt.warehouse_id,
+            delivery_route=flt.delivery_route,
+            limit=limit,
+            offset=offset,
+            conn=conn,
+        )
+
+        items: List[MinimumPriceBoundaryItem] = []
+        below_min_count = 0
+
+        for r in rows:
+            units_sold = round(float(r.get('units_sold', 0.0)), 2)
+            gross_sales = round(float(r.get('gross_sales', 0.0)), 2)
+            net_revenue = round(float(r.get('net_revenue', 0.0)), 2)
+            cogs = round(float(r.get('cogs', 0.0)), 2)
+            freight_cost = round(float(r.get('freight_cost', 0.0)), 2)
+            gross_profit = round(float(r.get('gross_profit', 0.0)), 2)
+
+            unit_cost = round((cogs / units_sold), 2) if units_sold > 0 else 0.0
+            unit_freight = round((freight_cost / units_sold), 2) if units_sold > 0 else 0.0
+            total_unit_cost = round(unit_cost + unit_freight, 2)
+            avg_selling_price = round((gross_sales / units_sold), 2) if units_sold > 0 else 0.0
+            current_margin_pct = round((gross_profit / net_revenue * 100.0), 2) if net_revenue > 0 else 0.0
+
+            if target_margin_pct < 100.0:
+                min_acceptable_price = round(total_unit_cost / (1.0 - (target_margin_pct / 100.0)), 2)
+            else:
+                min_acceptable_price = total_unit_cost
+
+            is_below = avg_selling_price < min_acceptable_price if units_sold > 0 else False
+            if is_below:
+                below_min_count += 1
+                status = 'Violation'
+            elif current_margin_pct < (target_margin_pct + 5.0):
+                status = 'Warning'
+            else:
+                status = 'Pass'
+
+            price_headroom = round(avg_selling_price - min_acceptable_price, 2)
+
+            if flt.min_margin_pct is not None and current_margin_pct < flt.min_margin_pct:
+                continue
+            if flt.max_margin_pct is not None and current_margin_pct > flt.max_margin_pct:
+                continue
+
+            items.append(
+                MinimumPriceBoundaryItem(
+                    product_id=int(r.get('product_id')),
+                    sku_code=r.get('sku_code'),
+                    product_name=r.get('product_name', ''),
+                    category_name=r.get('category_name'),
+                    brand_name=r.get('brand_name'),
+                    units_sold=units_sold,
+                    unit_cost=unit_cost,
+                    unit_freight=unit_freight,
+                    total_unit_cost=total_unit_cost,
+                    target_margin_pct=target_margin_pct,
+                    min_acceptable_price=min_acceptable_price,
+                    avg_selling_price=avg_selling_price,
+                    current_margin_pct=current_margin_pct,
+                    is_below_minimum=is_below,
+                    price_headroom=price_headroom,
+                    status=status,
+                )
+            )
+
+        return MinimumPriceBoundaryResponse(
+            period=flt.period,
+            date_from=start_date,
+            date_to=end_date,
+            target_margin_pct=target_margin_pct,
+            total_skus=total_count,
+            below_minimum_count=below_min_count,
+            items=items,
+        )
+
+    def validate_price_threshold(
+        self,
+        request: PriceThresholdValidationRequest,
+        conn=None,
+    ) -> PriceThresholdValidationResponse:
+        """
+        Validates a proposed unit price against the minimum acceptable price boundary for a SKU.
+        """
+        target_margin = request.target_margin_pct
+        proposed_price = round(float(request.proposed_unit_price), 2)
+
+        rows, _ = self.repo.get_sku_margins_data(
+            product_id=request.product_id,
+            customer_id=request.customer_id,
+            sales_rep_id=request.sales_rep_id,
+            limit=1,
+            conn=conn,
+        )
+
+        if rows:
+            r = rows[0]
+            sku_code = r.get('sku_code')
+            product_name = r.get('product_name', f'Product #{request.product_id}')
+            units_sold = round(float(r.get('units_sold', 0.0)), 2)
+            cogs = round(float(r.get('cogs', 0.0)), 2)
+            freight_cost = round(float(r.get('freight_cost', 0.0)), 2)
+            unit_cost = round((cogs / units_sold), 2) if units_sold > 0 else 0.0
+            unit_freight = round((freight_cost / units_sold), 2) if units_sold > 0 else 0.0
+            total_unit_cost = round(unit_cost + unit_freight, 2)
+        else:
+            sku_code = None
+            product_name = f'Product #{request.product_id}'
+            total_unit_cost = 0.0
+            unit_cost = 0.0
+
+            should_release = False
+            if conn is None:
+                from packages.database.connection import get_connection, release_connection
+                conn = get_connection()
+                should_release = True
+            try:
+                import psycopg2.extras
+                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                    schema = self.repo.schema
+                    cur.execute(f'SELECT sku, name, COALESCE(cost_price, 0)::FLOAT AS cost_price FROM "{schema}".t0003 WHERE id = %s', [request.product_id])
+                    p_row = cur.fetchone()
+                    if p_row:
+                        sku_code = p_row.get('sku')
+                        product_name = p_row.get('name', product_name)
+                        unit_cost = round(float(p_row.get('cost_price', 0.0)), 2)
+                        total_unit_cost = unit_cost
+            finally:
+                if should_release:
+                    release_connection(conn)
+
+        if target_margin < 100.0:
+            min_acceptable_price = round(total_unit_cost / (1.0 - (target_margin / 100.0)), 2)
+        else:
+            min_acceptable_price = total_unit_cost
+
+        projected_profit = proposed_price - total_unit_cost
+        projected_margin_pct = round((projected_profit / proposed_price * 100.0), 2) if proposed_price > 0 else 0.0
+        is_approved = proposed_price >= min_acceptable_price
+
+        margin_deficit_pct = round(max(0.0, target_margin - projected_margin_pct), 2)
+
+        if is_approved:
+            message = f"Proposed price ${proposed_price:.2f} satisfies target margin threshold of {target_margin}% (Minimum acceptable price: ${min_acceptable_price:.2f})."
+        else:
+            message = f"Proposed price ${proposed_price:.2f} violates target margin threshold of {target_margin}% (Minimum acceptable price: ${min_acceptable_price:.2f}, deficit: {margin_deficit_pct}%)."
+
+        return PriceThresholdValidationResponse(
+            product_id=request.product_id,
+            sku_code=sku_code,
+            product_name=product_name,
+            unit_cost=total_unit_cost,
+            proposed_unit_price=proposed_price,
+            target_margin_pct=target_margin,
+            min_acceptable_price=min_acceptable_price,
+            projected_margin_pct=projected_margin_pct,
+            is_approved=is_approved,
+            margin_deficit_pct=margin_deficit_pct,
+            message=message,
         )
 
     def get_period_margin_trends(

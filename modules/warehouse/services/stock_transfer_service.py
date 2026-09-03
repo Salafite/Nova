@@ -84,6 +84,7 @@ class StockTransferService(CrudService):
         product_repo: CrudRepository = None,
         batch_repo: CrudRepository = None,
         user_repo: CrudRepository = None,
+        stock_repo: CrudRepository = None,
     ):
         super().__init__(repo or TRANSFER_REPO)
         self.transfer_repo = self.repo
@@ -93,6 +94,7 @@ class StockTransferService(CrudService):
         self.product_repo = product_repo or PRODUCT_REPO
         self.batch_repo = batch_repo or BATCH_REPO
         self.user_repo = user_repo or USER_REPO
+        self.stock_repo = stock_repo
 
     # -------------------------------------------------------------------------
     # Creation & Retrieval
@@ -754,3 +756,82 @@ class StockTransferService(CrudService):
                 'warehouse_id': dest_wh_id,
                 'status': 'Available'
             }, **_conn_kwargs(conn))
+
+    # -------------------------------------------------------------------------
+    # Inter-Branch Replenishment Automation
+    # -------------------------------------------------------------------------
+
+    def get_replenishment_suggestions(
+        self,
+        warehouse_id: Optional[int] = None,
+        source_warehouse_id: Optional[int] = None,
+        product_id: Optional[int] = None,
+        category: Optional[str] = None,
+        priority: Optional[str] = None,
+        min_deficit: float = 0.0,
+        safety_stock_ratio: float = 0.5,
+        target_coverage_multiplier: float = 1.5,
+        conn=None,
+    ) -> Dict[str, Any]:
+        """
+        Evaluates branch warehouse inventory levels vs reorder points and safety thresholds,
+        matches deficit items with surplus central distribution hubs, and returns ranked
+        replenishment recommendations.
+        """
+        from modules.inventory.services.replenishment_service import ReplenishmentService
+        replenish_svc = ReplenishmentService(
+            stock_repo=self.stock_repo,
+            wh_repo=self.wh_repo,
+            product_repo=self.product_repo,
+            transfer_service=self,
+            stock_movement_service=self.stock_service,
+        )
+        return replenish_svc.get_replenishment_suggestions(
+            warehouse_id=warehouse_id,
+            source_warehouse_id=source_warehouse_id,
+            product_id=product_id,
+            category=category,
+            priority=priority,
+            min_deficit=min_deficit,
+            safety_stock_ratio=safety_stock_ratio,
+            target_coverage_multiplier=target_coverage_multiplier,
+            conn=conn,
+        )
+
+    def generate_replenishment_transfers(
+        self,
+        payload: Optional[Union[dict, BaseModel]] = None,
+        user_id: Optional[int] = None,
+        conn=None,
+    ) -> Dict[str, Any]:
+        """
+        One-click draft Stock Transfer order generation from replenishment recommendations.
+        Groups items by (source_warehouse, destination_warehouse) into unified transfer orders.
+        """
+        from modules.inventory.services.replenishment_service import ReplenishmentService
+        replenish_svc = ReplenishmentService(
+            stock_repo=self.stock_repo,
+            wh_repo=self.wh_repo,
+            product_repo=self.product_repo,
+            transfer_service=self,
+            stock_movement_service=self.stock_service,
+        )
+        return replenish_svc.generate_transfers(
+            payload=payload or {},
+            user_id=user_id,
+            conn=conn,
+        )
+
+    def get_stock_health_summary(self, conn=None) -> Dict[str, Any]:
+        """
+        Returns high-level inventory health summary KPIs across the warehouse network.
+        """
+        from modules.inventory.services.replenishment_service import ReplenishmentService
+        replenish_svc = ReplenishmentService(
+            stock_repo=self.stock_repo,
+            wh_repo=self.wh_repo,
+            product_repo=self.product_repo,
+            transfer_service=self,
+            stock_movement_service=self.stock_service,
+        )
+        return replenish_svc.get_stock_health_summary(conn=conn)
