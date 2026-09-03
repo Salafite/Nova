@@ -353,10 +353,13 @@ describe('PickListDetailView (Catch-Weight & Dual UOM)', () => {
     api.post.mockResolvedValue({
       data: {
         id: 11,
-        qty_picked: 2,
+        qty_picked: 1,
         picked_batch_id: 301,
         picked_batch_number: 'BATCH-CW-001',
-        tolerance_status: 'Not Applicable'
+        catch_weight_actual: 40,
+        catch_weight_uom: 'kg',
+        nominal_weight: 40,
+        tolerance_pct: 10
       }
     })
 
@@ -371,12 +374,12 @@ describe('PickListDetailView (Catch-Weight & Dual UOM)', () => {
     expect(api.post).toHaveBeenCalledWith(
       '/T0101I/1/pick-item/11',
       expect.objectContaining({
-        qty_picked: 2,
+        qty_picked: 1,
         picked_batch_id: 301,
         picked_batch_number: 'BATCH-CW-001'
       })
     )
-    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('Scanned code matched'), 'success')
+    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('picked line'), 'success')
   })
 })
 

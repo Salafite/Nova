@@ -5,9 +5,60 @@
         <h1 class="page-title">{{ t('gr-title', 'Goods Receipt') }}</h1>
         <p class="page-subtitle">{{ t('gr-sub', 'Record and manage goods received with lot & expiration tracking') }}</p>
       </div>
-      <button class="btn-primary" @click="openAdd">
-        <span class="material-symbols-outlined">add</span> {{ t('new-gr', 'New Receipt') }}
-      </button>
+      <div class="flex gap-2 items-center">
+        <button
+          class="btn-secondary flex items-center gap-1"
+          @click="showCameraScanner = true"
+          :title="t('open-camera-scanner', 'Open Camera Barcode Scanner')"
+        >
+          <span class="material-symbols-outlined icon-xs">photo_camera</span>
+          {{ t('camera-scan', 'Camera Scan') }}
+        </button>
+        <button class="btn-primary" @click="openAdd">
+          <span class="material-symbols-outlined">add</span> {{ t('new-gr', 'New Receipt') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Barcode Scanner Card for Inbound Receiving Verification -->
+    <div class="scanner-card mb-6" :class="{ 'flash-success': flashState === 'success', 'flash-error': flashState === 'error' }">
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined scanner-icon">qr_code_scanner</span>
+        <div class="flex-1">
+          <div class="flex justify-between items-center mb-1">
+            <label class="scanner-label">{{ t('quick-scan-gr', 'USB / Bluetooth & Camera Inbound Goods Scanner') }}</label>
+            <div class="flex items-center gap-2 text-xs">
+              <span class="badge badge-scanner-active" :title="t('scanner-listener-active', 'Hardware scanner listener active')">
+                <span class="status-pulse"></span>
+                {{ t('scanner-ready', 'Scanner Active') }}
+              </span>
+              <button
+                type="button"
+                class="btn-icon btn-xs"
+                @click="soundEnabled = !soundEnabled"
+                :title="soundEnabled ? t('mute-audio', 'Mute scan audio') : t('unmute-audio', 'Unmute scan audio')"
+              >
+                <span class="material-symbols-outlined icon-xs">{{ soundEnabled ? 'volume_up' : 'volume_off' }}</span>
+              </button>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              v-model="globalScan"
+              class="form-input scanner-input flex-1"
+              :placeholder="t('scan-gr-placeholder', 'Scan product barcode, EAN-13, UPC, Code 128, or GS1-128 lot label...')"
+              @keydown.enter.prevent="onManualGlobalScan"
+            />
+            <button type="button" class="btn-primary btn-sm px-4" @click="onManualGlobalScan">
+              <span class="material-symbols-outlined icon-xs">search</span> {{ t('verify-scan', 'Scan / Verify') }}
+            </button>
+            <button type="button" class="btn-outline btn-sm px-3" @click="showCameraScanner = true" :title="t('camera-scan-hint', 'Use device camera to scan barcode')">
+              <span class="material-symbols-outlined icon-xs">photo_camera</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Stats summary -->
@@ -327,6 +378,49 @@
       @confirm="executeDelete(confirmTarget)"
       @cancel="confirmTarget = null"
     />
+    <!-- Camera Barcode Scanner Modal -->
+    <CameraBarcodeScannerModal
+      v-model="showCameraScanner"
+      @scan="(parsed, raw) => handleBarcodeScan(parsed, raw)"
+    />
+
+    <!-- Barcode Scan Mismatch Warning Modal -->
+    <Teleport to="body">
+      <div v-if="showMismatchModal" class="modal-overlay" @click.self="showMismatchModal = false">
+        <div class="modal-dialog modal-dialog-warning" :dir="dir">
+          <div class="modal-header header-danger">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-red">warning</span>
+              <h3 class="modal-title text-red">{{ t('barcode-mismatch-title', 'Barcode Scan Mismatch Warning') }}</h3>
+            </div>
+            <button class="modal-close" @click="showMismatchModal = false">&times;</button>
+          </div>
+          <div class="modal-body text-center py-6">
+            <div class="mismatch-icon-wrap mb-3">
+              <span class="material-symbols-outlined icon-mismatch">qr_code_scanner</span>
+            </div>
+            <h4 class="font-bold text-lg text-slate-800 mb-2">
+              {{ t('unrecognized-barcode', 'Unrecognized or Mismatched Item') }}
+            </h4>
+            <p class="text-sm text-slate-600 mb-4">
+              {{ t('mismatch-gr-desc', 'Scanned barcode does not match any recognized product barcode, GTIN, or lot label for receiving:') }}
+            </p>
+            <div class="scanned-code-box mb-4">
+              <code>{{ lastMismatchedCode }}</code>
+            </div>
+            <div class="alert-warning-box">
+              <span class="material-symbols-outlined icon-xs">block</span>
+              <span>{{ t('receiving-prevented', 'Inbound goods receipt entry prevented to avoid invalid inventory intake.') }}</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-primary btn-danger-action" @click="showMismatchModal = false">
+              {{ t('acknowledge-dismiss', 'Acknowledge & Dismiss') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -338,9 +432,30 @@ import { useI18n } from '../../composables/useI18n.js'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import SkeletonTable from '../../components/SkeletonTable.vue'
 import ErrorState from '../../components/ErrorState.vue'
+import { useBarcodeScanner } from '../../composables/useBarcodeScanner.js'
+import { useScanFeedback } from '../../composables/useScanFeedback.js'
+import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal.vue'
+import { parseBarcode, formatGS1Date } from '../../utils/barcodeParser.js'
 
 const { show: toast } = useToast()
 const { t, dir } = useI18n()
+
+// Scan feedback & hardware scanner listeners
+const feedback = useScanFeedback()
+const { flashState, notifySuccess, notifyError, notifyWarning, soundEnabled } = feedback
+
+const showCameraScanner = ref(false)
+const showMismatchModal = ref(false)
+const lastMismatchedCode = ref('')
+const globalScan = ref('')
+
+const scanner = useBarcodeScanner({
+  onScan: (parsedBarcode, rawString) => {
+    handleBarcodeScan(parsedBarcode, rawString)
+  },
+  ignoreInputs: false,
+  endKeys: ['Enter']
+})
 
 const loading = ref(true)
 const error = ref('')
@@ -718,6 +833,121 @@ async function executeDelete(item) {
   }
 }
 
+function onManualGlobalScan() {
+  const code = (globalScan.value || '').trim()
+  if (!code) return
+  handleBarcodeScan(null, code)
+  globalScan.value = ''
+}
+
+function handleBarcodeScan(parsed, rawString) {
+  const rawCode = (rawString || (typeof parsed === 'string' ? parsed : parsed?.raw) || '').trim()
+  if (!rawCode) return
+
+  const parsedObj = (typeof parsed === 'object' && parsed !== null) ? parsed : parseBarcode(rawCode)
+
+  const gtin = parsedObj.gtin || parsedObj.code || rawCode
+  const aiBatch = parsedObj.batchNumber || parsedObj.attributes?.['10'] || parsedObj.aiData?.['10'] || null
+  const aiMfg = parsedObj.productionDate || (parsedObj.attributes?.['11'] ? formatGS1Date(parsedObj.attributes['11']) : null) || (parsedObj.aiData?.['11'] ? formatGS1Date(parsedObj.aiData['11']) : null) || null
+  const aiExpiry = parsedObj.expiryDate || parsedObj.bestBeforeDate || (parsedObj.attributes?.['17'] ? formatGS1Date(parsedObj.attributes['17']) : null) || (parsedObj.attributes?.['15'] ? formatGS1Date(parsedObj.attributes['15']) : null) || (parsedObj.aiData?.['17'] ? formatGS1Date(parsedObj.aiData['17']) : null) || (parsedObj.aiData?.['15'] ? formatGS1Date(parsedObj.aiData['15']) : null) || null
+
+  const normRaw = rawCode.toLowerCase().replace(/^0+/, '')
+  const normGtin = (gtin || '').toLowerCase().replace(/^0+/, '')
+
+  const isProductMatch = (p) => {
+    if (!p) return false
+    const pCode = (p.barcode || p.product_barcode || p.gtin || p.sku || '').toLowerCase()
+    const normPCode = pCode.replace(/^0+/, '')
+    const rCode = rawCode.toLowerCase()
+    const gCode = (gtin || '').toLowerCase()
+    return (
+      (pCode && (pCode === rCode || pCode === gCode || (normPCode && (normPCode === normRaw || normPCode === normGtin)))) ||
+      String(p.id) === rawCode ||
+      String(p.id) === gtin ||
+      (normRaw && String(p.id) === normRaw) ||
+      (p.sku && p.sku.toLowerCase() === rCode)
+    )
+  }
+
+  // 1. If edit/create receipt modal is open, match or add to form.value.lines
+  if (showModal.value) {
+    let matchedLine = form.value.lines.find(l => {
+      if (l.product_id) {
+        const prod = products.value.find(x => x.id === l.product_id)
+        if (prod && isProductMatch(prod)) {
+          if (aiBatch) {
+            return !l.batch_number || l.batch_number === aiBatch
+          }
+          return true
+        }
+      }
+      const lName = (l.product_name || '').toLowerCase()
+      return lName && (lName.includes(rawCode.toLowerCase()) || (gtin && lName.includes(gtin.toLowerCase())))
+    })
+
+    if (matchedLine) {
+      matchedLine.qty_received = (Number(matchedLine.qty_received) || 0) + 1
+      if (aiBatch) matchedLine.batch_number = aiBatch
+      if (aiMfg) matchedLine.manufacturing_date = aiMfg
+      if (aiExpiry) matchedLine.expiry_date = aiExpiry
+      notifySuccess(t('scan-receipt-qty-inc', `Received 1x ${matchedLine.product_name || 'Item'} (Total: ${matchedLine.qty_received})`))
+      return
+    }
+
+    // Line not found in form lines; search available products to add a line
+    const matchedProduct = products.value.find(p => isProductMatch(p))
+    if (matchedProduct) {
+      const newLine = {
+        product_id: matchedProduct.id,
+        product_name: matchedProduct.name || matchedProduct.sku,
+        qty_ordered: 1,
+        qty_received: 1,
+        batch_number: aiBatch || '',
+        manufacturing_date: aiMfg || '',
+        expiry_date: aiExpiry || ''
+      }
+      form.value.lines.push(newLine)
+      notifySuccess(t('scan-receipt-line-added', `Added ${matchedProduct.name || matchedProduct.sku} to receipt`))
+      return
+    }
+
+    // Product unrecognized
+    lastMismatchedCode.value = rawCode
+    showMismatchModal.value = true
+    notifyError(t('unrecognized-receiving-barcode', `Unrecognized goods receipt barcode: ${rawCode}`))
+    return
+  }
+
+  // 2. If modal is not open, but a receipt is currently expanded in list view
+  if (expandedId.value) {
+    const currentItem = items.value.find(i => i.id === expandedId.value)
+    if (currentItem && !isCompleted(currentItem.status)) {
+      editItem(currentItem)
+      handleBarcodeScan(parsedObj, rawCode)
+      return
+    }
+  }
+
+  // 3. Main view scan: find product and open new receipt
+  const matchedProduct = products.value.find(p => isProductMatch(p))
+  if (matchedProduct) {
+    openAdd()
+    form.value.lines[0].product_id = matchedProduct.id
+    form.value.lines[0].product_name = matchedProduct.name || matchedProduct.sku
+    form.value.lines[0].qty_received = 1
+    if (aiBatch) form.value.lines[0].batch_number = aiBatch
+    if (aiMfg) form.value.lines[0].manufacturing_date = aiMfg
+    if (aiExpiry) form.value.lines[0].expiry_date = aiExpiry
+    notifySuccess(t('scan-new-receipt-started', `Started new receipt with ${matchedProduct.name || matchedProduct.sku}`))
+    return
+  }
+
+  // Code unrecognized
+  lastMismatchedCode.value = rawCode
+  showMismatchModal.value = true
+  notifyError(t('unrecognized-receiving-barcode', `Unrecognized goods receipt barcode: ${rawCode}`))
+}
+
 onMounted(() => {
   load()
 })
@@ -845,6 +1075,40 @@ select.form-input { appearance: auto; }
 
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Quick Barcode Scanner Card */
+.scanner-card { background: #fdfaff; border: 1px dashed #c4b5fd; border-radius: 12px; padding: 14px 18px; }
+.scanner-icon { font-size: 32px; color: #5d3fd3; }
+.scanner-label { display: block; font-size: 11px; font-weight: 700; color: #5d3fd3; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.scanner-input { background: #fff; border-color: #c4b5fd; font-family: monospace; font-size: 13px; }
+
+/* Scanner status badge & pulse */
+.badge-scanner-active { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.status-pulse { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+/* Visual Flash States */
+.scanner-card.flash-success { border-color: #22c55e !important; box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); background: #f0fdf4 !important; transition: all 0.2s ease; }
+.scanner-card.flash-error { border-color: #ef4444 !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); background: #fef2f2 !important; transition: all 0.2s ease; }
+
+/* Mismatch Warning Modal */
+.modal-dialog { background: #fff; border-radius: 12px; width: 90%; max-width: 580px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); overflow: hidden; }
+.modal-title { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0; }
+.modal-close { background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: #1e293b; }
+.modal-dialog-warning { max-width: 480px; }
+.header-danger { background: #fef2f2; border-bottom: 1px solid #fee2e2; }
+.mismatch-icon-wrap { width: 56px; height: 56px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.icon-mismatch { font-size: 32px; }
+.scanned-code-box { background: #f1f5f9; padding: 8px 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: inline-block; font-family: monospace; font-size: 15px; color: #0f172a; }
+.alert-warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; color: #92400e; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-danger-action { background: #dc2626; color: #fff; border: none; }
+.btn-danger-action:hover { background: #b91c1c; }
+
+.flex-1 { flex: 1; }
+.px-3 { padding-left: 12px; padding-right: 12px; }
+.px-4 { padding-left: 16px; padding-right: 16px; }
+.py-6 { padding-top: 24px; padding-bottom: 24px; }
 
 [dir="rtl"] .data-table th, [dir="rtl"] .lines-table th, [dir="rtl"] .lines-editor-table th { text-align: right; }
 [dir="rtl"] .col-num { text-align: left; }
