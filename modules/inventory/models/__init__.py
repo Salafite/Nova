@@ -25,3 +25,7 @@ from modules.inventory.models.stock_transfer import (
     ReplenishmentSuggestionItem, ReplenishmentSuggestionResponse,
     ReplenishmentGenerateItem, ReplenishmentGenerateRequest, ReplenishmentGenerateResponse,
 )
+from modules.inventory.models.predictive_forecast import (
+    ConfidenceInterval, WeeklyDemandProjection, HistoricalSalesAggregation,
+    SeasonalTrendAdjustment, SKUForecastParameters,
+)
