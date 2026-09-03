@@ -601,6 +601,76 @@ class TestFieldSalesMcpTools:
         mock_val.assert_called_once()
 
 
+class TestPodCodTools:
+    def test_capture_proof_of_delivery(self, mock_svc):
+        mock_res = {"id": 1, "status": "Delivered", "recipient_signature": "sig123", "delivery_location": "Dock 4"}
+        sales_mcp._deliveries_svc.capture_pod.return_value = mock_res
+        res = sales_mcp._capture_proof_of_delivery(
+            delivery_id=1,
+            signature="sig123",
+            location="Dock 4",
+        )
+        assert res == mock_res
+        sales_mcp._deliveries_svc.capture_pod.assert_called_once_with(
+            delivery_id=1,
+            signature="sig123",
+            photo_url=None,
+            location="Dock 4",
+            timestamp=None,
+        )
+
+    def test_log_cod_collection(self, mock_svc):
+        mock_res = {"id": 1, "payment_status": "Collected", "cod_cash_amount": 150.0, "cod_check_amount": 50.0}
+        sales_mcp._deliveries_svc.log_cod_collection.return_value = mock_res
+        res = sales_mcp._log_cod_collection(
+            delivery_id=1,
+            cash_amount=150.0,
+            check_amount=50.0,
+            check_number="CHK-99",
+            check_bank="Chase",
+        )
+        assert res == mock_res
+        sales_mcp._deliveries_svc.log_cod_collection.assert_called_once_with(
+            delivery_id=1,
+            cash_amount=150.0,
+            check_amount=50.0,
+            check_number="CHK-99",
+            check_bank="Chase",
+            payment_status=None,
+        )
+
+    def test_get_driver_handover_report(self, mock_svc):
+        mock_report = {
+            "driver_id": 5,
+            "delivery_date": "2026-09-03",
+            "total_deliveries": 3,
+            "total_collected": 200.0,
+            "is_reconciled": False,
+        }
+        sales_mcp._deliveries_svc.get_driver_handover_report.return_value = mock_report
+        res = sales_mcp._get_driver_handover_report(driver_id=5, delivery_date="2026-09-03")
+        assert res == mock_report
+        sales_mcp._deliveries_svc.get_driver_handover_report.assert_called_once_with(
+            driver_id=5,
+            delivery_date="2026-09-03",
+        )
+
+    def test_call_pod_tools_via_registry(self, clear_registry, mock_svc):
+        register_tools()
+        sales_mcp._deliveries_svc.capture_pod.return_value = {"id": 2, "status": "Delivered"}
+        sales_mcp._deliveries_svc.log_cod_collection.return_value = {"id": 2, "payment_status": "Collected"}
+        sales_mcp._deliveries_svc.get_driver_handover_report.return_value = {"driver_id": 5, "total_deliveries": 1}
+
+        res1 = registry.call_tool("capture_proof_of_delivery", {"delivery_id": 2, "signature": "data:image/png;base64,abc"})
+        assert res1 == {"id": 2, "status": "Delivered"}
+
+        res2 = registry.call_tool("log_cod_collection", {"delivery_id": 2, "cash_amount": 100.0})
+        assert res2 == {"id": 2, "payment_status": "Collected"}
+
+        res3 = registry.call_tool("get_driver_handover_report", {"driver_id": 5})
+        assert res3 == {"driver_id": 5, "total_deliveries": 1}
+
+
 class TestRegisterTools:
     def test_registers_all_tools(self, clear_registry):
         register_tools()
@@ -612,7 +682,8 @@ class TestRegisterTools:
                     "get_customer_aging", "list_quotations", "convert_quotation_to_order",
                     "list_deliveries", "list_price_lists", "list_tax_rates",
                     "check_customer_credit", "override_credit_hold",
-                    "get_field_sales_catalog", "sync_offline_orders", "check_offline_order_conflicts"]
+                    "get_field_sales_catalog", "sync_offline_orders", "check_offline_order_conflicts",
+                    "capture_proof_of_delivery", "log_cod_collection", "get_driver_handover_report"]
         for name in expected:
             assert name in tool_names, f"Missing tool: {name}"
         resource_uris = [r.uri for r in list_resources()]

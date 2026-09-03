@@ -16,8 +16,18 @@ _aging_svc = AgingService(customer_repo=_customers_repo)
 _quotations_repo = CrudRepository('T0067', business_columns=['id', 'quote_number', 'customer_id', 'quote_date', 'valid_until', 'subtotal', 'tax', 'grand_total', 'status', 'notes', 'converted_order_id'])
 _quotations_svc = CrudService(_quotations_repo)
 
-_deliveries_repo = CrudRepository('T0016', business_columns=['id', 'delivery_number', 'sales_order_id', 'customer_id', 'delivery_date', 'status', 'notes'])
-_deliveries_svc = CrudService(_deliveries_repo)
+from modules.sales.services.delivery_service import DeliveryService
+
+_deliveries_repo = CrudRepository(
+    'T0077',
+    business_columns=[
+        'id', 'delivery_number', 'sales_order_id', 'customer_id', 'delivery_date',
+        'status', 'notes', 'recipient_signature', 'delivery_photo_url', 'pod_timestamp',
+        'delivery_location', 'payment_status', 'cod_cash_amount', 'cod_check_amount',
+        'cod_check_number', 'cod_check_bank', 'driver_id'
+    ],
+)
+_deliveries_svc = DeliveryService(_deliveries_repo)
 
 _price_lists_repo = CrudRepository('T0083', business_columns=['id', 'name', 'is_active'])
 _price_lists_svc = CrudService(_price_lists_repo)
@@ -278,6 +288,46 @@ def register_tools():
         }),
         _check_offline_order_conflicts,
     )
+    register_tool(
+        Tool(name="capture_proof_of_delivery", description="Capture recipient signature, photo proof, location, and timestamp for a delivery drop-off", input_schema={
+            "type": "object",
+            "properties": {
+                "delivery_id": {"type": "integer", "description": "Delivery ID"},
+                "signature": {"type": "string", "description": "Recipient signature (Base64 string or image data)"},
+                "photo_url": {"type": "string", "description": "Delivery photo proof URL or path"},
+                "location": {"type": "string", "description": "Delivery drop-off location or GPS coordinates"},
+                "timestamp": {"type": "string", "description": "POD timestamp (ISO format YYYY-MM-DDTHH:MM:SS)"},
+            },
+            "required": ["delivery_id"],
+        }),
+        _capture_proof_of_delivery,
+    )
+    register_tool(
+        Tool(name="log_cod_collection", description="Log cash or check collection at delivery time for cash-on-delivery (COD)", input_schema={
+            "type": "object",
+            "properties": {
+                "delivery_id": {"type": "integer", "description": "Delivery ID"},
+                "cash_amount": {"type": "number", "description": "Amount of cash collected"},
+                "check_amount": {"type": "number", "description": "Amount of check collected"},
+                "check_number": {"type": "string", "description": "Check number"},
+                "check_bank": {"type": "string", "description": "Issuing bank for check"},
+                "payment_status": {"type": "string", "description": "Payment status (e.g. Collected, In Transit)"},
+            },
+            "required": ["delivery_id"],
+        }),
+        _log_cod_collection,
+    )
+    register_tool(
+        Tool(name="get_driver_handover_report", description="Get daily driver handover report summarizing cash/check collections and delivery status breakdown for reconciliation", input_schema={
+            "type": "object",
+            "properties": {
+                "driver_id": {"type": "integer", "description": "Driver user ID"},
+                "delivery_date": {"type": "string", "description": "Delivery date for report (YYYY-MM-DD)"},
+            },
+            "required": ["driver_id"],
+        }),
+        _get_driver_handover_report,
+    )
     register_resource(
         Resource(uri="nova://sales/orders", name="All Orders", description="List of all sales orders"),
         _list_orders,
@@ -495,6 +545,47 @@ def _check_offline_order_conflicts(orders: list):
     payload = {"orders": orders}
     result = field_sales_sync_service.validate_batch(payload)
     return result.model_dump() if hasattr(result, "model_dump") else result.dict()
+
+
+def _capture_proof_of_delivery(
+    delivery_id: int,
+    signature: str = None,
+    photo_url: str = None,
+    location: str = None,
+    timestamp: str = None,
+):
+    return _deliveries_svc.capture_pod(
+        delivery_id=delivery_id,
+        signature=signature,
+        photo_url=photo_url,
+        location=location,
+        timestamp=timestamp,
+    )
+
+
+def _log_cod_collection(
+    delivery_id: int,
+    cash_amount: float = 0.0,
+    check_amount: float = 0.0,
+    check_number: str = None,
+    check_bank: str = None,
+    payment_status: str = None,
+):
+    return _deliveries_svc.log_cod_collection(
+        delivery_id=delivery_id,
+        cash_amount=cash_amount,
+        check_amount=check_amount,
+        check_number=check_number,
+        check_bank=check_bank,
+        payment_status=payment_status,
+    )
+
+
+def _get_driver_handover_report(driver_id: int, delivery_date: str = None):
+    return _deliveries_svc.get_driver_handover_report(
+        driver_id=driver_id,
+        delivery_date=delivery_date,
+    )
 
 
 def main():
