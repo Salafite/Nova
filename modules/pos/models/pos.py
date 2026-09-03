@@ -50,6 +50,40 @@ class PosReceiptData(BaseModel):
     grand_total: float = 0.0
     amount_tendered: float = 0.0
     change_due: float = 0.0
-    kick_drawer: bool = False
+    payments: List[PosPaymentSplit] = Field(default_factory=list)
+    cashier_name: Optional[str] = "Cashier"
+    business_name: Optional[str] = "Nova Wholesale Depot"
+
+
+class PosCheckoutResponse(BaseModel):
+    success: bool
+    order_id: int
+    order_number: str
+    subtotal: Optional[float] = 0.0
+    tax: Optional[float] = 0.0
+    grand_total: float
+    amount_tendered: Optional[float] = 0.0
+    change_due: Optional[float] = 0.0
+    payments: Optional[List[PosPaymentSplit]] = Field(default_factory=list)
+    receipt: Optional[PosReceiptData] = None
     message: str
 
+
+class PosCustomerLookup(BaseModel):
+    id: int
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    customer_group: Optional[str] = None
+    credit_limit: Optional[float] = 0.0
+    current_balance: Optional[float] = 0.0
+
+
+class PosBarcodeLookupResponse(BaseModel):
+    product_id: int
+    product_code: str
+    barcode: Optional[str] = None
+    product_name: str
+    unit_price: float
+    uom: Optional[str] = "PCS"
+    stock_qty: float = 0.0
