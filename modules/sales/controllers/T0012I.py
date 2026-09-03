@@ -180,7 +180,7 @@ def record_security_event(action: str, user_id: int = None, details: str = ''):
 
 @router.post('/{id}/override-credit-hold')
 def override_credit_hold_endpoint(id: int, body: dict, current_user: dict = Depends(get_current_user)):
-    allowed_roles = {'Admin', 'Financial Manager', 'Credit Controller'}
+    allowed_roles = {'Admin', 'Financial Manager', 'Credit Controller', 'Operations Manager', 'Accounting Manager'}
     user_role = current_user.get('role', '')
     user_perms = current_user.get('permissions', [])
     if user_role not in allowed_roles and '*' not in user_perms:
@@ -210,7 +210,7 @@ def override_credit_hold_endpoint(id: int, body: dict, current_user: dict = Depe
 
 @router.post('/{id}/reject-credit-hold')
 def reject_credit_hold_endpoint(id: int, body: dict, current_user: dict = Depends(get_current_user)):
-    allowed_roles = {'Admin', 'Financial Manager', 'Credit Controller'}
+    allowed_roles = {'Admin', 'Financial Manager', 'Credit Controller', 'Operations Manager', 'Accounting Manager'}
     user_role = current_user.get('role', '')
     user_perms = current_user.get('permissions', [])
     if user_role not in allowed_roles and '*' not in user_perms:
