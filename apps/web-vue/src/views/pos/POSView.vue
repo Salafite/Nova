@@ -92,6 +92,11 @@
         </div>
       </div>
     </div>
+    <SplitPaymentModal
+      v-model="showPaymentModal"
+      :total="grandTotal"
+      @confirm="processPayment"
+    />
   </div>
 </template>
 
@@ -100,6 +105,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { api } from '../../api/client.js'
 import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
+import SplitPaymentModal from '../../components/pos/SplitPaymentModal.vue'
 
 const { show: toast } = useToast()
 const { dir, t } = useI18n()
@@ -116,6 +122,7 @@ const loading = ref(true)
 const error = ref('')
 const checkingOut = ref(false)
 const totalPop = ref(false)
+const showPaymentModal = ref(false)
 
 const SCANNER_THRESHOLD = 50
 let barcodeBuffer = ''
@@ -299,8 +306,12 @@ watch(grandTotal, () => {
   setTimeout(() => { totalPop.value = false }, 250)
 })
 
-async function checkout() {
+function checkout() {
   if (!cart.value.length) return
+  showPaymentModal.value = true
+}
+
+async function processPayment(paymentDetails) {
   checkingOut.value = true
   try {
     const payload = {
@@ -311,6 +322,8 @@ async function checkout() {
         unit_price: i.price,
       })),
       customer_name: customerName.value || t('pos-walkin', 'Walk-in Customer'),
+      payments: paymentDetails.splits,
+      amount_tendered: paymentDetails.amount_tendered
     }
     const res = await api.post('/pos/checkout', payload)
     const data = res.data
