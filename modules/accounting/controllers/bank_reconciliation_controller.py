@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from modules.accounting.services.bank_statement_parser import BankStatementParser
 from modules.accounting.services.check_matching_service import CheckMatchingService
 from modules.accounting.services.check_clearing_service import CheckClearingService
+from modules.accounting.services.bounced_check_service import BouncedCheckService
 from modules.accounting.models.check_clearing import (
     BANK_STATEMENT_REPO,
     STATEMENT_TRANSACTION_REPO,
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/api/bank-reconciliation", tags=["Bank Statement Reco
 
 matching_service = CheckMatchingService()
 clearing_service = CheckClearingService()
+bounced_service = BouncedCheckService()
 
 
 class StatementUploadRequest(BaseModel):
