@@ -33,6 +33,8 @@ const ROUTE_PERMISSIONS = {
   sales: 'sales',
   'sales-detail': 'sales',
   'field-sales': 'FIELD_SALES_MOBILE',
+  'driver-pod': 'sales',
+
   'sales-quotations': 'sales',
   'sales-quotation-detail': 'sales',
   'sales-deliveries': 'sales',
@@ -131,6 +133,9 @@ const routes = [
       { path: 'sales/:id', name: 'sales-detail', meta: { requiresAuth: true }, component: () => import('../views/sales/OrderDetailView.vue') },
       { path: 'mobile/field-sales', name: 'field-sales', meta: { requiresAuth: true }, component: () => import('../views/mobile/FieldSalesMobileView.vue') },
       { path: 'field-sales', redirect: { name: 'field-sales' } },
+      { path: 'mobile/driver-pod', name: 'driver-pod', meta: { requiresAuth: true }, component: () => import('../views/mobile/DriverPodView.vue') },
+      { path: 'driver-pod', redirect: { name: 'driver-pod' } },
+
       { path: 'sales/quotations', name: 'sales-quotations', meta: { requiresAuth: true }, component: () => import('../views/sales/QuotationsView.vue') },
       { path: 'sales/quotations/:id', name: 'sales-quotation-detail', meta: { requiresAuth: true }, component: () => import('../views/sales/QuotationDetailView.vue') },
       { path: 'sales/deliveries', name: 'sales-deliveries', meta: { requiresAuth: true }, component: () => import('../views/sales/DeliveriesView.vue') },
