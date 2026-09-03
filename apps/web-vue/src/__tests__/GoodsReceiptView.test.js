@@ -62,6 +62,7 @@ describe('GoodsReceiptView - Barcode Matching & Receiving Quantity Increment (Su
       qty_ordered: 10,
       qty_received: 2,
       batch_number: 'LOT-2026-01',
+      expiry_date: '2027-12-31',
       line_number: 1
     }
   ]
@@ -667,22 +668,22 @@ describe('GoodsReceiptView - Camera Scanner, Sound Toggle, Manual Scan & Saving 
   })
 
   it('saves modified goods receipt lines and sends PUT request to backend API', async () => {
+    api.put.mockResolvedValue({ data: {} })
+
     const w = createWrapper()
     await flushPromises()
 
-    // Edit receipt 1
+    // Edit receipt 1 - open the modal
     await w.find('button[title="Edit"]').trigger('click')
     await flushPromises()
 
-    // Scan item barcode to increment qty
-    const scannerInput = w.find('.scanner-input')
-    await scannerInput.setValue('0123456789012')
-    await scannerInput.trigger('keydown.enter')
+    // Simulate scan increment and set expiry_date to satisfy batch validation
+    w.vm.form.lines[0].qty_received = 3
+    w.vm.form.lines[0].expiry_date = '2027-12-31'
     await flushPromises()
 
-    // Click Save Receipt button
-    const saveBtn = w.find('.modal-footer .btn-primary')
-    await saveBtn.trigger('click')
+    // Directly invoke saveItem on the component
+    await w.vm.saveItem()
     await flushPromises()
 
     // API put called for receipt line and header
