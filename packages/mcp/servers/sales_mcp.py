@@ -28,7 +28,9 @@ _tax_rates_svc = CrudService(_tax_rates_repo)
 _lines_repo = LINE_REPO
 _lines_svc = CrudService(_lines_repo)
 
+from datetime import date
 from modules.sales.services.credit_service import CreditService
+from modules.sales.services.delivery_route_service import delivery_route_service as _delivery_route_svc
 _credit_svc = CreditService(customer_repo=_customers_repo)
 
 

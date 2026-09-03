@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin, TenantMixin
 
 
-class StockTransferLineCreate(BaseModel):
+class StockTransferLineCreate(TenantMixin):
     transfer_id: Optional[int] = None
     product_id: int
     qty_requested: float = Field(..., gt=0, description="Quantity requested for transfer")
@@ -21,10 +21,9 @@ class StockTransferLineCreate(BaseModel):
     line_number: int = Field(default=1, ge=1, description="Line number sequence")
     notes: Optional[str] = None
     is_active: bool = True
-    business_id: Optional[int] = None
 
 
-class StockTransferLineUpdate(BaseModel):
+class StockTransferLineUpdate(TenantMixin):
     transfer_id: Optional[int] = None
     product_id: Optional[int] = None
     qty_requested: Optional[float] = Field(None, gt=0)
@@ -38,7 +37,6 @@ class StockTransferLineUpdate(BaseModel):
     line_number: Optional[int] = Field(None, ge=1)
     notes: Optional[str] = None
     is_active: Optional[bool] = None
-    business_id: Optional[int] = None
 
 
 class StockTransferLineResponse(AuditMixin):
@@ -61,7 +59,7 @@ class StockTransferLineResponse(AuditMixin):
     is_active: bool = True
 
 
-class StockTransferCreate(BaseModel):
+class StockTransferCreate(TenantMixin):
     transfer_number: Optional[str] = Field(None, max_length=50, description="Transfer number (auto-generated if omitted)")
     source_warehouse_id: int = Field(..., description="Source origin warehouse ID")
     destination_warehouse_id: int = Field(..., description="Destination receiving warehouse ID")
@@ -76,11 +74,10 @@ class StockTransferCreate(BaseModel):
     received_by: Optional[int] = None
     notes: Optional[str] = None
     is_active: bool = True
-    business_id: Optional[int] = None
     lines: Optional[List[StockTransferLineCreate]] = Field(default=None, description="Transfer line items")
 
 
-class StockTransferUpdate(BaseModel):
+class StockTransferUpdate(TenantMixin):
     transfer_number: Optional[str] = Field(None, max_length=50)
     source_warehouse_id: Optional[int] = None
     destination_warehouse_id: Optional[int] = None
@@ -95,7 +92,6 @@ class StockTransferUpdate(BaseModel):
     received_by: Optional[int] = None
     notes: Optional[str] = None
     is_active: Optional[bool] = None
-    business_id: Optional[int] = None
     lines: Optional[List[StockTransferLineCreate]] = None
 
 

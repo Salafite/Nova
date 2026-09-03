@@ -163,3 +163,55 @@ class TestPurchasingMcp:
             assert confirmed["purchase_order"]["order_number"] == "PO-003"
             assert confirmed["purchase_order"]["status"] == "Pending"
 
+    def test_calculate_restock_forecast_grouped_by_supplier(self):
+        mock_group = [{
+            "supplier_id": 2,
+            "supplier_name": "Supplier 2",
+            "total_items": 2,
+            "total_qty": 70.0,
+            "total_estimated_cost": 210.0,
+            "items": [MOCK_FORECAST],
+        }]
+        with _patch("_forecast_svc"):
+            purchasing_mcp._forecast_svc.get_aggregated_supplier_draft_pos.return_value = mock_group
+            result = purchasing_mcp._calculate_restock_forecast(group_by_supplier=True)
+            assert len(result) == 1
+            assert result[0]["supplier_id"] == 2
+            purchasing_mcp._forecast_svc.get_aggregated_supplier_draft_pos.assert_called_once()
+
+    def test_propose_draft_purchase_order_by_supplier_id(self):
+        mock_group = [{
+            "supplier_id": 5,
+            "supplier_name": "Supplier 5",
+            "lead_time_days": 7,
+            "expected_date": "2026-09-10",
+            "po_notes": "Consolidated draft PO",
+            "items": [
+                {
+                    "product_id": 101,
+                    "product_name": "Product A",
+                    "suggested_order_qty": 50.0,
+                    "unit_cost": 4.0,
+                }
+            ]
+        }]
+        with _patch("_forecast_svc"), _patch("_po_svc"), _patch("_po_repo"), _patch("_po_line_repo"):
+            purchasing_mcp._forecast_svc.get_aggregated_supplier_draft_pos.return_value = mock_group
+            purchasing_mcp._po_repo.list.return_value = []
+            purchasing_mcp._po_svc.create.return_value = {
+                "id": 40,
+                "order_number": "PO-004",
+                "supplier_id": 5,
+                "total": 200.0,
+                "status": "Pending",
+            }
+            purchasing_mcp._po_line_repo.create.side_effect = lambda line: {"id": 1, **line}
+
+            result = purchasing_mcp._propose_draft_purchase_order(supplier_id=5)
+
+            assert result["purchase_order"]["order_number"] == "PO-004"
+            assert result["purchase_order"]["supplier_id"] == 5
+            assert len(result["lines"]) == 1
+            assert result["lines"][0]["line_total"] == 200.0
+
+

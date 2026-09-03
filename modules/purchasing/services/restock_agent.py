@@ -54,8 +54,17 @@ class RestockAgentService:
             conn=conn,
         )
 
-        # 2. Filter down to restock recommendations
+        # 2. Filter down to restock recommendations and aggregate draft PO queue by primary supplier
         recommendations = [f for f in all_forecasts if f.get('needs_restock')]
+        supplier_draft_pos = self.forecast_service.get_aggregated_supplier_draft_pos(
+            warehouse_id=warehouse_id,
+            days=days,
+            safety_margin_days=safety_margin_days,
+            target_coverage_days=target_coverage_days,
+            only_at_risk=True,
+            reference_date=reference_date,
+            conn=conn,
+        )
 
         total_skus_evaluated = len(all_forecasts)
         at_risk_count = len(recommendations)
@@ -116,6 +125,7 @@ class RestockAgentService:
             'total_suggested_qty': total_suggested_qty,
             'total_estimated_spend': total_estimated_spend,
             'recommendations': recommendations,
+            'supplier_draft_pos': supplier_draft_pos,
             'digest_title': digest_title,
             'digest_message': digest_message,
             'notifications_sent': len(notifications_sent),
@@ -137,6 +147,27 @@ class RestockAgentService:
             safety_margin_days=safety_margin_days,
             target_coverage_days=target_coverage_days,
             only_at_risk=only_at_risk,
+            conn=conn,
+        )
+
+    def get_supplier_draft_po_queue(
+        self,
+        warehouse_id: Optional[int] = None,
+        days: int = DEFAULT_LOOKBACK_DAYS,
+        safety_margin_days: int = DEFAULT_SAFETY_MARGIN_DAYS,
+        target_coverage_days: int = DEFAULT_TARGET_COVERAGE_DAYS,
+        only_at_risk: bool = True,
+        reference_date: Optional[date] = None,
+        conn=None,
+    ) -> List[Dict[str, Any]]:
+        """Retrieve aggregated draft PO suggestions grouped by primary supplier."""
+        return self.forecast_service.get_aggregated_supplier_draft_pos(
+            warehouse_id=warehouse_id,
+            days=days,
+            safety_margin_days=safety_margin_days,
+            target_coverage_days=target_coverage_days,
+            only_at_risk=only_at_risk,
+            reference_date=reference_date,
             conn=conn,
         )
 

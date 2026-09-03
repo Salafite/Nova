@@ -17,6 +17,7 @@ class ExecutiveAnalyticsFilter(BaseModel):
     brand: Optional[str] = None
     sales_rep_id: Optional[int] = None
     customer_id: Optional[int] = None
+    customer_tier: Optional[str] = None
     warehouse_id: Optional[int] = None
     delivery_route: Optional[str] = None
     quadrant: Optional[str] = None
@@ -39,6 +40,8 @@ class ExecutiveMarginSummary(BaseModel):
     freight_cost: float = 0.0
     gross_profit: float = 0.0
     gross_margin_pct: float = 0.0
+    contribution_margin: float = 0.0
+    contribution_margin_pct: float = 0.0
     total_orders: int = 0
     total_customers: int = 0
     average_order_value: float = 0.0
@@ -63,6 +66,8 @@ class CategoryMarginItem(BaseModel):
     freight_cost: float = 0.0
     gross_profit: float = 0.0
     gross_margin_pct: float = 0.0
+    contribution_margin: float = 0.0
+    contribution_margin_pct: float = 0.0
     revenue_share_pct: float = 0.0
     units_sold: float = 0.0
     order_count: int = 0
@@ -96,6 +101,8 @@ class SkuMarginItem(BaseModel):
     freight_cost: float = 0.0
     gross_profit: float = 0.0
     gross_margin_pct: float = 0.0
+    contribution_margin: float = 0.0
+    contribution_margin_pct: float = 0.0
     is_low_margin: bool = False
 
 
@@ -106,6 +113,61 @@ class SkuMarginResponse(BaseModel):
     total_skus: int = 0
     low_margin_sku_count: int = 0
     items: List[SkuMarginItem] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Sales Rep Minimum Acceptable Price Boundaries
+# ---------------------------------------------------------------------------
+
+class MinimumPriceBoundaryItem(BaseModel):
+    product_id: int
+    sku_code: Optional[str] = None
+    product_name: str
+    category_name: Optional[str] = None
+    brand_name: Optional[str] = None
+    units_sold: float = 0.0
+    unit_cost: float = 0.0
+    unit_freight: float = 0.0
+    total_unit_cost: float = 0.0
+    target_margin_pct: float = 20.0
+    min_acceptable_price: float = 0.0
+    avg_selling_price: float = 0.0
+    current_margin_pct: float = 0.0
+    is_below_minimum: bool = False
+    price_headroom: float = 0.0
+    status: str = 'Pass'  # 'Pass', 'Warning', 'Violation'
+
+
+class MinimumPriceBoundaryResponse(BaseModel):
+    period: str = 'Monthly'
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+    target_margin_pct: float = 20.0
+    total_skus: int = 0
+    below_minimum_count: int = 0
+    items: List[MinimumPriceBoundaryItem] = Field(default_factory=list)
+
+
+class PriceThresholdValidationRequest(BaseModel):
+    product_id: int
+    proposed_unit_price: float
+    target_margin_pct: float = 20.0
+    customer_id: Optional[int] = None
+    sales_rep_id: Optional[int] = None
+
+
+class PriceThresholdValidationResponse(BaseModel):
+    product_id: int
+    sku_code: Optional[str] = None
+    product_name: str
+    unit_cost: float = 0.0
+    proposed_unit_price: float = 0.0
+    target_margin_pct: float = 20.0
+    min_acceptable_price: float = 0.0
+    projected_margin_pct: float = 0.0
+    is_approved: bool = True
+    margin_deficit_pct: float = 0.0
+    message: str
 
 
 class PeriodMarginTrendItem(BaseModel):
@@ -280,3 +342,61 @@ class ExecutiveExportResponse(BaseModel):
     content_type: str
     file_size_bytes: int = 0
     download_url: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Route Margin Breakdown & Price Boundary Validation Models
+# ---------------------------------------------------------------------------
+
+class RouteMarginItem(BaseModel):
+    delivery_route: str
+    warehouse_id: Optional[int] = None
+    warehouse_name: Optional[str] = None
+    order_count: int = 0
+    units_sold: float = 0.0
+    gross_sales: float = 0.0
+    discount_amount: float = 0.0
+    net_revenue: float = 0.0
+    cogs: float = 0.0
+    freight_cost: float = 0.0
+    gross_profit: float = 0.0
+    gross_margin_pct: float = 0.0
+    contribution_margin: float = 0.0
+    contribution_margin_pct: float = 0.0
+    is_low_margin: bool = False
+    status: str = 'Healthy'
+
+
+class RouteMarginResponse(BaseModel):
+    period: str = 'Monthly'
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+    total_routes: int = 0
+    low_margin_route_count: int = 0
+    items: List[RouteMarginItem] = Field(default_factory=list)
+
+
+class MinAcceptablePriceCheckRequest(BaseModel):
+    product_id: int
+    unit_price: float
+    target_margin_pct: float = 20.0
+    customer_tier: Optional[str] = None
+    freight_cost_per_unit: float = 0.0
+
+
+class MinAcceptablePriceCheckResponse(BaseModel):
+    product_id: int
+    sku_code: Optional[str] = None
+    product_name: str
+    cost_price: float = 0.0
+    unit_price: float = 0.0
+    freight_cost_per_unit: float = 0.0
+    net_realized_price: float = 0.0
+    effective_margin_pct: float = 0.0
+    min_acceptable_price: float = 0.0
+    target_margin_pct: float = 20.0
+    is_above_min_price: bool = True
+    margin_shortfall_pct: float = 0.0
+    status: str = 'Pass'
+    recommendation: str = ''
+
