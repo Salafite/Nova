@@ -29,3 +29,7 @@ from modules.inventory.models.predictive_forecast import (
     ConfidenceInterval, WeeklyDemandProjection, HistoricalSalesAggregation,
     SeasonalTrendAdjustment, SKUForecastParameters,
 )
+from modules.inventory.models.spoilage_prevention import (
+    BatchShelfLifeMetrics, SpoilageRiskAlert, BatchDiscountPromotionProposal,
+    SpoilageRiskSummaryResponse,
+)
