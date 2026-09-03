@@ -69,6 +69,20 @@ class TestGoodsReceiptBatchCapture:
         self.service.batch_repo.create.assert_not_called()
         self.service.batch_repo.update.assert_not_called()
 
+    def test_goods_receipt_missing_expiry_date_validation(self):
+        self.mock_repo.create.return_value = {'id': 10, 'warehouse_id': 2, 'status': 'Completed'}
+        self.mock_repo.get.return_value = {'id': 10, 'warehouse_id': 2, 'status': 'Draft'}
+        self.service.line_repo.list.return_value = [
+            {
+                'id': 1, 'receipt_id': 10, 'product_id': 101, 'product_name': 'Organic Milk 1L',
+                'batch_number': 'LOT-NO-EXP', 'manufacturing_date': '2026-01-10', 'expiry_date': None,
+                'qty_received': 50.0
+            }
+        ]
+        with pytest.raises(ValueError) as exc_info:
+            self.service.update(10, {'status': 'Completed'})
+        assert "Expiration date is required for batch 'LOT-NO-EXP'" in str(exc_info.value)
+
 
 class TestFEFOAllocation:
     def setup_method(self):
@@ -689,6 +703,32 @@ class TestBatchRecallReport:
             self.service.get_recall_report(batch_number='NONEXISTENT-LOT')
         assert "Batch 'NONEXISTENT-LOT' not found" in str(exc_info.value)
 
+    def test_get_recall_report_by_batch_number(self):
+        self.mock_repo.list.return_value = [{
+            'id': 1,
+            'batch_number': 'LOT-RECALL-02',
+            'product_id': 100,
+            'expiry_date': '2026-10-31',
+            'manufacturing_date': '2026-01-01',
+            'quantity': 50.0,
+            'warehouse_id': 1,
+            'status': 'Available'
+        }]
+        self.mock_product_repo.get.return_value = {
+            'id': 100,
+            'name': 'Organic Milk 1L',
+            'sku': 'MILK-001',
+            'category': 'Dairy'
+        }
+        self.mock_grn_line_repo.list.return_value = []
+        self.mock_pli_repo.list.return_value = []
+
+        report = self.service.get_recall_report(batch_number='LOT-RECALL-02')
+        assert report['batch']['batch_number'] == 'LOT-RECALL-02'
+        assert report['batch']['product_name'] == 'Organic Milk 1L'
+        assert report['batch']['quantity'] == 50.0
+
+
 
 class TestBatchRecallControllerEndpoints:
     def test_get_recall_report_endpoint(self, monkeypatch):
@@ -743,6 +783,270 @@ class TestBatchRecallControllerEndpoints:
             T0088I.get_batch_trace(id=999)
         assert exc_info.value.status_code == 404
         assert 'Batch with ID 999 not found' in exc_info.value.detail
+
+
+class TestDatabaseSchemaSupport:
+    def test_goods_receipt_line_schema_batch_fields(self):
+        from modules.warehouse.models.warehouse import (
+            GoodsReceiptLineCreate,
+            GoodsReceiptLineUpdate,
+            GoodsReceiptLineResponse
+        )
+        from datetime import date
+
+        create_model = GoodsReceiptLineCreate(
+            receipt_id=1,
+            product_name='Test Product',
+            qty_received=10.0,
+            batch_number='LOT-123',
+            manufacturing_date=date(2026, 1, 1),
+            expiry_date=date(2026, 12, 31)
+        )
+        assert create_model.batch_number == 'LOT-123'
+        assert create_model.manufacturing_date == date(2026, 1, 1)
+        assert create_model.expiry_date == date(2026, 12, 31)
+
+        update_model = GoodsReceiptLineUpdate(
+            batch_number='LOT-456',
+            manufacturing_date=date(2026, 2, 1),
+            expiry_date=date(2027, 1, 1)
+        )
+        assert update_model.batch_number == 'LOT-456'
+
+        response_model = GoodsReceiptLineResponse(
+            id=1,
+            receipt_id=1,
+            product_name='Test Product',
+            qty_received=10.0,
+            qty_ordered=10.0,
+            line_number=1,
+            batch_number='LOT-123',
+            manufacturing_date=date(2026, 1, 1),
+            expiry_date=date(2026, 12, 31)
+        )
+        assert response_model.batch_number == 'LOT-123'
+        assert response_model.expiry_date == date(2026, 12, 31)
+
+    def test_batch_number_schema_fields(self):
+        from modules.warehouse.models.serial_batch import (
+            BatchNumberCreate,
+            BatchNumberUpdate,
+            BatchNumberResponse
+        )
+        from datetime import date
+
+        batch_create = BatchNumberCreate(
+            product_id=10,
+            batch_number='BATCH-789',
+            manufacturing_date=date(2026, 1, 1),
+            expiry_date=date(2026, 12, 31),
+            quantity=100.0,
+            warehouse_id=2,
+            status='Available'
+        )
+        assert batch_create.batch_number == 'BATCH-789'
+        assert batch_create.expiry_date == date(2026, 12, 31)
+
+        batch_update = BatchNumberUpdate(
+            quantity=50.0,
+            status='Partially Used'
+        )
+        assert batch_update.quantity == 50.0
+
+        batch_response = BatchNumberResponse(
+            id=100,
+            product_id=10,
+            batch_number='BATCH-789',
+            manufacturing_date=date(2026, 1, 1),
+            expiry_date=date(2026, 12, 31),
+            quantity=100.0,
+            warehouse_id=2,
+            status='Available'
+        )
+        assert batch_response.id == 100
+        assert batch_response.batch_number == 'BATCH-789'
+
+
+class TestEndToEndFEFOWorkflow:
+    """End-to-end workflow verification across inbound check-in, FEFO order reservation,
+    picking completion, and recall trace execution."""
+
+    def test_full_fefo_lifecycle(self):
+        batch_repo = MagicMock()
+        grn_repo = MagicMock()
+        grn_line_repo = MagicMock()
+        po_repo = MagicMock()
+        supplier_repo = MagicMock()
+        pl_repo = MagicMock()
+        pli_repo = MagicMock()
+        order_repo = MagicMock()
+        line_repo = MagicMock()
+        customer_repo = MagicMock()
+        invoice_repo = MagicMock()
+        product_repo = MagicMock()
+        wh_repo = MagicMock()
+
+        batch_service = BatchNumberService(
+            repo=batch_repo,
+            grn_line_repo=grn_line_repo,
+            grn_repo=grn_repo,
+            po_repo=po_repo,
+            supplier_repo=supplier_repo,
+            pli_repo=pli_repo,
+            pl_repo=pl_repo,
+            order_repo=order_repo,
+            customer_repo=customer_repo,
+            invoice_repo=invoice_repo,
+            product_repo=product_repo,
+            wh_repo=wh_repo
+        )
+
+        from modules.warehouse.services.goods_receipt_service import GoodsReceiptService
+        from modules.warehouse.services.pick_list_service import PickListService
+
+        grn_service = GoodsReceiptService(grn_repo)
+        grn_service.line_repo = grn_line_repo
+        grn_service.batch_repo = batch_repo
+
+        pick_service = PickListService(
+            pl_repo=pl_repo,
+            pli_repo=pli_repo,
+            batch_service=batch_service,
+            order_repo=order_repo,
+            line_repo=line_repo,
+            wh_repo=wh_repo
+        )
+
+        # Step 1: Inbound Check-In - Goods Receipt registers batch
+        grn_repo.get.return_value = {'id': 100, 'warehouse_id': 1, 'status': 'Completed'}
+        grn_line_repo.list.return_value = [
+            {
+                'id': 1, 'receipt_id': 100, 'product_id': 500, 'product_name': 'Organic Cheese 250g',
+                'batch_number': 'LOT-CHEESE-EARLY', 'manufacturing_date': '2026-01-01', 'expiry_date': '2026-06-01',
+                'qty_received': 10.0
+            }
+        ]
+        batch_repo.list.return_value = []
+
+        grn_service._register_batches(100)
+
+        batch_repo.create.assert_called_once_with({
+            'product_id': 500,
+            'batch_number': 'LOT-CHEESE-EARLY',
+            'manufacturing_date': '2026-01-01',
+            'expiry_date': '2026-06-01',
+            'quantity': 10.0,
+            'warehouse_id': 1,
+            'status': 'Available'
+        })
+
+        # Step 2: FEFO Order Reservation with split lots
+        batches_in_db = [
+            {
+                'id': 1, 'product_id': 500, 'batch_number': 'LOT-CHEESE-EARLY',
+                'expiry_date': '2026-06-01', 'quantity': 10.0, 'warehouse_id': 1, 'status': 'Available'
+            },
+            {
+                'id': 2, 'product_id': 500, 'batch_number': 'LOT-CHEESE-LATE',
+                'expiry_date': '2026-09-01', 'quantity': 20.0, 'warehouse_id': 1, 'status': 'Available'
+            }
+        ]
+        batch_repo.list.return_value = batches_in_db
+
+        allocations = batch_service.allocate_fefo_lots(product_id=500, warehouse_id=1, qty_needed=15.0)
+
+        assert len(allocations) == 2
+        assert allocations[0]['batch_number'] == 'LOT-CHEESE-EARLY'
+        assert allocations[0]['quantity'] == 10.0
+        assert allocations[1]['batch_number'] == 'LOT-CHEESE-LATE'
+        assert allocations[1]['quantity'] == 5.0
+
+        # Step 3: Pick List Generation & Picking Completion
+        order_repo.get.return_value = {'id': 200, 'order_number': 'SO-200', 'warehouse_id': 1, 'customer_id': 10}
+        line_repo.list.return_value = [
+            {'id': 1, 'sales_order_id': 200, 'product_id': 500, 'product_name': 'Organic Cheese 250g', 'qty': 15.0, 'line_number': 1}
+        ]
+        pl_repo.list.return_value = []
+        pl_repo.create.return_value = {'id': 300, 'pick_list_number': 'PL-300', 'sales_order_id': 200, 'warehouse_id': 1, 'status': 'Pending'}
+        pl_repo.get.return_value = {'id': 300, 'sales_order_id': 200, 'warehouse_id': 1, 'status': 'In Progress'}
+
+        created_pli = []
+        def mock_pli_create(payload):
+            item = dict(payload, id=len(created_pli) + 1)
+            created_pli.append(item)
+            return item
+        pli_repo.create.side_effect = mock_pli_create
+        pli_repo.list.return_value = created_pli
+
+        with patch('modules.warehouse.services.pick_list_service.generate_pick_list_number', return_value='PKL-00300'):
+            pick_service.create_from_order(200, warehouse_id=1)
+
+        assert len(created_pli) == 2
+        assert created_pli[0]['batch_number'] == 'LOT-CHEESE-EARLY'
+        assert created_pli[0]['qty_ordered'] == 10.0
+        assert created_pli[1]['batch_number'] == 'LOT-CHEESE-LATE'
+        assert created_pli[1]['qty_ordered'] == 5.0
+
+        # Simulate picker marking items as picked
+        def mock_pli_get(item_id, **kwargs):
+            return next((i for i in created_pli if i['id'] == item_id), None)
+        pli_repo.get.side_effect = mock_pli_get
+
+        def mock_pli_update(item_id, payload, **kwargs):
+            item = next((i for i in created_pli if i['id'] == item_id), None)
+            if item:
+                item.update(payload)
+            return item
+        pli_repo.update.side_effect = mock_pli_update
+
+        def mock_batch_get(batch_id, **kwargs):
+            return next((b for b in batches_in_db if b['id'] == batch_id), None)
+        batch_repo.get.side_effect = mock_batch_get
+        batch_repo.get_for_update.side_effect = mock_batch_get
+
+        pick_service.pick_item(item_id=1, qty_picked=10.0, pick_list_id=300)
+        pick_service.pick_item(item_id=2, qty_picked=5.0, pick_list_id=300)
+
+        pick_service.complete_picking(300)
+
+        assert order_repo.update.call_count == 1
+        assert order_repo.update.call_args[0] == (200, {'status': 'Shipped'})
+
+        # Step 4: Supplier Recall Trace Execution
+        batch_repo.get.return_value = {
+            'id': 1, 'batch_number': 'LOT-CHEESE-EARLY', 'product_id': 500,
+            'expiry_date': '2026-06-01', 'manufacturing_date': '2026-01-01',
+            'quantity': 0.0, 'warehouse_id': 1, 'status': 'Depleted'
+        }
+        product_repo.get.return_value = {'id': 500, 'name': 'Organic Cheese 250g', 'sku': 'CHEESE-001', 'category': 'Dairy'}
+        wh_repo.get.return_value = {'id': 1, 'name': 'Main Warehouse'}
+        grn_line_repo.list.return_value = [
+            {'id': 1, 'receipt_id': 100, 'product_id': 500, 'batch_number': 'LOT-CHEESE-EARLY', 'qty_received': 10.0}
+        ]
+        grn_repo.get.return_value = {'id': 100, 'receipt_number': 'GRN-100', 'purchase_order_id': 50, 'receipt_date': '2026-01-02'}
+        po_repo.get.return_value = {'id': 50, 'order_number': 'PO-050', 'supplier_id': 5}
+        supplier_repo.get.return_value = {'id': 5, 'name': 'Cheese Producer Co', 'email': 'supplier@cheeseco.com', 'phone': '555-0199'}
+
+        pli_repo.list.side_effect = lambda filters=None: [
+            {'id': 1, 'pick_list_id': 300, 'product_id': 500, 'qty_ordered': 10.0, 'qty_picked': 10.0, 'batch_id': 1, 'batch_number': 'LOT-CHEESE-EARLY'}
+        ]
+        pl_repo.get.return_value = {'id': 300, 'pick_list_number': 'PL-300', 'sales_order_id': 200, 'warehouse_id': 1, 'status': 'Completed'}
+        order_repo.get.return_value = {'id': 200, 'order_number': 'SO-200', 'customer_id': 10, 'order_date': '2026-01-15', 'status': 'Shipped'}
+        customer_repo.get.return_value = {'id': 10, 'name': 'Gourmet Market', 'email': 'purchasing@gourmet.com', 'phone': '555-4321'}
+        invoice_repo.list.return_value = [{'id': 70, 'invoice_number': 'INV-070', 'status': 'Paid'}]
+
+        report = batch_service.get_recall_report(batch_id=1)
+
+        assert report['batch']['batch_number'] == 'LOT-CHEESE-EARLY'
+        assert len(report['inbound_trace']) == 1
+        assert report['inbound_trace'][0]['supplier_name'] == 'Cheese Producer Co'
+        assert len(report['outbound_trace']) == 1
+        assert report['outbound_trace'][0]['customer_name'] == 'Gourmet Market'
+        assert report['outbound_trace'][0]['sales_order_number'] == 'SO-200'
+        assert report['summary']['total_affected_customers'] == 1
+        assert report['summary']['total_affected_orders'] == 1
+
+
 
 
 

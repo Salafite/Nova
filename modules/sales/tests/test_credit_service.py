@@ -380,3 +380,37 @@ def test_get_overdue_invoices_skips_invalid_dates_and_statuses():
     overdue = service.get_overdue_invoices(customer_id=60, as_of_date=date(2026, 8, 25))
     assert len(overdue) == 0
 
+
+def test_get_aging_breakdown_and_60_plus_metrics():
+    mock_cust_repo = MagicMock()
+    mock_inv_repo = MagicMock()
+    mock_order_repo = MagicMock()
+
+    service = CreditService(
+        customer_repo=mock_cust_repo,
+        invoice_repo=mock_inv_repo,
+        order_repo=mock_order_repo,
+    )
+
+    ref_date = date(2026, 8, 25)
+    mock_inv_repo.list.return_value = [
+        {"id": 1, "partner_id": 70, "due_date": "2026-08-30", "total_amount": 1000.0, "status": "Issued"}, # Current
+        {"id": 2, "partner_id": 70, "due_date": "2026-08-10", "total_amount": 500.0, "status": "Issued"},  # 15 days overdue
+        {"id": 3, "partner_id": 70, "due_date": "2026-07-10", "total_amount": 750.0, "status": "Issued"},  # 46 days overdue (>30)
+        {"id": 4, "partner_id": 70, "due_date": "2026-06-10", "total_amount": 1200.0, "status": "Issued"}, # 76 days overdue (>60)
+        {"id": 5, "partner_id": 70, "due_date": "2026-04-10", "total_amount": 2000.0, "status": "Issued"}, # 137 days overdue (>90)
+    ]
+
+    aging = service.get_aging_breakdown(customer_id=70, as_of_date=ref_date)
+    assert aging["current"] == 1000.0
+    assert aging["overdue_1_30"] == 500.0
+    assert aging["overdue_31_60"] == 750.0
+    assert aging["overdue_61_90"] == 1200.0
+    assert aging["overdue_90_plus"] == 2000.0
+    assert aging["total_overdue"] == 4450.0
+    assert aging["overdue_30_plus_count"] == 3
+    assert aging["overdue_30_plus_amount"] == 3950.0
+    assert aging["overdue_60_plus_count"] == 2
+    assert aging["overdue_60_plus_amount"] == 3200.0
+
+

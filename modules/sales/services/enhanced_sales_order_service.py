@@ -60,7 +60,15 @@ class EnhancedSalesOrderService(CrudService):
             ],
         )
         self.inv_repo = inv_repo
-        self.credit_service = credit_service
+        if credit_service is not None:
+            self.credit_service = credit_service
+        else:
+            from modules.sales.services.credit_service import CreditService
+            self.credit_service = CreditService(
+                customer_repo=self.customer_repo,
+                invoice_repo=self.inv_repo,
+                order_repo=self.repo,
+            )
         self.notification_service = notification_service
 
     def _dispatch_ws_broadcast(self, **kwargs):
