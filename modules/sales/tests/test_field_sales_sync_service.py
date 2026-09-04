@@ -653,3 +653,47 @@ def test_get_suggested_substitutes():
     assert subs[1]["name"] == "Soy Milk 1L"
     assert subs[1]["available_qty"] == 8.0
 
+
+def test_conflict_detection_base_catalog_price_shift():
+    """Verify conflict detection when base catalog price in t0003 shifted while offline and price_list_id is None."""
+    service = FieldSalesSyncService(schema="Nova")
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    # 1. Customer check -> active
+    # 2. Product check -> active, current catalog price 15.00 (order captured at 12.00)
+    # 3. Stock check -> 50.0
+    mock_cursor.fetchone.side_effect = [
+        {"id": 1, "name": "Regular Customer", "is_active": True, "credit_limit": Decimal("5000"), "balance": Decimal("0")},
+        {"id": 77, "name": "Olive Oil 1L", "sku": "OIL-01", "price": Decimal("15.00"), "category": "Pantry", "is_active": True},
+        {"qty": Decimal("50.0")},
+    ]
+
+    order_sub = FieldSalesOrderSubmission(
+        client_order_uuid="uuid-base-price-shift",
+        customer_id=1,
+        warehouse_id=1,
+        price_list_id=None,
+        lines=[
+            FieldSalesOrderLine(
+                line_number=1,
+                product_id=77,
+                product_name="Olive Oil 1L",
+                qty=5.0,
+                unit_price=12.00,  # Differs from current base catalog price 15.00
+                line_total=60.00,
+            )
+        ],
+    )
+
+    conflicts = service.check_order_conflicts(order_sub, conn=mock_conn)
+    assert len(conflicts) == 1
+    c = conflicts[0]
+    assert c.conflict_type == ConflictType.PRICE_MISMATCH.value
+    assert c.requested_price == 12.00
+    assert c.current_price == 15.00
+    assert c.suggested_action == ResolutionAction.ACCEPT_PRICE.value
+
+

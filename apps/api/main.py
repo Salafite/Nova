@@ -57,6 +57,7 @@ from modules.bi.controllers.executive_analytics_controller import router as exec
 from modules.bi.controllers.executive_export_controller import router as executive_export_router
 from modules.sales.controllers.commission_controller import router as commission_router
 from modules.sales.controllers.delivery_routes_controller import router as delivery_routes_router, alias_router as delivery_routes_alias_router
+from modules.sales.controllers.T0077I import handover_router
 
 from contextlib import asynccontextmanager
 
@@ -112,6 +113,7 @@ app.include_router(executive_export_router)
 app.include_router(commission_router)
 app.include_router(delivery_routes_router)
 app.include_router(delivery_routes_alias_router)
+app.include_router(handover_router)
 
 mcp_server = McpServer(name="NovaERP", version="1.0")
 register_database_mcp()

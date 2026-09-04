@@ -180,8 +180,8 @@ export const useFieldSalesStore = defineStore('fieldSales', {
     },
 
     isCartValid: (state) => {
-      const hasCustomer = !!state.selectedCustomer
-      const hasLines = (state.draft.lines || []).length > 0
+      const hasCustomer = !!state.selectedCustomer || !!state.draft?.customer_id
+      const hasLines = (state.draft?.lines || []).length > 0
       const allLinesValid = hasLines && state.draft.lines.every((l) => Number(l.qty) > 0 && Number(l.unit_price) >= 0)
       return hasCustomer && allLinesValid
     },
@@ -402,6 +402,13 @@ export const useFieldSalesStore = defineStore('fieldSales', {
       try {
         const cached = await offlineDb.getAllCustomers()
         this.customers = cached || []
+        if (this.selectedCustomer?.id) {
+          const refreshed = this.customers.find((c) => c.id === this.selectedCustomer.id) || (await offlineDb.getCustomer(this.selectedCustomer.id))
+          if (refreshed) {
+            this.selectedCustomer = refreshed
+            this.customerRecentOrders = refreshed.recent_orders || []
+          }
+        }
       } catch (err) {
         console.error('Failed to load cached customers:', err)
       } finally {
@@ -472,7 +479,14 @@ export const useFieldSalesStore = defineStore('fieldSales', {
     },
 
     async fetchCustomerHistory(customerId) {
-      if (!customerId || !this.isOnline) return []
+      if (!customerId) return []
+      if (!this.isOnline) {
+        const cust = (this.selectedCustomer && this.selectedCustomer.id === customerId)
+          ? this.selectedCustomer
+          : (await offlineDb.getCustomer(customerId))
+        this.customerRecentOrders = cust?.recent_orders || []
+        return this.customerRecentOrders
+      }
       this.customerHistoryLoading = true
       try {
         const res = await api.get(`/sales/mobile/customers/${customerId}/history`)
@@ -482,12 +496,14 @@ export const useFieldSalesStore = defineStore('fieldSales', {
         // Update customer in state and IndexedDB
         if (this.selectedCustomer && this.selectedCustomer.id === customerId) {
           this.selectedCustomer.recent_orders = orders
-          await offlineDb.put('customers', this.selectedCustomer)
+          await offlineDb.put('customers', JSON.parse(JSON.stringify(this.selectedCustomer)))
         }
         return orders
       } catch (err) {
         console.warn(`Failed to fetch history for customer ${customerId}:`, err)
-        return []
+        const cust = this.selectedCustomer || (await offlineDb.getCustomer(customerId))
+        this.customerRecentOrders = cust?.recent_orders || []
+        return this.customerRecentOrders
       } finally {
         this.customerHistoryLoading = false
       }
@@ -542,7 +558,7 @@ export const useFieldSalesStore = defineStore('fieldSales', {
       }
 
       this.draft.lines = updatedLines
-      this._updateDraftTotals()
+      await this.saveDraft()
     },
 
     // -----------------------------------------------------------------------
@@ -559,6 +575,9 @@ export const useFieldSalesStore = defineStore('fieldSales', {
           }
           if (this.draft.customer_id) {
             this.selectedCustomer = this.customers.find((c) => c.id === this.draft.customer_id) || (await offlineDb.getCustomer(this.draft.customer_id))
+            if (this.selectedCustomer) {
+              this.customerRecentOrders = this.selectedCustomer.recent_orders || []
+            }
           }
         } else {
           this.draft = createBlankDraft(this.selectedWarehouseId)

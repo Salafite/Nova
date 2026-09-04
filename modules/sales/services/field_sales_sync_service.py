@@ -251,7 +251,9 @@ class FieldSalesSyncService:
 
                 # Deduct inventory stock in T0009 and record movement in T0064
                 if warehouse_id:
-                    for line in order.lines:
+                    # Sort lines by product_id to enforce lock ordering and prevent database deadlocks
+                    sorted_lines = sorted(order.lines, key=lambda l: (l.product_id or 0))
+                    for line in sorted_lines:
                         self._deduct_stock_and_record_movement(
                             cur=cur,
                             product_id=line.product_id,
@@ -269,6 +271,15 @@ class FieldSalesSyncService:
                     WHERE id = %s
                     """,
                     (grand_total, order.customer_id),
+                )
+
+                # Push order into warehouse picking queue (T0101 & T0102)
+                self._create_warehouse_pick_list(
+                    cur=cur,
+                    order_id=order_id,
+                    order_number=order_number,
+                    warehouse_id=warehouse_id or 1,
+                    lines=order.lines,
                 )
 
             conn.commit()
@@ -570,7 +581,8 @@ class FieldSalesSyncService:
                             )
                         )
 
-                    # 3. Price check if price list is configured
+                    # 3. Price check: contracted price list if configured, otherwise base catalog price
+                    rule_price = None
                     if price_list_id:
                         cur.execute(
                             f"""
@@ -583,21 +595,25 @@ class FieldSalesSyncService:
                         pr_row = cur.fetchone()
                         if pr_row:
                             rule_price = _to_float(pr_row["unit_price"])
-                            if abs(rule_price - line.unit_price) > 0.01:
-                                conflicts.append(
-                                    LineConflictDetail(
-                                        line_number=line.line_number,
-                                        product_id=pid,
-                                        product_name=line.product_name,
-                                        conflict_type=ConflictType.PRICE_MISMATCH.value,
-                                        requested_qty=line.qty,
-                                        available_qty=avail_qty,
-                                        requested_price=line.unit_price,
-                                        current_price=rule_price,
-                                        message=f"Price mismatch for '{line.product_name}'. Submitted: {line.unit_price}, contracted price: {rule_price}.",
-                                        suggested_action=ResolutionAction.ACCEPT_PRICE.value,
-                                    )
-                                )
+
+                    if rule_price is None and product and product.get("price") is not None:
+                        rule_price = _to_float(product.get("price"))
+
+                    if rule_price is not None and abs(rule_price - line.unit_price) > 0.01:
+                        conflicts.append(
+                            LineConflictDetail(
+                                line_number=line.line_number,
+                                product_id=pid,
+                                product_name=line.product_name,
+                                conflict_type=ConflictType.PRICE_MISMATCH.value,
+                                requested_qty=line.qty,
+                                available_qty=avail_qty,
+                                requested_price=line.unit_price,
+                                current_price=rule_price,
+                                message=f"Price mismatch for '{line.product_name}'. Submitted: {line.unit_price}, current price: {rule_price}.",
+                                suggested_action=ResolutionAction.ACCEPT_PRICE.value,
+                            )
+                        )
 
             return conflicts
         finally:
@@ -708,14 +724,17 @@ class FieldSalesSyncService:
 
         try:
             order_data = req_obj.order_data
-            resolutions_map: Dict[int, ConflictResolutionItem] = {
-                res.line_number: res for res in req_obj.resolutions
-            }
+            resolutions_map: Dict[int, ConflictResolutionItem] = {}
+            for res in req_obj.resolutions:
+                if res.line_number is not None:
+                    resolutions_map[res.line_number] = res
+                if res.product_id is not None:
+                    resolutions_map[res.product_id] = res
 
             resolved_lines: List[FieldSalesOrderLine] = []
 
             for line in order_data.lines:
-                res = resolutions_map.get(line.line_number)
+                res = resolutions_map.get(line.line_number) or resolutions_map.get(line.product_id)
                 if not res:
                     resolved_lines.append(line)
                     continue
@@ -918,10 +937,11 @@ class FieldSalesSyncService:
         order_id: int,
         order_number: str,
     ) -> None:
-        """Atomically deduct stock from T0009 and record movement in T0064."""
+        """Atomically deduct stock from T0009 and record movement in T0064 under SELECT FOR UPDATE row locking."""
         cur.execute(
             f"""
-            SELECT id, qty FROM {self._get_table("t0009")}
+            SELECT id, qty, COALESCE(reserved_qty, 0) AS reserved_qty
+            FROM {self._get_table("t0009")}
             WHERE product_id = %s AND warehouse_id = %s
             FOR UPDATE
             """,
@@ -929,22 +949,24 @@ class FieldSalesSyncService:
         )
         stock_row = cur.fetchone()
 
-        if stock_row:
-            current_qty = _to_float(stock_row["qty"])
-            new_balance = max(0.0, current_qty - qty)
-            cur.execute(
-                f'UPDATE {self._get_table("t0009")} SET qty = %s WHERE id = %s',
-                (new_balance, stock_row["id"]),
+        if not stock_row:
+            raise ValueError(f"Insufficient stock for product {product_id} in warehouse {warehouse_id}: product not stocked")
+
+        current_qty = _to_float(stock_row["qty"])
+        current_reserved = _to_float(stock_row.get("reserved_qty"))
+        available_qty = current_qty - current_reserved
+
+        if available_qty < qty:
+            raise ValueError(
+                f"Insufficient stock for product {product_id} in warehouse {warehouse_id}: available {available_qty}, requested {qty}"
             )
-        else:
-            new_balance = 0.0
-            cur.execute(
-                f"""
-                INSERT INTO {self._get_table("t0009")} (product_id, warehouse_id, qty)
-                VALUES (%s, %s, %s)
-                """,
-                (product_id, warehouse_id, new_balance),
-            )
+
+        new_balance = current_qty - qty
+        new_reserved = min(current_reserved, new_balance)
+        cur.execute(
+            f'UPDATE {self._get_table("t0009")} SET qty = %s, reserved_qty = %s WHERE id = %s',
+            (new_balance, new_reserved, stock_row["id"]),
+        )
 
         # Record movement in T0064
         cur.execute(
@@ -964,6 +986,65 @@ class FieldSalesSyncService:
                 f"Field Sales Order #{order_number}",
             ),
         )
+
+    def _create_warehouse_pick_list(
+        self,
+        cur,
+        order_id: int,
+        order_number: str,
+        warehouse_id: int,
+        lines: List[FieldSalesOrderLine],
+    ) -> Optional[int]:
+        """Create a pick list record in T0101 and line items in T0102 to push order into warehouse picking queue."""
+        try:
+            pick_list_num = f"PKL-{order_number}"
+            cur.execute(
+                f"""
+                INSERT INTO {self._get_table("t0101")} (
+                    pick_list_number, sales_order_id, warehouse_id, status, notes
+                )
+                VALUES (%s, %s, %s, 'Pending', %s)
+                RETURNING id
+                """,
+                (
+                    pick_list_num,
+                    order_id,
+                    warehouse_id,
+                    f"Auto-generated from field sales sync for order #{order_number}",
+                ),
+            )
+            pl_row = cur.fetchone()
+            if pl_row:
+                if isinstance(pl_row, dict):
+                    pick_list_id = pl_row.get("id", 1)
+                elif isinstance(pl_row, (tuple, list)):
+                    pick_list_id = pl_row[0]
+                else:
+                    pick_list_id = getattr(pl_row, "id", 1)
+            else:
+                pick_list_id = 1
+
+            for idx, line in enumerate(lines, start=1):
+                cur.execute(
+                    f"""
+                    INSERT INTO {self._get_table("t0102")} (
+                        pick_list_id, sales_order_line_id, product_id, product_name,
+                        qty_ordered, qty_picked, line_number
+                    )
+                    VALUES (%s, NULL, %s, %s, %s, 0.0, %s)
+                    """,
+                    (
+                        pick_list_id,
+                        line.product_id,
+                        line.product_name,
+                        line.qty,
+                        idx,
+                    ),
+                )
+            return pick_list_id
+        except Exception as e:
+            logger.warning(f"Could not create warehouse pick list entry for order {order_id}: {e}")
+            return None
 
 
 field_sales_sync_service = FieldSalesSyncService()

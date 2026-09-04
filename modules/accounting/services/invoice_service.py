@@ -4,6 +4,7 @@ from typing import Optional, List, Dict, Any, Union
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from packages.database.sequence import generate_invoice_number
+from packages.database.connection import db_transaction
 from modules.accounting.services.payment_term_service import (
     calculate_due_date,
     calculate_discount_deadline,
@@ -331,98 +332,101 @@ class InvoiceService(CrudService):
         """
         Create a sales invoice from an order record, incorporating catch-weight aggregates,
         dynamic payment terms due date & discount calculations, and customer balance updates.
+        Executed within an atomic db_transaction with SELECT FOR UPDATE customer locking.
         """
-        recalc = recalculation_summary or {}
-        is_cw = recalc.get('is_catch_weight', order.get('is_catch_weight', False))
-        weight_adj = recalc.get('weight_adjustment_amount', 0.0)
+        with db_transaction(conn) as tx_conn:
+            recalc = recalculation_summary or {}
+            is_cw = recalc.get('is_catch_weight', order.get('is_catch_weight', False))
+            weight_adj = recalc.get('weight_adjustment_amount', 0.0)
 
-        notes = f'Auto-generated from order {order.get("order_number")}'
-        if is_cw and weight_adj != 0:
-            notes += f" (Catch-weight adjustment: {'+' if weight_adj > 0 else ''}{weight_adj:.2f})"
+            notes = f'Auto-generated from order {order.get("order_number")}'
+            if is_cw and weight_adj != 0:
+                notes += f" (Catch-weight adjustment: {'+' if weight_adj > 0 else ''}{weight_adj:.2f})"
 
-        # Resolve effective payment terms (Order term -> Customer term -> Default term -> Fallback)
-        term = resolve_effective_term(
-            payment_term_id=order.get('payment_term_id'),
-            customer_id=order.get('customer_id'),
-            customer_repo=self.customer_repo if hasattr(self, 'customer_repo') else None,
-            term_repo=self.payment_term_repo if hasattr(self, 'payment_term_repo') else None,
-            conn=conn,
-        )
+            # Resolve effective payment terms (Order term -> Customer term -> Default term -> Fallback)
+            term = resolve_effective_term(
+                payment_term_id=order.get('payment_term_id'),
+                customer_id=order.get('customer_id'),
+                customer_repo=self.customer_repo if hasattr(self, 'customer_repo') else None,
+                term_repo=self.payment_term_repo if hasattr(self, 'payment_term_repo') else None,
+                conn=tx_conn,
+            )
 
-        term_id = order.get('payment_term_id')
-        if not term_id and isinstance(term, dict):
-            term_id = term.get('id')
-        elif not term_id and hasattr(term, 'id'):
-            term_id = getattr(term, 'id', None)
+            term_id = order.get('payment_term_id')
+            if not term_id and isinstance(term, dict):
+                term_id = term.get('id')
+            elif not term_id and hasattr(term, 'id'):
+                term_id = getattr(term, 'id', None)
 
-        issue_date = order.get('order_date') or date.today()
-        due_date = calculate_due_date(base_date=issue_date, term=term)
-        discount_due_date = calculate_discount_deadline(base_date=issue_date, term=term)
+            issue_date = order.get('order_date') or date.today()
+            due_date = calculate_due_date(base_date=issue_date, term=term)
+            discount_due_date = calculate_discount_deadline(base_date=issue_date, term=term)
 
-        discount_percentage = (
-            float(term.get('discount_percentage', 0.0) or 0.0)
-            if isinstance(term, dict)
-            else float(getattr(term, 'discount_percentage', 0.0) or 0.0)
-        )
-        discount_days = (
-            int(term.get('discount_days', 0) or 0)
-            if isinstance(term, dict)
-            else int(getattr(term, 'discount_days', 0) or 0)
-        )
-        grand_total = float(order.get('grand_total', 0) or 0)
-        early_discount_amount = (
-            calculate_max_early_discount(grand_total, discount_percentage)
-            if (discount_percentage > 0 and discount_days > 0)
-            else 0.0
-        )
+            discount_percentage = (
+                float(term.get('discount_percentage', 0.0) or 0.0)
+                if isinstance(term, dict)
+                else float(getattr(term, 'discount_percentage', 0.0) or 0.0)
+            )
+            discount_days = (
+                int(term.get('discount_days', 0) or 0)
+                if isinstance(term, dict)
+                else int(getattr(term, 'discount_days', 0) or 0)
+            )
+            grand_total = float(order.get('grand_total', 0) or 0)
+            early_discount_amount = (
+                calculate_max_early_discount(grand_total, discount_percentage)
+                if (discount_percentage > 0 and discount_days > 0)
+                else 0.0
+            )
 
-        invoice_payload = {
-            'invoice_type': 'Sales',
-            'partner_id': order.get('customer_id'),
-            'sales_order_id': order.get('id'),
-            'sales_rep_id': order.get('sales_rep_id'),
-            'payment_term_id': term_id,
-            'issue_date': issue_date,
-            'due_date': due_date,
-            'discount_due_date': discount_due_date,
-            'discount_percentage': discount_percentage,
-            'discount_days': discount_days,
-            'early_discount_amount': early_discount_amount,
-            'total_amount': grand_total,
-            'freight_amount': order.get('freight_amount', 0) or 0,
-            'discount_amount': order.get('discount_amount', 0) or 0,
-            'status': 'Unpaid',
-            'notes': notes,
-            'is_catch_weight': is_cw,
-            'nominal_total_weight': recalc.get('nominal_total_weight'),
-            'actual_total_weight': recalc.get('actual_total_weight'),
-            'weight_adjustment_amount': weight_adj,
-        }
-        invoice = self.create(invoice_payload, conn=conn)
+            invoice_payload = {
+                'invoice_type': 'Sales',
+                'partner_id': order.get('customer_id'),
+                'sales_order_id': order.get('id'),
+                'sales_rep_id': order.get('sales_rep_id'),
+                'payment_term_id': term_id,
+                'issue_date': issue_date,
+                'due_date': due_date,
+                'discount_due_date': discount_due_date,
+                'discount_percentage': discount_percentage,
+                'discount_days': discount_days,
+                'early_discount_amount': early_discount_amount,
+                'total_amount': grand_total,
+                'freight_amount': order.get('freight_amount', 0) or 0,
+                'discount_amount': order.get('discount_amount', 0) or 0,
+                'status': 'Unpaid',
+                'notes': notes,
+                'is_catch_weight': is_cw,
+                'nominal_total_weight': recalc.get('nominal_total_weight'),
+                'actual_total_weight': recalc.get('actual_total_weight'),
+                'weight_adjustment_amount': weight_adj,
+            }
+            invoice = self.create(invoice_payload, conn=tx_conn)
 
-        if update_customer_balance and order.get('customer_id') and self.customer_repo:
-            try:
-                cust_id = order['customer_id']
-                grand_total = float(order.get('grand_total', 0) or 0)
-                if conn is not None and hasattr(conn, 'cursor') and not getattr(conn, '_is_mock', False):
-                    schema = getattr(self.customer_repo, 'schema', 'Nova')
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            f'UPDATE "{schema}".t0010 SET balance = COALESCE(balance, 0) + %s, updated_at = now() WHERE id = %s RETURNING balance;',
-                            (grand_total, cust_id)
-                        )
-                        logger.info(f"Atomically updated customer {cust_id} balance with +{grand_total}")
-                else:
-                    customer = self.customer_repo.get(cust_id, conn=conn)
+            if update_customer_balance and order.get('customer_id') and self.customer_repo:
+                try:
+                    cust_id = int(order['customer_id'])
+                    grand_total = float(order.get('grand_total', 0) or 0)
+                    customer_get_for_update = (
+                        getattr(self.customer_repo, 'get_for_update', self.customer_repo.get)
+                        if self.customer_repo
+                        else None
+                    )
+                    if customer_get_for_update:
+                        customer = customer_get_for_update(cust_id, conn=tx_conn)
+                    else:
+                        customer = self.customer_repo.get(cust_id, conn=tx_conn)
+
                     if customer:
-                        new_balance = float(customer.get('balance', 0) or 0) + grand_total
-                        self.customer_repo.update(cust_id, {'balance': new_balance}, conn=conn)
-                        logger.info(f"Updated customer {cust_id} balance to {new_balance}")
-            except Exception as e:
-                logger.error(f"Failed to update customer balance for customer {order.get('customer_id')}: {e}")
-                raise RuntimeError(f"Failed to update customer balance: {e}") from e
+                        cur_bal = float(customer.get('balance', 0.0) or 0.0)
+                        new_bal = round(cur_bal + grand_total, 2)
+                        self.customer_repo.update(cust_id, {'balance': new_bal}, conn=tx_conn)
+                        logger.info(f"Updated customer {cust_id} balance from {cur_bal:.2f} to {new_bal:.2f}")
+                except Exception as e:
+                    logger.error(f"Failed to update customer balance for customer {order.get('customer_id')}: {e}")
+                    raise RuntimeError(f"Failed to update customer balance: {e}") from e
 
-        return invoice
+            return invoice
 
     def recalculate_and_invoice_order(
         self,
@@ -431,57 +435,58 @@ class InvoiceService(CrudService):
         conn=None,
     ) -> dict:
         """
-        Recalculate order billing based on catch-weight lines and create invoice.
+        Recalculate order billing based on catch-weight lines and create invoice inside an atomic transaction.
         """
-        order = self.order_repo.get(order_id, conn=conn)
-        if not order:
-            logger.error(f"Cannot recalculate and invoice order: order {order_id} not found")
-            raise ValueError(f"Sales order {order_id} not found")
+        with db_transaction(conn) as tx_conn:
+            order = self.order_repo.get(order_id, conn=tx_conn)
+            if not order:
+                logger.error(f"Cannot recalculate and invoice order: order {order_id} not found")
+                raise ValueError(f"Sales order {order_id} not found")
 
-        lines = self.line_repo.list(filters={'sales_order_id': order_id}, conn=conn)
-        summary = self.calculate_catch_weight_summary(lines)
+            lines = self.line_repo.list(filters={'sales_order_id': order_id}, conn=tx_conn)
+            summary = self.calculate_catch_weight_summary(lines)
 
-        if summary.get('is_catch_weight'):
-            orig_sub = float(order.get('subtotal', 0) or 0)
-            orig_tax = float(order.get('tax', 0) or 0)
-            recalc_sub = summary.get('recalculated_subtotal', orig_sub)
+            if summary.get('is_catch_weight'):
+                orig_sub = float(order.get('subtotal', 0) or 0)
+                orig_tax = float(order.get('tax', 0) or 0)
+                recalc_sub = summary.get('recalculated_subtotal', orig_sub)
 
-            if orig_sub > 0 and orig_tax > 0:
-                tax_rate = orig_tax / orig_sub
-                new_tax = round(recalc_sub * tax_rate, 2)
-            else:
-                new_tax = orig_tax
+                if orig_sub > 0 and orig_tax > 0:
+                    tax_rate = orig_tax / orig_sub
+                    new_tax = round(recalc_sub * tax_rate, 2)
+                else:
+                    new_tax = orig_tax
 
-            freight = float(order.get('freight_amount', 0) or 0)
-            discount = float(order.get('discount_amount', 0) or 0)
-            new_grand_total = round(max(0.0, recalc_sub + new_tax + freight - discount), 2)
+                freight = float(order.get('freight_amount', 0) or 0)
+                discount = float(order.get('discount_amount', 0) or 0)
+                new_grand_total = round(max(0.0, recalc_sub + new_tax + freight - discount), 2)
 
-            order['subtotal'] = recalc_sub
-            order['tax'] = new_tax
-            order['grand_total'] = new_grand_total
-            order['is_catch_weight'] = True
+                order['subtotal'] = recalc_sub
+                order['tax'] = new_tax
+                order['grand_total'] = new_grand_total
+                order['is_catch_weight'] = True
 
-            self.order_repo.update(order_id, {
-                'subtotal': recalc_sub,
-                'tax': new_tax,
-                'grand_total': new_grand_total,
-            }, conn=conn)
+                self.order_repo.update(order_id, {
+                    'subtotal': recalc_sub,
+                    'tax': new_tax,
+                    'grand_total': new_grand_total,
+                }, conn=tx_conn)
 
-            # Update line items with recalculated totals
-            for l in summary.get('lines', []):
-                if l.get('is_catch_weight') and l.get('recalculated_total') is not None:
-                    self.line_repo.update(l['id'], {
-                        'is_catch_weight': True,
-                        'recalculated_total': l['recalculated_total'],
-                        'catch_weight_actual': l.get('catch_weight_actual'),
-                    }, conn=conn)
+                # Update line items with recalculated totals
+                for l in summary.get('lines', []):
+                    if l.get('is_catch_weight') and l.get('recalculated_total') is not None:
+                        self.line_repo.update(l['id'], {
+                            'is_catch_weight': True,
+                            'recalculated_total': l['recalculated_total'],
+                            'catch_weight_actual': l.get('catch_weight_actual'),
+                        }, conn=tx_conn)
 
-        return self.create_from_order(
-            order,
-            recalculation_summary=summary,
-            update_customer_balance=update_customer_balance,
-            conn=conn,
-        )
+            return self.create_from_order(
+                order,
+                recalculation_summary=summary,
+                update_customer_balance=update_customer_balance,
+                conn=tx_conn,
+            )
 
     def get_catch_weight_breakdown(self, invoice_id: int, conn=None) -> dict:
         """
