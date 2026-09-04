@@ -3,6 +3,8 @@ from modules.core.context import get_current_tenant
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.inventory.services.replenishment_service import ReplenishmentService
+from modules.inventory.services.predictive_demand_service import PredictiveDemandService
+from modules.inventory.services.spoilage_prevention_service import SpoilagePreventionService
 from packages.database.connection import get_connection, release_connection
 from packages.mcp.registry import register_tool, register_resource, get_current_user
 from packages.mcp.types import Tool, Resource
@@ -32,6 +34,8 @@ _stock_repo = CrudRepository('T0009', business_columns=['id', 'product_id', 'war
 _stock_svc = CrudService(_stock_repo)
 
 _replenishment_svc = ReplenishmentService()
+_predictive_demand_svc = PredictiveDemandService()
+_spoilage_prevention_svc = SpoilagePreventionService(demand_service=_predictive_demand_svc)
 
 
 def register_tools():
@@ -218,6 +222,66 @@ def register_tools():
         }),
         _generate_replenishment_transfers,
     )
+    register_tool(
+        Tool(name="get_sku_demand_forecast", description="Generates statistical weekly SKU demand forecasts with 80% and 95% confidence intervals based on 90+ days historical sales velocity", input_schema={
+            "type": "object",
+            "properties": {
+                "product_id": {"type": "integer", "description": "Product SKU ID to generate forecast for"},
+                "warehouse_id": {"type": "integer", "description": "Optional warehouse ID to filter sales history"},
+                "lookback_days": {"type": "integer", "description": "Historical sales lookback window in days (default 90)"},
+                "forecast_weeks": {"type": "integer", "description": "Number of weeks to project forecast (default 4)"},
+            },
+            "required": ["product_id"],
+        }),
+        _get_sku_demand_forecast,
+    )
+    register_tool(
+        Tool(name="get_predictive_demand_forecast", description="Generates statistical weekly SKU demand forecasts with 80% and 95% confidence intervals", input_schema={
+            "type": "object",
+            "properties": {
+                "product_id": {"type": "integer", "description": "Filter by product SKU ID"},
+                "warehouse_id": {"type": "integer", "description": "Filter by warehouse ID"},
+                "lookback_days": {"type": "integer", "description": "Historical lookback window (default 90)"},
+                "forecast_weeks": {"type": "integer", "description": "Forecast horizon weeks (default 4)"},
+            },
+        }),
+        _get_predictive_demand_forecast,
+    )
+    register_tool(
+        Tool(name="get_spoilage_risk_alerts", description="Retrieves inventory batches at risk of expiring before sale based on projected SKU demand velocity", input_schema={
+            "type": "object",
+            "properties": {
+                "warehouse_id": {"type": "integer", "description": "Filter by warehouse ID"},
+                "product_id": {"type": "integer", "description": "Filter by product SKU ID"},
+                "min_severity": {"type": "string", "description": "Filter by minimum risk severity ('low', 'medium', 'high', 'critical')"},
+                "days_to_expiry_threshold": {"type": "integer", "description": "Days to expiry horizon threshold (default 60)"},
+            },
+        }),
+        _get_spoilage_risk_alerts,
+    )
+    register_tool(
+        Tool(name="recommend_expiry_promotions", description="Provides suggested discount promotions and revenue recovery estimates for expiring inventory batches", input_schema={
+            "type": "object",
+            "properties": {
+                "batch_id": {"type": "integer", "description": "ID of the expiring batch"},
+                "discount_percentage": {"type": "number", "description": "Optional override discount percentage"},
+                "override_discount_pct": {"type": "number", "description": "Alternative parameter for override discount percentage"},
+            },
+            "required": ["batch_id"],
+        }),
+        _recommend_expiry_promotions,
+    )
+    register_tool(
+        Tool(name="propose_batch_discount_promotion", description="Propose promotional markdown discount for an expiring inventory batch", input_schema={
+            "type": "object",
+            "properties": {
+                "batch_id": {"type": "integer", "description": "Batch ID"},
+                "discount_percentage": {"type": "number", "description": "Optional discount percentage"},
+            },
+            "required": ["batch_id"],
+        }),
+        _propose_batch_discount_promotion,
+    )
     register_resource(
         Resource(uri="nova://inventory/products", name="All Products", description="List of all products"),
         _list_products,
@@ -225,6 +289,14 @@ def register_tools():
     register_resource(
         Resource(uri="nova://inventory/replenishment-suggestions", name="Replenishment Suggestions", description="List of inter-branch replenishment suggestions and inventory deficit recommendations"),
         _list_replenishment_suggestions,
+    )
+    register_resource(
+        Resource(uri="nova://inventory/spoilage-alerts", name="Spoilage Alerts", description="Active perishable inventory batch spoilage risk alerts and expiry warnings"),
+        _get_spoilage_risk_alerts,
+    )
+    register_resource(
+        Resource(uri="nova://bi/demand-forecasts", name="Demand Forecasts", description="Predictive SKU demand forecasts and confidence intervals summary"),
+        _get_predictive_demand_forecast,
     )
 
 
@@ -400,6 +472,84 @@ def _generate_replenishment_transfers(
     if hasattr(_replenishment_svc, "generate_transfers"):
         return _replenishment_svc.generate_transfers(payload=payload, user_id=user_id)
     return {"transfers_created": 0, "transfers": []}
+
+
+def _get_sku_demand_forecast(
+    product_id: int,
+    warehouse_id: int = None,
+    lookback_days: int = 90,
+    forecast_weeks: int = 4,
+):
+    res = _predictive_demand_svc.generate_demand_forecast(
+        product_id=product_id,
+        warehouse_id=warehouse_id,
+        lookback_days=lookback_days or 90,
+        forecast_weeks=forecast_weeks or 4,
+    )
+    return res.model_dump() if hasattr(res, "model_dump") else res
+
+
+def _get_predictive_demand_forecast(
+    product_id: int = None,
+    warehouse_id: int = None,
+    lookback_days: int = 90,
+    forecast_weeks: int = 4,
+):
+    if product_id:
+        res = _predictive_demand_svc.generate_demand_forecast(
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            lookback_days=lookback_days or 90,
+            forecast_weeks=forecast_weeks or 4,
+        )
+        return [res.model_dump() if hasattr(res, "model_dump") else res]
+    else:
+        forecasts = _predictive_demand_svc.list_demand_forecasts(
+            product_ids=None,
+            warehouse_id=warehouse_id,
+            lookback_days=lookback_days or 90,
+            forecast_weeks=forecast_weeks or 4,
+        )
+        return [f.model_dump() if hasattr(f, "model_dump") else f for f in forecasts]
+
+
+def _get_spoilage_risk_alerts(
+    warehouse_id: int = None,
+    product_id: int = None,
+    min_severity: str = None,
+    days_to_expiry_threshold: int = 60,
+):
+    res = _spoilage_prevention_svc.evaluate_spoilage_risks(
+        warehouse_id=warehouse_id,
+        product_id=product_id,
+        min_severity=min_severity,
+        days_to_expiry_threshold=days_to_expiry_threshold or 60,
+    )
+    return res.model_dump() if hasattr(res, "model_dump") else res
+
+
+def _recommend_expiry_promotions(
+    batch_id: int,
+    discount_percentage: float = None,
+    override_discount_pct: float = None,
+):
+    disc = discount_percentage if discount_percentage is not None else override_discount_pct
+    res = _spoilage_prevention_svc.propose_batch_discount_promotion(
+        batch_id=batch_id,
+        override_discount_pct=disc,
+    )
+    return res.model_dump() if hasattr(res, "model_dump") else res
+
+
+def _propose_batch_discount_promotion(
+    batch_id: int,
+    discount_percentage: float = None,
+):
+    res = _spoilage_prevention_svc.propose_batch_discount_promotion(
+        batch_id=batch_id,
+        override_discount_pct=discount_percentage,
+    )
+    return res.model_dump() if hasattr(res, "model_dump") else res
 
 
 def main():

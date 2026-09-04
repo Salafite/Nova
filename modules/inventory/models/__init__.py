@@ -25,11 +25,16 @@ from modules.inventory.models.stock_transfer import (
     ReplenishmentSuggestionItem, ReplenishmentSuggestionResponse,
     ReplenishmentGenerateItem, ReplenishmentGenerateRequest, ReplenishmentGenerateResponse,
 )
+from modules.inventory.models.predictive_demand import (
+    ConfidenceInterval, WeeklyForecastPoint, WeeklyDemandProjection,
+    HistoricalSalesAggregation, SeasonalTrendAdjustment,
+    SKUForecastParameters, DemandForecastResponse,
+)
 from modules.inventory.models.predictive_forecast import (
-    ConfidenceInterval, WeeklyDemandProjection, HistoricalSalesAggregation,
-    SeasonalTrendAdjustment, SKUForecastParameters,
+    ConfidenceInterval as ConfidenceInterval_PF,
 )
 from modules.inventory.models.spoilage_prevention import (
-    BatchShelfLifeMetrics, SpoilageRiskAlert, BatchDiscountPromotionProposal,
-    SpoilageRiskSummaryResponse,
+    BatchShelfLifeMetrics, SpoilageSeverityEnum, BatchSpoilageItem, SpoilageRiskAlert,
+    SpoilageRiskReport, SpoilageRiskSummaryResponse, PromotionRecommendation,
+    BatchDiscountPromotionProposal, ApplyPromotionRequest, ApplyPromotionResponse,
 )

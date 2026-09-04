@@ -52,6 +52,7 @@ from modules.administration.controllers.admin_preferences import router as admin
 from modules.portal.controllers.portal_orders_controller import router as portal_orders_router
 from modules.portal.controllers.portal_invoices_controller import router as portal_invoices_router
 from modules.inventory.controllers.replenishment_controller import router as replenishment_router
+from modules.inventory.controllers.predictive_inventory_controller import router as predictive_inventory_router
 from modules.purchasing.controllers.restock_controller import router as restock_router
 from modules.bi.controllers.executive_analytics_controller import router as executive_analytics_router
 from modules.bi.controllers.executive_export_controller import router as executive_export_router
@@ -106,6 +107,7 @@ app.include_router(admin_preferences_router)
 app.include_router(portal_orders_router)
 app.include_router(portal_invoices_router)
 app.include_router(replenishment_router)
+app.include_router(predictive_inventory_router)
 app.include_router(restock_router)
 app.include_router(executive_analytics_router)
 app.include_router(executive_export_router)

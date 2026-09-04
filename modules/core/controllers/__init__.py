@@ -31,6 +31,12 @@ def _load_all_routers():
     except Exception:
         pass
 
+    try:
+        from modules.inventory.controllers.predictive_inventory_controller import router as predictive_inventory_router
+        _all_routers.append(predictive_inventory_router)
+    except Exception:
+        pass
+
     return _all_routers
 
 

@@ -13,12 +13,14 @@ import psycopg2.extras
 
 from packages.database.connection import get_connection, release_connection
 from modules.core.context import get_current_tenant
-from modules.inventory.models.predictive_forecast import (
+from modules.inventory.models.predictive_demand import (
     ConfidenceInterval,
+    WeeklyForecastPoint,
     WeeklyDemandProjection,
     HistoricalSalesAggregation,
     SeasonalTrendAdjustment,
     SKUForecastParameters,
+    DemandForecastResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -154,7 +156,7 @@ class PredictiveDemandService:
             ]
 
             # Generate weekly projections for future forecast_weeks
-            weekly_projections: List[WeeklyDemandProjection] = []
+            weekly_projections: List[WeeklyForecastPoint] = []
             for w in range(1, forecast_weeks + 1):
                 proj_start = ref_date + timedelta(days=(w - 1) * 7 + 1)
 
@@ -170,7 +172,7 @@ class PredictiveDemandService:
                 upper_95 = round(projected_val + margin_95, 2)
 
                 weekly_projections.append(
-                    WeeklyDemandProjection(
+                    WeeklyForecastPoint(
                         week_start_date=proj_start,
                         predicted_demand=round(projected_val, 2),
                         confidence_80=ConfidenceInterval(lower_bound=lower_80, upper_bound=upper_80),
@@ -191,6 +193,25 @@ class PredictiveDemandService:
         finally:
             if should_release and conn:
                 release_connection(conn)
+
+    def get_sku_demand_forecast(
+        self,
+        product_id: int,
+        warehouse_id: Optional[int] = None,
+        lookback_days: int = DEFAULT_LOOKBACK_DAYS,
+        forecast_weeks: int = DEFAULT_FORECAST_WEEKS,
+        reference_date: Optional[date] = None,
+        conn=None,
+    ) -> SKUForecastParameters:
+        """Alias method for generate_demand_forecast."""
+        return self.generate_demand_forecast(
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            lookback_days=lookback_days,
+            forecast_weeks=forecast_weeks,
+            reference_date=reference_date,
+            conn=conn,
+        )
 
     def list_demand_forecasts(
         self,

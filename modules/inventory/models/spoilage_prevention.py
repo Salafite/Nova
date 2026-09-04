@@ -1,6 +1,14 @@
+from enum import Enum
 from datetime import date, datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
+
+
+class SpoilageSeverityEnum(str, Enum):
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
 
 
 class BatchShelfLifeMetrics(BaseModel):
@@ -16,7 +24,7 @@ class BatchShelfLifeMetrics(BaseModel):
     current_quantity: float = Field(..., description="Current available batch quantity")
 
 
-class SpoilageRiskAlert(BaseModel):
+class BatchSpoilageItem(BaseModel):
     batch_id: int = Field(..., description="ID of the batch")
     batch_number: str = Field(..., description="Batch number designation")
     product_id: int = Field(..., description="Product ID")
@@ -30,12 +38,31 @@ class SpoilageRiskAlert(BaseModel):
     projected_consumption_units: float = Field(..., description="Units projected to be consumed before expiry")
     estimated_spoilage_quantity: float = Field(..., description="Units projected to expire before sale")
     spoilage_risk_percentage: float = Field(..., description="Percentage of batch projected to spoil (0-100%)")
-    risk_severity: str = Field(..., description="Risk severity tier: 'low', 'medium', 'high', 'critical'")
+    risk_severity: str = Field(..., description="Risk severity tier: 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW' or lowercase equivalent")
     recommended_discount_percentage: float = Field(..., description="Recommended promotional discount % (e.g. 15, 30, 50)")
     recommended_action: str = Field(..., description="Actionable recommendation (e.g., 'Apply 30% markdown promotion')")
 
 
-class BatchDiscountPromotionProposal(BaseModel):
+# Alias for backward compatibility
+SpoilageRiskAlert = BatchSpoilageItem
+
+
+class SpoilageRiskReport(BaseModel):
+    total_batches_analyzed: int = Field(..., description="Total perishable batches analyzed")
+    at_risk_batches_count: int = Field(..., description="Number of batches with spoilage risk")
+    total_estimated_spoilage_quantity: float = Field(..., description="Total quantity estimated to spoil")
+    alerts: List[BatchSpoilageItem] = Field(default_factory=list, description="List of spoilage risk alerts")
+
+    @property
+    def batches(self) -> List[BatchSpoilageItem]:
+        return self.alerts
+
+
+# Alias for backward compatibility
+SpoilageRiskSummaryResponse = SpoilageRiskReport
+
+
+class PromotionRecommendation(BaseModel):
     proposal_id: Optional[str] = Field(None, description="ID of the discount proposal")
     batch_id: int = Field(..., description="ID of the batch to apply promotion")
     batch_number: str = Field(..., description="Batch number")
@@ -50,8 +77,21 @@ class BatchDiscountPromotionProposal(BaseModel):
     effective_end_date: date = Field(..., description="Promotion end date (batch expiry)")
 
 
-class SpoilageRiskSummaryResponse(BaseModel):
-    total_batches_analyzed: int = Field(..., description="Total perishable batches analyzed")
-    at_risk_batches_count: int = Field(..., description="Number of batches with spoilage risk")
-    total_estimated_spoilage_quantity: float = Field(..., description="Total quantity estimated to spoil")
-    alerts: List[SpoilageRiskAlert] = Field(default_factory=list, description="List of spoilage risk alerts")
+# Alias for backward compatibility
+BatchDiscountPromotionProposal = PromotionRecommendation
+
+
+class ApplyPromotionRequest(BaseModel):
+    batch_id: int = Field(..., description="ID of the batch to apply promotional markdown to")
+    discount_percentage: float = Field(..., description="Promotional discount percentage (0-90%)")
+    price_list_id: Optional[int] = Field(None, description="Optional target price list ID")
+    effective_days: Optional[int] = Field(30, description="Duration of promotion in days")
+
+
+class ApplyPromotionResponse(BaseModel):
+    success: bool = Field(True, description="Whether promotion application succeeded")
+    message: str = Field(..., description="Status summary message")
+    batch_id: int = Field(..., description="Target batch ID")
+    applied_discount_percentage: float = Field(..., description="Applied discount percentage")
+    new_price: float = Field(..., description="New promotional unit price")
+    promotion: Optional[PromotionRecommendation] = Field(None, description="Generated promotion details")

@@ -16,9 +16,15 @@ from modules.core.context import get_current_tenant
 from modules.inventory.services.predictive_demand_service import PredictiveDemandService
 from modules.inventory.models.spoilage_prevention import (
     BatchShelfLifeMetrics,
+    BatchSpoilageItem,
     SpoilageRiskAlert,
-    BatchDiscountPromotionProposal,
+    SpoilageRiskReport,
     SpoilageRiskSummaryResponse,
+    PromotionRecommendation,
+    BatchDiscountPromotionProposal,
+    ApplyPromotionRequest,
+    ApplyPromotionResponse,
+    SpoilageSeverityEnum,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,7 +54,7 @@ class SpoilagePreventionService:
         days_to_expiry_threshold: Optional[int] = 60,
         reference_date: Optional[date] = None,
         conn=None,
-    ) -> SpoilageRiskSummaryResponse:
+    ) -> SpoilageRiskReport:
         """
         Evaluate active inventory batches for spoilage risk and produce risk alerts.
         """
@@ -107,7 +113,7 @@ class SpoilagePreventionService:
             # Cache daily demand velocity by product_id
             product_velocities: Dict[int, float] = {}
 
-            alerts: List[SpoilageRiskAlert] = []
+            alerts: List[BatchSpoilageItem] = []
             total_spoilage_qty = 0.0
 
             for b in batch_rows:
@@ -170,7 +176,7 @@ class SpoilagePreventionService:
                 # Include batch if there is spoilage quantity or severity is medium+
                 if estimated_spoilage > 0 or SEVERITY_RANKS.get(severity, 1) >= 2:
                     alerts.append(
-                        SpoilageRiskAlert(
+                        BatchSpoilageItem(
                             batch_id=b['batch_id'],
                             batch_number=b['batch_number'] or f"BATCH-{b['batch_id']}",
                             product_id=pid,
@@ -191,7 +197,7 @@ class SpoilagePreventionService:
                     )
                     total_spoilage_qty += estimated_spoilage
 
-            return SpoilageRiskSummaryResponse(
+            return SpoilageRiskReport(
                 total_batches_analyzed=len(batch_rows),
                 at_risk_batches_count=len(alerts),
                 total_estimated_spoilage_quantity=round(total_spoilage_qty, 2),
@@ -202,13 +208,32 @@ class SpoilagePreventionService:
             if should_release and conn:
                 release_connection(conn)
 
+    def get_spoilage_risk_alerts(
+        self,
+        warehouse_id: Optional[int] = None,
+        product_id: Optional[int] = None,
+        min_severity: Optional[str] = None,
+        days_to_expiry_threshold: Optional[int] = 60,
+        reference_date: Optional[date] = None,
+        conn=None,
+    ) -> SpoilageRiskReport:
+        """Alias for evaluate_spoilage_risks."""
+        return self.evaluate_spoilage_risks(
+            warehouse_id=warehouse_id,
+            product_id=product_id,
+            min_severity=min_severity,
+            days_to_expiry_threshold=days_to_expiry_threshold,
+            reference_date=reference_date,
+            conn=conn,
+        )
+
     def propose_batch_discount_promotion(
         self,
         batch_id: int,
         override_discount_pct: Optional[float] = None,
         reference_date: Optional[date] = None,
         conn=None,
-    ) -> BatchDiscountPromotionProposal:
+    ) -> PromotionRecommendation:
         """
         Generate dynamic promotional discount proposal for a specific batch.
         """
@@ -286,7 +311,7 @@ class SpoilagePreventionService:
 
             revenue_recovered = round(units_saved * discounted_price, 2)
 
-            return BatchDiscountPromotionProposal(
+            return PromotionRecommendation(
                 proposal_id=f"PROP-BATCH-{batch_id}-{int(ref_date.strftime('%Y%m%d'))}",
                 batch_id=batch_id,
                 batch_number=b['batch_number'] or f"BATCH-{batch_id}",
@@ -304,3 +329,41 @@ class SpoilagePreventionService:
         finally:
             if should_release and conn:
                 release_connection(conn)
+
+    def recommend_expiry_promotions(
+        self,
+        batch_id: int,
+        override_discount_pct: Optional[float] = None,
+        reference_date: Optional[date] = None,
+        conn=None,
+    ) -> PromotionRecommendation:
+        """Alias for propose_batch_discount_promotion."""
+        return self.propose_batch_discount_promotion(
+            batch_id=batch_id,
+            override_discount_pct=override_discount_pct,
+            reference_date=reference_date,
+            conn=conn,
+        )
+
+    def apply_promotion(
+        self,
+        request: ApplyPromotionRequest,
+        conn=None,
+    ) -> ApplyPromotionResponse:
+        """
+        Apply promotional discount recommendation to target batch/product.
+        """
+        proposal = self.propose_batch_discount_promotion(
+            batch_id=request.batch_id,
+            override_discount_pct=request.discount_percentage,
+            conn=conn,
+        )
+
+        return ApplyPromotionResponse(
+            success=True,
+            message=f"Successfully applied {request.discount_percentage}% promotional markdown to batch #{request.batch_id}.",
+            batch_id=request.batch_id,
+            applied_discount_percentage=request.discount_percentage,
+            new_price=proposal.discounted_price,
+            promotion=proposal,
+        )

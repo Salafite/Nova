@@ -5,16 +5,20 @@ and perishable batch spoilage risk evaluation with promotional discount markdown
 """
 import logging
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
 
 from packages.auth.deps import require_permission, get_current_user
 from modules.core.context import set_current_tenant
 from modules.inventory.services.predictive_demand_service import PredictiveDemandService
 from modules.inventory.services.spoilage_prevention_service import SpoilagePreventionService
-from modules.inventory.models.predictive_forecast import SKUForecastParameters
+from modules.inventory.models.predictive_demand import SKUForecastParameters, DemandForecastResponse
 from modules.inventory.models.spoilage_prevention import (
+    SpoilageRiskReport,
     SpoilageRiskSummaryResponse,
+    PromotionRecommendation,
     BatchDiscountPromotionProposal,
+    ApplyPromotionRequest,
+    ApplyPromotionResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,7 +75,8 @@ def get_predictive_demand_forecast(
         )
 
 
-@router.get("/spoilage-risk", response_model=SpoilageRiskSummaryResponse)
+@router.get("/spoilage-risks", response_model=SpoilageRiskReport)
+@router.get("/spoilage-risk", response_model=SpoilageRiskReport)
 def get_spoilage_risk_alerts(
     warehouse_id: Optional[int] = Query(None, description="Filter by warehouse ID"),
     product_id: Optional[int] = Query(None, description="Filter by product SKU ID"),
@@ -98,7 +103,46 @@ def get_spoilage_risk_alerts(
         )
 
 
-@router.post("/spoilage-risk/propose-discount", response_model=BatchDiscountPromotionProposal)
+@router.post("/spoilage-promotions/apply", response_model=ApplyPromotionResponse)
+def apply_spoilage_promotion(
+    payload: Optional[ApplyPromotionRequest] = Body(None),
+    batch_id: Optional[int] = Query(None, description="ID of the batch"),
+    discount_percentage: Optional[float] = Query(None, description="Discount percentage"),
+    price_list_id: Optional[int] = Query(None, description="Target price list ID"),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Apply promotional discount recommendation to target batch or price list.
+    Accepts payload in request body or query params.
+    """
+    _set_tenant_from_user(user)
+    try:
+        if payload is None:
+            if batch_id is None or discount_percentage is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="batch_id and discount_percentage are required in body or query parameters.",
+                )
+            payload = ApplyPromotionRequest(
+                batch_id=batch_id,
+                discount_percentage=discount_percentage,
+                price_list_id=price_list_id,
+            )
+
+        return spoilage_service.apply_promotion(payload)
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Error applying spoilage promotion: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to apply spoilage promotion: {str(e)}",
+        )
+
+
+@router.post("/spoilage-risk/propose-discount", response_model=PromotionRecommendation)
 def propose_batch_discount_promotion(
     batch_id: int = Query(..., description="ID of the batch to apply markdown discount"),
     discount_percentage: Optional[float] = Query(None, ge=0.0, le=90.0, description="Optional override discount percentage"),
