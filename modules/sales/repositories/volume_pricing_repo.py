@@ -6,7 +6,7 @@ from modules.core.repositories.base import CrudRepository
 class VolumeTierBreakRepository(CrudRepository):
     def __init__(self):
         super().__init__(
-            'T0116',
+            'T0120',
             business_columns=[
                 'id', 'price_list_id', 'product_id', 'min_quantity', 'max_quantity',
                 'unit_price', 'discount_percentage', 'discount_type', 'is_active'
@@ -17,7 +17,7 @@ class VolumeTierBreakRepository(CrudRepository):
 class CustomerGroupPriceListRepository(CrudRepository):
     def __init__(self):
         super().__init__(
-            'T0117',
+            'T0121',
             business_columns=[
                 'id', 'customer_group', 'price_list_id', 'priority', 'is_active'
             ]
@@ -27,7 +27,7 @@ class CustomerGroupPriceListRepository(CrudRepository):
 class CustomerContractRepository(CrudRepository):
     def __init__(self):
         super().__init__(
-            'T0118',
+            'T0122',
             business_columns=[
                 'id', 'contract_number', 'customer_id', 'product_id', 'contracted_price',
                 'discount_percentage', 'min_order_quantity', 'start_date', 'end_date',
@@ -39,7 +39,7 @@ class CustomerContractRepository(CrudRepository):
 class PromotionalRuleRepository(CrudRepository):
     def __init__(self):
         super().__init__(
-            'T0119',
+            'T0123',
             business_columns=[
                 'id', 'code', 'name', 'description', 'promo_type', 'buy_product_id',
                 'buy_quantity', 'get_product_id', 'get_quantity', 'get_discount_percentage',
@@ -52,7 +52,7 @@ class PromotionalRuleRepository(CrudRepository):
 class VolumePricingRepository(CrudRepository):
     def __init__(self):
         super().__init__(
-            'T0116',
+            'T0120',
             business_columns=[
                 'id', 'price_list_id', 'product_id', 'min_quantity', 'max_quantity',
                 'unit_price', 'discount_percentage', 'discount_type', 'is_active'

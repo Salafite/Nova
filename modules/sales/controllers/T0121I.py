@@ -8,7 +8,7 @@ from modules.sales.models.promotions import (
 )
 
 repo = CrudRepository(
-    'T0117',
+    'T0121',
     business_columns=[
         'id', 'code', 'name', 'description', 'promo_type', 'buy_product_id',
         'buy_quantity', 'get_product_id', 'get_quantity', 'get_discount_percentage',
@@ -18,8 +18,8 @@ repo = CrudRepository(
 )
 service = CrudService(repo)
 router = create_crud_router(
-    '/api/T0117I',
-    'T0117 - Promotional Campaign Rules',
+    '/api/T0121I',
+    'T0121 - Promotional Campaign Rules',
     service,
     PromotionCreate,
     PromotionUpdate,

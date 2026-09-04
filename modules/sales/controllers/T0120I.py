@@ -8,15 +8,15 @@ from modules.sales.models.price_list import (
 )
 
 repo = CrudRepository(
-    'T0116',
+    'T0120',
     business_columns=[
         'id', 'customer_group', 'price_list_id', 'priority', 'description', 'is_active'
     ]
 )
 service = CrudService(repo)
 router = create_crud_router(
-    '/api/T0116I',
-    'T0116 - Customer Group Price Mappings',
+    '/api/T0120I',
+    'T0120 - Customer Group Price Mappings',
     service,
     CustomerGroupPriceListCreate,
     CustomerGroupPriceListUpdate,
