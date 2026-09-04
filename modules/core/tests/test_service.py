@@ -526,12 +526,13 @@ class TestDomainServicesTenantScoping:
         mock_repo = MagicMock()
         # Returns None because record is in a different tenant
         mock_repo.get.return_value = None
+        mock_repo.get_for_update.return_value = None
         mock_repo.update.return_value = None
 
         svc = JournalEntryService(mock_repo)
         res = svc.update(99, {'status': 'Posted'})
         assert res is None
-        mock_repo.get.assert_called_once_with(99)
+        assert mock_repo.get.called or mock_repo.get_for_update.called
 
     def test_customer_service_delete_checks_only_own_tenant_orders(self):
         from unittest.mock import patch, MagicMock

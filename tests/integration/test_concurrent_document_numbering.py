@@ -277,22 +277,22 @@ def setup_mock_environment():
         pass
 
     # Patch CrudRepository methods to route to ThreadSafeTableStore
-    def repo_create(self, payload: dict, conn=None):
+    def repo_create(self, payload: dict, conn=None, *args, **kwargs):
         return tbl_store.create(self.qualified, payload, pk=self.pk)
 
-    def repo_get(self, id_val, conn=None):
+    def repo_get(self, id_val, conn=None, *args, **kwargs):
         return tbl_store.get(self.qualified, id_val, pk=self.pk)
 
-    def repo_update(self, id_val, payload: dict, conn=None):
+    def repo_update(self, id_val, payload: dict, conn=None, *args, **kwargs):
         return tbl_store.update(self.qualified, id_val, payload, pk=self.pk)
 
-    def repo_list(self, filters=None, order_by=None, limit=None, offset=None, conn=None):
+    def repo_list(self, filters=None, order_by=None, limit=None, offset=None, conn=None, *args, **kwargs):
         return tbl_store.list(self.qualified, filters=filters, order_by=order_by, limit=limit, offset=offset)
 
-    def repo_count(self, filters=None, conn=None):
+    def repo_count(self, filters=None, conn=None, *args, **kwargs):
         return tbl_store.count(self.qualified, filters=filters)
 
-    def repo_delete(self, id_val, conn=None):
+    def repo_delete(self, id_val, conn=None, *args, **kwargs):
         return tbl_store.delete(self.qualified, id_val, pk=self.pk)
 
     mock_pool = MagicMock()
@@ -312,6 +312,7 @@ def setup_mock_environment():
          patch('packages.database.sequence.release_connection', side_effect=mock_rel_conn), \
          patch.object(CrudRepository, 'create', repo_create), \
          patch.object(CrudRepository, 'get', repo_get), \
+         patch.object(CrudRepository, 'get_for_update', repo_get), \
          patch.object(CrudRepository, 'update', repo_update), \
          patch.object(CrudRepository, 'list', repo_list), \
          patch.object(CrudRepository, 'count', repo_count), \
