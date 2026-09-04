@@ -1,27 +1,24 @@
 from modules.core.repositories.base import CrudRepository
 from modules.core.services.base import CrudService
 from modules.core.controllers.base import create_crud_router
-from modules.sales.models.promotions import (
-    PromotionCreate,
-    PromotionUpdate,
-    PromotionResponse,
+from modules.sales.models.price_list import (
+    CustomerGroupPriceListCreate,
+    CustomerGroupPriceListUpdate,
+    CustomerGroupPriceListResponse,
 )
 
 repo = CrudRepository(
     'T0121',
     business_columns=[
-        'id', 'code', 'name', 'description', 'promo_type', 'buy_product_id',
-        'buy_quantity', 'get_product_id', 'get_quantity', 'get_discount_percentage',
-        'customer_group', 'customer_id', 'start_date', 'end_date', 'usage_limit',
-        'times_used', 'is_active'
+        'id', 'customer_group', 'price_list_id', 'priority', 'description', 'is_active'
     ]
 )
 service = CrudService(repo)
 router = create_crud_router(
     '/api/T0121I',
-    'T0121 - Promotional Campaign Rules',
+    'T0121 - Customer Group Price Lists',
     service,
-    PromotionCreate,
-    PromotionUpdate,
-    PromotionResponse,
+    CustomerGroupPriceListCreate,
+    CustomerGroupPriceListUpdate,
+    CustomerGroupPriceListResponse,
 )
