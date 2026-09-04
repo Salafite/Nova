@@ -35,10 +35,10 @@
         <tr v-for="(item, idx) in items" :key="idx">
           <td class="col-qty">{{ item.qty }}</td>
           <td class="col-desc">
-            <div>{{ item.name }}</div>
+            <div>{{ item.name || item.product_name }}</div>
             <div class="item-sku" v-if="item.sku">{{ item.sku }}</div>
           </td>
-          <td class="col-price">{{ formatMoney(item.qty * item.price) }}</td>
+          <td class="col-price">{{ formatMoney(item.qty * (item.price ?? item.unit_price ?? 0)) }}</td>
         </tr>
       </tbody>
     </table>
@@ -63,7 +63,7 @@
     <div class="receipt-payments" v-if="payments && payments.length">
       <div class="receipt-divider"></div>
       <div class="summary-row" v-for="(payment, idx) in payments" :key="idx">
-        <span>{{ payment.method }}</span>
+        <span>{{ payment.payment_method || payment.method }}</span>
         <span>{{ formatMoney(payment.amount) }}</span>
       </div>
       <div class="summary-row" v-if="change > 0">

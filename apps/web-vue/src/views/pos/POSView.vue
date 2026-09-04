@@ -52,9 +52,8 @@
         </div>
         <button class="cart-clear" @click="clearCart">{{ t('pos-clear', 'Clear') }}</button>
       </div>
-      <div class="cart-customer" v-if="!checkingOut">
-        <span class="material-symbols-outlined">person</span>
-        <input v-model="customerName" :placeholder="t('pos-walkin', 'Walk-in Customer')" class="customer-input" />
+      <div class="cart-customer-wrapper" v-if="!checkingOut">
+        <QuickCustomerSelector v-model="selectedCustomer" />
       </div>
       <div class="cart-items" :class="{ 'checking-out': checkingOut }">
         <div v-if="!cart.length" class="cart-empty">{{ t('pos-empty', 'Cart is empty') }}</div>
@@ -119,6 +118,7 @@ import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
 import SplitPaymentModal from '../../components/pos/SplitPaymentModal.vue'
 import ThermalReceipt from '../../components/pos/ThermalReceipt.vue'
+import QuickCustomerSelector from '../../components/pos/QuickCustomerSelector.vue'
 
 const { show: toast } = useToast()
 const { dir, t } = useI18n()
@@ -130,7 +130,7 @@ const searchQuery = ref('')
 const barcodeQuery = ref('')
 const barcodeInputRef = ref(null)
 const activeCategory = ref('')
-const customerName = ref('')
+const selectedCustomer = ref({ id: null, name: 'Walk-in Customer' })
 const loading = ref(true)
 const error = ref('')
 const checkingOut = ref(false)
@@ -158,6 +158,29 @@ let scanning = false
 
 function onDocumentKeydown(e) {
   if (checkingOut.value) return
+
+  if (e.key === 'F2') {
+    e.preventDefault()
+    barcodeInputRef.value?.focus()
+    return
+  }
+  if (e.key === 'F4' || e.key === 'F9') {
+    e.preventDefault()
+    if (cart.value.length && !checkingOut.value) {
+      checkout()
+    }
+    return
+  }
+  if (e.key === 'Escape') {
+    if (showPaymentModal.value) {
+      showPaymentModal.value = false
+    } else {
+      barcodeQuery.value = ''
+      searchQuery.value = ''
+    }
+    return
+  }
+
   if (e.target === barcodeInputRef.value && !scanning) return
 
   const now = Date.now()
@@ -340,6 +363,7 @@ function checkout() {
 async function processPayment(paymentDetails) {
   checkingOut.value = true
   try {
+    const custName = selectedCustomer.value?.name || t('pos-walkin', 'Walk-in Customer')
     const payload = {
       cart_items: cart.value.map(i => ({
         product_id: i.productId,
@@ -347,7 +371,8 @@ async function processPayment(paymentDetails) {
         qty: i.qty,
         unit_price: i.price,
       })),
-      customer_name: customerName.value || t('pos-walkin', 'Walk-in Customer'),
+      customer_id: selectedCustomer.value?.id || null,
+      customer_name: custName,
       payments: paymentDetails.splits,
       amount_tendered: paymentDetails.amount_tendered
     }
@@ -355,8 +380,8 @@ async function processPayment(paymentDetails) {
     const data = res.data
     
     // Prepare receipt data
-    const hasCash = paymentDetails.splits.some(s => s.method === 'Cash')
-    const changeAmount = hasCash ? Math.max(0, paymentDetails.amount_tendered - grandTotal.value) : 0
+    const hasCash = paymentDetails.splits.some(s => (s.payment_method || s.method) === 'Cash')
+    const changeAmount = data.change_due !== undefined ? data.change_due : (hasCash ? Math.max(0, paymentDetails.amount_tendered - grandTotal.value) : 0)
     
     lastReceiptData.value = {
       items: cart.value.map(i => ({ ...i, sku: findProduct(i.productId)?.sku })),
@@ -365,14 +390,14 @@ async function processPayment(paymentDetails) {
       total: grandTotal.value,
       payments: paymentDetails.splits,
       change: changeAmount,
-      customerName: payload.customer_name,
+      customerName: custName,
       orderNumber: data.order_number || 'POS-' + Date.now(),
       date: new Date()
     }
     
     toast(data.message || t('pos-sale-completed', 'Sale completed!'), 'success')
     cart.value = []
-    customerName.value = ''
+    selectedCustomer.value = { id: null, name: t('pos-walkin', 'Walk-in Customer') }
     showPaymentModal.value = false
     
     if (hasCash) {
