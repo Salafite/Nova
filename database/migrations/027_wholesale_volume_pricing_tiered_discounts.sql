@@ -1,0 +1,214 @@
+-- Nova ERP — Wholesale Volume Pricing, Tiered Discounts & Contract Terms
+-- Migration 024: Volume Tier Breaks (T0116), Customer Group Price Lists Matrix (T0117), Customer Contracts (T0118), Promotional Campaign Rules (T0119)
+BEGIN;
+
+-- 1. Sequences for Contract Numbers and Promotional Campaign Codes
+CREATE SEQUENCE IF NOT EXISTS "Nova".seq_contract_number START WITH 1 INCREMENT BY 1;
+COMMENT ON SEQUENCE "Nova".seq_contract_number IS 'Atomic sequence for generating unique contract numbers (CTR-XXXXX)';
+
+CREATE SEQUENCE IF NOT EXISTS "Nova".seq_promo_code START WITH 1 INCREMENT BY 1;
+COMMENT ON SEQUENCE "Nova".seq_promo_code IS 'Atomic sequence for generating unique promotion codes (PROMO-XXXXX)';
+
+
+-- 2. Volume Tier Breaks Table (T0116)
+CREATE TABLE IF NOT EXISTS "Nova".t0120 (
+    id                  SERIAL PRIMARY KEY,
+    price_list_id       INT REFERENCES "Nova".t0083(id) ON DELETE CASCADE,
+    product_id          INT REFERENCES "Nova".t0001(id) ON DELETE CASCADE,
+    min_quantity        NUMERIC(12,2) NOT NULL DEFAULT 1.00,
+    max_quantity        NUMERIC(12,2),
+    unit_price          NUMERIC(12,4),
+    discount_percentage NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+    discount_type       VARCHAR(30) NOT NULL DEFAULT 'FixedPrice',
+    is_active           BOOLEAN NOT NULL DEFAULT true,
+    business_id         INT REFERENCES "Nova".t0059(id),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by          INT,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by          INT,
+    update_number       INT NOT NULL DEFAULT 1
+);
+
+COMMENT ON TABLE "Nova".t0120 IS 'Volume Tier Breaks — Quantity threshold breaks and volume pricing for sales price lists';
+COMMENT ON COLUMN "Nova".t0120.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0120.price_list_id IS 'Parent price list reference (FK to t0083)';
+COMMENT ON COLUMN "Nova".t0120.product_id IS 'Target product reference (FK to t0001)';
+COMMENT ON COLUMN "Nova".t0120.min_quantity IS 'Minimum order line threshold quantity to trigger tier break';
+COMMENT ON COLUMN "Nova".t0120.max_quantity IS 'Maximum quantity for tier break (NULL for open-ended / infinity)';
+COMMENT ON COLUMN "Nova".t0120.unit_price IS 'Tier unit price when discount_type is FixedPrice';
+COMMENT ON COLUMN "Nova".t0120.discount_percentage IS 'Discount percentage when discount_type is Percentage';
+COMMENT ON COLUMN "Nova".t0120.discount_type IS 'Discount application type: FixedPrice | Percentage | FixedDiscount';
+COMMENT ON COLUMN "Nova".t0120.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+
+CREATE INDEX IF NOT EXISTS idx_t0120_price_list_id ON "Nova".t0120(price_list_id);
+CREATE INDEX IF NOT EXISTS idx_t0120_product_id ON "Nova".t0120(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0120_min_quantity ON "Nova".t0120(min_quantity);
+CREATE INDEX IF NOT EXISTS idx_t0120_business_id ON "Nova".t0120(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0120_business_id_id ON "Nova".t0120(business_id, id);
+
+
+-- 3. Customer Group Price Lists Matrix Table (T0117)
+CREATE TABLE IF NOT EXISTS "Nova".t0121 (
+    id                  SERIAL PRIMARY KEY,
+    customer_group      VARCHAR(100) NOT NULL,
+    price_list_id       INT NOT NULL REFERENCES "Nova".t0083(id) ON DELETE CASCADE,
+    priority            INT NOT NULL DEFAULT 10,
+    description         TEXT,
+    is_active           BOOLEAN NOT NULL DEFAULT true,
+    business_id         INT REFERENCES "Nova".t0059(id),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by          INT,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by          INT,
+    update_number       INT NOT NULL DEFAULT 1
+);
+
+COMMENT ON TABLE "Nova".t0121 IS 'Customer Group Price Lists — Default price list matrix assignments by customer group category';
+COMMENT ON COLUMN "Nova".t0121.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0121.customer_group IS 'Customer group designation (e.g. Wholesale, HoReCa Tier A, Supermarket, Retail)';
+COMMENT ON COLUMN "Nova".t0121.price_list_id IS 'Assigned default price list (FK to t0083)';
+COMMENT ON COLUMN "Nova".t0121.priority IS 'Priority ranking when resolving overlapping rules (lower/higher priority evaluation)';
+COMMENT ON COLUMN "Nova".t0121.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+
+CREATE INDEX IF NOT EXISTS idx_t0121_customer_group ON "Nova".t0121(customer_group);
+CREATE INDEX IF NOT EXISTS idx_t0121_price_list_id ON "Nova".t0121(price_list_id);
+CREATE INDEX IF NOT EXISTS idx_t0121_business_id ON "Nova".t0121(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0121_business_id_id ON "Nova".t0121(business_id, id);
+
+
+-- 4. Customer Contracts & Special Price Overrides Table (T0118)
+CREATE TABLE IF NOT EXISTS "Nova".t0122 (
+    id                  SERIAL PRIMARY KEY,
+    contract_number     VARCHAR(50) NOT NULL,
+    customer_id         INT NOT NULL REFERENCES "Nova".t0010(id) ON DELETE CASCADE,
+    product_id          INT NOT NULL REFERENCES "Nova".t0001(id) ON DELETE CASCADE,
+    contracted_price    NUMERIC(12,4) NOT NULL,
+    discount_percentage NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+    min_order_quantity  NUMERIC(12,2) NOT NULL DEFAULT 1.00,
+    start_date          DATE NOT NULL,
+    end_date            DATE,
+    status              VARCHAR(30) NOT NULL DEFAULT 'Active',
+    is_active           BOOLEAN NOT NULL DEFAULT true,
+    business_id         INT REFERENCES "Nova".t0059(id),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by          INT,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by          INT,
+    update_number       INT NOT NULL DEFAULT 1
+);
+
+COMMENT ON TABLE "Nova".t0122 IS 'Customer Contracts — Special contracted price overrides and commitment terms for key customer accounts';
+COMMENT ON COLUMN "Nova".t0122.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0122.contract_number IS 'Contract agreement reference identifier (CTR-XXXXX)';
+COMMENT ON COLUMN "Nova".t0122.customer_id IS 'Contracted customer account reference (FK to t0010)';
+COMMENT ON COLUMN "Nova".t0122.product_id IS 'Target product item reference (FK to t0001)';
+COMMENT ON COLUMN "Nova".t0122.contracted_price IS 'Contracted fixed unit price override';
+COMMENT ON COLUMN "Nova".t0122.discount_percentage IS 'Contracted discount percentage override';
+COMMENT ON COLUMN "Nova".t0122.min_order_quantity IS 'Minimum order threshold to qualify for contract pricing';
+COMMENT ON COLUMN "Nova".t0122.start_date IS 'Effective start date of contract agreement';
+COMMENT ON COLUMN "Nova".t0122.end_date IS 'Expiration date of contract agreement (NULL if open-ended)';
+COMMENT ON COLUMN "Nova".t0122.status IS 'Contract lifecycle status: Draft | Active | Expired | Terminated';
+COMMENT ON COLUMN "Nova".t0122.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+
+CREATE INDEX IF NOT EXISTS idx_t0122_contract_number ON "Nova".t0122(contract_number);
+CREATE INDEX IF NOT EXISTS idx_t0122_customer_id ON "Nova".t0122(customer_id);
+CREATE INDEX IF NOT EXISTS idx_t0122_product_id ON "Nova".t0122(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0122_dates ON "Nova".t0122(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_t0122_status ON "Nova".t0122(status);
+CREATE INDEX IF NOT EXISTS idx_t0122_business_id ON "Nova".t0122(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0122_business_id_id ON "Nova".t0122(business_id, id);
+
+
+-- 5. Promotional Rules / Buy-X-Get-Y Campaigns Table (T0119)
+CREATE TABLE IF NOT EXISTS "Nova".t0123 (
+    id                      SERIAL PRIMARY KEY,
+    code                    VARCHAR(50) NOT NULL,
+    name                    VARCHAR(255) NOT NULL,
+    description             TEXT,
+    promo_type              VARCHAR(50) NOT NULL DEFAULT 'BuyXGetY',
+    buy_product_id          INT REFERENCES "Nova".t0001(id) ON DELETE CASCADE,
+    buy_quantity            NUMERIC(12,2) NOT NULL DEFAULT 1.00,
+    get_product_id          INT REFERENCES "Nova".t0001(id) ON DELETE CASCADE,
+    get_quantity            NUMERIC(12,2) NOT NULL DEFAULT 1.00,
+    get_discount_percentage NUMERIC(5,2) NOT NULL DEFAULT 100.00,
+    discount_amount         NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    customer_group          VARCHAR(100),
+    customer_id             INT REFERENCES "Nova".t0010(id) ON DELETE CASCADE,
+    price_list_id           INT REFERENCES "Nova".t0083(id) ON DELETE CASCADE,
+    start_date              TIMESTAMPTZ NOT NULL,
+    end_date                TIMESTAMPTZ NOT NULL,
+    usage_limit             INT,
+    times_used              INT NOT NULL DEFAULT 0,
+    is_active               BOOLEAN NOT NULL DEFAULT true,
+    business_id             INT REFERENCES "Nova".t0059(id),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by              INT,
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by              INT,
+    update_number           INT NOT NULL DEFAULT 1
+);
+
+COMMENT ON TABLE "Nova".t0123 IS 'Promotional Rules — Time-bounded Buy-X-Get-Y promotional campaigns and discount rules';
+COMMENT ON COLUMN "Nova".t0123.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0123.code IS 'Unique promotion code identifier (PROMO-XXXXX)';
+COMMENT ON COLUMN "Nova".t0123.name IS 'Promotional campaign name';
+COMMENT ON COLUMN "Nova".t0123.description IS 'Detailed description of campaign terms';
+COMMENT ON COLUMN "Nova".t0123.promo_type IS 'Promotion type: BuyXGetY | PercentageDiscount | FixedDiscount';
+COMMENT ON COLUMN "Nova".t0123.buy_product_id IS 'Required trigger product reference (FK to t0001)';
+COMMENT ON COLUMN "Nova".t0123.buy_quantity IS 'Required trigger quantity threshold';
+COMMENT ON COLUMN "Nova".t0123.get_product_id IS 'Reward product item reference (FK to t0001)';
+COMMENT ON COLUMN "Nova".t0123.get_quantity IS 'Reward item quantity awarded per trigger threshold';
+COMMENT ON COLUMN "Nova".t0123.get_discount_percentage IS 'Discount percentage applied to reward item (100.00 = Free)';
+COMMENT ON COLUMN "Nova".t0123.customer_group IS 'Target customer group filter (NULL applies to all groups)';
+COMMENT ON COLUMN "Nova".t0123.customer_id IS 'Target specific customer filter (NULL applies to all customers)';
+COMMENT ON COLUMN "Nova".t0123.start_date IS 'Campaign validity window start timestamp';
+COMMENT ON COLUMN "Nova".t0123.end_date IS 'Campaign validity window end timestamp';
+COMMENT ON COLUMN "Nova".t0123.usage_limit IS 'Maximum allowed total redemptions (NULL for unlimited)';
+COMMENT ON COLUMN "Nova".t0123.times_used IS 'Count of completed campaign redemptions';
+COMMENT ON COLUMN "Nova".t0123.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+
+CREATE INDEX IF NOT EXISTS idx_t0123_code ON "Nova".t0123(code);
+CREATE INDEX IF NOT EXISTS idx_t0123_buy_product_id ON "Nova".t0123(buy_product_id);
+CREATE INDEX IF NOT EXISTS idx_t0123_get_product_id ON "Nova".t0123(get_product_id);
+CREATE INDEX IF NOT EXISTS idx_t0123_dates ON "Nova".t0123(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_t0123_customer_group ON "Nova".t0123(customer_group);
+CREATE INDEX IF NOT EXISTS idx_t0123_customer_id ON "Nova".t0123(customer_id);
+CREATE INDEX IF NOT EXISTS idx_t0123_business_id ON "Nova".t0123(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0123_business_id_id ON "Nova".t0123(business_id, id);
+
+
+-- 6. Enhance Price List Items Table (T0084) for volume tier break attributes
+ALTER TABLE "Nova".t0084
+    ADD COLUMN IF NOT EXISTS max_qty INT,
+    ADD COLUMN IF NOT EXISTS discount_percent NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS pricing_type VARCHAR(30) NOT NULL DEFAULT 'Fixed Price';
+
+COMMENT ON COLUMN "Nova".t0084.min_qty IS 'Minimum quantity threshold break point for tier discount';
+COMMENT ON COLUMN "Nova".t0084.max_qty IS 'Maximum quantity threshold break point (NULL indicates upper bound open)';
+COMMENT ON COLUMN "Nova".t0084.discount_percent IS 'Percentage discount applied for this volume tier break';
+COMMENT ON COLUMN "Nova".t0084.discount_amount IS 'Fixed monetary discount applied per unit for this volume tier break';
+COMMENT ON COLUMN "Nova".t0084.pricing_type IS 'Pricing rule type: Fixed Price | Percentage Discount | Fixed Discount';
+
+CREATE INDEX IF NOT EXISTS idx_t0084_tier_lookup ON "Nova".t0084(price_list_id, product_id, min_qty);
+
+
+-- 7. Add Tier & Promotion Tracking Columns to Sales Order Items (T0013)
+ALTER TABLE "Nova".t0013
+    ADD COLUMN IF NOT EXISTS applied_price_tier VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS applied_promotion_id INT REFERENCES "Nova".t0123(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS is_promotional_item BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS original_unit_price NUMERIC(12,2);
+
+
+-- 8. Grant Readonly Permissions to AI / MCP Role
+DO $$ BEGIN
+    IF EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'nova_readonly') THEN
+        GRANT SELECT ON "Nova".t0120 TO nova_readonly;
+        GRANT SELECT ON "Nova".t0121 TO nova_readonly;
+        GRANT SELECT ON "Nova".t0122 TO nova_readonly;
+        GRANT SELECT ON "Nova".t0123 TO nova_readonly;
+    END IF;
+END $$;
+
+COMMIT;
