@@ -9,9 +9,9 @@ Nova ERP provides native end-to-end support for **Dual Unit of Measure (Dual UoM
 In perishable food distribution, products are frequently purchased, stored, or ordered by discrete units (e.g. cases, boxes, wheels, cuts), but priced and billed based on exact scale weight (e.g. kilograms, pounds). Because individual natural items vary in mass:
 - A customer orders **5 wheels** of Parmigiano Reggiano (ordered in inventory UOM: Units / Wheels).
 - Nominal catalogue weight is **40.0 kg per wheel** (total nominal: 200.0 kg).
-- Unit price is **.00 per kg** (pricing UOM: KG).
+- Unit price is **$15.00 per kg** (pricing UOM: KG).
 - When picked in the warehouse and weighed on certified scales, the actual weight is **194.5 kg**.
-- If billed by nominal weight (,000.00), the customer is overcharged; if billed incorrectly, margins are lost.
+- If billed by nominal weight ($3,000.00), the customer is overcharged; if billed incorrectly, margins are lost.
 
 With Nova ERP's Catch Weight subsystem:
 1. Exact scale weights are captured or scanned (GS1-128 / AI 310x barcodes) during warehouse pick list fulfillment.
@@ -148,13 +148,12 @@ Inventory queries provide simultaneous visibility into:
 
 ## 6. REST API Reference
 
-### Products & UOM
-- GET /api/T0003I & POST /api/T0003I: Product master CRUD with is_catch_weight, pricing_uom_id, 
-ominal_weight, 	olerance_pct, pricing_basis.
+#### Products & UOM
+- GET /api/T0003I & POST /api/T0003I: Product master CRUD with `is_catch_weight`, `pricing_uom_id`, `nominal_weight`, `tolerance_pct`, `pricing_basis`.
 - GET /api/T0007I & POST /api/T0007I: Product UOM conversions with catch-weight attributes.
 
 ### Warehouse Pick Lists
-- POST /api/T0101I/{id}/pick-item/{item_id}: Record picked quantity and scale weight (catch_weight_actual, catch_weight_uom).
+- POST /api/T0101I/{id}/pick-item/{item_id}: Record picked quantity and scale weight (`catch_weight_actual`, `catch_weight_uom`).
 - GET /api/T0101I/{id}/discrepancies: Retrieve list of unapproved out-of-tolerance lines.
 - POST /api/T0101I/{id}/approve-tolerance: Supervisor approval for out-of-tolerance items.
 - POST /api/T0101I/{id}/items/{item_id}/approve-tolerance: Single-item supervisor approval.
@@ -175,12 +174,10 @@ AI agents (e.g. Claude Code, In-App Assistant) interact with catch-weight operat
 
 | MCP Server | Tool Name | Description |
 |---|---|---|
-| inventory | create_product / update_product | Configure catch-weight parameters (is_catch_weight, 
-ominal_weight, 	olerance_pct, pricing_basis). |
-| inventory | list_products | Filter and inspect catch-weight configurations across the catalogue. |
-| warehouse | pick_item | Record picked item scale weight (catch_weight_actual, catch_weight_uom). |
-| warehouse | check_pick_list_discrepancies | Audit pending out-of-tolerance items requiring approval. |
-| warehouse | pprove_pick_tolerance | Supervisor authorization tool with required justification notes. |
-| sales | 
-ecalculate_order_catch_weight | AI tool to preview and recalculate sales order totals based on picked weights. |
-| sales | create_order / create_order_line | Create dual-UOM sales lines with pricing UOM and nominal weight specifications. |
+| inventory | `create_product` / `update_product` | Configure catch-weight parameters (`is_catch_weight`, `nominal_weight`, `tolerance_pct`, `pricing_basis`). |
+| inventory | `list_products` | Filter and inspect catch-weight configurations across the catalogue. |
+| warehouse | `pick_item` | Record picked item scale weight (`catch_weight_actual`, `catch_weight_uom`). |
+| warehouse | `check_pick_list_discrepancies` | Audit pending out-of-tolerance items requiring approval. |
+| warehouse | `approve_pick_tolerance` | Supervisor authorization tool with required justification notes. |
+| sales | `recalculate_order_catch_weight` | AI tool to preview and recalculate sales order totals based on picked weights. |
+| sales | `create_order` / `create_order_line` | Create dual-UOM sales lines with pricing UOM and nominal weight specifications. |
