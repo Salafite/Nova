@@ -346,7 +346,14 @@ class SalesOrderService(CrudService):
                     self._reserve_order_stock(id_val, conn=conn)
                 elif new_status == 'Delivered':
                     self._validate_delivery_tolerance_approvals(id_val, conn=conn)
-                    self._create_invoice_from_order(id_val, conn=conn)
+                    recalc = self._create_invoice_from_order(id_val, conn=conn)
+                    if recalc and recalc.get('is_catch_weight'):
+                        if 'subtotal' in payload:
+                            payload['subtotal'] = recalc.get('recalculated_subtotal')
+                        if 'tax' in payload:
+                            payload['tax'] = recalc.get('tax')
+                        if 'grand_total' in payload:
+                            payload['grand_total'] = recalc.get('grand_total')
                 elif new_status == 'Cancelled':
                     self._release_order_stock(id_val, conn=conn)
 

@@ -1,6 +1,16 @@
 from decimal import Decimal
 from modules.core.services.base import CrudService
-from modules.sales.services.sales_service import SalesOrderService, ORDER_REPO, LINE_REPO, CUSTOMER_REPO, INVOICE_REPO, PAYMENT_TERM_REPO
+from modules.sales.services.sales_service import (
+    SalesOrderService,
+    ORDER_REPO,
+    LINE_REPO,
+    CUSTOMER_REPO,
+    INVOICE_REPO,
+    PAYMENT_TERM_REPO,
+    PL_REPO,
+    PLI_REPO,
+    PRODUCT_REPO,
+)
 from modules.core.repositories.base import CrudRepository
 from packages.database.connection import get_connection, release_connection
 
@@ -16,12 +26,16 @@ def _to_decimal(value) -> Decimal:
 class EnhancedSalesOrderService(SalesOrderService):
     def __init__(self, repo=None, line_repo=None, price_list_item_repo=None,
                  tax_rate_repo=None, customer_repo=None, inv_repo=None,
-                 payment_term_repo=None, credit_service=None, notification_service=None):
+                 payment_term_repo=None, credit_service=None, notification_service=None,
+                 pl_repo=None, pli_repo=None, product_repo=None):
         super().__init__(
             repo=repo or ORDER_REPO,
             line_repo=line_repo or LINE_REPO,
             customer_repo=customer_repo or CUSTOMER_REPO,
             inv_repo=inv_repo or INVOICE_REPO,
+            pl_repo=pl_repo or PL_REPO,
+            pli_repo=pli_repo or PLI_REPO,
+            product_repo=product_repo or PRODUCT_REPO,
             payment_term_repo=payment_term_repo or PAYMENT_TERM_REPO,
             credit_service=credit_service,
             notification_service=notification_service,
