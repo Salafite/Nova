@@ -230,3 +230,61 @@ class TestSecurityAudit:
             assert parsed["arguments"] == {"id": 42}
             assert parsed["preview"] == "Delete product 42"
 
+    def test_record_mcp_tool_execution_record_id_extraction_and_tenant_context(self):
+        with tenant_context(88):
+            with patch("packages.security.audit._audit_repo.create") as mock_create:
+                mock_create.return_value = {"id": 205}
+
+                # Using 'record_id' in arguments
+                res = record_mcp_tool_execution(
+                    tool_name="update_order",
+                    arguments={"record_id": 999, "status": "confirmed"},
+                    status="SUCCESS",
+                    user_id=14,
+                )
+
+                assert res == {"id": 205}
+                call_payload, kwargs = mock_create.call_args
+                entry = call_payload[0]
+                assert entry["record_id"] == 999
+                assert entry["business_id"] == 88
+                assert kwargs.get("business_id") == 88
+
+                parsed = json.loads(entry["changed_data"])
+                assert parsed["tenant_id"] == 88
+                assert parsed["arguments"] == {"record_id": 999, "status": "confirmed"}
+
+    def test_record_mcp_propose_confirm_denied_and_error(self, caplog):
+        with patch("packages.security.audit._audit_repo.create", return_value={"id": 301}):
+            with caplog.at_level(logging.WARNING, logger="security.audit"):
+                res = record_mcp_propose_confirm(
+                    action_type="PROPOSE",
+                    tool_name="cancel_order",
+                    action_id="act-fail-1",
+                    arguments={"id": 10},
+                    status="DENIED",
+                    user_id=8,
+                    business_id=2,
+                    role="Viewer",
+                    error="Permission denied: SALES_VIEW required",
+                )
+                assert res == {"id": 301}
+                assert "MCP action [PROPOSE:act-fail-1] DENIED" in caplog.text
+
+        with patch("packages.security.audit._audit_repo.create", return_value={"id": 302}):
+            with caplog.at_level(logging.ERROR, logger="security.audit"):
+                res = record_mcp_propose_confirm(
+                    action_type="CONFIRM",
+                    tool_name="confirm_order",
+                    action_id="act-fail-2",
+                    arguments={"id": 20},
+                    status="ERROR",
+                    user_id=8,
+                    business_id=2,
+                    role="Admin",
+                    error="Order already cancelled",
+                )
+                assert res == {"id": 302}
+                assert "MCP action [CONFIRM:act-fail-2] ERROR" in caplog.text
+
+
