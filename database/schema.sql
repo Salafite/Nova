@@ -3081,6 +3081,16 @@ CREATE TABLE IF NOT EXISTS "Nova".t0102 (
     expiry_date       DATE,
     picked_batch_id   INT REFERENCES "Nova".t0088(id),
     picked_batch_number VARCHAR(255),
+    catch_weight_actual NUMERIC(12,4) DEFAULT NULL,
+    catch_weight_uom    VARCHAR(50) DEFAULT NULL,
+    nominal_weight      NUMERIC(12,4) DEFAULT NULL,
+    tolerance_pct       NUMERIC(6,2) DEFAULT NULL,
+    tolerance_variance_pct NUMERIC(6,2) DEFAULT NULL,
+    tolerance_status    VARCHAR(30) DEFAULT 'Not Applicable',
+    supervisor_approved BOOLEAN NOT NULL DEFAULT false,
+    supervisor_approved_by INT REFERENCES "Nova".t0021(id),
+    supervisor_approved_at TIMESTAMPTZ DEFAULT NULL,
+    supervisor_notes    TEXT DEFAULT NULL,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by        INT,
@@ -3101,11 +3111,23 @@ COMMENT ON COLUMN "Nova".t0102.batch_number IS 'Suggested lot number';
 COMMENT ON COLUMN "Nova".t0102.expiry_date IS 'Expiration date of suggested lot';
 COMMENT ON COLUMN "Nova".t0102.picked_batch_id IS 'Actual picked lot ID (if different from suggested)';
 COMMENT ON COLUMN "Nova".t0102.picked_batch_number IS 'Actual picked lot number';
+COMMENT ON COLUMN "Nova".t0102.catch_weight_actual IS 'Actual physical scale weight measured during warehouse picking';
+COMMENT ON COLUMN "Nova".t0102.catch_weight_uom IS 'Unit of measure for the actual scale weight (e.g. kg, lbs)';
+COMMENT ON COLUMN "Nova".t0102.nominal_weight IS 'Nominal expected weight for the picked quantity';
+COMMENT ON COLUMN "Nova".t0102.tolerance_pct IS 'Allowed tolerance percentage (+/-) from nominal weight';
+COMMENT ON COLUMN "Nova".t0102.tolerance_variance_pct IS 'Actual weight variance percentage vs nominal';
+COMMENT ON COLUMN "Nova".t0102.tolerance_status IS 'Status: Within Tolerance | Out of Tolerance | Approved | Pending Approval | Not Applicable';
+COMMENT ON COLUMN "Nova".t0102.supervisor_approved IS 'Whether out-of-tolerance discrepancy was approved by a supervisor';
+COMMENT ON COLUMN "Nova".t0102.supervisor_approved_by IS 'Supervisor user who approved tolerance variance';
+COMMENT ON COLUMN "Nova".t0102.supervisor_approved_at IS 'Timestamp of supervisor approval';
+COMMENT ON COLUMN "Nova".t0102.supervisor_notes IS 'Supervisor comments/reasons on approval';
 CREATE INDEX IF NOT EXISTS idx_t0102_pick_list_id ON "Nova".t0102(pick_list_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_product_id ON "Nova".t0102(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_batch_id ON "Nova".t0102(batch_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_picked_batch_id ON "Nova".t0102(picked_batch_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_batch_number ON "Nova".t0102(batch_number);
+CREATE INDEX IF NOT EXISTS idx_t0102_tolerance_status ON "Nova".t0102(tolerance_status);
+CREATE INDEX IF NOT EXISTS idx_t0102_supervisor_approved ON "Nova".t0102(supervisor_approved);
 
 -- ============================================================
 -- PRODUCT-SUPPLIER LINKING
