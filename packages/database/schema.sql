@@ -275,7 +275,12 @@ CREATE TABLE IF NOT EXISTS "Nova".t0009 (
     warehouse_id   INT NOT NULL REFERENCES "Nova".t0008(id),
     qty            NUMERIC(12,2) NOT NULL DEFAULT 0,
     reserved_qty   NUMERIC(12,2) NOT NULL DEFAULT 0,
+    in_transit_qty NUMERIC(12,2) NOT NULL DEFAULT 0,
     reorder_level  NUMERIC(12,2) NOT NULL DEFAULT 0,
+    weight_qty     NUMERIC(12,4) NOT NULL DEFAULT 0,
+    reserved_weight_qty   NUMERIC(12,4) NOT NULL DEFAULT 0,
+    in_transit_weight_qty NUMERIC(12,4) NOT NULL DEFAULT 0,
+    weight_uom     VARCHAR(50),
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by     INT,
@@ -284,8 +289,13 @@ CREATE TABLE IF NOT EXISTS "Nova".t0009 (
     update_number  INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0009.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0009.weight_qty IS 'Total on-hand physical net weight across packages';
+COMMENT ON COLUMN "Nova".t0009.reserved_weight_qty IS 'Reserved physical weight for confirmed orders';
+COMMENT ON COLUMN "Nova".t0009.in_transit_weight_qty IS 'In-transit physical weight between warehouses';
+COMMENT ON COLUMN "Nova".t0009.weight_uom IS 'Unit of measure for weight quantities (e.g. kg, lbs)';
 CREATE INDEX IF NOT EXISTS idx_t0009_business_id ON "Nova".t0009(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0009_business_id_id ON "Nova".t0009(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0009_weight_qty ON "Nova".t0009(weight_qty);
 
 
 
@@ -2047,6 +2057,10 @@ CREATE TABLE IF NOT EXISTS "Nova".t0064 (
     reference_id INT,
     qty_change NUMERIC(12,2),
     balance_after NUMERIC(12,2),
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    weight_change NUMERIC(12,4),
+    weight_balance_after NUMERIC(12,4),
+    weight_uom VARCHAR(50),
     description TEXT,
     movement_date TIMESTAMPTZ NOT NULL DEFAULT now(),
     is_active BOOLEAN NOT NULL DEFAULT true,
@@ -2058,8 +2072,13 @@ CREATE TABLE IF NOT EXISTS "Nova".t0064 (
     update_number INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0064.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0064.is_catch_weight IS 'Flag indicating movement is for a catch-weight product';
+COMMENT ON COLUMN "Nova".t0064.weight_change IS 'Net scale weight change (+ for stock in, - for stock out)';
+COMMENT ON COLUMN "Nova".t0064.weight_balance_after IS 'Net weight balance after this transaction';
+COMMENT ON COLUMN "Nova".t0064.weight_uom IS 'Weight unit of measure (e.g. kg, lbs)';
 CREATE INDEX IF NOT EXISTS idx_t0064_business_id ON "Nova".t0064(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0064_business_id_id ON "Nova".t0064(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0064_is_catch_weight ON "Nova".t0064(is_catch_weight);
 
 
 COMMENT ON TABLE "Nova".t0064 IS 'Stock Movements';

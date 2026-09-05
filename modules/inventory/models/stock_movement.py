@@ -10,6 +10,10 @@ class StockMovementCreate(BaseModel):
     reference_id: Optional[int] = None
     qty_change: float  # positive = stock in, negative = stock out
     balance_after: float = 0
+    is_catch_weight: bool = False
+    weight_change: Optional[float] = None
+    weight_balance_after: Optional[float] = None
+    weight_uom: Optional[str] = None
     description: Optional[str] = None
     business_id: Optional[int] = None
 
@@ -22,6 +26,10 @@ class StockMovementResponse(BaseModel):
     reference_id: Optional[int] = None
     qty_change: float
     balance_after: float
+    is_catch_weight: bool = False
+    weight_change: Optional[float] = None
+    weight_balance_after: Optional[float] = None
+    weight_uom: Optional[str] = None
     description: Optional[str] = None
     movement_date: Optional[datetime] = None
     created_by: Optional[int] = None
