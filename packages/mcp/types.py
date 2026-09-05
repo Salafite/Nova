@@ -7,6 +7,8 @@ class Tool(BaseModel):
     description: str
     input_schema: dict
     tier: str = "tier1"
+    required_permission: str | None = None
+    required_permission: str | None = None
 
 
 class Resource(BaseModel):
