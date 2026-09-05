@@ -1,4 +1,9 @@
-from modules.accounting.models import InvoiceCreate, InvoiceUpdate, InvoiceResponse
+from modules.accounting.models import (
+    InvoiceCreate,
+    InvoiceUpdate,
+    InvoiceResponse,
+    InvoiceCatchWeightBreakdownResponse,
+)
 from modules.accounting.services.invoice_service import InvoiceService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router
@@ -58,7 +63,7 @@ def create_invoice_from_order(order_id: int):
         raise HTTPException(500, f"Failed to create invoice from order: {e}")
 
 
-@router.get('/{id}/catch-weight-breakdown')
+@router.get('/{id}/catch-weight-breakdown', response_model=InvoiceCatchWeightBreakdownResponse)
 def get_invoice_catch_weight_breakdown(id: int):
     """Retrieve catch-weight breakdown details for an invoice."""
     try:

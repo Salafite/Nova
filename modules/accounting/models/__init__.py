@@ -3,6 +3,8 @@ from modules.accounting.models.finance import (
     JournalEntryCreate, JournalEntryUpdate, JournalEntryResponse,
     JournalLineCreate, JournalLineUpdate, JournalLineResponse,
     InvoiceCreate, InvoiceUpdate, InvoiceResponse,
+    InvoiceCatchWeightLineBreakdown, InvoiceCatchWeightBreakdownResponse,
+    InvoiceCatchWeightSummary, InvoiceRecalculateAndCreateRequest,
     PaymentCreate, PaymentUpdate, PaymentResponse,
 )
 from modules.accounting.models.payment_term import (
