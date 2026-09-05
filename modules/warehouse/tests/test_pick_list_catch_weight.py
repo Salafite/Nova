@@ -755,3 +755,34 @@ class TestPickListApprovalControllerEndpoints:
             T0101I.approve_tolerance(id=999, body={})
         assert exc_info.value.status_code == 404
 
+    def test_complete_picking_controller_endpoint_blocked_by_discrepancy(self, monkeypatch):
+        from modules.warehouse.controllers import T0101I
+        import pytest
+        from fastapi import HTTPException
+
+        mock_svc = MagicMock()
+        mock_svc.complete_picking.side_effect = ValueError("Cannot complete pick list 100: Unapproved catch-weight tolerance discrepancies exist on items: Item #10")
+        monkeypatch.setattr(T0101I, 'pl_service', mock_svc)
+
+        with pytest.raises(HTTPException) as exc_info:
+            T0101I.complete_picking(id=100)
+        assert exc_info.value.status_code == 400
+        assert "Unapproved catch-weight tolerance discrepancies exist" in exc_info.value.detail
+
+    def test_complete_picking_controller_endpoint_success(self, monkeypatch):
+        from modules.warehouse.controllers import T0101I
+
+        mock_svc = MagicMock()
+        mock_svc.complete_picking.return_value = {
+            'id': 100,
+            'status': 'Completed',
+            'has_discrepancies': False,
+            'discrepancy_count': 0,
+        }
+        monkeypatch.setattr(T0101I, 'pl_service', mock_svc)
+
+        result = T0101I.complete_picking(id=100)
+        assert result['status'] == 'Completed'
+        assert result['has_discrepancies'] is False
+        mock_svc.complete_picking.assert_called_once_with(100)
+
