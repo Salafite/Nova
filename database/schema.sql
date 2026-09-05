@@ -128,6 +128,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0003 (
     is_purchasable BOOLEAN NOT NULL DEFAULT true,
     is_saleable    BOOLEAN NOT NULL DEFAULT true,
     is_phantom     BOOLEAN NOT NULL DEFAULT false,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    pricing_uom_id INT REFERENCES "Nova".t0001(id),
+    nominal_weight NUMERIC(12,4) DEFAULT NULL,
+    tolerance_pct NUMERIC(6,2) DEFAULT NULL,
+    pricing_basis VARCHAR(20) DEFAULT 'weight',
     last_transaction_date TIMESTAMPTZ,
     is_active   BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
@@ -138,8 +143,15 @@ CREATE TABLE IF NOT EXISTS "Nova".t0003 (
     update_number INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0003.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0003.is_catch_weight IS 'Flag indicating product is sold/priced by catch-weight (variable physical weight)';
+COMMENT ON COLUMN "Nova".t0003.pricing_uom_id IS 'Unit of Measure used for pricing/billing (e.g. Kilograms, Pounds)';
+COMMENT ON COLUMN "Nova".t0003.nominal_weight IS 'Expected nominal weight per stocking unit (e.g. kg per case)';
+COMMENT ON COLUMN "Nova".t0003.tolerance_pct IS 'Allowable weight variance percentage (+/- %) without requiring supervisor approval';
+COMMENT ON COLUMN "Nova".t0003.pricing_basis IS 'Pricing basis: weight (actual weighed amount) or unit (fixed per piece/case)';
 CREATE INDEX IF NOT EXISTS idx_t0003_business_id ON "Nova".t0003(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0003_business_id_id ON "Nova".t0003(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0003_is_catch_weight ON "Nova".t0003(is_catch_weight);
+CREATE INDEX IF NOT EXISTS idx_t0003_pricing_uom_id ON "Nova".t0003(pricing_uom_id);
 
 
 
@@ -215,6 +227,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0007 (
     sales_uom_id    INT REFERENCES "Nova".t0001(id),
     purchase_factor NUMERIC(12,6) NOT NULL DEFAULT 1,
     sales_factor    NUMERIC(12,6) NOT NULL DEFAULT 1,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    pricing_uom_id  INT REFERENCES "Nova".t0001(id),
+    nominal_weight  NUMERIC(12,4) DEFAULT NULL,
+    tolerance_pct   NUMERIC(6,2) DEFAULT NULL,
+    pricing_basis   VARCHAR(20) DEFAULT 'weight',
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
@@ -223,8 +240,14 @@ CREATE TABLE IF NOT EXISTS "Nova".t0007 (
     update_number   INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0007.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0007.is_catch_weight IS 'Flag indicating dual UOM catch-weight applies to this product UOM configuration';
+COMMENT ON COLUMN "Nova".t0007.pricing_uom_id IS 'Pricing unit of measure reference';
+COMMENT ON COLUMN "Nova".t0007.nominal_weight IS 'Nominal weight per stocking unit';
+COMMENT ON COLUMN "Nova".t0007.tolerance_pct IS 'Tolerance percentage (+/-)';
+COMMENT ON COLUMN "Nova".t0007.pricing_basis IS 'Pricing basis: weight or unit';
 CREATE INDEX IF NOT EXISTS idx_t0007_business_id ON "Nova".t0007(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0007_business_id_id ON "Nova".t0007(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0007_pricing_uom_id ON "Nova".t0007(pricing_uom_id);
 
 
 
