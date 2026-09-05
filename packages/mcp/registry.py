@@ -11,6 +11,11 @@ from modules.core.context import (
     set_current_tenant,
     reset_current_tenant,
 )
+from modules.core.services.permission_service import (
+    has_permission,
+    derive_permissions,
+    get_mcp_tool_permission,
+)
 
 
 logger = logging.getLogger("mcp.audit")
@@ -56,19 +61,46 @@ def get_tools() -> list[Tool]:
     return [v["tool"] for v in _tools.values()]
 
 
+def _get_user_permissions(user: dict | object | None) -> list[str]:
+    """Extract and derive granted permissions for a user dict or object."""
+    if not user:
+        return []
+    if isinstance(user, dict):
+        raw_perms = user.get("permissions")
+        role = user.get("role", "")
+    else:
+        raw_perms = getattr(user, "permissions", None)
+        role = getattr(user, "role", "")
+
+    if raw_perms is None or (isinstance(raw_perms, (list, tuple)) and len(raw_perms) == 0):
+        perms = derive_permissions(role) if role else []
+    elif isinstance(raw_perms, list):
+        perms = list(raw_perms)
+    elif isinstance(raw_perms, str):
+        perms = [raw_perms]
+    else:
+        perms = list(raw_perms)
+
+    if role in ("Admin", "Administrator", "Superadmin", "Super Admin") and "*" not in perms:
+        perms = list(perms) + ["*"]
+
+    return perms
+
+
 def call_tool(name: str, arguments: dict, user: dict | None = None):
     entry = _tools.get(name)
     if not entry:
         raise ValueError(f"Tool not found: {name}")
 
     start = time.time()
+    effective_user = user if user is not None else _current_user.get()
 
     # Extract tenant_id from user dict, active tenant context, or fallback to NOVA_TENANT_ID env var
     tenant_id = None
-    if user and isinstance(user, dict):
-        tenant_id = user.get("business_id")
+    if effective_user and isinstance(effective_user, dict):
+        tenant_id = effective_user.get("business_id")
         if tenant_id is None:
-            tenant_id = user.get("tenant_id")
+            tenant_id = effective_user.get("tenant_id")
     if tenant_id is None:
         tenant_id = get_current_tenant()
     if tenant_id is None:
@@ -79,7 +111,27 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
             except (ValueError, TypeError):
                 tenant_id = None
 
-    user_token = _current_user.set(user)
+    # Enforce RBAC permission check
+    tool_obj = entry.get("tool")
+    required_permission = getattr(tool_obj, "required_permission", None) or get_mcp_tool_permission(name)
+    if required_permission:
+        user_perms = _get_user_permissions(effective_user)
+        if not has_permission(user_perms, required_permission):
+            user_id = effective_user.get("id") if isinstance(effective_user, dict) else getattr(effective_user, "id", None) if effective_user else None
+            role = effective_user.get("role") if isinstance(effective_user, dict) else getattr(effective_user, "role", None) if effective_user else None
+            elapsed = time.time() - start
+            logger.warning(
+                "tool=%s user=%s role=%s tenant=%s required_permission=%s status=denied latency_ms=%d",
+                name,
+                user_id,
+                role,
+                tenant_id,
+                required_permission,
+                round(elapsed * 1000),
+            )
+            raise PermissionError(f"Permission denied: {required_permission} required for tool '{name}'")
+
+    user_token = _current_user.set(effective_user)
     tenant_token = set_current_tenant(tenant_id)
     try:
         result = entry["handler"](**arguments)
@@ -87,7 +139,7 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
         logger.info(
             "tool=%s user=%s tenant=%s status=success latency_ms=%d",
             name,
-            user.get("id") if user else None,
+            effective_user.get("id") if isinstance(effective_user, dict) else None,
             get_current_tenant(),
             round(elapsed * 1000),
         )
@@ -97,7 +149,7 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
         logger.error(
             "tool=%s user=%s tenant=%s status=error error=%s latency_ms=%d",
             name,
-            user.get("id") if user else None,
+            effective_user.get("id") if isinstance(effective_user, dict) else None,
             get_current_tenant(),
             str(e),
             round(elapsed * 1000),
@@ -113,9 +165,28 @@ def propose_action(tool_name: str, arguments: dict, user: dict | None = None) ->
     entry = _tools.get(tool_name)
     if not entry:
         raise ValueError(f"Tool not found: {tool_name}")
+
+    effective_user = user if user is not None else _current_user.get()
+
+    # Enforce RBAC permission check before proposing action
+    tool_obj = entry.get("tool")
+    required_permission = getattr(tool_obj, "required_permission", None) or get_mcp_tool_permission(tool_name)
+    if required_permission:
+        user_perms = _get_user_permissions(effective_user)
+        if not has_permission(user_perms, required_permission):
+            user_id = effective_user.get("id") if isinstance(effective_user, dict) else getattr(effective_user, "id", None) if effective_user else None
+            role = effective_user.get("role") if isinstance(effective_user, dict) else getattr(effective_user, "role", None) if effective_user else None
+            logger.warning(
+                "propose_action: tool=%s user=%s role=%s required_permission=%s status=denied",
+                tool_name,
+                user_id,
+                role,
+                required_permission,
+            )
+            raise PermissionError(f"Permission denied: {required_permission} required for tool '{tool_name}'")
+
     action_id = str(uuid.uuid4())
     now = time.time()
-    effective_user = user if user is not None else _current_user.get()
     payload = {
         "action_id": action_id,
         "tool_name": tool_name,
