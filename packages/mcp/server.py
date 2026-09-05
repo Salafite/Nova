@@ -99,6 +99,8 @@ class McpServer:
                 return self._result(req_id, result)
             else:
                 return self._error(req_id, -32601, f"Method not found: {method}")
+        except PermissionError as e:
+            return self._error(req_id, -32003, str(e))
         except ValueError as e:
             return self._error(req_id, -32602, str(e))
         except Exception as e:

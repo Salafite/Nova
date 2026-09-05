@@ -1,4 +1,4 @@
-﻿from packages.auth.jwt import create_access_token, create_refresh_token, decode_token
+from packages.auth.jwt import create_access_token, create_refresh_token, decode_token
 import jwt
 
 
@@ -179,4 +179,32 @@ def test_create_refresh_token_contains_business_id():
     payload = decode_token(token)
     assert payload['sub'] == '42'
     assert payload['business_id'] == 99
+
+
+def test_create_refresh_token_contains_unique_jti_and_family_id():
+    token1 = create_refresh_token(42)
+    token2 = create_refresh_token(42)
+    payload1 = decode_token(token1)
+    payload2 = decode_token(token2)
+
+    assert 'jti' in payload1
+    assert 'family_id' in payload1
+    assert 'jti' in payload2
+    assert 'family_id' in payload2
+
+    # Each generated token must have a distinct jti and family_id by default
+    assert payload1['jti'] != payload2['jti']
+    assert payload1['family_id'] != payload2['family_id']
+
+
+def test_create_refresh_token_with_custom_jti_and_family():
+    custom_jti = 'custom-jti-uuid-1234'
+    custom_family = 'custom-family-uuid-5678'
+    token = create_refresh_token(42, jti=custom_jti, family_id=custom_family)
+    payload = decode_token(token)
+
+    assert payload['jti'] == custom_jti
+    assert payload['family_id'] == custom_family
+    assert payload['family'] == custom_family
+
 

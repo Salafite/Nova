@@ -61,6 +61,13 @@ def get_tools() -> list[Tool]:
     return [v["tool"] for v in _tools.values()]
 
 
+def _get_user_permissions(user: dict | object | None) -> list[str]:
+    """Extract and derive granted permissions for a user dict or object."""
+    if not user:
+        return []
+    if isinstance(user, dict):
+        raw_perms = user.get("permissions")
+        role = user.get("role", "")
     else:
         raw_perms = getattr(user, "permissions", None)
         role = getattr(user, "role", "")

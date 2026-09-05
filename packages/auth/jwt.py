@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import os
+import uuid
 import jwt
 
 DEFAULT_DEV_SECRET = 'dev-insecure-secret-key-for-development-only-32chars'
@@ -108,9 +109,16 @@ _ACCESS_EXPIRE = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES', 1440))
 _REFRESH_EXPIRE = int(os.getenv('REFRESH_TOKEN_EXPIRE_DAYS', 7))
 
 
-def create_access_token(user_id: int, business_id: int | None = None, customer_id: int | None = None) -> str:
+def create_access_token(
+    user_id: int,
+    business_id: int | None = None,
+    customer_id: int | None = None,
+    jti: str | None = None,
+) -> str:
     now = datetime.now(timezone.utc)
     payload = {'sub': str(user_id), 'iat': now, 'exp': now + timedelta(minutes=_ACCESS_EXPIRE), 'type': 'access'}
+    if jti is not None:
+        payload['jti'] = jti
     if business_id is not None:
         payload['business_id'] = business_id
     if customer_id is not None:
@@ -118,9 +126,26 @@ def create_access_token(user_id: int, business_id: int | None = None, customer_i
     return jwt.encode(payload, get_secret_key(), algorithm=_ALGO)
 
 
-def create_refresh_token(user_id: int, business_id: int | None = None, customer_id: int | None = None) -> str:
+def create_refresh_token(
+    user_id: int,
+    business_id: int | None = None,
+    customer_id: int | None = None,
+    jti: str | None = None,
+    family_id: str | None = None,
+    family: str | None = None,
+) -> str:
     now = datetime.now(timezone.utc)
-    payload = {'sub': str(user_id), 'iat': now, 'exp': now + timedelta(days=_REFRESH_EXPIRE), 'type': 'refresh'}
+    token_jti = jti if jti is not None else str(uuid.uuid4())
+    token_family = family_id if family_id is not None else (family if family is not None else str(uuid.uuid4()))
+    payload = {
+        'sub': str(user_id),
+        'iat': now,
+        'exp': now + timedelta(days=_REFRESH_EXPIRE),
+        'type': 'refresh',
+        'jti': token_jti,
+        'family_id': token_family,
+        'family': token_family,
+    }
     if business_id is not None:
         payload['business_id'] = business_id
     if customer_id is not None:
@@ -128,6 +153,7 @@ def create_refresh_token(user_id: int, business_id: int | None = None, customer_
     return jwt.encode(payload, get_secret_key(), algorithm=_ALGO)
 
 
-def decode_token(token: str) -> dict:
-    return jwt.decode(token, get_secret_key(), algorithms=[_ALGO])
+def decode_token(token: str, options: dict | None = None) -> dict:
+    return jwt.decode(token, get_secret_key(), algorithms=[_ALGO], options=options)
+
 
