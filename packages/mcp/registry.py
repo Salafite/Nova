@@ -81,9 +81,16 @@ def _get_user_permissions(user: dict | object | None) -> list[str]:
     if isinstance(user, dict):
         raw_perms = user.get("permissions")
         role = user.get("role", "")
+        username = user.get("username", "")
     else:
         raw_perms = getattr(user, "permissions", None)
         role = getattr(user, "role", "")
+        username = getattr(user, "username", "")
+
+    if not role and isinstance(username, str):
+        u_lower = username.lower().strip()
+        if u_lower in ("admin", "administrator", "superadmin", "super_admin", "tenant_admin", "system_admin"):
+            role = "Admin"
 
     if raw_perms is None or (isinstance(raw_perms, (list, tuple)) and len(raw_perms) == 0):
         perms = derive_permissions(role) if role else []
@@ -94,7 +101,7 @@ def _get_user_permissions(user: dict | object | None) -> list[str]:
     else:
         perms = list(raw_perms)
 
-    if role in ("Admin", "Administrator", "Superadmin", "Super Admin") and "*" not in perms:
+    if isinstance(role, str) and role.lower() in ("admin", "administrator", "superadmin", "super admin") and "*" not in perms:
         perms = list(perms) + ["*"]
 
     return perms

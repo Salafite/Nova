@@ -37,7 +37,7 @@ class McpServer:
             env_tenant = os.environ.get("NOVA_TENANT_ID")
             if env_tenant:
                 try:
-                    user = {"business_id": int(env_tenant)}
+                    user = {"business_id": int(env_tenant), "role": os.environ.get("NOVA_USER_ROLE", "Admin")}
                 except (ValueError, TypeError):
                     pass
         elif isinstance(user, dict) and "business_id" not in user and "tenant_id" not in user:

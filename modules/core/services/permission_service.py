@@ -434,7 +434,14 @@ MCP_TOOL_PERMISSIONS: dict[str, str] = {
 
 def derive_permissions(role: str) -> list[str]:
     """Return default permissions list for a given user role."""
-    return _ROLE_PERMISSIONS.get(role, ['DASHBOARD_VIEW'])
+    if not role:
+        return ['DASHBOARD_VIEW']
+    if role in _ROLE_PERMISSIONS:
+        return _ROLE_PERMISSIONS[role]
+    for k, v in _ROLE_PERMISSIONS.items():
+        if k.lower() == str(role).lower().strip():
+            return v
+    return ['DASHBOARD_VIEW']
 
 
 def get_required_permission(prefix: str = '', tag: str = '') -> str:
