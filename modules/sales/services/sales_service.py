@@ -724,7 +724,10 @@ class SalesOrderService(CrudService):
 
             discount_percentage = float(term.get('discount_percentage', 0.0) or 0.0) if isinstance(term, dict) else float(getattr(term, 'discount_percentage', 0.0) or 0.0)
             discount_days = int(term.get('discount_days', 0) or 0) if isinstance(term, dict) else int(getattr(term, 'discount_days', 0) or 0)
-            grand_total = float(order.get('grand_total', 0) or 0)
+            if recalc and recalc.get('is_catch_weight') and recalc.get('grand_total') is not None:
+                grand_total = float(recalc.get('grand_total'))
+            else:
+                grand_total = float(order.get('grand_total', 0) or 0)
             early_discount_amount = calculate_max_early_discount(grand_total, discount_percentage) if (discount_percentage > 0 and discount_days > 0) else 0.0
 
             self.inv_repo.create({
@@ -767,13 +770,15 @@ class SalesOrderService(CrudService):
                     # The in-memory mock test store does not serialize concurrent access,
                     # so the concurrent balance assertion was already removed in PR #5.
                     current_bal = float(customer.get('balance') or 0.0)
-                    order_total = float(order.get('grand_total') or 0.0)
+                    order_total = grand_total
                     new_balance = current_bal + order_total
                     self.customer_repo.update(customer_id, {'balance': new_balance}, conn=conn)
                     logger.info(f"Updated customer {customer_id} balance to {new_balance}")
             except Exception as e:
                 logger.error(f"Failed to update customer balance for customer {customer_id}: {e}")
                 raise RuntimeError(f"Failed to update customer balance for customer {customer_id}: {e}") from e
+
+        return recalc
 
     def _reserve_order_stock(self, order_id, conn=None):
         from modules.inventory.services.stock_movement import StockMovementService
