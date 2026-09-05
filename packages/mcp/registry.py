@@ -16,6 +16,10 @@ from modules.core.context import (
     set_current_tenant,
     reset_current_tenant,
 )
+from packages.security.audit import (
+    record_mcp_tool_execution,
+    record_mcp_propose_confirm,
+)
 
 
 logger = logging.getLogger("mcp.audit")
@@ -30,6 +34,15 @@ _CONFIRM_ACTION_REGISTERED: bool = False
 
 # Context variable for the current user, set before handler execution
 _current_user: contextvars.ContextVar[dict | None] = contextvars.ContextVar("current_user", default=None)
+
+
+def _extract_user_meta(user: dict | object | None) -> tuple[int | None, str | None]:
+    """Extract user_id and role from user dict or object."""
+    if not user:
+        return None, None
+    if isinstance(user, dict):
+        return user.get("id"), user.get("role")
+    return getattr(user, "id", None), getattr(user, "role", None)
 
 
 def _get_action_key(action_id: str) -> str:
@@ -89,11 +102,9 @@ def _get_user_permissions(user: dict | object | None) -> list[str]:
 
 def call_tool(name: str, arguments: dict, user: dict | None = None):
     entry = _tools.get(name)
-    if not entry:
-        raise ValueError(f"Tool not found: {name}")
-
     start = time.time()
     effective_user = user if user is not None else _current_user.get()
+    user_id, role = _extract_user_meta(effective_user)
 
     # Extract tenant_id from user dict, active tenant context, or fallback to NOVA_TENANT_ID env var
     tenant_id = None
@@ -101,6 +112,8 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
         tenant_id = effective_user.get("business_id")
         if tenant_id is None:
             tenant_id = effective_user.get("tenant_id")
+    elif effective_user:
+        tenant_id = getattr(effective_user, "business_id", None) or getattr(effective_user, "tenant_id", None)
     if tenant_id is None:
         tenant_id = get_current_tenant()
     if tenant_id is None:
@@ -111,15 +124,26 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
             except (ValueError, TypeError):
                 tenant_id = None
 
+    if not entry:
+        record_mcp_tool_execution(
+            tool_name=name,
+            arguments=arguments,
+            status="ERROR",
+            user_id=user_id,
+            business_id=tenant_id,
+            role=role,
+            error=f"Tool not found: {name}",
+        )
+        raise ValueError(f"Tool not found: {name}")
+
     # Enforce RBAC permission check
     tool_obj = entry.get("tool")
     required_permission = getattr(tool_obj, "required_permission", None) or get_mcp_tool_permission(name)
     if required_permission:
         user_perms = _get_user_permissions(effective_user)
         if not has_permission(user_perms, required_permission):
-            user_id = effective_user.get("id") if isinstance(effective_user, dict) else getattr(effective_user, "id", None) if effective_user else None
-            role = effective_user.get("role") if isinstance(effective_user, dict) else getattr(effective_user, "role", None) if effective_user else None
             elapsed = time.time() - start
+            latency_ms = round(elapsed * 1000)
             logger.warning(
                 "tool=%s user=%s role=%s tenant=%s required_permission=%s status=denied latency_ms=%d",
                 name,
@@ -127,7 +151,18 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
                 role,
                 tenant_id,
                 required_permission,
-                round(elapsed * 1000),
+                latency_ms,
+            )
+            record_mcp_tool_execution(
+                tool_name=name,
+                arguments=arguments,
+                status="DENIED",
+                user_id=user_id,
+                business_id=tenant_id,
+                role=role,
+                required_permission=required_permission,
+                latency_ms=latency_ms,
+                error=f"Permission denied: {required_permission} required for tool '{name}'",
             )
             raise PermissionError(f"Permission denied: {required_permission} required for tool '{name}'")
 
@@ -136,23 +171,47 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
     try:
         result = entry["handler"](**arguments)
         elapsed = time.time() - start
+        latency_ms = round(elapsed * 1000)
         logger.info(
             "tool=%s user=%s tenant=%s status=success latency_ms=%d",
             name,
-            effective_user.get("id") if isinstance(effective_user, dict) else None,
+            user_id,
             get_current_tenant(),
-            round(elapsed * 1000),
+            latency_ms,
+        )
+        record_mcp_tool_execution(
+            tool_name=name,
+            arguments=arguments,
+            result=result,
+            status="SUCCESS",
+            user_id=user_id,
+            business_id=tenant_id,
+            role=role,
+            required_permission=required_permission,
+            latency_ms=latency_ms,
         )
         return result
     except Exception as e:
         elapsed = time.time() - start
+        latency_ms = round(elapsed * 1000)
         logger.error(
             "tool=%s user=%s tenant=%s status=error error=%s latency_ms=%d",
             name,
-            effective_user.get("id") if isinstance(effective_user, dict) else None,
+            user_id,
             get_current_tenant(),
             str(e),
-            round(elapsed * 1000),
+            latency_ms,
+        )
+        record_mcp_tool_execution(
+            tool_name=name,
+            arguments=arguments,
+            status="ERROR",
+            user_id=user_id,
+            business_id=tenant_id,
+            role=role,
+            required_permission=required_permission,
+            latency_ms=latency_ms,
+            error=str(e),
         )
         raise
     finally:
@@ -162,11 +221,38 @@ def call_tool(name: str, arguments: dict, user: dict | None = None):
 
 def propose_action(tool_name: str, arguments: dict, user: dict | None = None) -> dict:
     """Propose a tier-2 action without executing it. Returns an action_id and preview."""
+    effective_user = user if user is not None else _current_user.get()
+    user_id, role = _extract_user_meta(effective_user)
+
+    tenant_id = None
+    if effective_user and isinstance(effective_user, dict):
+        tenant_id = effective_user.get("business_id") or effective_user.get("tenant_id")
+    elif effective_user:
+        tenant_id = getattr(effective_user, "business_id", None) or getattr(effective_user, "tenant_id", None)
+    if tenant_id is None:
+        tenant_id = get_current_tenant()
+    if tenant_id is None:
+        env_tenant = os.environ.get("NOVA_TENANT_ID")
+        if env_tenant:
+            try:
+                tenant_id = int(env_tenant)
+            except (ValueError, TypeError):
+                tenant_id = None
+
     entry = _tools.get(tool_name)
     if not entry:
+        record_mcp_propose_confirm(
+            action_type="PROPOSE",
+            tool_name=tool_name,
+            action_id="",
+            arguments=arguments,
+            status="ERROR",
+            user_id=user_id,
+            business_id=tenant_id,
+            role=role,
+            error=f"Tool not found: {tool_name}",
+        )
         raise ValueError(f"Tool not found: {tool_name}")
-
-    effective_user = user if user is not None else _current_user.get()
 
     # Enforce RBAC permission check before proposing action
     tool_obj = entry.get("tool")
@@ -174,14 +260,23 @@ def propose_action(tool_name: str, arguments: dict, user: dict | None = None) ->
     if required_permission:
         user_perms = _get_user_permissions(effective_user)
         if not has_permission(user_perms, required_permission):
-            user_id = effective_user.get("id") if isinstance(effective_user, dict) else getattr(effective_user, "id", None) if effective_user else None
-            role = effective_user.get("role") if isinstance(effective_user, dict) else getattr(effective_user, "role", None) if effective_user else None
             logger.warning(
                 "propose_action: tool=%s user=%s role=%s required_permission=%s status=denied",
                 tool_name,
                 user_id,
                 role,
                 required_permission,
+            )
+            record_mcp_propose_confirm(
+                action_type="PROPOSE",
+                tool_name=tool_name,
+                action_id="",
+                arguments=arguments,
+                status="DENIED",
+                user_id=user_id,
+                business_id=tenant_id,
+                role=role,
+                error=f"Permission denied: {required_permission} required for tool '{tool_name}'",
             )
             raise PermissionError(f"Permission denied: {required_permission} required for tool '{tool_name}'")
 
@@ -199,10 +294,23 @@ def propose_action(tool_name: str, arguments: dict, user: dict | None = None) ->
     client = get_redis_client()
     key = _get_action_key(action_id)
     client.set(key, json.dumps(payload), ex=_ACTION_TTL)
+    preview = f"Action: {tool_name}\nArguments: {json.dumps(arguments, indent=2)}"
+
+    record_mcp_propose_confirm(
+        action_type="PROPOSE",
+        tool_name=tool_name,
+        action_id=action_id,
+        arguments=arguments,
+        preview=preview,
+        status="SUCCESS",
+        user_id=user_id,
+        business_id=tenant_id,
+        role=role,
+    )
     return {
         "action_id": action_id,
         "tool": tool_name,
-        "preview": f"Action: {tool_name}\nArguments: {json.dumps(arguments, indent=2)}",
+        "preview": preview,
     }
 
 
@@ -240,11 +348,70 @@ def _fetch_and_delete_action(action_id: str) -> dict | None:
 
 def confirm_action(action_id: str, user: dict | None = None) -> dict:
     """Confirm and execute a previously proposed action."""
+    effective_user = user if user is not None else _current_user.get()
+    user_id, role = _extract_user_meta(effective_user)
+
+    tenant_id = None
+    if effective_user and isinstance(effective_user, dict):
+        tenant_id = effective_user.get("business_id") or effective_user.get("tenant_id")
+    elif effective_user:
+        tenant_id = getattr(effective_user, "business_id", None) or getattr(effective_user, "tenant_id", None)
+    if tenant_id is None:
+        tenant_id = get_current_tenant()
+    if tenant_id is None:
+        env_tenant = os.environ.get("NOVA_TENANT_ID")
+        if env_tenant:
+            try:
+                tenant_id = int(env_tenant)
+            except (ValueError, TypeError):
+                tenant_id = None
+
     entry = _fetch_and_delete_action(action_id)
     if not entry:
+        record_mcp_propose_confirm(
+            action_type="CONFIRM",
+            tool_name="UNKNOWN",
+            action_id=action_id,
+            status="ERROR",
+            user_id=user_id,
+            business_id=tenant_id,
+            role=role,
+            error=f"Action not found or expired: {action_id}",
+        )
         raise ValueError(f"Action not found or expired: {action_id}")
+
     exec_user = user if user is not None else (_current_user.get() or entry.get("user"))
-    return call_tool(entry["tool_name"], entry["arguments"], user=exec_user)
+    exec_user_id, exec_user_role = _extract_user_meta(exec_user)
+    tool_name = entry.get("tool_name", "UNKNOWN")
+    arguments = entry.get("arguments", {})
+
+    try:
+        result = call_tool(tool_name, arguments, user=exec_user)
+        record_mcp_propose_confirm(
+            action_type="CONFIRM",
+            tool_name=tool_name,
+            action_id=action_id,
+            arguments=arguments,
+            result=result,
+            status="SUCCESS",
+            user_id=exec_user_id,
+            business_id=tenant_id,
+            role=exec_user_role,
+        )
+        return result
+    except Exception as e:
+        record_mcp_propose_confirm(
+            action_type="CONFIRM",
+            tool_name=tool_name,
+            action_id=action_id,
+            arguments=arguments,
+            status="ERROR",
+            user_id=exec_user_id,
+            business_id=tenant_id,
+            role=exec_user_role,
+            error=str(e),
+        )
+        raise
 
 
 def _purge_expired_actions():
@@ -324,12 +491,7 @@ def _ensure_meta_tools():
     _CONFIRM_ACTION_REGISTERED = True
 
     def _handle_confirm_action(action_id: str):
-        _purge_expired_actions()
-        entry = _pending_actions.pop(action_id, None)
-        if not entry:
-            raise ValueError(f"Action not found or expired: {action_id}")
-        user = _current_user.get() or entry.get("user")
-        return call_tool(entry["tool_name"], entry["arguments"], user=user)
+        return confirm_action(action_id, user=_current_user.get())
 
     register_tool(
         Tool(
