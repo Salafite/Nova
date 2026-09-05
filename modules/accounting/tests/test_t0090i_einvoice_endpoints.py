@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from packages.auth.deps import get_current_user
 from modules.accounting.controllers.T0090I import router, service, fiscal_pdf_service
 from modules.accounting.models.einvoice import (
     QRCodeResponse,
@@ -14,6 +15,13 @@ from modules.accounting.models.einvoice import (
 @pytest.fixture
 def client():
     app = FastAPI()
+    app.dependency_overrides[get_current_user] = lambda: {
+        "id": 1,
+        "username": "admin",
+        "role": "Admin",
+        "business_id": 1,
+        "permissions": ["*"],
+    }
     app.include_router(router)
     return TestClient(app)
 

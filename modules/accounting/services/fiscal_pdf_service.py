@@ -440,3 +440,6 @@ class FiscalPdfService:
         pdf_bytes = buffer.getvalue()
         buffer.close()
         return pdf_bytes
+
+
+fiscal_pdf_service = FiscalPdfService()
