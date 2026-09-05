@@ -119,6 +119,8 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0121': 'SALES_VIEW',         # Customer Group Price Lists
     'T0122': 'SALES_VIEW',         # Customer Contracts
     'T0123': 'SALES_VIEW',         # Promotional Campaign Rules
+    'T0124': 'FINANCE_VIEW',       # E-Invoice Clearance Records
+    'T0125': 'FINANCE_VIEW',       # Fiscal Authority Profiles
 }
 
 # Non-T-code custom route and tag mappings
