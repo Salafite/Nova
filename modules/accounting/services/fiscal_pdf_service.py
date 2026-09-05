@@ -101,7 +101,16 @@ class FiscalPdfService:
             qr_code_tlv=qr_code_tlv,
         )
 
-    def _create_qr_drawing(self, text: str, size: float = 110.0) -> Drawing:
+    def generate_fiscal_invoice_pdf(
+        self,
+        invoice_id: int,
+        profile_id: Optional[int] = None,
+        conn=None,
+    ) -> bytes:
+        """Alias for generate_fiscal_pdf."""
+        return self.generate_fiscal_pdf(invoice_id=invoice_id, profile_id=profile_id, conn=conn)
+
+    def _create_qr_drawing(self, text: str, size: float = 100.0) -> Drawing:
         """Construct ReportLab Drawing containing scaled QR code."""
         d = Drawing(size, size)
         qr = QrCodeWidget(text)
@@ -109,7 +118,7 @@ class FiscalPdfService:
         w = bounds[2] - bounds[0]
         h = bounds[3] - bounds[1]
         if w > 0 and h > 0:
-            qr.transform = [size / w, 0, 0, size / h, 0, 0]
+            d.scale(size / w, size / h)
         d.add(qr)
         return d
 
@@ -443,3 +452,4 @@ class FiscalPdfService:
 
 
 fiscal_pdf_service = FiscalPdfService()
+

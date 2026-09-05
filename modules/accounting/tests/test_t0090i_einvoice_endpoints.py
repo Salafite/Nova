@@ -88,15 +88,24 @@ def test_submit_invoice_clearance(client, mock_invoice):
         "subtype": "0100000",
         "clearance_status": "Draft",
     }
+    mock_clearance_res = ClearanceSubmissionResponse(
+        success=True,
+        invoice_id=101,
+        invoice_uuid="3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        clearance_status="Cleared",
+        clearance_id="CLR-SA-3FA85F64",
+        qr_code_tlv="AQ...",
+        invoice_hash="a" * 44,
+    )
     with patch.object(service.repo, "get", return_value=mock_invoice), \
          patch.object(service.einvoice_service, "get_by_invoice_id", return_value=mock_record), \
-         patch.object(service.einvoice_service.repo, "update", return_value=None):
+         patch.object(service.einvoice_service, "submit_clearance", return_value=mock_clearance_res):
         response = client.post("/api/T0090I/101/clearance")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["clearance_status"] in ("Cleared", "Reported", "Pending")
-        assert data["clearance_id"] is not None
+        assert data["clearance_status"] == "Cleared"
+        assert data["clearance_id"] == "CLR-SA-3FA85F64"
 
 
 def test_submit_invoice_clearance_not_found(client):

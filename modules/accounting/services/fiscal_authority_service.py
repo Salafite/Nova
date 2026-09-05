@@ -1,4 +1,4 @@
-﻿import base64
+import base64
 import json
 import logging
 import time
@@ -188,7 +188,7 @@ class FiscalAuthorityService:
 
         # If all retries exhausted, check if we should return fallback simulation or raise
         if self.environment in ["Sandbox", "Simulation"] and (
-            isinstance(last_exception, (httpx.ConnectError, httpx.TimeoutException, RuntimeError))
+            isinstance(last_exception, (httpx.RequestError, httpx.TimeoutException, RuntimeError, Exception))
             or (last_exception and "not found" in str(last_exception).lower())
         ):
             logger.info("Sandbox/Simulation network unreachable. Generating mock compliance response.")
