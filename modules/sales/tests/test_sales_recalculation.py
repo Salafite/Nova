@@ -673,7 +673,7 @@ class TestSalesOrderControllerEndpoints:
 
         result = T0012I.preview_order_catch_weight_recalculation(id=100)
         assert result['weight_adjustment_amount'] == 60.0
-        mock_svc.recalculate_order_catch_weight.assert_called_once_with(100)
+        mock_svc.recalculate_order_catch_weight.assert_called_once_with(100, preview=True)
 
     def test_recalculate_not_found_raises_404(self, monkeypatch):
         mock_svc = MagicMock()

@@ -518,14 +518,14 @@ class SalesOrderService(CrudService):
     def _generate_invoice_number(self, conn=None):
         return generate_invoice_number(conn=conn)
 
-    def recalculate_order_catch_weight(self, order_id: int, conn=None) -> dict:
+    def recalculate_order_catch_weight(self, order_id: int, preview: bool = False, conn=None) -> dict:
         """
         Recalculate sales order lines and order totals based on actual weighed catch-weights.
         - Sourced from pick list items (T0102) if not already set on sales lines (T0013).
         - Computes line recalculated total using unit_price_pricing_uom (or price/weight ratio).
-        - Updates sales order lines with actual weights and recalculated totals.
+        - Updates sales order lines with actual weights and recalculated totals (unless preview=True).
         - Recalculates order subtotal, proportional tax, and grand total.
-        - Updates order header T0012 with recalculated amounts.
+        - Updates order header T0012 with recalculated amounts (unless preview=True).
         - Returns a detailed recalculation summary.
         """
         order = self.repo.get(order_id, conn=conn)
@@ -640,7 +640,8 @@ class SalesOrderService(CrudService):
                     if nominal_wt is not None and line.get('nominal_weight') is None:
                         line_update['nominal_weight'] = nom_val
 
-                    self.line_repo.update(line_id, line_update, conn=conn)
+                    if not preview:
+                        self.line_repo.update(line_id, line_update, conn=conn)
                     updated_line = dict(line, **line_update)
                     updated_lines.append(updated_line)
                     recalculated_subtotal += recalculated_line_total
@@ -671,7 +672,7 @@ class SalesOrderService(CrudService):
         hdr_discount = float(order.get('discount_amount', 0) or 0)
         new_grand_total = round(max(0.0, recalculated_subtotal + new_tax + freight - hdr_discount), 2)
 
-        if has_catch_weight:
+        if has_catch_weight and not preview:
             self.repo.update(order_id, {
                 'subtotal': recalculated_subtotal,
                 'tax': new_tax,
