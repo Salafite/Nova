@@ -404,6 +404,12 @@ CREATE TABLE IF NOT EXISTS "Nova".t0013 (
     discount        NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_total      NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_number     INT NOT NULL DEFAULT 1,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    pricing_uom_id INT REFERENCES "Nova".t0001(id),
+    unit_price_pricing_uom NUMERIC(12,4) DEFAULT NULL,
+    nominal_weight NUMERIC(12,4) DEFAULT NULL,
+    catch_weight_actual NUMERIC(12,4) DEFAULT NULL,
+    recalculated_total NUMERIC(12,2) DEFAULT NULL,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
@@ -414,8 +420,15 @@ CREATE TABLE IF NOT EXISTS "Nova".t0013 (
 COMMENT ON COLUMN "Nova".t0013.cost_price IS 'Unit cost price / COGS at time of order';
 COMMENT ON COLUMN "Nova".t0013.discount IS 'Line-level discount amount';
 COMMENT ON COLUMN "Nova".t0013.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0013.is_catch_weight IS 'Flag indicating order line uses catch-weight pricing';
+COMMENT ON COLUMN "Nova".t0013.pricing_uom_id IS 'Pricing unit of measure (e.g. kg)';
+COMMENT ON COLUMN "Nova".t0013.unit_price_pricing_uom IS 'Price per pricing UOM unit (e.g. price per kg)';
+COMMENT ON COLUMN "Nova".t0013.nominal_weight IS 'Nominal weight for ordered quantity';
+COMMENT ON COLUMN "Nova".t0013.catch_weight_actual IS 'Actual weighed catch weight from warehouse fulfillment';
+COMMENT ON COLUMN "Nova".t0013.recalculated_total IS 'Final recalculated line total based on actual catch-weight';
 CREATE INDEX IF NOT EXISTS idx_t0013_business_id ON "Nova".t0013(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0013_business_id_id ON "Nova".t0013(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0013_pricing_uom_id ON "Nova".t0013(pricing_uom_id);
 
 
 
@@ -798,6 +811,10 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     sales_rep_id    INT REFERENCES "Nova".t0021(id),
     status          VARCHAR(20) NOT NULL DEFAULT 'Draft',
     notes           TEXT,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    nominal_total_weight NUMERIC(12,4) DEFAULT NULL,
+    actual_total_weight NUMERIC(12,4) DEFAULT NULL,
+    weight_adjustment_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
@@ -809,6 +826,10 @@ COMMENT ON COLUMN "Nova".t0090.freight_amount IS 'Freight / shipping charges bil
 COMMENT ON COLUMN "Nova".t0090.discount_amount IS 'Customer discount deducted on invoice';
 COMMENT ON COLUMN "Nova".t0090.sales_rep_id IS 'Assigned sales representative (User ID)';
 COMMENT ON COLUMN "Nova".t0090.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0090.is_catch_weight IS 'Flag indicating invoice contains catch-weight products';
+COMMENT ON COLUMN "Nova".t0090.nominal_total_weight IS 'Total nominal weight across invoiced catch-weight items';
+COMMENT ON COLUMN "Nova".t0090.actual_total_weight IS 'Total actual scale weight across invoiced catch-weight items';
+COMMENT ON COLUMN "Nova".t0090.weight_adjustment_amount IS 'Net financial adjustment due to catch-weight variance vs nominal';
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id ON "Nova".t0090(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id_id ON "Nova".t0090(business_id, id);
 
