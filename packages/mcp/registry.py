@@ -6,15 +6,15 @@ import logging
 import contextvars
 from packages.mcp.types import Tool, Resource, Prompt
 from packages.redis.client import get_redis_client
+from modules.core.services.permission_service import (
+    get_mcp_tool_permission,
+    has_permission,
+    derive_permissions,
+)
 from modules.core.context import (
     get_current_tenant,
     set_current_tenant,
     reset_current_tenant,
-)
-from modules.core.services.permission_service import (
-    has_permission,
-    derive_permissions,
-    get_mcp_tool_permission,
 )
 
 
@@ -61,13 +61,6 @@ def get_tools() -> list[Tool]:
     return [v["tool"] for v in _tools.values()]
 
 
-def _get_user_permissions(user: dict | object | None) -> list[str]:
-    """Extract and derive granted permissions for a user dict or object."""
-    if not user:
-        return []
-    if isinstance(user, dict):
-        raw_perms = user.get("permissions")
-        role = user.get("role", "")
     else:
         raw_perms = getattr(user, "permissions", None)
         role = getattr(user, "role", "")
@@ -264,9 +257,31 @@ def read_resource(uri: str, user: dict | None = None):
     if not entry:
         raise ValueError(f"Resource not found: {uri}")
     exec_user = user if user is not None else _current_user.get()
+
+    # Enforce RBAC permission check for resource
+    res_obj = entry.get("resource")
+    required_permission = getattr(res_obj, "required_permission", None)
+    if not required_permission and uri == "nova://schema":
+        required_permission = "ADMIN_VIEW"
+    if required_permission:
+        user_perms = _get_user_permissions(exec_user)
+        if not has_permission(user_perms, required_permission):
+            user_id = exec_user.get("id") if isinstance(exec_user, dict) else getattr(exec_user, "id", None) if exec_user else None
+            role = exec_user.get("role") if isinstance(exec_user, dict) else getattr(exec_user, "role", None) if exec_user else None
+            logger.warning(
+                "read_resource: uri=%s user=%s role=%s required_permission=%s status=denied",
+                uri,
+                user_id,
+                role,
+                required_permission,
+            )
+            raise PermissionError(f"Permission denied: {required_permission} required for resource '{uri}'")
+
     tenant_id = None
     if exec_user and isinstance(exec_user, dict):
         tenant_id = exec_user.get("business_id") or exec_user.get("tenant_id")
+    if tenant_id is None:
+        tenant_id = get_current_tenant()
     if tenant_id is None:
         env_tenant = os.environ.get("NOVA_TENANT_ID")
         if env_tenant:
