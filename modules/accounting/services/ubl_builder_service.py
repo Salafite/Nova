@@ -1,4 +1,4 @@
-"""UBL 2.1 XML Document Generator for e-Invoicing & Fiscal Compliance.
+﻿"""UBL 2.1 XML Document Generator for e-Invoicing & Fiscal Compliance.
 
 Compliant with UN/CEFACT, OASIS UBL 2.1, and regional tax authority mandates (ZATCA / EN16931).
 Supports Standard B2B (0100000) and Simplified B2C (0200000) Tax Invoices, Credit Notes, and Debit Notes.
@@ -6,16 +6,17 @@ Supports Standard B2B (0100000) and Simplified B2C (0200000) Tax Invoices, Credi
 
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-from datetime import datetime, date
+from datetime import datetime, date, timezone
+from decimal import Decimal
 from typing import Dict, List, Any, Optional, Union
 import uuid
 
 # Namespaces
 NAMESPACES = {
     "xmlns": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
-    "xmlns:cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
-    "xmlns:cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
-    "xmlns:ext": "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
+    "cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+    "cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+    "ext": "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
 }
 
 # Subtypes
@@ -65,14 +66,14 @@ class UBLInvoiceBuilder:
         elif issue_date:
             self.issue_date = str(issue_date)
         else:
-            self.issue_date = datetime.utcnow().strftime("%Y-%m-%d")
+            self.issue_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         if isinstance(issue_time, datetime):
             self.issue_time = issue_time.strftime("%H:%M:%S")
         elif issue_time:
             self.issue_time = str(issue_time)
         else:
-            self.issue_time = datetime.utcnow().strftime("%H:%M:%S")
+            self.issue_time = datetime.now(timezone.utc).strftime("%H:%M:%S")
 
         self.invoice_type_code = invoice_type_code
         self.subtype = subtype
@@ -80,7 +81,7 @@ class UBLInvoiceBuilder:
         self.tax_currency_code = tax_currency_code
         self.note = note
         self.icv = icv
-        self.pih = pih or "NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0Nj振兴"  # default initial hash placeholder
+        self.pih = pih or "NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjNzljMmRiYzIzOWRkNGU5MWI0NjAzZTQ4MmUwNzMzYTJhNw=="
         self.qr_code_tlv = qr_code_tlv
 
         # Supplier data
@@ -90,7 +91,7 @@ class UBLInvoiceBuilder:
         # Line items
         self.lines: List[Dict[str, Any]] = []
         # Payment details
-        self.payment_means_code: str = "10"  # 10: Cash, 30: Credit, 48: Card
+        self.payment_means_code: str = "10"
         self.payment_terms_note: Optional[str] = None
         # Allowances / Charges (Discounts)
         self.allowances: List[Dict[str, Any]] = []
@@ -251,7 +252,6 @@ class UBLInvoiceBuilder:
         ubl_ext = ET.SubElement(ubl_extensions, "ext:UBLExtension")
         ET.SubElement(ubl_ext, "ext:ExtensionURI").text = "urn:oasis:names:specification:ubl:dsig:enveloped:xades"
         ext_content = ET.SubElement(ubl_ext, "ext:ExtensionContent")
-        # Placeholder for digital signature / XAdES
         ET.SubElement(ext_content, "sig:UBLDocumentSignatures", {
             "xmlns:sig": "urn:oasis:names:specification:ubl:schema:xsd:CommonSignatureComponents-2",
             "xmlns:sac": "urn:oasis:names:specification:ubl:schema:xsd:SignatureAggregateComponents-2",
@@ -291,7 +291,8 @@ class UBLInvoiceBuilder:
         # 3. QR Code (if provided)
         if self.qr_code_tlv:
             qr_ref = ET.SubElement(root, "cac:AdditionalDocumentReference")
-            ET.SubElement(qr_ref, "cbc:ID").text = "QR"
+            qr_ref_id = ET.SubElement(qr_ref, "cbc:ID")
+            qr_ref_id.text = "QR"
             qr_att = ET.SubElement(qr_ref, "cac:Attachment")
             qr_bin = ET.SubElement(qr_att, "cbc:EmbeddedDocumentBinaryObject", {"mimeCode": "text/plain"})
             qr_bin.text = self.qr_code_tlv
@@ -418,15 +419,102 @@ class UBLInvoiceBuilder:
         raw_xml = ET.tostring(root, encoding="utf-8")
         if pretty:
             reparsed = minidom.parseString(raw_xml)
-            # Remove empty text nodes that minidom sometimes adds
-            pretty_xml = reparsed.toprettyxml(indent="  ", encoding=encoding)
-            return pretty_xml
-        return b'<?xml version="1.0" encoding="UTF-8"?>
-' + raw_xml
+            return reparsed.toprettyxml(indent="  ", encoding=encoding)
+        return b'<?xml version="1.0" encoding="UTF-8"?>\n' + raw_xml
 
     def to_xml_string(self, pretty: bool = True) -> str:
         """Serializes the UBL document to an XML string."""
         return self.to_xml_bytes(encoding="utf-8", pretty=pretty).decode("utf-8")
+
+
+class UBLBuilderService:
+    """Service wrapper offering static builder convenience methods."""
+
+    @staticmethod
+    def build_invoice_xml(
+        invoice_id: str,
+        invoice_uuid: Optional[str] = None,
+        issue_date: Optional[Union[str, datetime, date]] = None,
+        issue_time: Optional[Union[str, datetime]] = None,
+        invoice_type_code: str = INVOICE_TYPE_TAX_INVOICE,
+        subtype: str = SUBTYPE_STANDARD_B2B,
+        currency_code: str = "SAR",
+        tax_currency_code: str = "SAR",
+        icv: int = 1,
+        pih: Optional[str] = None,
+        qr_code_tlv: Optional[str] = None,
+        seller: Optional[Dict[str, Any]] = None,
+        buyer: Optional[Dict[str, Any]] = None,
+        line_items: Optional[List[Dict[str, Any]]] = None,
+        tax_total: Optional[Union[float, Decimal, str]] = None,
+        subtotal: Optional[Union[float, Decimal, str]] = None,
+        grand_total: Optional[Union[float, Decimal, str]] = None,
+        discount_total: Optional[Union[float, Decimal, str]] = 0.0,
+        prepaid_amount: Optional[Union[float, Decimal, str]] = 0.0,
+        payable_amount: Optional[Union[float, Decimal, str]] = None,
+        note: Optional[str] = None,
+    ) -> str:
+        builder = UBLInvoiceBuilder(
+            invoice_number=str(invoice_id),
+            invoice_uuid=invoice_uuid,
+            issue_date=issue_date,
+            issue_time=issue_time,
+            invoice_type_code=invoice_type_code,
+            subtype=subtype,
+            currency_code=currency_code,
+            tax_currency_code=tax_currency_code,
+            note=note,
+            icv=icv,
+            pih=pih,
+            qr_code_tlv=qr_code_tlv,
+        )
+
+        if seller:
+            builder.set_supplier(
+                name=seller.get("name") or seller.get("seller_name", "Nova Enterprises"),
+                tax_id=seller.get("tax_id") or seller.get("vat_number", "300000000000003"),
+                crn=seller.get("crn") or seller.get("commercial_registration_number"),
+                street=seller.get("street") or seller.get("street_name"),
+                building_number=seller.get("building_number"),
+                district=seller.get("district"),
+                city=seller.get("city"),
+                postal_code=seller.get("postal_code"),
+                country_code=seller.get("country_code", "SA"),
+            )
+
+        if buyer:
+            builder.set_customer(
+                name=buyer.get("name") or buyer.get("customer_name", "Customer"),
+                tax_id=buyer.get("tax_id") or buyer.get("vat_number"),
+                crn=buyer.get("crn") or buyer.get("commercial_registration_number"),
+                street=buyer.get("street") or buyer.get("street_name"),
+                building_number=buyer.get("building_number"),
+                district=buyer.get("district"),
+                city=buyer.get("city"),
+                postal_code=buyer.get("postal_code"),
+                country_code=buyer.get("country_code", "SA"),
+            )
+
+        if line_items:
+            for idx, item in enumerate(line_items, start=1):
+                qty = float(item.get("quantity") or item.get("qty", 1.0))
+                price = float(item.get("unit_price") or item.get("price", 0.0))
+                disc = float(item.get("discount", 0.0))
+                rate = float(item.get("tax_rate") or item.get("vat_rate", 15.0))
+                builder.add_line_item(
+                    name=item.get("name") or item.get("product_name") or f"Item {idx}",
+                    quantity=qty,
+                    unit_price=price,
+                    unit_code=item.get("unit_code") or "PCE",
+                    tax_rate=rate,
+                    tax_category_code=item.get("tax_category") or item.get("tax_category_code") or "S",
+                    tax_scheme="VAT",
+                    discount=disc,
+                    line_id=idx,
+                )
+
+        builder.calculate_totals()
+        return builder.to_xml_string(pretty=True)
 
 
 def generate_ubl_invoice_xml(
@@ -442,8 +530,8 @@ def generate_ubl_invoice_xml(
     """Convenience helper to generate UBL 2.1 XML from invoice entity dictionaries."""
     inv_num = invoice.get("invoice_number", f"INV-{invoice.get('id', '1')}")
     inv_uuid = invoice.get("invoice_uuid") or str(uuid.uuid4())
-    issue_date = invoice.get("issue_date") or datetime.utcnow().strftime("%Y-%m-%d")
-    issue_time = invoice.get("created_at") or datetime.utcnow().strftime("%H:%M:%S")
+    issue_date = invoice.get("issue_date") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    issue_time = invoice.get("created_at") or datetime.now(timezone.utc).strftime("%H:%M:%S")
 
     builder = UBLInvoiceBuilder(
         invoice_number=inv_num,
@@ -509,7 +597,6 @@ def generate_ubl_invoice_xml(
                 line_id=idx,
             )
     else:
-        # If no lines provided, derive from total_amount
         total = float(invoice.get("total_amount") or 0.0)
         net = round(total / 1.15, 2)
         builder.add_line_item(
