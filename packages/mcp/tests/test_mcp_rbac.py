@@ -211,25 +211,34 @@ class TestMcpRbacUnitAndIntegration:
     def test_database_server_tools_require_admin(self):
         """Database server tools (list_tables, describe_table, execute_read_query) require ADMIN_VIEW."""
         from packages.mcp.servers import database_mcp
-        database_mcp.register_tools()
 
         admin_user = {"id": 1, "username": "admin", "role": "Admin"}
         non_admin_user = {"id": 2, "username": "sales", "role": "Sales Rep"}
 
-        with patch("packages.mcp.servers.database_mcp._list_tables", return_value=[{"table_name": "t0001"}]):
+        with patch("packages.mcp.servers.database_mcp.get_connection") as mock_get_conn:
+            mock_conn = MagicMock()
+            mock_cur = MagicMock()
+            mock_cur.fetchall.return_value = [{"table_name": "t0001"}]
+            mock_cur.fetchmany.return_value = [{"count": 5}]
+            mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+            mock_get_conn.return_value = mock_conn
+
+            database_mcp.register_tools()
+
+            # Authorized admin calls
             assert call_tool("list_tables", {}, user=admin_user) == [{"table_name": "t0001"}]
+            assert call_tool("describe_table", {"table_name": "t0001"}, user=admin_user) == [{"table_name": "t0001"}]
+            assert call_tool("execute_read_query", {"sql": "SELECT COUNT(*) FROM t0001"}, user=admin_user) == [{"count": 5}]
+
+            # Non-admin calls are blocked
             with pytest.raises(PermissionError, match="ADMIN_VIEW required for tool 'list_tables'"):
                 call_tool("list_tables", {}, user=non_admin_user)
 
-        with patch("packages.mcp.servers.database_mcp._describe_table", return_value=[{"column_name": "id"}]):
-            assert call_tool("describe_table", {"table_name": "t0001"}, user=admin_user) == [{"column_name": "id"}]
             with pytest.raises(PermissionError, match="ADMIN_VIEW required for tool 'describe_table'"):
                 call_tool("describe_table", {"table_name": "t0001"}, user=non_admin_user)
 
-        with patch("packages.mcp.servers.database_mcp._execute_read_query", return_value=[{"count": 5}]):
-            assert call_tool("execute_read_query", {"query": "SELECT COUNT(*) FROM t0001"}, user=admin_user) == [{"count": 5}]
             with pytest.raises(PermissionError, match="ADMIN_VIEW required for tool 'execute_read_query'"):
-                call_tool("execute_read_query", {"query": "SELECT COUNT(*) FROM t0001"}, user=non_admin_user)
+                call_tool("execute_read_query", {"sql": "SELECT COUNT(*) FROM t0001"}, user=non_admin_user)
 
     def test_central_permission_mapping_fallback(self):
         """If tool object lacks required_permission attribute, fallback to MCP_TOOL_PERMISSIONS mapping."""
