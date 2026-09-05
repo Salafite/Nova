@@ -66,6 +66,7 @@ def pick_item(id: int, item_id: int, body: dict):
     catch_weight_uom = body.get('catch_weight_uom')
     nominal_weight = body.get('nominal_weight')
     tolerance_pct = body.get('tolerance_pct')
+    barcode = body.get('barcode')
 
     kwargs = {
         'item_id': item_id,
@@ -82,6 +83,8 @@ def pick_item(id: int, item_id: int, body: dict):
         kwargs['nominal_weight'] = nominal_weight
     if tolerance_pct is not None:
         kwargs['tolerance_pct'] = tolerance_pct
+    if barcode is not None:
+        kwargs['barcode'] = barcode
 
     try:
         return pl_service.pick_item(**kwargs)

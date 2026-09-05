@@ -429,7 +429,20 @@ class PickListService(CrudService):
 
     def pick_item(self, item_id, qty_picked, pick_list_id=None, picked_batch_id=None,
                   picked_batch_number=None, catch_weight_actual=None, catch_weight_uom=None,
-                  nominal_weight=None, tolerance_pct=None, conn=None):
+                  nominal_weight=None, tolerance_pct=None, barcode=None, conn=None):
+        if barcode:
+            try:
+                from modules.inventory.services.barcode_service import parse_barcode_string
+                parsed_bc = parse_barcode_string(barcode)
+                if catch_weight_actual is None and parsed_bc.get('weight') is not None:
+                    catch_weight_actual = parsed_bc.get('weight')
+                if catch_weight_uom is None and parsed_bc.get('weight_uom') is not None:
+                    catch_weight_uom = parsed_bc.get('weight_uom')
+                if picked_batch_number is None and picked_batch_id is None and parsed_bc.get('batch_number') is not None:
+                    picked_batch_number = parsed_bc.get('batch_number')
+            except Exception as bc_err:
+                logger.warning(f"Failed to parse barcode in pick_item: {bc_err}")
+
         item = self.pli_repo.get(item_id, **_conn_kwargs(conn))
         if not item:
             logger.error(f"Cannot pick item: Pick list item {item_id} not found")
