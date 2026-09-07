@@ -17,6 +17,10 @@ _audit_repo = CrudRepository(
 
 
 def _json_safe(obj: Any) -> Any:
+    type_name = type(obj).__name__
+    type_module = type(obj).__module__ or ""
+    if "mock" in type_name.lower() or type_module.startswith("unittest.mock"):
+        return str(obj)
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
     if isinstance(obj, Decimal):

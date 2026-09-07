@@ -265,6 +265,52 @@ _ROLE_PERMISSIONS: dict[str, list[str]] = {
         'PORTAL_ORDER',
         'PORTAL_PAY',
     ],
+    'Financial Manager': [
+        'DASHBOARD_VIEW',
+        'FINANCE_VIEW',
+        'ACCOUNTING_VIEW',
+        'SALES_VIEW',
+        'CRM_VIEW',
+        'CUSTOMERS_VIEW',
+        'PURCHASING_VIEW',
+        'SUPPLIERS_VIEW',
+        'PRODUCTS_VIEW',
+        'INVENTORY_VIEW',
+        'BI_VIEW',
+    ],
+    'Warehouse Manager': [
+        'DASHBOARD_VIEW',
+        'WAREHOUSE_VIEW',
+        'INVENTORY_VIEW',
+        'PRODUCTS_VIEW',
+        'PURCHASING_VIEW',
+    ],
+    'Purchasing Manager': [
+        'DASHBOARD_VIEW',
+        'PURCHASING_VIEW',
+        'SUPPLIERS_VIEW',
+        'PRODUCTS_VIEW',
+        'INVENTORY_VIEW',
+        'WAREHOUSE_VIEW',
+        'FINANCE_VIEW',
+    ],
+    'HR Manager': [
+        'DASHBOARD_VIEW',
+        'HR_VIEW',
+    ],
+    'Project Manager': [
+        'DASHBOARD_VIEW',
+        'PROJECTS_VIEW',
+    ],
+    'Manufacturing Manager': [
+        'DASHBOARD_VIEW',
+        'MFG_VIEW',
+        'PLANNING_VIEW',
+        'SHOPFLOOR_VIEW',
+        'QUALITY_VIEW',
+        'INVENTORY_VIEW',
+        'WAREHOUSE_VIEW',
+    ],
 }
 
 # Centralized mapping of MCP tool names to required permission keys
@@ -438,9 +484,14 @@ def derive_permissions(role: str) -> list[str]:
         return ['DASHBOARD_VIEW']
     if role in _ROLE_PERMISSIONS:
         return _ROLE_PERMISSIONS[role]
+    normalized = str(role).strip().lower()
+    normalized_spaced = normalized.replace('_', ' ')
     for k, v in _ROLE_PERMISSIONS.items():
-        if k.lower() == str(role).lower().strip():
+        k_lower = k.lower()
+        if k_lower == normalized or k_lower == normalized_spaced:
             return v
+    if "manager" in normalized or "admin" in normalized:
+        return _ROLE_PERMISSIONS.get("Manager", ['DASHBOARD_VIEW'])
     return ['DASHBOARD_VIEW']
 
 

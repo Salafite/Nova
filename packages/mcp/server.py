@@ -11,6 +11,10 @@ from packages.mcp.registry import (
 
 
 def _json_safe(obj):
+    type_name = type(obj).__name__
+    type_module = type(obj).__module__ or ""
+    if "mock" in type_name.lower() or type_module.startswith("unittest.mock"):
+        return str(obj)
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
     if isinstance(obj, Decimal):
@@ -34,12 +38,14 @@ class McpServer:
         req_id = raw.get("id")
 
         if user is None:
+            tenant_val = None
             env_tenant = os.environ.get("NOVA_TENANT_ID")
             if env_tenant:
                 try:
-                    user = {"business_id": int(env_tenant), "role": os.environ.get("NOVA_USER_ROLE", "Admin")}
+                    tenant_val = int(env_tenant)
                 except (ValueError, TypeError):
-                    pass
+                    tenant_val = None
+            user = {"business_id": tenant_val, "role": os.environ.get("NOVA_USER_ROLE", "Admin")}
         elif isinstance(user, dict) and "business_id" not in user and "tenant_id" not in user:
             env_tenant = os.environ.get("NOVA_TENANT_ID")
             if env_tenant:

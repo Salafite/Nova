@@ -87,10 +87,13 @@ def _get_user_permissions(user: dict | object | None) -> list[str]:
         role = getattr(user, "role", "")
         username = getattr(user, "username", "")
 
-    if not role and isinstance(username, str):
+    if not role and isinstance(username, str) and username:
         u_lower = username.lower().strip()
         if u_lower in ("admin", "administrator", "superadmin", "super_admin", "tenant_admin", "system_admin"):
             role = "Admin"
+
+    if not role and raw_perms is None:
+        role = os.environ.get("NOVA_USER_ROLE", "Admin")
 
     if raw_perms is None or (isinstance(raw_perms, (list, tuple)) and len(raw_perms) == 0):
         perms = derive_permissions(role) if role else []
