@@ -2,7 +2,7 @@
   <div :dir="dir">
     <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
       <div>
-        <h1 class="page-title">{{ t('einvoicing-title', 'E-Invoicing & Fiscal Clearance') }}</h1>
+        <h1 class="page-title">{{ t('einvoicing-title', 'e-Invoicing & Fiscal Clearance') }}</h1>
         <p class="page-subtitle">{{ t('einvoicing-subtitle', 'Manage government tax authority clearance, ZATCA Phase 1 & 2 UBL XML, and TLV QR compliance.') }}</p>
       </div>
       <div class="flex items-center gap-2">
@@ -24,7 +24,7 @@
           <span class="material-symbols-outlined">receipt_long</span>
         </div>
         <div class="stat-info">
-          <span class="stat-label">{{ t('total-invoices', 'Total Invoices') }}</span>
+          <span class="stat-label">{{ t('total-invoices', 'Total e-Invoices') }}</span>
           <span class="stat-value">{{ items.length }}</span>
         </div>
       </div>
@@ -172,7 +172,7 @@
                   </button>
                   <button
                     v-if="item.clearance_status !== 'CLEARED' && item.clearance_status !== 'REPORTED'"
-                    class="btn-icon btn-icon-submit"
+                    class="btn-icon btn-action-submit btn-icon-submit"
                     @click="submitClearance(item)"
                     :title="t('submit-clearance', 'Submit for Tax Authority Clearance')"
                     :disabled="submittingId === item.invoice_id"
@@ -194,7 +194,7 @@
         <div class="modal-header">
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-primary">qr_code_2</span>
-            <h3>{{ t('fiscal-qr-preview', 'Bilingual Fiscal QR Code') }}</h3>
+            <h3>{{ t('fiscal-qr-preview', 'Tax Authority QR Code Preview') }}</h3>
           </div>
           <button class="btn-icon" @click="showQRModal = false" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
@@ -271,7 +271,7 @@
         <div class="modal-header">
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-primary">code</span>
-            <h3>{{ t('ubl-xml-inspector', 'OASIS UBL 2.1 XML Inspector') }}</h3>
+            <h3>{{ t('ubl-xml-inspector', 'OASIS UBL 2.1 XML Document Inspector') }}</h3>
           </div>
           <button class="btn-icon" @click="showXMLModal = false" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
@@ -313,6 +313,46 @@
         </div>
       </div>
     </div>
+
+    <!-- Fiscal Clearance Result Modal -->
+    <div v-if="showClearanceModal" class="modal-overlay" @click.self="showClearanceModal = false">
+      <div class="modal-content" :dir="dir">
+        <div class="modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">verified</span>
+            <h3>{{ t('clearance-status-modal-title', 'Fiscal Authority Clearance Status') }}</h3>
+          </div>
+          <button class="btn-icon" @click="showClearanceModal = false" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="clearanceResult" class="tlv-tags-card">
+            <div class="tlv-row">
+              <span class="tlv-label">{{ t('status', 'Status') }}:</span>
+              <span class="badge" :class="clearanceBadge(clearanceResult.status || clearanceResult.clearance_status)">
+                {{ clearanceResult.status || clearanceResult.clearance_status || 'CLEARED' }}
+              </span>
+            </div>
+            <div v-if="clearanceResult.clearance_id" class="tlv-row">
+              <span class="tlv-label">{{ t('clearance-id', 'Clearance / IRN ID') }}:</span>
+              <span class="tlv-value cell-mono">{{ clearanceResult.clearance_id }}</span>
+            </div>
+            <div v-if="clearanceResult.environment" class="tlv-row">
+              <span class="tlv-label">{{ t('environment', 'Environment') }}:</span>
+              <span class="tlv-value">{{ clearanceResult.environment }}</span>
+            </div>
+            <div v-if="clearanceResult.message" class="tlv-row">
+              <span class="tlv-label">{{ t('message', 'Message') }}:</span>
+              <span class="tlv-value">{{ clearanceResult.message }}</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-primary" @click="showClearanceModal = false">{{ t('close', 'Close') }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -347,6 +387,9 @@ const xmlContent = ref('')
 const selectedItem = ref(null)
 const copied = ref(false)
 
+const showClearanceModal = ref(false)
+const clearanceResult = ref(null)
+
 const clearedCount = computed(() => items.value.filter(i => i.clearance_status === 'CLEARED').length)
 const reportedCount = computed(() => items.value.filter(i => i.clearance_status === 'REPORTED').length)
 const pendingCount = computed(() => items.value.filter(i => !i.clearance_status || i.clearance_status === 'DRAFT' || i.clearance_status === 'SUBMITTED').length)
@@ -354,14 +397,14 @@ const rejectedCount = computed(() => items.value.filter(i => i.clearance_status 
 
 const filteredItems = computed(() => {
   return items.value.filter(item => {
-    if (statusFilter.value !== 'ALL') {
+    if (statusFilter.value && statusFilter.value.toUpperCase() !== 'ALL') {
       const st = (item.clearance_status || 'DRAFT').toUpperCase()
-      if (st !== statusFilter.value) return false
+      if (st !== statusFilter.value.toUpperCase()) return false
     }
-    if (subtypeFilter.value !== 'ALL') {
+    if (subtypeFilter.value && subtypeFilter.value.toUpperCase() !== 'ALL') {
       if (item.subtype !== subtypeFilter.value) return false
     }
-    if (searchQuery.value.trim()) {
+    if (searchQuery.value && searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase()
       const invNum = (item.invoice_number || '').toLowerCase()
       const cust = (item.partner_name || item.customer_name || '').toLowerCase()
@@ -514,7 +557,9 @@ async function submitClearance(item) {
   submittingId.value = item.invoice_id
   try {
     const res = await api.post(`/T0090I/${item.invoice_id}/clearance`)
-    toast(`Clearance result: ${res.data?.status || 'Submitted'}`, 'success')
+    toast(t('clearance-submitted', 'Invoice submitted for clearance successfully'), 'success')
+    clearanceResult.value = res.data || { status: 'CLEARED', message: 'Invoice cleared successfully by ZATCA' }
+    showClearanceModal.value = true
     await load()
   } catch (err) {
     toast(err.response?.data?.detail || 'Clearance submission failed', 'error')

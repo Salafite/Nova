@@ -1,16 +1,22 @@
-<template>
+﻿<template>
   <div :dir="dir">
-    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+    <header class="flex justify-between items-center mb-6 flex-wrap gap-3">
       <div>
         <button class="btn-link" @click="$router.push('/accounting/einvoicing')">&larr; {{ t('back-to-einvoicing', 'Back to E-Invoicing') }}</button>
         <h1 class="page-title">{{ t('fiscal-profiles-title', 'Fiscal Authority Profiles & Tax Credentials') }}</h1>
         <p class="page-subtitle">{{ t('fiscal-profiles-subtitle', 'Configure ZATCA, European e-invoicing, and regional tax authority credentials and environments.') }}</p>
       </div>
-      <button class="btn-primary" @click="openAddModal">
-        <span class="material-symbols-outlined icon-xs">add</span>
-        {{ t('new-profile', 'New Fiscal Profile') }}
-      </button>
-    </div>
+      <div class="flex items-center gap-2">
+        <button class="btn-outline" @click="openKeypairModal" :disabled="generatingKeypair">
+          <span class="material-symbols-outlined icon-xs">key</span>
+          {{ generatingKeypair ? t('generating', 'Generating...') : t('generate-keypair', 'Generate Keypair') }}
+        </button>
+        <button class="btn-primary" @click="openAddModal">
+          <span class="material-symbols-outlined icon-xs">add</span>
+          {{ t('new-profile', 'New Fiscal Profile') }}
+        </button>
+      </div>
+    </header>
 
     <SkeletonTable v-if="loading" />
     <ErrorState v-else-if="error" :message="error" @retry="load" />
@@ -36,30 +42,30 @@
               <span class="material-symbols-outlined">account_balance</span>
             </div>
             <div>
-              <h3 class="profile-name">{{ prof.authority_name }}</h3>
-              <span class="country-badge">{{ prof.country_code }} &bull; {{ prof.tax_scheme || 'VAT' }}</span>
+              <h3 class="profile-name">{{ prof.profile_name || prof.authority_name || prof.seller_name || 'Fiscal Profile' }}</h3>
+              <span class="country-badge">{{ prof.country_code || 'SA' }} &bull; {{ prof.authority_code || prof.tax_scheme || 'VAT' }}</span>
             </div>
           </div>
           <div class="flex items-center gap-2">
             <span v-if="prof.is_default" class="badge badge-default">{{ t('default', 'Default') }}</span>
-            <span class="badge" :class="envBadge(prof.environment)">{{ prof.environment }}</span>
+            <span class="badge" :class="envBadge(prof.environment)">{{ prof.environment || 'Sandbox' }}</span>
           </div>
         </div>
 
         <div class="profile-card-body">
           <div class="info-row">
             <span class="info-label">{{ t('vat-number', 'VAT / Tax ID') }}:</span>
-            <span class="cell-mono font-bold">{{ prof.vat_number }}</span>
+            <span class="cell-mono font-bold">{{ prof.tax_id || prof.vat_number || prof.seller_vat_number || '-' }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">{{ t('endpoint-url', 'Endpoint URL') }}:</span>
-            <span class="cell-mono text-xs text-muted url-truncate" :title="prof.endpoint_url || '-'">{{ prof.endpoint_url || 'Default Standard API' }}</span>
+            <span class="cell-mono text-xs text-muted url-truncate" :title="prof.api_base_url || prof.endpoint_url || '-'">{{ prof.api_base_url || prof.endpoint_url || 'Default Standard API' }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">{{ t('certificate-csid', 'CSID / Certificate') }}:</span>
-            <span class="badge" :class="prof.certificate ? 'badge-active' : 'badge-inactive'">
-              <span class="material-symbols-outlined icon-xs">{{ prof.certificate ? 'verified_user' : 'warning' }}</span>
-              {{ prof.certificate ? t('installed', 'Installed') : t('not-installed', 'Not Configured') }}
+            <span class="badge" :class="(prof.certificate || prof.csid) ? 'badge-active' : 'badge-inactive'">
+              <span class="material-symbols-outlined icon-xs">{{ (prof.certificate || prof.csid) ? 'verified_user' : 'warning' }}</span>
+              {{ (prof.certificate || prof.csid) ? t('installed', 'Installed') : t('not-installed', 'Not Configured') }}
             </span>
           </div>
           <div class="info-row">
@@ -87,7 +93,7 @@
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal-content modal-lg" :dir="dir">
         <div class="modal-header">
-          <h3>{{ editing ? t('edit-profile', 'Edit Fiscal Authority Profile') : t('new-profile', 'New Fiscal Authority Profile') }}</h3>
+          <h3>{{ editing ? t('edit-profile', 'Edit Fiscal Authority Profile') : t('new-profile', 'New Fiscal Profile') }}</h3>
           <button class="btn-icon" @click="closeModal" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -95,23 +101,34 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group">
-              <label>{{ t('authority-name', 'Authority / Provider Name') }} <span class="required">*</span></label>
-              <input type="text" v-model="form.authority_name" class="form-input" placeholder="e.g. ZATCA Fatoora Phase 2, Peppol" required />
+              <label>{{ t('profile-name', 'Profile Name / Label') }} <span class="required">*</span></label>
+              <input type="text" v-model="form.profile_name" class="form-input" placeholder="e.g. Saudi ZATCA Production Profile" required />
             </div>
             <div class="form-group">
-              <label>{{ t('country-code', 'Country Code (ISO 2-letter)') }} <span class="required">*</span></label>
-              <input type="text" v-model="form.country_code" class="form-input" maxlength="2" placeholder="SA, DE, FR, etc." required />
+              <label>{{ t('seller-name', 'Legal Seller Name (English)') }} <span class="required">*</span></label>
+              <input type="text" v-model="form.seller_name" class="form-input" placeholder="e.g. Nova Global Trading LLC" required />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>{{ t('vat-number', 'VAT / Tax Registration Number') }} <span class="required">*</span></label>
-              <input type="text" v-model="form.vat_number" class="form-input" placeholder="e.g. 300000000000003" required />
+              <label>{{ t('seller-name-ar', 'Legal Seller Name (Arabic)') }}</label>
+              <input type="text" v-model="form.seller_name_ar" class="form-input" placeholder="شركة نوفا للتجارة العامة" />
             </div>
             <div class="form-group">
-              <label>{{ t('tax-scheme', 'Tax Scheme ID') }}</label>
-              <input type="text" v-model="form.tax_scheme" class="form-input" placeholder="VAT" />
+              <label>{{ t('tax-id', 'VAT / Tax Registration Number') }} <span class="required">*</span></label>
+              <input type="text" v-model="form.tax_id" class="form-input" placeholder="e.g. 300012345600003" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('country-code', 'Country Code (ISO 2-letter)') }} <span class="required">*</span></label>
+              <input type="text" v-model="form.country_code" class="form-input" maxlength="2" placeholder="SA, DE, FR, NL" required />
+            </div>
+            <div class="form-group">
+              <label>{{ t('authority-code', 'Authority Provider Code') }}</label>
+              <input type="text" v-model="form.authority_code" class="form-input" placeholder="ZATCA, PEPPOL, NTS" />
             </div>
           </div>
 
@@ -125,19 +142,19 @@
               </select>
             </div>
             <div class="form-group">
-              <label>{{ t('endpoint-url', 'Custom Endpoint URL (Optional)') }}</label>
-              <input type="text" v-model="form.endpoint_url" class="form-input" placeholder="https://..." />
+              <label>{{ t('api-base-url', 'API Base URL / Endpoint (Optional)') }}</label>
+              <input type="text" v-model="form.api_base_url" class="form-input" placeholder="https://gw.zatca.gov.sa/..." />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>{{ t('api-key-or-secret', 'API Secret / CSID Secret') }}</label>
+              <label>{{ t('api-secret', 'CSID Secret / OTP / API Secret') }}</label>
               <input type="password" v-model="form.api_secret" class="form-input" placeholder="••••••••" />
             </div>
             <div class="form-group">
               <label>{{ t('auth-token', 'Bearer Auth Token') }}</label>
-              <input type="password" v-model="form.auth_token" class="form-input" placeholder="Optional bearer token" />
+              <input type="password" v-model="form.auth_token" class="form-input" placeholder="Optional active bearer token" />
             </div>
           </div>
 
@@ -147,7 +164,7 @@
           </div>
 
           <div class="form-group">
-            <label>{{ t('private-key-pem', 'ECDSA / RSA Private Key (PEM)') }}</label>
+            <label>{{ t('private-key-pem', 'ECDSA / RSA Private Key (PEM format)') }}</label>
             <textarea v-model="form.private_key" class="form-input textarea" rows="3" placeholder="-----BEGIN EC PRIVATE KEY----- ..."></textarea>
           </div>
 
@@ -169,6 +186,40 @@
               <span v-else class="material-symbols-outlined icon-xs">check</span>
               {{ saving ? t('saving', 'Saving...') : t('save', 'Save Profile') }}
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keypair Generator Modal -->
+    <div v-if="showKeypairModal" class="modal-overlay" @click.self="showKeypairModal = false">
+      <div class="modal-content modal-lg" :dir="dir">
+        <div class="modal-header">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">key</span>
+            <h3>{{ t('keypair-generator-title', 'ECDSA secp256k1 Keypair Generator') }}</h3>
+          </div>
+          <button class="btn-icon" @click="showKeypairModal = false" aria-label="Close">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="text-sm text-muted mb-3">
+            {{ t('keypair-description', 'Cryptographically secure SECP256k1 ECDSA private key and public key generated for ZATCA Phase 2 signing.') }}
+          </p>
+          <div v-if="generatedKeypair" class="keypair-results">
+            <div class="form-group">
+              <label>{{ t('private-key', 'Private Key (PEM format - Keep Secret!)') }}</label>
+              <textarea class="form-input textarea key-textarea" rows="5" readonly :value="generatedKeypair.private_key"></textarea>
+            </div>
+            <div class="form-group">
+              <label>{{ t('public-key', 'Public Key (PEM format)') }}</label>
+              <textarea class="form-input textarea key-textarea" rows="4" readonly :value="generatedKeypair.public_key"></textarea>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-outline" @click="showKeypairModal = false">{{ t('close', 'Close') }}</button>
+            <button class="btn-primary" @click="useGeneratedKeypair">{{ t('use-in-new-profile', 'Use in New Profile') }}</button>
           </div>
         </div>
       </div>
@@ -195,13 +246,19 @@ const showModal = ref(false)
 const editing = ref(false)
 const editId = ref(null)
 
+const showKeypairModal = ref(false)
+const generatingKeypair = ref(false)
+const generatedKeypair = ref(null)
+
 const form = ref({
-  authority_name: 'ZATCA',
+  profile_name: 'Main Store ZATCA',
+  authority_code: 'ZATCA',
+  seller_name: '',
+  seller_name_ar: '',
+  tax_id: '',
   country_code: 'SA',
-  tax_scheme: 'VAT',
-  vat_number: '',
   environment: 'Sandbox',
-  endpoint_url: '',
+  api_base_url: '',
   api_secret: '',
   auth_token: '',
   certificate: '',
@@ -233,12 +290,14 @@ function openAddModal() {
   editing.value = false
   editId.value = null
   form.value = {
-    authority_name: 'ZATCA',
+    profile_name: '',
+    authority_code: 'ZATCA',
+    seller_name: '',
+    seller_name_ar: '',
+    tax_id: '',
     country_code: 'SA',
-    tax_scheme: 'VAT',
-    vat_number: '',
     environment: 'Sandbox',
-    endpoint_url: '',
+    api_base_url: '',
     api_secret: '',
     auth_token: '',
     certificate: '',
@@ -253,12 +312,14 @@ function editProfile(prof) {
   editing.value = true
   editId.value = prof.id
   form.value = {
-    authority_name: prof.authority_name,
-    country_code: prof.country_code,
-    tax_scheme: prof.tax_scheme || 'VAT',
-    vat_number: prof.vat_number,
+    profile_name: prof.profile_name || prof.authority_name || '',
+    authority_code: prof.authority_code || 'ZATCA',
+    seller_name: prof.seller_name || '',
+    seller_name_ar: prof.seller_name_ar || '',
+    tax_id: prof.tax_id || prof.vat_number || '',
+    country_code: prof.country_code || 'SA',
     environment: prof.environment || 'Sandbox',
-    endpoint_url: prof.endpoint_url || '',
+    api_base_url: prof.api_base_url || prof.endpoint_url || '',
     api_secret: prof.api_secret || '',
     auth_token: prof.auth_token || '',
     certificate: prof.certificate || '',
@@ -273,8 +334,29 @@ function closeModal() {
   showModal.value = false
 }
 
+async function openKeypairModal() {
+  generatingKeypair.value = true
+  try {
+    const res = await api.post('/T0125I/generate-keypair')
+    generatedKeypair.value = res.data || {}
+    showKeypairModal.value = true
+  } catch (err) {
+    toast(err.response?.data?.detail || 'Failed to generate keypair', 'error')
+  } finally {
+    generatingKeypair.value = false
+  }
+}
+
+function useGeneratedKeypair() {
+  if (generatedKeypair.value) {
+    openAddModal()
+    form.value.private_key = generatedKeypair.value.private_key || ''
+  }
+  showKeypairModal.value = false
+}
+
 async function saveProfile() {
-  if (!form.value.authority_name || !form.value.country_code || !form.value.vat_number) {
+  if (!form.value.profile_name || !form.value.seller_name || !form.value.tax_id) {
     toast('Please fill all required fields', 'error')
     return
   }
@@ -297,7 +379,7 @@ async function saveProfile() {
 }
 
 async function confirmDeleteProfile(prof) {
-  if (!confirm(`Delete profile for ${prof.authority_name}?`)) return
+  if (!confirm(`Delete profile for ${prof.profile_name || prof.authority_name || 'profile'}?`)) return
   try {
     await api.delete(`/T0125I/${prof.id}`)
     toast('Profile deleted', 'success')
@@ -373,4 +455,5 @@ onMounted(load)
 .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #333; cursor: pointer; }
 .required { color: #dc2626; }
 .cell-mono { font-family: monospace; font-size: 12px; }
+.keypair-results { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
 </style>

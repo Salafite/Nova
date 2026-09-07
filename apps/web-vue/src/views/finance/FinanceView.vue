@@ -1,13 +1,18 @@
 <template>
   <div :dir="dir">
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
       <div>
         <h1 class="page-title">{{ t('invoices-title') }}</h1>
         <p class="page-subtitle">{{ t('invoices-sub') }}</p>
       </div>
-      <button class="btn-primary" @click="openAdd">
-        <span class="material-symbols-outlined">add</span> {{ t('new-invoice') }}
-      </button>
+      <div class="flex items-center gap-2">
+        <button class="btn-outline" @click="router.push('/accounting/einvoicing')">
+          <span class="material-symbols-outlined">qr_code_2</span> {{ t('einvoicing-nav', 'E-Invoicing & Fiscal Clearance') }}
+        </button>
+        <button class="btn-primary" @click="openAdd">
+          <span class="material-symbols-outlined">add</span> {{ t('new-invoice') }}
+        </button>
+      </div>
     </div>
 
     <SkeletonTable v-if="loading" />

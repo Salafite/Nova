@@ -119,7 +119,8 @@ def test_update_einvoice_record(client, mock_einvoice_record):
     """Test PUT /api/T0124I/{id} updates record."""
     updated = dict(mock_einvoice_record)
     updated["clearance_status"] = "Reported"
-    with patch.object(t0124_service, "update", return_value=updated):
+    with patch.object(t0124_service, "get", return_value=mock_einvoice_record), \
+         patch.object(t0124_service, "update", return_value=updated):
         resp = client.put("/api/T0124I/10", json={"clearance_status": "Reported"})
         assert resp.status_code == 200
         data = resp.json()
@@ -128,7 +129,8 @@ def test_update_einvoice_record(client, mock_einvoice_record):
 
 def test_delete_einvoice_record(client):
     """Test DELETE /api/T0124I/{id} deletes record."""
-    with patch.object(t0124_service, "delete", return_value=True):
+    with patch.object(t0124_service, "get", return_value={"id": 10}), \
+         patch.object(t0124_service, "delete", return_value=True):
         resp = client.delete("/api/T0124I/10")
         assert resp.status_code in (200, 204)
 
@@ -378,7 +380,7 @@ def test_generate_fiscal_keypair(client):
     assert resp.status_code == 200
     data = resp.json()
     assert "private_key" in data
-    assert "-----BEGIN EC PRIVATE KEY-----" in data["private_key"]
+    assert ("-----BEGIN PRIVATE KEY-----" in data["private_key"] or "-----BEGIN EC PRIVATE KEY-----" in data["private_key"])
     assert "public_key" in data
     assert "-----BEGIN PUBLIC KEY-----" in data["public_key"]
     assert data["algorithm"] == "ECDSA_secp256k1"

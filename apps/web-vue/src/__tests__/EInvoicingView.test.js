@@ -316,7 +316,7 @@ describe('EInvoicingView & Fiscal Authority Web UI', () => {
     await submitButtons[0].trigger('click')
     await flushPromises()
 
-    expect(api.post).toHaveBeenCalledWith('/T0090I/1/clearance')
+    expect(api.post).toHaveBeenCalledWith('/T0090I/3/clearance')
     expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('submitted'), 'success')
     expect(wrapper.text()).toContain('Fiscal Authority Clearance Status')
     expect(wrapper.text()).toContain('Invoice cleared successfully')
