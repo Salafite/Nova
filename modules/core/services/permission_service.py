@@ -119,6 +119,11 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0121': 'SALES_VIEW',         # Customer Group Price Lists
     'T0122': 'SALES_VIEW',         # Customer Contracts
     'T0123': 'SALES_VIEW',         # Promotional Campaign Rules
+    'T0124': 'WAREHOUSE_VIEW',     # Warehouse Temperature Zones
+    'T0125': 'WAREHOUSE_VIEW',     # Warehouse Bins & Staging Areas
+    'T0126': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments
+    'T0127': 'QUALITY_VIEW',       # Temperature Excursion Alerts
+    'T0128': 'QUALITY_VIEW',       # HACCP Checkpoint Logs & Compliance Reports
 }
 
 # Non-T-code custom route and tag mappings

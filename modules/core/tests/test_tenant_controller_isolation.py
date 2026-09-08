@@ -589,9 +589,10 @@ class TestMultiDomainCrossTenantIntegration:
         token = create_access_token(6, business_id=4)
         user = {"id": 6, "username": "accountant", "role": "Admin", "permissions": ["*"], "business_id": 4}
 
+        from modules.accounting.controllers.T0090I import service as inv_service
         with patch("packages.auth.deps.get_user_by_id", return_value=user), \
-             patch("modules.core.repositories.base.CrudRepository.get", return_value=None), \
-             patch("modules.core.repositories.base.CrudRepository.get_unscoped") as mock_unscoped, \
+             patch.object(inv_service.repo, "get", return_value=None), \
+             patch.object(inv_service.repo, "get_unscoped") as mock_unscoped, \
              patch("packages.security.audit._audit_repo.create") as mock_audit:
             mock_unscoped.return_value = {"id": 901, "invoice_number": "INV-901", "total_amount": 5000, "business_id": 5}
             mock_audit.return_value = {"id": 1}

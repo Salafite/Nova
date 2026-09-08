@@ -1341,8 +1341,6 @@
   "qty-reject": "الكمية المرفوضة",
   "qty-rcvd": "المستلم",
   "total-claim-est": "إجمالي المطالبة التقديري:",
-  "print-return-slip": "طباعة سند إرجاع المورد",
-  "print-slip": "طباعة سند الإرجاع",
   "supplier-return-slip": "سند إرجاع بضاعة للمورد وإشعار مدين (RMA)",
   "return-slip-sub": "إذن إرجاع مستودعي رسمي وإقرار استلام الناقل",
   "company-header": "نوفا للحلول المؤسسية (Nova ERP)",

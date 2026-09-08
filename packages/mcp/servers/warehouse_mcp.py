@@ -14,6 +14,9 @@ from packages.mcp.registry import register_tool, register_resource
 from packages.mcp.types import Tool, Resource
 
 
+from modules.warehouse.services.cold_chain_service import ColdChainService
+from modules.quality.services.haccp_audit_service import HaccpAuditService
+
 _products_repo = CrudRepository('T0003', business_columns=['id', 'name', 'sku', 'barcode', 'description', 'price', 'is_active', 'is_catch_weight', 'nominal_weight', 'tolerance_pct'])
 _products_svc = CrudService(_products_repo)
 
@@ -32,6 +35,9 @@ _pick_svc = PickListService(repo=_pick_repo, pli_repo=PLI_REPO)
 _transfer_repo = TRANSFER_REPO
 _transfer_line_repo = TRANSFER_LINE_REPO
 _transfer_svc = StockTransferService(repo=_transfer_repo, line_repo=_transfer_line_repo)
+
+_cold_chain_svc = ColdChainService()
+_haccp_svc = HaccpAuditService()
 
 
 def register_tools():
@@ -260,6 +266,71 @@ def register_tools():
         },
         "required": ["barcode"],
     }), _verify_goods_receipt_barcode)
+    register_tool(Tool(name="list_warehouse_temperature_zones", description="List warehouse temperature zones with their temperature boundaries, target temperatures, current monitored readings, and status", input_schema={
+        "type": "object", "properties": {
+            "warehouse_id": {"type": "integer", "description": "Optional warehouse ID filter"},
+            "zone_type": {"type": "string", "description": "Optional zone type filter: Ambient, Chilled, Frozen, Deep Freeze"},
+            "status": {"type": "string", "description": "Optional status filter: Normal, Warning, Excursion, Maintenance"},
+            "limit": {"type": "integer", "description": "Maximum records to return (default 50)"},
+        },
+    }), _list_warehouse_temperature_zones)
+    register_tool(Tool(name="check_temperature_compatibility", description="Validate if a product can be safely stored in or transferred to a target warehouse zone, bin, or vehicle compartment without violating cold-chain constraints or HACCP critical limits", input_schema={
+        "type": "object", "properties": {
+            "product_id": {"type": "integer", "description": "Product ID to check compatibility for"},
+            "target_zone_id": {"type": "integer", "description": "Target warehouse temperature zone ID"},
+            "target_bin_id": {"type": "integer", "description": "Target storage bin ID"},
+            "target_compartment_id": {"type": "integer", "description": "Target vehicle compartment ID"},
+            "warehouse_id": {"type": "integer", "description": "Target warehouse ID"},
+        },
+        "required": ["product_id"],
+    }), _check_temperature_compatibility)
+    register_tool(Tool(name="log_haccp_temperature_checkpoint", description="Log a temperature checkpoint reading at any supply chain stage (GoodsReceipt, WarehouseStorage, StagingDock, VehicleDeparture, TransitCheckpoint, DestinationDelivery) and automatically detect HACCP excursions", input_schema={
+        "type": "object", "properties": {
+            "checkpoint_stage": {"type": "string", "description": "Stage: GoodsReceipt, WarehouseStorage, StagingDock, VehicleDeparture, TransitCheckpoint, DestinationDelivery, QualityInspection"},
+            "checkpoint_name": {"type": "string", "description": "Checkpoint name or description"},
+            "recorded_temperature": {"type": "number", "description": "Physical temperature reading in Celsius"},
+            "product_id": {"type": "integer", "description": "Product ID"},
+            "batch_number": {"type": "string", "description": "Batch / lot number"},
+            "warehouse_id": {"type": "integer", "description": "Warehouse ID"},
+            "zone_id": {"type": "integer", "description": "Temperature zone ID"},
+            "bin_id": {"type": "integer", "description": "Storage bin ID"},
+            "vehicle_id": {"type": "integer", "description": "Vehicle ID"},
+            "compartment_id": {"type": "integer", "description": "Vehicle compartment ID"},
+            "delivery_run_id": {"type": "integer", "description": "Delivery run ID"},
+            "delivery_stop_id": {"type": "integer", "description": "Delivery stop ID"},
+            "ambient_temperature": {"type": "number", "description": "Ambient outside temperature"},
+            "sensor_device_id": {"type": "string", "description": "Sensor probe or device ID"},
+            "corrective_action": {"type": "string", "description": "Corrective action if excursion occurred"},
+        },
+        "required": ["checkpoint_stage", "checkpoint_name", "recorded_temperature"],
+    }), _log_haccp_temperature_checkpoint)
+    register_tool(Tool(name="get_haccp_compliance_audit_report", description="Generate an end-to-end HACCP cold-chain compliance audit report showing all checkpoint temperature readings, excursion statistics, and compliance certification for a batch, product, or delivery run", input_schema={
+        "type": "object", "properties": {
+            "batch_number": {"type": "string", "description": "Batch / lot number filter"},
+            "product_id": {"type": "integer", "description": "Product ID filter"},
+            "delivery_run_id": {"type": "integer", "description": "Delivery run ID filter"},
+        },
+    }), _get_haccp_compliance_audit_report)
+    register_tool(Tool(name="list_temperature_excursion_alerts", description="List temperature excursion alerts and cold-chain threshold violation incidents", input_schema={
+        "type": "object", "properties": {
+            "status": {"type": "string", "description": "Filter by status: Open, Acknowledged, Investigating, Resolved, Quarantined, Dismissed"},
+            "severity": {"type": "string", "description": "Filter by severity: Warning, Critical, Emergency"},
+            "product_id": {"type": "integer", "description": "Product ID filter"},
+            "batch_number": {"type": "string", "description": "Batch / lot number filter"},
+            "warehouse_id": {"type": "integer", "description": "Warehouse ID filter"},
+            "limit": {"type": "integer", "description": "Maximum records to return (default 50)"},
+        },
+    }), _list_temperature_excursion_alerts)
+    register_tool(Tool(name="get_thermal_pick_sequence", description="Optimize picking sequence by thermal sensitivity so Ambient products are picked first and refrigerated/frozen items are picked last immediately before vehicle loading", input_schema={
+        "type": "object", "properties": {
+            "items": {
+                "type": "array",
+                "description": "List of order items with product_id, optional temp_zone_type, optional thermal_priority_rank",
+                "items": {"type": "object"},
+            },
+            "pick_list_id": {"type": "integer", "description": "Pick list ID to sequence items for"},
+        },
+    }), _get_thermal_pick_sequence)
     register_resource(
         Resource(uri="nova://warehouse/pick-lists", name="All Pick Lists", description="List of all warehouse pick lists"),
         _list_pick,
@@ -747,6 +818,105 @@ def _verify_goods_receipt_barcode(barcode: str, receipt_id: int = None, purchase
         "qty_scanned": qty,
         "message": f"Goods receipt barcode scan verified for '{prod_name}'" if product else f"Unrecognized goods receipt barcode '{barcode}'"
     }
+
+
+def _list_warehouse_temperature_zones(warehouse_id: int = None, zone_type: str = None, status: str = None, limit: int = 50):
+    filters = {}
+    if warehouse_id: filters["warehouse_id"] = warehouse_id
+    if zone_type: filters["zone_type"] = zone_type
+    if status: filters["status"] = status
+    zones = _cold_chain_svc.list_zones(filters=filters or None)
+    return zones[:limit] if limit else zones
+
+
+def _check_temperature_compatibility(product_id: int, target_zone_id: int = None, target_bin_id: int = None, target_compartment_id: int = None, warehouse_id: int = None):
+    try:
+        res = _cold_chain_svc.check_temperature_compatibility(
+            product_id=product_id,
+            target_zone_id=target_zone_id,
+            target_bin_id=target_bin_id,
+            target_compartment_id=target_compartment_id,
+            warehouse_id=warehouse_id,
+        )
+        return res.model_dump()
+    except Exception as e:
+        return {"error": str(e), "is_compatible": False}
+
+
+def _log_haccp_temperature_checkpoint(
+    checkpoint_stage: str,
+    checkpoint_name: str,
+    recorded_temperature: float,
+    product_id: int = None,
+    batch_number: str = None,
+    warehouse_id: int = None,
+    zone_id: int = None,
+    bin_id: int = None,
+    vehicle_id: int = None,
+    compartment_id: int = None,
+    delivery_run_id: int = None,
+    delivery_stop_id: int = None,
+    ambient_temperature: float = None,
+    sensor_device_id: str = None,
+    corrective_action: str = None,
+):
+    try:
+        payload = {
+            "checkpoint_stage": checkpoint_stage,
+            "checkpoint_name": checkpoint_name,
+            "recorded_temperature": recorded_temperature,
+            "product_id": product_id,
+            "batch_number": batch_number,
+            "warehouse_id": warehouse_id,
+            "zone_id": zone_id,
+            "bin_id": bin_id,
+            "vehicle_id": vehicle_id,
+            "compartment_id": compartment_id,
+            "delivery_run_id": delivery_run_id,
+            "delivery_stop_id": delivery_stop_id,
+            "ambient_temperature": ambient_temperature,
+            "sensor_device_id": sensor_device_id,
+            "corrective_action": corrective_action,
+        }
+        return _haccp_svc.log_checkpoint(payload)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def _get_haccp_compliance_audit_report(batch_number: str = None, product_id: int = None, delivery_run_id: int = None):
+    try:
+        res = _haccp_svc.compile_compliance_report(
+            batch_number=batch_number,
+            product_id=product_id,
+            delivery_run_id=delivery_run_id,
+        )
+        return res.model_dump()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def _list_temperature_excursion_alerts(status: str = None, severity: str = None, product_id: int = None, batch_number: str = None, warehouse_id: int = None, limit: int = 50):
+    filters = {}
+    if status: filters["status"] = status
+    if severity: filters["severity"] = severity
+    if product_id: filters["product_id"] = product_id
+    if batch_number: filters["batch_number"] = batch_number
+    if warehouse_id: filters["warehouse_id"] = warehouse_id
+    alerts = _haccp_svc.list_alerts(filters=filters or None)
+    return alerts[:limit] if limit else alerts
+
+
+def _get_thermal_pick_sequence(items: list = None, pick_list_id: int = None):
+    try:
+        raw_items = items or []
+        if pick_list_id and not raw_items:
+            pl = _pick_svc.get_with_items(pick_list_id) if hasattr(_pick_svc, 'get_with_items') else _pick_svc.get(pick_list_id)
+            if isinstance(pl, dict):
+                raw_items = pl.get("items") or pl.get("lines") or []
+        seq = _cold_chain_svc.get_thermal_pick_sequence(raw_items)
+        return [s.model_dump() for s in seq]
+    except Exception as e:
+        return {"error": str(e)}
 
 
 def main():
