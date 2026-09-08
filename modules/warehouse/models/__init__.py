@@ -1,4 +1,4 @@
-from modules.warehouse.models.warehouse import (
+﻿from modules.warehouse.models.warehouse import (
     WarehouseCreate, WarehouseUpdate, WarehouseResponse,
     InventoryCreate, InventoryUpdate, InventoryResponse,
     GoodsReceiptCreate, GoodsReceiptUpdate, GoodsReceiptResponse,
@@ -21,4 +21,10 @@ from modules.warehouse.models.stock_transfer import (
     ReplenishmentSuggestionItem, ReplenishmentSuggestionResponse,
     ReplenishmentGenerateItem, ReplenishmentGenerateRequest, ReplenishmentGenerateResponse,
 )
-
+from modules.warehouse.models.temperature_zone import (
+    TemperatureZoneCreate, TemperatureZoneUpdate, TemperatureZoneResponse,
+    WarehouseBinCreate, WarehouseBinUpdate, WarehouseBinResponse,
+    VehicleCompartmentCreate, VehicleCompartmentUpdate, VehicleCompartmentResponse,
+    TemperatureCheckRequest, TemperatureCheckResponse,
+    ZoneReadingLogRequest, ThermalPickSequenceItem,
+)
