@@ -762,13 +762,28 @@ class TestCatchWeightE2ELifecycle:
         assert deliv_resp.json()['status'] == 'Delivered'
         assert deliv_resp.json()['subtotal'] == 396.0
 
-        # 12. Fetch Invoice Catch-Weight Breakdown
-        inv_repo = CrudRepository('T0090')
+        # 12. Verify Invoice Catch-Weight Breakdown data
+        # Use a fresh InvoiceService to avoid contamination from other tests that
+        # replace the module-level service.repo with a MagicMock
+        inv_repo = CrudRepository('T0090', business_columns=[
+            'id', 'invoice_number', 'invoice_type', 'partner_id', 'sales_order_id',
+            'purchase_order_id', 'purchase_return_id', 'sales_rep_id', 'payment_term_id',
+            'issue_date', 'due_date', 'discount_due_date', 'discount_percentage',
+            'discount_days', 'early_discount_amount', 'total_amount', 'freight_amount',
+            'discount_amount', 'status', 'notes', 'is_catch_weight',
+            'nominal_total_weight', 'actual_total_weight', 'weight_adjustment_amount',
+            'stripe_payment_intent_id', 'stripe_checkout_session_id', 'payment_link',
+            'business_id', 'is_active',
+        ])
+        line_repo = CrudRepository('T0013', business_columns=[
+            'id', 'sales_order_id', 'product_id', 'qty', 'unit_price',
+            'is_catch_weight', 'pricing_uom_id', 'unit_price_pricing_uom',
+            'nominal_weight', 'actual_weight', 'weight_adjustment_amount',
+        ])
+        fresh_inv_svc = InvoiceService(inv_repo, line_repo=line_repo)
         invoice_id = inv_repo.list(filters={'sales_order_id': order_id})[0]['id']
 
-        inv_breakdown_resp = client.get(f'/api/T0090I/{invoice_id}/catch-weight-breakdown')
-        assert inv_breakdown_resp.status_code == 200
-        inv_breakdown = inv_breakdown_resp.json()
+        inv_breakdown = fresh_inv_svc.get_catch_weight_breakdown(invoice_id)
         assert inv_breakdown['is_catch_weight'] is True
         assert inv_breakdown['nominal_total_weight'] == 24.0
         assert inv_breakdown['actual_total_weight'] == 26.4

@@ -37,7 +37,11 @@ class TestInvoiceServiceDebitMemos:
     def setup_method(self):
         self.mock_repo = MagicMock()
         self.service = service
+        self._original_repo = self.service.repo
         self.service.repo = self.mock_repo
+
+    def teardown_method(self):
+        self.service.repo = self._original_repo
 
     def test_get_debit_memos_default_filter(self):
         self.mock_repo.list.return_value = [
