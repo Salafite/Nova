@@ -89,6 +89,22 @@ from modules.integrations.services.edi.edi_850_service import (
     edi_850_service,
 )
 
+from modules.integrations.services.edi.edi_catalog_service import (
+    EdiCatalogHeader,
+    EdiCatalogLine,
+    ParsedEdiCatalog,
+    CatalogItemSyncDetail,
+    CatalogSyncResult,
+    CatalogExportResult,
+    parse_x12_832,
+    parse_edifact_pricat,
+    parse_inbound_catalog_edi,
+    generate_x12_832,
+    generate_edifact_pricat,
+    EdiCatalogService,
+    edi_catalog_service,
+)
+
 __all__ = [
     "EdiDelimiters",
     "EdiSegment",
@@ -162,4 +178,18 @@ __all__ = [
     "parse_inbound_order_edi",
     "Edi850Service",
     "edi_850_service",
+    "EdiCatalogHeader",
+    "EdiCatalogLine",
+    "ParsedEdiCatalog",
+    "CatalogItemSyncDetail",
+    "CatalogSyncResult",
+    "CatalogExportResult",
+    "parse_x12_832",
+    "parse_edifact_pricat",
+    "parse_inbound_catalog_edi",
+    "generate_x12_832",
+    "generate_edifact_pricat",
+    "EdiCatalogService",
+    "edi_catalog_service",
 ]
+
