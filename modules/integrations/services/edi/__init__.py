@@ -120,6 +120,21 @@ from modules.integrations.services.edi.edi_856_service import (
     edi_856_service,
 )
 
+from modules.integrations.services.edi.edi_810_service import (
+    EdiInvoiceAllowanceCharge,
+    EdiInvoiceTaxSummary,
+    EdiInvoiceLine,
+    EdiInvoiceHeader,
+    EdiInvoiceDocument,
+    generate_x12_810,
+    generate_edifact_invoic,
+    parse_x12_810,
+    parse_edifact_invoic,
+    parse_inbound_invoice,
+    Edi810Service,
+    edi_810_service,
+)
+
 __all__ = [
     "EdiDelimiters",
     "EdiSegment",
@@ -218,5 +233,17 @@ __all__ = [
     "parse_inbound_asn",
     "Edi856Service",
     "edi_856_service",
+    "EdiInvoiceAllowanceCharge",
+    "EdiInvoiceTaxSummary",
+    "EdiInvoiceLine",
+    "EdiInvoiceHeader",
+    "EdiInvoiceDocument",
+    "generate_x12_810",
+    "generate_edifact_invoic",
+    "parse_x12_810",
+    "parse_edifact_invoic",
+    "parse_inbound_invoice",
+    "Edi810Service",
+    "edi_810_service",
 ]
 
