@@ -225,7 +225,8 @@ class TestRecalculateCatchWeight:
             "grand_total": 550.2,
         }
         sales_mcp._orders_svc.recalculate_order_catch_weight.return_value = recalc_result
-        res = registry.call_tool("recalculate_order_catch_weight", {"id": 1})
+        user = {"id": 1, "role": "Admin", "permissions": ["SALES_VIEW"]}
+        res = registry.call_tool("recalculate_order_catch_weight", {"id": 1}, user=user)
         assert res == recalc_result
         sales_mcp._orders_svc.recalculate_order_catch_weight.assert_called_once_with(1)
 
@@ -243,6 +244,7 @@ class TestRecalculateCatchWeight:
             "nominal_weight": 10.0,
         }
         sales_mcp._lines_svc.create.return_value = mock_line
+        user = {"id": 1, "role": "Admin", "permissions": ["SALES_VIEW"]}
         res = registry.call_tool("create_order_line", {
             "sales_order_id": 1,
             "product_name": "Parmesan",
@@ -252,7 +254,7 @@ class TestRecalculateCatchWeight:
             "pricing_uom_id": 2,
             "unit_price_pricing_uom": 10.0,
             "nominal_weight": 10.0,
-        })
+        }, user=user)
         assert res == mock_line
 
 
