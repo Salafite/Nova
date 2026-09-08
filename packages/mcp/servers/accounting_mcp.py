@@ -46,6 +46,7 @@ def _list_invoices(
     partner_id: int = None,
     invoice_type: str = None,
     payment_term_id: int = None,
+    purchase_return_id: int = None,
     limit: int = 50,
 ):
     filters = {}
@@ -57,7 +58,70 @@ def _list_invoices(
         filters["invoice_type"] = invoice_type
     if payment_term_id:
         filters["payment_term_id"] = payment_term_id
+    if purchase_return_id is not None:
+        filters["purchase_return_id"] = purchase_return_id
     return _inv_svc.list(filters=filters or None, limit=limit)
+
+
+def _list_debit_memos(
+    purchase_return_id: Optional[int] = None,
+    partner_id: Optional[int] = None,
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    if hasattr(_inv_svc, "get_debit_memos"):
+        return _inv_svc.get_debit_memos(
+            purchase_return_id=purchase_return_id,
+            partner_id=partner_id,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
+    filters = {"invoice_type": "Debit Memo"}
+    if purchase_return_id is not None:
+        filters["purchase_return_id"] = purchase_return_id
+    if partner_id is not None:
+        filters["partner_id"] = partner_id
+    if status is not None:
+        filters["status"] = status
+    return _inv_svc.list(filters=filters, limit=limit, offset=offset)
+
+
+def _get_debit_memo_for_rma(purchase_return_id: int):
+    if not purchase_return_id:
+        return {"found": False, "error": "purchase_return_id is required"}
+
+    dm = None
+    if hasattr(_inv_svc, "get_debit_memo_by_purchase_return"):
+        dm = _inv_svc.get_debit_memo_by_purchase_return(purchase_return_id)
+    else:
+        results = _inv_svc.list(
+            filters={"purchase_return_id": purchase_return_id, "invoice_type": "Debit Memo"},
+            limit=1,
+        )
+        dm = results[0] if results else None
+
+    if not dm or (isinstance(dm, dict) and "error" in dm):
+        return {
+            "found": False,
+            "purchase_return_id": purchase_return_id,
+            "message": f"No debit memo found for Purchase Return (RMA) #{purchase_return_id}",
+        }
+
+    return {
+        "found": True,
+        "purchase_return_id": purchase_return_id,
+        "debit_memo": dm,
+        "debit_memo_id": dm.get("id"),
+        "invoice_number": dm.get("invoice_number"),
+        "supplier_id": dm.get("partner_id"),
+        "total_amount": float(dm.get("total_amount", 0.0) or 0.0),
+        "status": dm.get("status"),
+        "issue_date": str(dm.get("issue_date")) if dm.get("issue_date") else None,
+        "notes": dm.get("notes"),
+        "message": f"Debit Memo {dm.get('invoice_number', f'#{dm.get('id')}')} found for RMA #{purchase_return_id} (Total: ${float(dm.get('total_amount', 0.0) or 0.0):.2f}, Status: {dm.get('status')})",
+    }
 
 
 def _get_invoice(id: int):
@@ -229,13 +293,47 @@ def register_tools():
                 "properties": {
                     "status": {"type": "string", "description": "Filter by status (Unpaid, Paid, Overdue, Cancelled)"},
                     "partner_id": {"type": "integer", "description": "Filter by customer/partner ID"},
-                    "invoice_type": {"type": "string", "description": "Filter by invoice type (Sales, Purchase)"},
+                    "invoice_type": {"type": "string", "description": "Filter by invoice type (Sales, Purchase, Debit Memo)"},
                     "payment_term_id": {"type": "integer", "description": "Filter by payment term ID"},
+                    "purchase_return_id": {"type": "integer", "description": "Filter by linked Purchase Return (RMA) ID"},
                     "limit": {"type": "integer", "description": "Max results (default 50)"},
                 },
             },
         ),
         _list_invoices,
+    )
+    register_tool(
+        Tool(
+            name="list_debit_memos",
+            description="List supplier debit memos (T0090 with invoice_type='Debit Memo') linked to vendor returns (RMA) or supplier credit adjustments",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "purchase_return_id": {"type": "integer", "description": "Filter by linked Purchase Return (RMA) ID"},
+                    "partner_id": {"type": "integer", "description": "Filter by supplier/partner ID"},
+                    "status": {"type": "string", "description": "Filter by debit memo status (Draft, Approved, Applied, Paid, Cancelled)"},
+                    "limit": {"type": "integer", "description": "Max results (default 50)"},
+                    "offset": {"type": "integer", "description": "Offset for pagination (default 0)"},
+                },
+            },
+        ),
+        _list_debit_memos,
+    )
+    register_tool(
+        Tool(
+            name="get_debit_memo_for_rma",
+            description="Get the supplier debit memo record and credit amount linked to a specific Purchase Return (RMA) ID",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "purchase_return_id": {"type": "integer", "description": "Purchase Return (RMA) ID"},
+                },
+                "required": ["purchase_return_id"],
+            },
+        ),
+        _get_debit_memo_for_rma,
     )
     register_tool(
         Tool(
@@ -409,6 +507,10 @@ def register_tools():
     register_resource(
         Resource(uri="nova://accounting/invoices", name="All Invoices", description="List of all invoices"),
         _list_invoices,
+    )
+    register_resource(
+        Resource(uri="nova://accounting/debit-memos", name="Supplier Debit Memos", description="List of all supplier debit memos"),
+        _list_debit_memos,
     )
 
 
