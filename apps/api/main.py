@@ -58,6 +58,7 @@ from modules.bi.controllers.executive_export_controller import router as executi
 from modules.sales.controllers.commission_controller import router as commission_router
 from modules.sales.controllers.delivery_routes_controller import router as delivery_routes_router, alias_router as delivery_routes_alias_router
 from modules.sales.controllers.T0077I import handover_router
+from modules.accounting.controllers.ar_reminder_controller import router as ar_reminder_router
 
 from contextlib import asynccontextmanager
 

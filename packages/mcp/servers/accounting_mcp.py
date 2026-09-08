@@ -13,6 +13,10 @@ from modules.accounting.services.bank_statement_parser import BankStatementParse
 from modules.accounting.services.check_matching_service import CheckMatchingService
 from modules.accounting.services.check_clearing_service import CheckClearingService
 from modules.accounting.services.bounced_check_service import BouncedCheckService
+from modules.accounting.services.ar_reminder_service import (
+    ARReminderService,
+    ar_reminder_service,
+)
 from packages.mcp.registry import register_tool, register_resource
 from packages.mcp.types import Tool, Resource
 
@@ -32,6 +36,7 @@ _pay_svc = PaymentService(_pay_repo, _inv_repo, payment_term_repo=_terms_repo)
 _matching_svc = CheckMatchingService()
 _clearing_svc = CheckClearingService()
 _bounced_svc = BouncedCheckService()
+_reminder_svc = ar_reminder_service
 
 
 def _list_coa(account_type: str = None, limit: int = 100):
@@ -203,6 +208,86 @@ def _list_bounced_checks(
     if limit and len(results) > limit:
         return results[:limit]
     return results
+
+
+def _send_customer_reminder(
+    customer_id: int,
+    rule_id: Optional[int] = None,
+    template_id: Optional[int] = None,
+    channel: Optional[str] = None,
+    custom_message: Optional[str] = None,
+    attach_statement_pdf: bool = True,
+    include_payment_link: bool = True,
+):
+    return _reminder_svc.send_customer_reminder(
+        customer_id=customer_id,
+        rule_id=rule_id,
+        template_id=template_id,
+        channel=channel,
+        custom_message=custom_message,
+        attach_statement_pdf=attach_statement_pdf,
+        include_payment_link=include_payment_link,
+    )
+
+
+def _dispatch_customer_statement(
+    customer_id: int,
+    channel: Optional[str] = "EMAIL",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    as_of_date: Optional[str] = None,
+    custom_message: Optional[str] = None,
+):
+    return _reminder_svc.dispatch_customer_statement(
+        customer_id=customer_id,
+        channel=channel,
+        start_date=start_date,
+        end_date=end_date,
+        as_of_date=as_of_date,
+        custom_message=custom_message,
+    )
+
+
+def _list_reminder_rules(
+    is_active: Optional[bool] = None,
+    trigger_type: Optional[str] = None,
+    channel: Optional[str] = None,
+    limit: int = 50,
+):
+    return _reminder_svc.list_rules(
+        is_active=is_active,
+        trigger_type=trigger_type,
+        channel=channel,
+        limit=limit,
+    )
+
+
+def _update_reminder_rule(
+    id: int,
+    rule_name: Optional[str] = None,
+    trigger_type: Optional[str] = None,
+    threshold_days: Optional[int] = None,
+    channel: Optional[str] = None,
+    min_overdue_balance: Optional[float] = None,
+    template_id: Optional[int] = None,
+    is_active: Optional[bool] = None,
+    exclude_vip: Optional[bool] = None,
+    schedule_day: Optional[str] = None,
+):
+    update_data = {
+        k: v for k, v in {
+            "rule_name": rule_name,
+            "trigger_type": trigger_type,
+            "threshold_days": threshold_days,
+            "channel": channel,
+            "min_overdue_balance": min_overdue_balance,
+            "template_id": template_id,
+            "is_active": is_active,
+            "exclude_vip": exclude_vip,
+            "schedule_day": schedule_day,
+        }.items() if v is not None
+    }
+    return _reminder_svc.update_rule(rule_id=id, data=update_data)
 
 
 def register_tools():
@@ -401,6 +486,88 @@ def register_tools():
             },
         ),
         _list_bounced_checks,
+    )
+    register_tool(
+        Tool(
+            name="send_customer_reminder",
+            description="Send an on-demand or automated AR collection reminder to a customer via email or WhatsApp",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer", "description": "Customer ID (T0010)"},
+                    "rule_id": {"type": "integer", "description": "Optional reminder rule ID (T0120)"},
+                    "template_id": {"type": "integer", "description": "Optional message template ID (T0121)"},
+                    "channel": {"type": "string", "description": "Communication channel override ('EMAIL', 'WHATSAPP')"},
+                    "custom_message": {"type": "string", "description": "Optional custom note/message prepended to reminder"},
+                    "attach_statement_pdf": {"type": "boolean", "description": "Whether to attach generated PDF account statement (default True)"},
+                    "include_payment_link": {"type": "boolean", "description": "Whether to generate and include payment link in message (default True)"},
+                },
+                "required": ["customer_id"],
+            },
+        ),
+        _send_customer_reminder,
+    )
+    register_tool(
+        Tool(
+            name="dispatch_customer_statement",
+            description="Generate and dispatch a branded PDF customer account statement with aging summary and open invoices via Email or WhatsApp",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer", "description": "Customer ID (T0010)"},
+                    "channel": {"type": "string", "description": "Target dispatch channel ('EMAIL' or 'WHATSAPP', default 'EMAIL')"},
+                    "start_date": {"type": "string", "description": "Statement start date (YYYY-MM-DD)"},
+                    "end_date": {"type": "string", "description": "Statement end date (YYYY-MM-DD)"},
+                    "as_of_date": {"type": "string", "description": "As-of calculation date (YYYY-MM-DD, defaults to today)"},
+                    "custom_message": {"type": "string", "description": "Optional custom message note included in statement"},
+                },
+                "required": ["customer_id"],
+            },
+        ),
+        _dispatch_customer_statement,
+    )
+    register_tool(
+        Tool(
+            name="list_reminder_rules",
+            description="List AR collection reminder rules, schedules, and aging threshold triggers",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "is_active": {"type": "boolean", "description": "Filter by active status"},
+                    "trigger_type": {"type": "string", "description": "Filter by trigger type (AGING_THRESHOLD, STATEMENT_SCHEDULE, DUE_DATE_OFFSET)"},
+                    "channel": {"type": "string", "description": "Filter by channel (EMAIL, WHATSAPP, ALL)"},
+                    "limit": {"type": "integer", "description": "Max results (default 50)"},
+                },
+            },
+        ),
+        _list_reminder_rules,
+    )
+    register_tool(
+        Tool(
+            name="update_reminder_rule",
+            description="Update an AR collection reminder rule configuration, threshold days, channel, active state, or VIP exclusion policy",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer", "description": "Reminder rule ID (T0120)"},
+                    "rule_name": {"type": "string", "description": "Name of the reminder rule"},
+                    "trigger_type": {"type": "string", "description": "Trigger type (AGING_THRESHOLD, STATEMENT_SCHEDULE, DUE_DATE_OFFSET)"},
+                    "threshold_days": {"type": "integer", "description": "Overdue aging threshold in days (e.g. 30, 60, 90)"},
+                    "channel": {"type": "string", "description": "Target delivery channel (EMAIL, WHATSAPP, ALL)"},
+                    "min_overdue_balance": {"type": "number", "description": "Minimum overdue amount to trigger reminder"},
+                    "template_id": {"type": "integer", "description": "Associated message template ID"},
+                    "is_active": {"type": "boolean", "description": "Whether rule is active"},
+                    "exclude_vip": {"type": "boolean", "description": "Whether to exclude VIP customer accounts"},
+                    "schedule_day": {"type": "string", "description": "Weekly schedule day (e.g. Friday)"},
+                },
+                "required": ["id"],
+            },
+        ),
+        _update_reminder_rule,
     )
     register_resource(
         Resource(uri="nova://accounting/payment-terms", name="Payment Terms", description="List of all payment terms"),
