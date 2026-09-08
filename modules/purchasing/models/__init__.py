@@ -16,5 +16,7 @@ from modules.purchasing.models.purchase_return import (
     InspectionAttachment, AttachmentUploadRequest,
     DockRejectionLineItem, ReceivingRejectionCreate, RMAApprovalRequest,
     ReturnSlipLineData, ReturnSlipData,
+    BulkReturnLinesCreate, QuarantineStatusUpdateRequest,
 )
+
 

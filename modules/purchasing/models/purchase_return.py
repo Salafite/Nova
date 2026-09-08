@@ -262,3 +262,14 @@ class PurchaseReturnDetailResponse(PurchaseReturnResponse):
     lines: List[PurchaseReturnLineResponse] = Field(default_factory=list)
 
 
+class BulkReturnLinesCreate(BaseModel):
+    return_id: int
+    lines: List[Dict[str, Any]] = Field(..., min_length=1)
+
+
+class QuarantineStatusUpdateRequest(BaseModel):
+    quarantine_status: str = Field(..., max_length=30)
+    sync_batch: bool = True
+
+
+
