@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any, Union
 from datetime import date, datetime, timezone
+import uuid
 from fastapi import HTTPException
 
 from modules.core.services.base import CrudService
@@ -1207,5 +1208,199 @@ class PurchaseReturnService(CrudService):
                 "Supplier acknowledgment verifies debit memo claims."
             ),
         }
+
+    def add_attachment(
+        self,
+        return_id: int,
+        attachment: Union[dict, Any],
+        line_id: Optional[int] = None,
+        user_id: Optional[int] = None,
+        conn=None,
+    ) -> dict:
+        """
+        Adds an inspection photo or documentation attachment to an RMA header (T0081)
+        or a specific return line item (T0082). Supports URL, base64 image data,
+        and thumbnail metadata.
+        """
+        kwargs = {'conn': conn} if conn is not None else {}
+        return_rec = self.repo.get(return_id, **kwargs)
+        if not return_rec:
+            raise HTTPException(404, f"Purchase return with id {return_id} not found")
+
+        # Normalize attachment data
+        if hasattr(attachment, 'model_dump'):
+            att_dict = attachment.model_dump()
+        elif isinstance(attachment, dict):
+            att_dict = dict(attachment)
+        else:
+            att_dict = {}
+
+        target_line_id = line_id or att_dict.get('line_id')
+
+        # Generate unique attachment ID if not provided
+        att_id = att_dict.get('id') or f"att_{uuid.uuid4().hex[:10]}"
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        # Calculate approximate size from base64 if not specified
+        size_bytes = att_dict.get('size_bytes')
+        if not size_bytes and att_dict.get('data_base64'):
+            b64_str = str(att_dict['data_base64'])
+            if ',' in b64_str:
+                b64_str = b64_str.split(',', 1)[1]
+            size_bytes = (len(b64_str) * 3) // 4
+
+        attachment_entry: Dict[str, Any] = {
+            'id': att_id,
+            'filename': att_dict.get('filename') or 'inspection_photo.jpg',
+            'content_type': att_dict.get('content_type') or 'image/jpeg',
+            'url': att_dict.get('url'),
+            'data_base64': att_dict.get('data_base64'),
+            'thumbnail_url': att_dict.get('thumbnail_url'),
+            'size_bytes': size_bytes,
+            'description': att_dict.get('description'),
+            'uploaded_at': att_dict.get('uploaded_at') or now_iso,
+            'uploaded_by': user_id or att_dict.get('uploaded_by'),
+            'line_id': target_line_id,
+        }
+
+        if target_line_id:
+            lines_repo = self._get_lines_repo()
+            line = lines_repo.get(target_line_id, **kwargs)
+            if not line or int(line.get('return_id', 0)) != int(return_id):
+                raise HTTPException(404, f"Return line item {target_line_id} not found for RMA {return_id}")
+
+            current_photos = line.get('photos') or []
+            if not isinstance(current_photos, list):
+                current_photos = []
+
+            # Check if photo already exists by id
+            existing_idx = next((i for i, p in enumerate(current_photos) if isinstance(p, dict) and p.get('id') == att_id), None)
+            if existing_idx is not None:
+                current_photos[existing_idx] = attachment_entry
+            else:
+                current_photos.append(attachment_entry)
+
+            lines_repo.update(target_line_id, {'photos': current_photos}, **kwargs)
+            attachment_entry['product_id'] = line.get('product_id')
+            attachment_entry['product_name'] = line.get('product_name')
+        else:
+            current_attachments = return_rec.get('attachments') or []
+            if not isinstance(current_attachments, list):
+                current_attachments = []
+
+            existing_idx = next((i for i, a in enumerate(current_attachments) if isinstance(a, dict) and a.get('id') == att_id), None)
+            if existing_idx is not None:
+                current_attachments[existing_idx] = attachment_entry
+            else:
+                current_attachments.append(attachment_entry)
+
+            self.repo.update(return_id, {'attachments': current_attachments}, **kwargs)
+
+        return attachment_entry
+
+    def get_attachments(self, return_id: int, conn=None) -> List[dict]:
+        """
+        Retrieves all inspection photo attachments for an RMA, including header-level
+        attachments and line-item specific photos.
+        """
+        kwargs = {'conn': conn} if conn is not None else {}
+        return_rec = self.repo.get(return_id, **kwargs)
+        if not return_rec:
+            raise HTTPException(404, f"Purchase return with id {return_id} not found")
+
+        all_attachments = []
+
+        # 1. Header attachments
+        header_atts = return_rec.get('attachments') or []
+        if isinstance(header_atts, list):
+            for att in header_atts:
+                if isinstance(att, dict):
+                    att_copy = dict(att)
+                    att_copy['scope'] = 'header'
+                    all_attachments.append(att_copy)
+                elif isinstance(att, str):
+                    all_attachments.append({
+                        'id': f"att_{len(all_attachments)+1}",
+                        'url': att,
+                        'scope': 'header',
+                    })
+
+        # 2. Line item photos
+        lines = self._get_lines(return_id, conn=conn)
+        for line in lines:
+            line_photos = line.get('photos') or []
+            if isinstance(line_photos, list):
+                for photo in line_photos:
+                    if isinstance(photo, dict):
+                        p_copy = dict(photo)
+                        p_copy['scope'] = 'line'
+                        p_copy['line_id'] = line.get('id')
+                        p_copy['product_id'] = line.get('product_id')
+                        p_copy['product_name'] = line.get('product_name')
+                        all_attachments.append(p_copy)
+                    elif isinstance(photo, str):
+                        all_attachments.append({
+                            'id': f"line_att_{len(all_attachments)+1}",
+                            'url': photo,
+                            'scope': 'line',
+                            'line_id': line.get('id'),
+                            'product_id': line.get('product_id'),
+                            'product_name': line.get('product_name'),
+                        })
+
+        return all_attachments
+
+    def delete_attachment(
+        self,
+        return_id: int,
+        attachment_id: str,
+        line_id: Optional[int] = None,
+        conn=None,
+    ) -> dict:
+        """
+        Deletes an attachment from an RMA header or a specific return line item by attachment ID.
+        """
+        kwargs = {'conn': conn} if conn is not None else {}
+        return_rec = self.repo.get(return_id, **kwargs)
+        if not return_rec:
+            raise HTTPException(404, f"Purchase return with id {return_id} not found")
+
+        found = False
+
+        if line_id:
+            lines_repo = self._get_lines_repo()
+            line = lines_repo.get(line_id, **kwargs)
+            if not line or int(line.get('return_id', 0)) != int(return_id):
+                raise HTTPException(404, f"Return line item {line_id} not found for RMA {return_id}")
+
+            current_photos = line.get('photos') or []
+            new_photos = [p for p in current_photos if not (isinstance(p, dict) and str(p.get('id')) == str(attachment_id))]
+            if len(new_photos) != len(current_photos):
+                found = True
+                lines_repo.update(line_id, {'photos': new_photos}, **kwargs)
+        else:
+            # First check header attachments
+            header_atts = return_rec.get('attachments') or []
+            new_atts = [a for a in header_atts if not (isinstance(a, dict) and str(a.get('id')) == str(attachment_id))]
+            if len(new_atts) != len(header_atts):
+                found = True
+                self.repo.update(return_id, {'attachments': new_atts}, **kwargs)
+            else:
+                # Also check lines
+                lines_repo = self._get_lines_repo()
+                lines = self._get_lines(return_id, conn=conn)
+                for line in lines:
+                    line_photos = line.get('photos') or []
+                    new_photos = [p for p in line_photos if not (isinstance(p, dict) and str(p.get('id')) == str(attachment_id))]
+                    if len(new_photos) != len(line_photos):
+                        found = True
+                        lines_repo.update(line['id'], {'photos': new_photos}, **kwargs)
+                        break
+
+        if not found:
+            raise HTTPException(404, f"Attachment {attachment_id} not found on RMA {return_id}")
+
+        return {"success": True, "deleted_id": attachment_id, "return_id": return_id}
+
 
 

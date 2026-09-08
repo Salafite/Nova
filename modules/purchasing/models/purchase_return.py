@@ -188,10 +188,13 @@ class RMAApprovalRequest(BaseModel):
 
 
 class AttachmentUploadRequest(BaseModel):
+    id: Optional[str] = None
     filename: str = Field(..., max_length=255)
     content_type: Optional[str] = Field("image/jpeg", max_length=100)
     data_base64: Optional[str] = None
     url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    size_bytes: Optional[int] = None
     description: Optional[str] = None
     line_id: Optional[int] = None
 

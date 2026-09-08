@@ -841,5 +841,147 @@ class TestPurchaseReturnServiceStateMachine:
             assert details['debit_memo_number'] == 'DM-78'
             assert len(details['lines']) == 1
 
+    def test_add_attachment_to_header_success(self, service, mock_repo):
+        return_rec = {
+            'id': 1,
+            'return_number': 'RMA-0001',
+            'attachments': [],
+        }
+        mock_repo.get.return_value = return_rec
+        mock_repo.update.return_value = return_rec
+
+        att_data = {
+            'filename': 'damage_photo.jpg',
+            'url': 'https://storage.example.com/rma/photo1.jpg',
+            'content_type': 'image/jpeg',
+            'description': 'Crushed packaging at dock',
+        }
+        result = service.add_attachment(return_id=1, attachment=att_data, user_id=10)
+
+        assert result['filename'] == 'damage_photo.jpg'
+        assert result['url'] == 'https://storage.example.com/rma/photo1.jpg'
+        assert result['uploaded_by'] == 10
+        assert 'id' in result
+        mock_repo.update.assert_called_once()
+        update_call = mock_repo.update.call_args
+        assert len(update_call[0][1]['attachments']) == 1
+
+    def test_add_attachment_with_base64_calculates_size(self, service, mock_repo):
+        return_rec = {
+            'id': 2,
+            'return_number': 'RMA-0002',
+            'attachments': [],
+        }
+        mock_repo.get.return_value = return_rec
+
+        b64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        att_data = {
+            'filename': 'inspection_base64.png',
+            'content_type': 'image/png',
+            'data_base64': b64_data,
+        }
+        result = service.add_attachment(return_id=2, attachment=att_data, user_id=12)
+
+        assert result['filename'] == 'inspection_base64.png'
+        assert result['content_type'] == 'image/png'
+        assert result['size_bytes'] is not None and result['size_bytes'] > 0
+        mock_repo.update.assert_called_once()
+
+    def test_add_attachment_to_line_item(self, service, mock_repo):
+        return_rec = {
+            'id': 3,
+            'return_number': 'RMA-0003',
+            'attachments': [],
+        }
+        mock_repo.get.return_value = return_rec
+
+        mock_lines_repo = MagicMock()
+        service.lines_repo = mock_lines_repo
+        line_rec = {
+            'id': 101,
+            'return_id': 3,
+            'product_id': 45,
+            'product_name': 'Fresh Apples',
+            'photos': [],
+        }
+        mock_lines_repo.get.return_value = line_rec
+
+        att_data = {
+            'filename': 'bruised_apples.jpg',
+            'url': 'https://storage.example.com/rma/apples.jpg',
+            'line_id': 101,
+        }
+        result = service.add_attachment(return_id=3, attachment=att_data, line_id=101)
+
+        assert result['line_id'] == 101
+        assert result['product_id'] == 45
+        assert result['product_name'] == 'Fresh Apples'
+        mock_lines_repo.update.assert_called_once()
+        update_call = mock_lines_repo.update.call_args
+        assert len(update_call[0][1]['photos']) == 1
+
+    def test_add_attachment_not_found_raises_404(self, service, mock_repo):
+        mock_repo.get.return_value = None
+        with pytest.raises(HTTPException) as exc:
+            service.add_attachment(return_id=999, attachment={'filename': 'x.jpg'})
+        assert exc.value.status_code == 404
+
+    def test_add_attachment_invalid_line_raises_404(self, service, mock_repo):
+        mock_repo.get.return_value = {'id': 1, 'return_number': 'RMA-0001'}
+        mock_lines_repo = MagicMock()
+        service.lines_repo = mock_lines_repo
+        mock_lines_repo.get.return_value = {'id': 99, 'return_id': 999}  # Mismatched return_id
+
+        with pytest.raises(HTTPException) as exc:
+            service.add_attachment(return_id=1, attachment={'filename': 'x.jpg'}, line_id=99)
+        assert exc.value.status_code == 404
+
+    def test_get_attachments_combines_header_and_lines(self, service, mock_repo):
+        return_rec = {
+            'id': 5,
+            'return_number': 'RMA-0005',
+            'attachments': [{'id': 'att_1', 'filename': 'doc.pdf'}],
+        }
+        mock_repo.get.return_value = return_rec
+
+        lines = [
+            {
+                'id': 20,
+                'return_id': 5,
+                'product_id': 10,
+                'product_name': 'Product 10',
+                'photos': [{'id': 'att_2', 'filename': 'photo_p10.jpg'}],
+            }
+        ]
+        with patch.object(service, '_get_lines', return_value=lines):
+            atts = service.get_attachments(5)
+            assert len(atts) == 2
+            assert atts[0]['scope'] == 'header'
+            assert atts[0]['id'] == 'att_1'
+            assert atts[1]['scope'] == 'line'
+            assert atts[1]['id'] == 'att_2'
+            assert atts[1]['product_name'] == 'Product 10'
+
+    def test_delete_attachment_from_header_and_line(self, service, mock_repo):
+        return_rec = {
+            'id': 6,
+            'return_number': 'RMA-0006',
+            'attachments': [{'id': 'att_hdr_1', 'filename': 'invoice.pdf'}],
+        }
+        mock_repo.get.return_value = return_rec
+
+        # Delete header attachment
+        del_res = service.delete_attachment(6, 'att_hdr_1')
+        assert del_res['success'] is True
+        assert del_res['deleted_id'] == 'att_hdr_1'
+        mock_repo.update.assert_called_with(6, {'attachments': []})
+
+        # Delete non-existent raises 404
+        with patch.object(service, '_get_lines', return_value=[]):
+            with pytest.raises(HTTPException) as exc:
+                service.delete_attachment(6, 'non_existent_id')
+            assert exc.value.status_code == 404
+
+
 
 

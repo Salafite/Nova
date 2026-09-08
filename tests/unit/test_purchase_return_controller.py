@@ -1,4 +1,4 @@
-﻿from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
@@ -165,3 +165,74 @@ def test_get_return_details_endpoint(client):
         assert data["id"] == 1
         assert len(data["lines"]) == 1
         mock_details.assert_called_once_with(return_id=1)
+
+
+def test_upload_return_attachment_endpoint(client):
+    with patch.object(service, "add_attachment") as mock_add_att:
+        mock_add_att.return_value = {
+            "id": "att_12345",
+            "filename": "dock_damage.jpg",
+            "content_type": "image/jpeg",
+            "url": "https://example.com/photos/dock_damage.jpg",
+            "description": "Forklift puncture",
+            "uploaded_by": 10,
+        }
+
+        payload = {
+            "filename": "dock_damage.jpg",
+            "content_type": "image/jpeg",
+            "url": "https://example.com/photos/dock_damage.jpg",
+            "description": "Forklift puncture",
+        }
+
+        response = client.post("/api/T0081I/1/attachments", json=payload)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert data["id"] == "att_12345"
+        assert data["filename"] == "dock_damage.jpg"
+        mock_add_att.assert_called_once()
+
+
+def test_get_return_attachments_endpoint(client):
+    with patch.object(service, "get_attachments") as mock_get_atts:
+        mock_get_atts.return_value = [
+            {
+                "id": "att_12345",
+                "filename": "dock_damage.jpg",
+                "scope": "header",
+            },
+            {
+                "id": "att_67890",
+                "filename": "batch_label.jpg",
+                "scope": "line",
+                "line_id": 101,
+            },
+        ]
+
+        response = client.get("/api/T0081I/1/attachments")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["id"] == "att_12345"
+        assert data[1]["line_id"] == 101
+        mock_get_atts.assert_called_once_with(return_id=1)
+
+
+def test_delete_return_attachment_endpoint(client):
+    with patch.object(service, "delete_attachment") as mock_del_att:
+        mock_del_att.return_value = {
+            "success": True,
+            "deleted_id": "att_12345",
+            "return_id": 1,
+        }
+
+        response = client.delete("/api/T0081I/1/attachments/att_12345")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["success"] is True
+        assert data["deleted_id"] == "att_12345"
+        mock_del_att.assert_called_once_with(return_id=1, attachment_id="att_12345", line_id=None)
+

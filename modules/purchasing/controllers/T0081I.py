@@ -11,6 +11,8 @@ from modules.purchasing.models import (
     RMAApprovalRequest,
     ReceivingRejectionCreate,
     ReturnSlipData,
+    AttachmentUploadRequest,
+    InspectionAttachment,
 )
 from packages.auth.deps import get_current_user
 from modules.core.context import set_current_tenant
@@ -231,3 +233,81 @@ def get_purchase_return_slip_data(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
     except Exception as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to fetch RMA slip data: {e}")
+
+
+@router.post('/{id}/attachments', status_code=status.HTTP_201_CREATED)
+def upload_return_attachment(
+    id: int,
+    body: AttachmentUploadRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Upload an inspection photo or document attachment to an RMA header or line item.
+    Supports Base64 data and direct URL references.
+    """
+    b_id = user.get('business_id') if isinstance(user, dict) else None
+    if b_id is not None:
+        set_current_tenant(b_id)
+
+    user_id = user.get('id') if isinstance(user, dict) else None
+
+    try:
+        return service.add_attachment(
+            return_id=id,
+            attachment=body,
+            line_id=body.line_id,
+            user_id=user_id,
+        )
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to upload attachment: {e}")
+
+
+@router.get('/{id}/attachments')
+def get_return_attachments(
+    id: int,
+    user: dict = Depends(get_current_user),
+):
+    """
+    List all attachments (header and line items) for a given Purchase Return / RMA.
+    """
+    b_id = user.get('business_id') if isinstance(user, dict) else None
+    if b_id is not None:
+        set_current_tenant(b_id)
+
+    try:
+        return service.get_attachments(return_id=id)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(e))
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to retrieve attachments: {e}")
+
+
+@router.delete('/{id}/attachments/{attachment_id}')
+def delete_return_attachment(
+    id: int,
+    attachment_id: str,
+    line_id: Optional[int] = None,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Delete an attachment from an RMA header or line item by its attachment ID.
+    """
+    b_id = user.get('business_id') if isinstance(user, dict) else None
+    if b_id is not None:
+        set_current_tenant(b_id)
+
+    try:
+        return service.delete_attachment(return_id=id, attachment_id=attachment_id, line_id=line_id)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to delete attachment: {e}")
+
