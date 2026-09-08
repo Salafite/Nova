@@ -37,6 +37,12 @@ def _load_all_routers():
     except Exception:
         pass
 
+    try:
+        from modules.integrations.controllers.edi_controller import router as edi_router
+        _all_routers.append(edi_router)
+    except Exception:
+        pass
+
     return _all_routers
 
 
