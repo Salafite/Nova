@@ -21,7 +21,6 @@ from modules.bi.models.executive_analytics import (
     WarehouseDeliveryMetricItem,
 )
 from modules.sales.models.commission import CommissionSummaryItem
-from apps.api.main import app
 
 
 @pytest.fixture
@@ -365,6 +364,7 @@ class TestExportControllerEndpoints:
 
     @pytest.fixture(autouse=True)
     def setup_client(self):
+        from apps.api.main import app
         self.client = TestClient(app)
 
     def _make_auth_header(self, user_id=1, role='Admin', permissions=None):
