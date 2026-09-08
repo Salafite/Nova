@@ -22,5 +22,3 @@ __all__ = [
     'ARReminderService',
     'ar_reminder_service',
 ]
-
-
