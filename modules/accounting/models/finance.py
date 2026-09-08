@@ -151,6 +151,9 @@ class InvoiceResponse(AuditMixin):
     nominal_total_weight: Optional[float] = None
     actual_total_weight: Optional[float] = None
     weight_adjustment_amount: float = 0
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 
 # Payment
