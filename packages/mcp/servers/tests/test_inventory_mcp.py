@@ -25,7 +25,9 @@ def mock_svc():
                         _uoms_svc=MagicMock(),
                         _brands_svc=MagicMock(),
                         _stock_svc=MagicMock(),
-                        _replenishment_svc=MagicMock()):
+                        _replenishment_svc=MagicMock(),
+                        _predictive_demand_svc=MagicMock(),
+                        _spoilage_prevention_svc=MagicMock()):
         yield
 
 
@@ -341,6 +343,84 @@ class TestGenerateReplenishmentTransfers:
             )
 
 
+class TestPredictiveDemandForecast:
+    def test_get_predictive_demand_forecast_with_product_id(self, mock_svc):
+        mock_forecast = MagicMock()
+        mock_forecast.model_dump.return_value = {
+            "product_id": 1,
+            "sku": "SKU-001",
+            "weekly_projections": [{"week": 1, "forecast_qty": 50.0, "ci_80": [40.0, 60.0], "ci_95": [35.0, 65.0]}],
+        }
+        inventory_mcp._predictive_demand_svc.generate_demand_forecast.return_value = mock_forecast
+
+        result = inventory_mcp._get_predictive_demand_forecast(product_id=1, warehouse_id=2, lookback_days=90, forecast_weeks=4)
+        assert len(result) == 1
+        assert result[0]["product_id"] == 1
+        inventory_mcp._predictive_demand_svc.generate_demand_forecast.assert_called_once_with(
+            product_id=1,
+            warehouse_id=2,
+            lookback_days=90,
+            forecast_weeks=4,
+        )
+
+    def test_get_predictive_demand_forecast_without_product_id(self, mock_svc):
+        mock_forecast = MagicMock()
+        mock_forecast.model_dump.return_value = {"product_id": 2, "sku": "SKU-002"}
+        inventory_mcp._predictive_demand_svc.list_demand_forecasts.return_value = [mock_forecast]
+
+        result = inventory_mcp._get_predictive_demand_forecast(warehouse_id=1)
+        assert len(result) == 1
+        assert result[0]["product_id"] == 2
+        inventory_mcp._predictive_demand_svc.list_demand_forecasts.assert_called_once_with(
+            product_ids=None,
+            warehouse_id=1,
+            lookback_days=90,
+            forecast_weeks=4,
+        )
+
+
+class TestSpoilageRiskAlerts:
+    def test_get_spoilage_risk_alerts(self, mock_svc):
+        mock_report = MagicMock()
+        mock_report.model_dump.return_value = {
+            "total_batches_evaluated": 5,
+            "batches_at_risk_count": 2,
+            "total_estimated_spoilage_qty": 150.0,
+            "total_value_at_risk": 1500.0,
+            "items": [],
+        }
+        inventory_mcp._spoilage_prevention_svc.evaluate_spoilage_risks.return_value = mock_report
+
+        result = inventory_mcp._get_spoilage_risk_alerts(warehouse_id=1, min_severity="high", days_to_expiry_threshold=60)
+        assert result["batches_at_risk_count"] == 2
+        inventory_mcp._spoilage_prevention_svc.evaluate_spoilage_risks.assert_called_once_with(
+            warehouse_id=1,
+            product_id=None,
+            min_severity="high",
+            days_to_expiry_threshold=60,
+        )
+
+
+class TestProposeBatchDiscountPromotion:
+    def test_propose_batch_discount_promotion(self, mock_svc):
+        mock_proposal = MagicMock()
+        mock_proposal.model_dump.return_value = {
+            "batch_id": 10,
+            "recommended_discount_pct": 25.0,
+            "proposed_price": 7.5,
+            "risk_severity": "high",
+        }
+        inventory_mcp._spoilage_prevention_svc.propose_batch_discount_promotion.return_value = mock_proposal
+
+        result = inventory_mcp._propose_batch_discount_promotion(batch_id=10, discount_percentage=25.0)
+        assert result["batch_id"] == 10
+        assert result["recommended_discount_pct"] == 25.0
+        inventory_mcp._spoilage_prevention_svc.propose_batch_discount_promotion.assert_called_once_with(
+            batch_id=10,
+            override_discount_pct=25.0,
+        )
+
+
 class TestRegisterTools:
     def test_registers_all_tools_and_resources(self, clear_registry):
         register_tools()
@@ -359,6 +439,12 @@ class TestRegisterTools:
         assert "list_brands" in tool_names
         assert "list_replenishment_suggestions" in tool_names
         assert "generate_replenishment_transfers" in tool_names
+        assert "get_predictive_demand_forecast" in tool_names
+        assert "get_spoilage_risk_alerts" in tool_names
+        assert "propose_batch_discount_promotion" in tool_names
         resource_uris = [r.uri for r in list_resources()]
         assert "nova://inventory/products" in resource_uris
         assert "nova://inventory/replenishment-suggestions" in resource_uris
+        assert "nova://inventory/spoilage-alerts" in resource_uris
+        assert "nova://bi/demand-forecasts" in resource_uris
+
