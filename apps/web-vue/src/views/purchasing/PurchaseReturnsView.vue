@@ -285,6 +285,16 @@
                     <span class="material-symbols-outlined">visibility</span>
                   </button>
 
+                  <!-- Print Return Slip -->
+                  <button
+                    class="btn-icon btn-icon-print"
+                    @click="openSlipModal(item)"
+                    :title="t('print-slip', 'Print Supplier Return Slip')"
+                    :aria-label="t('print-slip', 'Print Slip')"
+                  >
+                    <span class="material-symbols-outlined">print</span>
+                  </button>
+
                   <!-- Draft State: Quick Approve -->
                   <button
                     v-if="item.status === 'Draft'"
@@ -510,18 +520,30 @@
               <span class="material-symbols-outlined">photo_library</span>
               {{ t('inspection-photos', 'Inspection Photos & Attachments') }} ({{ selectedDetail.attachments.length }})
             </h4>
+            <span class="text-xs text-muted">{{ t('click-photo-enlarge', 'Click photo to view full resolution') }}</span>
           </div>
 
           <div class="photos-grid mb-4" v-if="(selectedDetail.attachments || []).length">
-            <div v-for="att in selectedDetail.attachments" :key="att.id || att.filename" class="photo-thumb-card">
-              <img
-                v-if="att.url || att.thumbnail_url || att.data_base64"
-                :src="att.url || att.thumbnail_url || (att.data_base64 ? `data:${att.content_type || 'image/jpeg'};base64,${att.data_base64}` : '')"
-                :alt="att.filename || 'Inspection photo'"
-                class="photo-img"
-              />
-              <div v-else class="photo-placeholder">
-                <span class="material-symbols-outlined">image</span>
+            <div
+              v-for="(att, pIdx) in selectedDetail.attachments"
+              :key="att.id || att.filename || pIdx"
+              class="photo-thumb-card photo-card-clickable"
+              @click="openLightboxForDetail(pIdx)"
+              :title="t('click-to-enlarge', 'Click to enlarge photo')"
+            >
+              <div class="photo-img-container">
+                <img
+                  v-if="att.url || att.thumbnail_url || att.data_base64"
+                  :src="att.url || att.thumbnail_url || (att.data_base64 ? `data:${att.content_type || 'image/jpeg'};base64,${att.data_base64}` : '')"
+                  :alt="att.filename || 'Inspection photo'"
+                  class="photo-img"
+                />
+                <div v-else class="photo-placeholder">
+                  <span class="material-symbols-outlined">image</span>
+                </div>
+                <div class="photo-zoom-hint">
+                  <span class="material-symbols-outlined">zoom_in</span>
+                </div>
               </div>
               <div class="photo-caption">{{ att.filename || att.description || 'Photo' }}</div>
             </div>
@@ -546,6 +568,14 @@
             >
               <span class="material-symbols-outlined">local_shipping</span>
               {{ t('complete-return', 'Complete Return') }}
+            </button>
+            <button
+              class="btn-outline"
+              @click="openSlipModal(selectedDetail)"
+              :title="t('print-slip', 'Print Supplier Return Slip')"
+            >
+              <span class="material-symbols-outlined">print</span>
+              {{ t('print-return-slip-btn', 'Print Return Slip') }}
             </button>
           </div>
           <button class="btn-outline" @click="closeDetailModal">{{ t('close', 'Close') }}</button>
@@ -1119,6 +1149,22 @@
       @confirm="executeDelete"
       @cancel="confirmTarget = null"
     />
+
+    <!-- Printable Supplier Return Slip & Debit Memo Modal -->
+    <SupplierReturnSlipModal
+      :show="showSlipModal"
+      :return-id="slipReturnId"
+      :initial-data="slipInitialData"
+      @close="showSlipModal = false"
+    />
+
+    <!-- Inspection Photo Lightbox Modal -->
+    <PhotoLightboxModal
+      :show="showLightbox"
+      :photos="lightboxPhotos"
+      :initial-index="lightboxIndex"
+      @close="showLightbox = false"
+    />
   </div>
 </template>
 
@@ -1130,6 +1176,8 @@ import { useI18n } from '../../composables/useI18n.js'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import SkeletonTable from '../../components/SkeletonTable.vue'
 import ErrorState from '../../components/ErrorState.vue'
+import SupplierReturnSlipModal from '../../components/purchasing/SupplierReturnSlipModal.vue'
+import PhotoLightboxModal from '../../components/PhotoLightboxModal.vue'
 
 const { show: toast } = useToast()
 const { t, dir } = useI18n()
@@ -1177,6 +1225,14 @@ const deletedLineIds = ref([])
 const showDetailModal = ref(false)
 const loadingDetail = ref(false)
 const selectedDetail = ref(null)
+
+const showSlipModal = ref(false)
+const slipReturnId = ref(null)
+const slipInitialData = ref(null)
+
+const showLightbox = ref(false)
+const lightboxPhotos = ref([])
+const lightboxIndex = ref(0)
 
 const showApproveModal = ref(false)
 const approving = ref(false)
@@ -1422,6 +1478,27 @@ async function viewDetails(item) {
 function closeDetailModal() {
   showDetailModal.value = false
   selectedDetail.value = null
+}
+
+function openSlipModal(item) {
+  if (!item) return
+  slipReturnId.value = item.id
+  slipInitialData.value = item
+  showSlipModal.value = true
+}
+
+function openLightboxForDetail(idx) {
+  if (!selectedDetail.value?.attachments?.length) return
+  lightboxPhotos.value = selectedDetail.value.attachments
+  lightboxIndex.value = idx
+  showLightbox.value = true
+}
+
+function openLightboxForForm(idx) {
+  if (!form.value.attachments?.length) return
+  lightboxPhotos.value = form.value.attachments
+  lightboxIndex.value = idx
+  showLightbox.value = true
 }
 
 function onSupplierChange() {
@@ -2235,11 +2312,18 @@ textarea.form-input { resize: vertical; }
 
 .approval-explanation { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; font-size: 13px; }
 
-.photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.btn-icon-print:hover { background: #e0f2fe; color: #0284c7; }
+
+.photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
 .photo-thumb-card { border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-surface); }
-.photo-img { width: 100%; height: 80px; object-fit: cover; display: block; }
-.photo-placeholder { height: 80px; display: flex; align-items: center; justify-content: center; background: var(--bg-surface-low); color: var(--text-muted); }
-.photo-caption { font-size: 11px; padding: 4px 6px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.photo-card-clickable { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+.photo-card-clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: var(--color-primary); }
+.photo-img-container { position: relative; height: 85px; overflow: hidden; background: var(--bg-surface-low); }
+.photo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; background: var(--bg-surface-low); color: var(--text-muted); }
+.photo-zoom-hint { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.4); color: #fff; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s; }
+.photo-card-clickable:hover .photo-zoom-hint { opacity: 1; }
+.photo-caption { font-size: 11px; padding: 4px 6px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--bg-surface); }
 
 .loading-wrap { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px; color: var(--text-muted); font-size: 13px; }
 .spinner { animation: spin 1s linear infinite; font-size: 20px; color: var(--color-primary); }
