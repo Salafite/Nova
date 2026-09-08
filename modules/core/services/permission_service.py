@@ -122,6 +122,11 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0124': 'SALES_VIEW',         # Driver GPS Telemetry
     'T0125': 'SALES_VIEW',         # Customer Live Tracking Sessions
     'T0126': 'SALES_VIEW',         # Geofence Detection Events
+    'T0132': 'WAREHOUSE_VIEW',     # Warehouse Temperature Zones
+    'T0133': 'WAREHOUSE_VIEW',     # Warehouse Bins & Staging Areas
+    'T0134': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments
+    'T0135': 'QUALITY_VIEW',       # Temperature Excursion Alerts
+    'T0136': 'QUALITY_VIEW',       # HACCP Checkpoint Logs & Compliance Reports
 }
 
 # Non-T-code custom route and tag mappings
