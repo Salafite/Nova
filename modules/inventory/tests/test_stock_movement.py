@@ -1,3 +1,4 @@
+import contextlib
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
@@ -7,6 +8,12 @@ from modules.inventory.services.stock_movement import (
     _get_or_create_stock,
     STOCK_REPO,
 )
+
+
+@pytest.fixture(autouse=True)
+def mock_db_transaction():
+    with patch('modules.inventory.services.stock_movement.db_transaction', side_effect=lambda conn=None: contextlib.nullcontext(conn)):
+        yield
 
 
 @pytest.fixture
@@ -20,7 +27,7 @@ class TestStockMovementServiceTransfers:
         source_stock = {'id': 1, 'product_id': 101, 'warehouse_id': 1, 'qty': 50.0, 'reserved_qty': 10.0, 'in_transit_qty': 0.0}
         dest_stock = {'id': 2, 'product_id': 101, 'warehouse_id': 2, 'qty': 5.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0}
 
-        def mock_list(filters=None, conn=None):
+        def mock_list(filters=None, conn=None, **kwargs):
             if filters.get('warehouse_id') == 1:
                 return [source_stock]
             elif filters.get('warehouse_id') == 2:
@@ -114,7 +121,7 @@ class TestStockMovementServiceTransfers:
         source_stock = {'id': 1, 'product_id': 101, 'warehouse_id': 1, 'qty': 50.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0}
         created_dest = {'id': 99, 'product_id': 101, 'warehouse_id': 2, 'qty': 0, 'reserved_qty': 0, 'in_transit_qty': 0, 'reorder_level': 0}
 
-        def mock_list(filters=None, conn=None):
+        def mock_list(filters=None, conn=None, **kwargs):
             if filters.get('warehouse_id') == 1:
                 return [source_stock]
             return []
@@ -272,7 +279,7 @@ class TestStockMovementServiceTransfers:
         source_stock = {'id': 1, 'product_id': 101, 'warehouse_id': 1, 'qty': 30.0, 'reserved_qty': 0.0, 'in_transit_qty': 0.0}
         dest_stock = {'id': 2, 'product_id': 101, 'warehouse_id': 2, 'qty': 10.0, 'reserved_qty': 0.0, 'in_transit_qty': 20.0}
 
-        def mock_list(filters=None, conn=None):
+        def mock_list(filters=None, conn=None, **kwargs):
             if filters.get('warehouse_id') == 1:
                 return [source_stock]
             elif filters.get('warehouse_id') == 2:

@@ -52,9 +52,8 @@
         </div>
         <button class="cart-clear" @click="clearCart">{{ t('pos-clear', 'Clear') }}</button>
       </div>
-      <div class="cart-customer" v-if="!checkingOut">
-        <span class="material-symbols-outlined">person</span>
-        <input v-model="customerName" :placeholder="t('pos-walkin', 'Walk-in Customer')" class="customer-input" />
+      <div class="cart-customer-wrapper" v-if="!checkingOut">
+        <QuickCustomerSelector v-model="selectedCustomer" />
       </div>
       <div class="cart-items" :class="{ 'checking-out': checkingOut }">
         <div v-if="!cart.length" class="cart-empty">{{ t('pos-empty', 'Cart is empty') }}</div>
@@ -92,6 +91,23 @@
         </div>
       </div>
     </div>
+    <SplitPaymentModal
+      v-model="showPaymentModal"
+      :total="grandTotal"
+      @confirm="processPayment"
+    />
+    <ThermalReceipt
+      ref="receiptComponentRef"
+      :items="lastReceiptData.items"
+      :subtotal="lastReceiptData.subtotal"
+      :tax="lastReceiptData.tax"
+      :total="lastReceiptData.total"
+      :payments="lastReceiptData.payments"
+      :change="lastReceiptData.change"
+      :customer-name="lastReceiptData.customerName"
+      :order-number="lastReceiptData.orderNumber"
+      :date="lastReceiptData.date"
+    />
   </div>
 </template>
 
@@ -100,6 +116,9 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { api } from '../../api/client.js'
 import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
+import SplitPaymentModal from '../../components/pos/SplitPaymentModal.vue'
+import ThermalReceipt from '../../components/pos/ThermalReceipt.vue'
+import QuickCustomerSelector from '../../components/pos/QuickCustomerSelector.vue'
 
 const { show: toast } = useToast()
 const { dir, t } = useI18n()
@@ -111,11 +130,25 @@ const searchQuery = ref('')
 const barcodeQuery = ref('')
 const barcodeInputRef = ref(null)
 const activeCategory = ref('')
-const customerName = ref('')
+const selectedCustomer = ref({ id: null, name: 'Walk-in Customer' })
 const loading = ref(true)
 const error = ref('')
 const checkingOut = ref(false)
 const totalPop = ref(false)
+const showPaymentModal = ref(false)
+
+const receiptComponentRef = ref(null)
+const lastReceiptData = ref({
+  items: [],
+  subtotal: 0,
+  tax: 0,
+  total: 0,
+  payments: [],
+  change: 0,
+  customerName: '',
+  orderNumber: '',
+  date: new Date()
+})
 
 const SCANNER_THRESHOLD = 50
 let barcodeBuffer = ''
@@ -125,6 +158,29 @@ let scanning = false
 
 function onDocumentKeydown(e) {
   if (checkingOut.value) return
+
+  if (e.key === 'F2') {
+    e.preventDefault()
+    barcodeInputRef.value?.focus()
+    return
+  }
+  if (e.key === 'F4' || e.key === 'F9') {
+    e.preventDefault()
+    if (cart.value.length && !checkingOut.value) {
+      checkout()
+    }
+    return
+  }
+  if (e.key === 'Escape') {
+    if (showPaymentModal.value) {
+      showPaymentModal.value = false
+    } else {
+      barcodeQuery.value = ''
+      searchQuery.value = ''
+    }
+    return
+  }
+
   if (e.target === barcodeInputRef.value && !scanning) return
 
   const now = Date.now()
@@ -299,10 +355,15 @@ watch(grandTotal, () => {
   setTimeout(() => { totalPop.value = false }, 250)
 })
 
-async function checkout() {
+function checkout() {
   if (!cart.value.length) return
+  showPaymentModal.value = true
+}
+
+async function processPayment(paymentDetails) {
   checkingOut.value = true
   try {
+    const custName = selectedCustomer.value?.name || t('pos-walkin', 'Walk-in Customer')
     const payload = {
       cart_items: cart.value.map(i => ({
         product_id: i.productId,
@@ -310,18 +371,82 @@ async function checkout() {
         qty: i.qty,
         unit_price: i.price,
       })),
-      customer_name: customerName.value || t('pos-walkin', 'Walk-in Customer'),
+      customer_id: selectedCustomer.value?.id || null,
+      customer_name: custName,
+      payments: paymentDetails.splits,
+      amount_tendered: paymentDetails.amount_tendered
     }
     const res = await api.post('/pos/checkout', payload)
     const data = res.data
+    
+    // Prepare receipt data
+    const hasCash = paymentDetails.splits.some(s => (s.payment_method || s.method) === 'Cash')
+    const changeAmount = data.change_due !== undefined ? data.change_due : (hasCash ? Math.max(0, paymentDetails.amount_tendered - grandTotal.value) : 0)
+    
+    lastReceiptData.value = {
+      items: cart.value.map(i => ({ ...i, sku: findProduct(i.productId)?.sku })),
+      subtotal: subtotal.value,
+      tax: tax.value,
+      total: grandTotal.value,
+      payments: paymentDetails.splits,
+      change: changeAmount,
+      customerName: custName,
+      orderNumber: data.order_number || 'POS-' + Date.now(),
+      date: new Date()
+    }
+    
     toast(data.message || t('pos-sale-completed', 'Sale completed!'), 'success')
     cart.value = []
-    customerName.value = ''
+    selectedCustomer.value = { id: null, name: t('pos-walkin', 'Walk-in Customer') }
+    showPaymentModal.value = false
+    
+    if (hasCash) {
+      await kickCashDrawer()
+    }
+    
+    if (receiptComponentRef.value) {
+      receiptComponentRef.value.print()
+    }
+    
   } catch (e) {
     const detail = e.response?.data?.detail || e.message || t('pos-checkout-failed', 'Checkout failed')
     toast(detail, 'error')
   } finally {
     checkingOut.value = false
+  }
+}
+
+let cachedSerialPort = null
+
+async function kickCashDrawer() {
+  if ('serial' in navigator) {
+    try {
+      if (!cachedSerialPort) {
+        const ports = await navigator.serial.getPorts()
+        if (ports.length > 0) {
+          cachedSerialPort = ports[0]
+        } else {
+          cachedSerialPort = await navigator.serial.requestPort()
+        }
+      }
+      
+      if (!cachedSerialPort.readable && !cachedSerialPort.writable) {
+        await cachedSerialPort.open({ baudRate: 9600 })
+      }
+      
+      const writer = cachedSerialPort.writable.getWriter()
+      // ESC p 0 25 250 - Pulse command for drawer
+      const escPulse = new Uint8Array([27, 112, 0, 25, 250])
+      await writer.write(escPulse)
+      writer.releaseLock()
+      console.log('Cash drawer kick sent via Web Serial API')
+    } catch (err) {
+      console.warn('Web Serial API cash drawer kick failed', err)
+      cachedSerialPort = null // Reset on error
+    }
+  } else {
+    // Fallback: mostly the receipt print job will pulse the drawer automatically via driver
+    console.log('Cash drawer kick fallback to print job pulse')
   }
 }
 

@@ -112,6 +112,18 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0108': 'WAREHOUSE_VIEW',     # Stock Transfers
     'T0109': 'WAREHOUSE_VIEW',     # Stock Transfer Lines
     'T0110': 'SALES_VIEW',         # Commission Payouts
+    'T0116': 'ACCOUNTING_VIEW',    # Bank Statements
+    'T0117': 'ACCOUNTING_VIEW',    # Statement Transactions
+    'T0118': 'ACCOUNTING_VIEW',    # Check Clearing Records
+    'T0120': 'SALES_VIEW',         # Volume Tier Breaks
+    'T0121': 'SALES_VIEW',         # Customer Group Price Lists
+    'T0122': 'SALES_VIEW',         # Customer Contracts
+    'T0123': 'SALES_VIEW',         # Promotional Campaign Rules
+    'T0124': 'WAREHOUSE_VIEW',     # Warehouse Temperature Zones
+    'T0125': 'WAREHOUSE_VIEW',     # Warehouse Bins & Staging Areas
+    'T0126': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments
+    'T0127': 'QUALITY_VIEW',       # Temperature Excursion Alerts
+    'T0128': 'QUALITY_VIEW',       # HACCP Checkpoint Logs & Compliance Reports
 }
 
 # Non-T-code custom route and tag mappings
@@ -155,8 +167,18 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'T0110 - Commission Payouts': 'SALES_VIEW',
     'T0108 - Stock Transfers': 'WAREHOUSE_VIEW',
     'T0109 - Stock Transfer Lines': 'WAREHOUSE_VIEW',
+    'T0116 - Bank Statements': 'ACCOUNTING_VIEW',
+    'T0117 - Statement Transactions': 'ACCOUNTING_VIEW',
+    'T0118 - Check Clearing Records': 'ACCOUNTING_VIEW',
     '/api/T0108I': 'WAREHOUSE_VIEW',
     '/api/T0109I': 'WAREHOUSE_VIEW',
+    '/api/T0116I': 'ACCOUNTING_VIEW',
+    '/api/T0117I': 'ACCOUNTING_VIEW',
+    '/api/T0118I': 'ACCOUNTING_VIEW',
+    'T0120 - Customer Group Price Mappings': 'SALES_VIEW',
+    'T0121 - Promotional Campaign Rules': 'SALES_VIEW',
+    '/api/T0120I': 'SALES_VIEW',
+    '/api/T0121I': 'SALES_VIEW',
     'Admin User Preferences': 'ADMIN_VIEW',
     'Stock Adjustments': 'INVENTORY_VIEW',
     'POS': 'POS_VIEW',

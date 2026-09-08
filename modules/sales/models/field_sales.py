@@ -229,7 +229,7 @@ class FieldSalesValidationResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class ConflictResolutionItem(BaseModel):
-    line_number: int
+    line_number: Optional[int] = None
     product_id: int
     action: str  # 'adjust_qty', 'backorder', 'substitute', 'remove_item', 'accept_price'
     adjusted_qty: Optional[float] = None

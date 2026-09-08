@@ -41,7 +41,10 @@ def get_connection():
 
 def release_connection(conn, close=False):
     if conn is not None:
-        _pool.putconn(conn, close=close)
+        try:
+            _pool.putconn(conn, close=close)
+        except Exception:
+            pass
 
 
 @contextmanager
@@ -51,3 +54,30 @@ def db_connection():
         yield conn
     finally:
         release_connection(conn)
+
+
+@contextmanager
+def db_transaction(conn=None):
+    """
+    Context manager for atomic database transactions.
+    If conn is provided, reuses the existing connection without committing/releasing
+    (nested transaction scope within outer transaction).
+    If conn is None, acquires a connection from the pool, yields connection,
+    commits on successful completion, and rolls back on exception before releasing connection to pool.
+    """
+    if conn is not None:
+        yield conn
+    else:
+        conn = get_connection()
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            raise
+        finally:
+            release_connection(conn)
+

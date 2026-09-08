@@ -1,5 +1,5 @@
-﻿from typing import Optional
-from datetime import date
+from typing import Optional
+from datetime import date, datetime
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
 
@@ -14,6 +14,16 @@ class DeliveryCreate(BaseModel):
     actual_delivery_date: Optional[date] = None
     status: str = 'Draft'
     notes: Optional[str] = None
+    recipient_signature: Optional[str] = None
+    delivery_photo_url: Optional[str] = None
+    pod_timestamp: Optional[datetime] = None
+    delivery_location: Optional[str] = Field(None, max_length=255)
+    payment_status: str = 'Pending'
+    cod_cash_amount: float = 0
+    cod_check_amount: float = 0
+    cod_check_number: Optional[str] = Field(None, max_length=100)
+    cod_check_bank: Optional[str] = Field(None, max_length=100)
+    driver_id: Optional[int] = None
     business_id: Optional[int] = None
 
 class DeliveryUpdate(BaseModel):
@@ -26,6 +36,16 @@ class DeliveryUpdate(BaseModel):
     actual_delivery_date: Optional[date] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    recipient_signature: Optional[str] = None
+    delivery_photo_url: Optional[str] = None
+    pod_timestamp: Optional[datetime] = None
+    delivery_location: Optional[str] = Field(None, max_length=255)
+    payment_status: Optional[str] = Field(None, max_length=50)
+    cod_cash_amount: Optional[float] = None
+    cod_check_amount: Optional[float] = None
+    cod_check_number: Optional[str] = Field(None, max_length=100)
+    cod_check_bank: Optional[str] = Field(None, max_length=100)
+    driver_id: Optional[int] = None
     business_id: Optional[int] = None
 
 class DeliveryResponse(AuditMixin):
@@ -33,13 +53,24 @@ class DeliveryResponse(AuditMixin):
     delivery_number: str
     sales_order_id: int
     delivery_date: date
-    warehouse_id: Optional[int]
+    warehouse_id: Optional[int] = None
     freight_cost: float = 0
     delivery_route: Optional[str] = None
     actual_delivery_date: Optional[date] = None
 
     status: str
     notes: Optional[str] = None
+
+    recipient_signature: Optional[str] = None
+    delivery_photo_url: Optional[str] = None
+    pod_timestamp: Optional[datetime] = None
+    delivery_location: Optional[str] = None
+    payment_status: str = 'Pending'
+    cod_cash_amount: float = 0
+    cod_check_amount: float = 0
+    cod_check_number: Optional[str] = None
+    cod_check_bank: Optional[str] = None
+    driver_id: Optional[int] = None
 
 
 class DeliveryLineCreate(BaseModel):

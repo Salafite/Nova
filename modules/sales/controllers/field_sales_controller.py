@@ -31,6 +31,12 @@ router = APIRouter(
     dependencies=[Depends(require_permission("FIELD_SALES_MOBILE"))],
 )
 
+v1_router = APIRouter(
+    prefix="/api/v1/sales/field",
+    tags=["Field Sales Mobile"],
+    dependencies=[Depends(require_permission("FIELD_SALES_MOBILE"))],
+)
+
 _catalog_svc: FieldSalesCatalogService = default_catalog_service
 _sync_svc: FieldSalesSyncService = default_sync_service
 
@@ -254,3 +260,66 @@ def resolve_conflict_alias(
 ) -> OrderSyncResult:
     """Alias for /resolve-conflict endpoint."""
     return resolve_conflict_and_sync(request, current_user=current_user)
+
+
+# ---------------------------------------------------------------------------
+# Route definitions for v1_router (/api/v1/sales/field/*)
+# ---------------------------------------------------------------------------
+
+@v1_router.get("/catalog", response_model=FieldSalesCatalogBundle, summary="Get mobile catalog bundle (v1)")
+def get_mobile_catalog_v1(
+    delta_timestamp: Optional[str] = Query(None),
+    warehouse_id: Optional[int] = Query(None),
+    sales_rep_id: Optional[int] = Query(None),
+) -> FieldSalesCatalogBundle:
+    return get_mobile_catalog(delta_timestamp=delta_timestamp, warehouse_id=warehouse_id, sales_rep_id=sales_rep_id)
+
+
+@v1_router.get("/customers", response_model=List[FieldSalesCustomerProfile], summary="Get customer profiles (v1)")
+def get_mobile_customers_v1(
+    delta_timestamp: Optional[str] = Query(None),
+    sales_rep_id: Optional[int] = Query(None),
+    include_recent_orders: bool = Query(True),
+) -> List[FieldSalesCustomerProfile]:
+    return get_mobile_customers(delta_timestamp=delta_timestamp, sales_rep_id=sales_rep_id, include_recent_orders=include_recent_orders)
+
+
+@v1_router.get("/customers/{customer_id}/history", response_model=List[CustomerOrderSummary], summary="Get customer order history (v1)")
+def get_customer_history_v1(
+    customer_id: int,
+    limit: int = Query(5, ge=1, le=50),
+) -> List[CustomerOrderSummary]:
+    return get_customer_history(customer_id=customer_id, limit=limit)
+
+
+@v1_router.post("/sync", response_model=FieldSalesBatchSyncResponse, summary="Sync offline sales orders batch (v1)")
+def sync_offline_orders_v1(
+    request: FieldSalesBatchSyncRequest,
+    current_user: dict = Depends(get_current_user),
+) -> FieldSalesBatchSyncResponse:
+    return sync_offline_orders(request=request, current_user=current_user)
+
+
+@v1_router.post("/validate", response_model=FieldSalesValidationResponse, summary="Pre-sync order conflict validation (v1)")
+def validate_offline_orders_v1(
+    request: FieldSalesValidationRequest,
+) -> FieldSalesValidationResponse:
+    return validate_offline_orders(request=request)
+
+
+@v1_router.post("/resolve-conflict", response_model=OrderSyncResult, summary="Resolve conflict and sync order (v1)")
+def resolve_conflict_and_sync_v1(
+    request: FieldSalesResolveConflictRequest,
+    current_user: dict = Depends(get_current_user),
+) -> OrderSyncResult:
+    return resolve_conflict_and_sync(request=request, current_user=current_user)
+
+
+@v1_router.post("/resolve", response_model=OrderSyncResult, include_in_schema=False)
+def resolve_conflict_alias_v1(
+    request: FieldSalesResolveConflictRequest,
+    current_user: dict = Depends(get_current_user),
+) -> OrderSyncResult:
+    return resolve_conflict_and_sync(request=request, current_user=current_user)
+
+

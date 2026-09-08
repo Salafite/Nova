@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 import psycopg2.extras
 
-from packages.database.connection import get_connection, release_connection
+from packages.database.connection import get_connection, release_connection, db_transaction
 from modules.core.context import get_current_tenant
 
 logger = logging.getLogger(__name__)
@@ -1006,13 +1006,11 @@ class PortalRepository:
         payment_link: Optional[str] = None,
         conn=None,
     ) -> Dict[str, Any]:
-        """Reconcile online Stripe payment: create payment, update invoices, decrement balance, post journal entry."""
-        should_release = False
-        if conn is None:
-            conn = get_connection()
-            should_release = True
-
-        try:
+        """
+        Reconcile online Stripe payment: create payment, update invoices, decrement balance, post journal entry.
+        Hardened with db_transaction and deterministic SELECT FOR UPDATE row locking across customer and invoices.
+        """
+        with db_transaction(conn) as tx_conn:
             tenant_id = get_current_tenant()
 
             # 1. Idempotency Check: see if payment record already exists
@@ -1026,12 +1024,12 @@ class PortalRepository:
                        OR (%s IS NOT NULL AND stripe_checkout_session_id = %s)
                     LIMIT 1
                 """
-                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                with tx_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                     cur.execute(check_payment_query, (payment_intent_id, payment_intent_id, session_id, session_id))
                     existing_payment = cur.fetchone()
 
                 if existing_payment:
-                    customer = self.get_customer(customer_id, conn=conn)
+                    customer = self.get_customer(customer_id, conn=tx_conn)
                     cust_bal = _to_float(customer.get("balance", 0.0)) if customer else 0.0
                     return {
                         "reconciled": True,
@@ -1047,49 +1045,58 @@ class PortalRepository:
                         "payment_intent_id": payment_intent_id,
                     }
 
-            # 2. Lookup customer
-            customer = self.get_customer(customer_id, conn=conn)
-            if not customer:
-                raise ValueError(f"Customer with ID {customer_id} does not exist.")
+            with tx_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # 2. Lock and fetch customer row in T0010
+                cur.execute(
+                    f'SELECT id, name, balance, business_id FROM {self._get_table("t0010")} WHERE id = %s FOR UPDATE',
+                    (customer_id,)
+                )
+                customer = cur.fetchone()
+                if not customer:
+                    raise ValueError(f"Customer with ID {customer_id} does not exist.")
 
-            customer_business_id = customer.get("business_id") or tenant_id
+                customer_business_id = customer.get("business_id") or tenant_id
 
-            # 3. Create payment record in T0091
-            insert_payment_query = f"""
-                INSERT INTO {self._get_table("t0091")} (
-                    payment_date, invoice_id, partner_id, amount, payment_method,
-                    reference, status, notes, stripe_payment_intent_id,
-                    stripe_checkout_session_id, payment_link, business_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, payment_date, invoice_id, partner_id, amount, payment_method,
-                          reference, status, notes, stripe_payment_intent_id,
-                          stripe_checkout_session_id, payment_link, created_at
-            """
-            reference = payment_intent_id or session_id or f"STRIPE-{customer_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-            payment_params = [
-                datetime.now(timezone.utc).date(),
-                invoice_id,
-                customer_id,
-                amount,
-                payment_method,
-                reference,
-                "Completed",
-                f"Online settlement via {payment_method}",
-                payment_intent_id,
-                session_id,
-                payment_link,
-                customer_business_id,
-            ]
-
-            invoices_updated = []
-            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # 3. Create payment record in T0091
+                insert_payment_query = f"""
+                    INSERT INTO {self._get_table("t0091")} (
+                        payment_date, invoice_id, partner_id, amount, payment_method,
+                        reference, status, notes, stripe_payment_intent_id,
+                        stripe_checkout_session_id, payment_link, business_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id, payment_date, invoice_id, partner_id, amount, payment_method,
+                              reference, status, notes, stripe_payment_intent_id,
+                              stripe_checkout_session_id, payment_link, created_at
+                """
+                reference = payment_intent_id or session_id or f"STRIPE-{customer_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                payment_params = [
+                    datetime.now(timezone.utc).date(),
+                    invoice_id,
+                    customer_id,
+                    amount,
+                    payment_method,
+                    reference,
+                    "Completed",
+                    f"Online settlement via {payment_method}",
+                    payment_intent_id,
+                    session_id,
+                    payment_link,
+                    customer_business_id,
+                ]
                 cur.execute(insert_payment_query, payment_params)
                 payment_row = cur.fetchone()
                 payment_id = payment_row["id"]
 
-                # 4. Update Invoices in T0090
+                # 4. Lock & Update Invoices in T0090
+                invoices_updated = []
                 if invoice_id:
-                    # Calculate total paid for this invoice
+                    # Single invoice lock
+                    cur.execute(
+                        f'SELECT id, total_amount, status FROM {self._get_table("t0090")} WHERE id = %s FOR UPDATE',
+                        (invoice_id,)
+                    )
+                    inv_row = cur.fetchone()
+
                     cur.execute(
                         f"""
                         SELECT COALESCE(SUM(amount), 0) as total_paid
@@ -1099,26 +1106,10 @@ class PortalRepository:
                         (invoice_id,),
                     )
                     paid_row = cur.fetchone()
-                    total_paid = amount
-                    if paid_row:
-                        if isinstance(paid_row, dict):
-                            total_paid = _to_float(paid_row.get("total_paid", paid_row.get("paid_amount", amount)))
-                        elif isinstance(paid_row, (list, tuple)) and len(paid_row) > 0:
-                            total_paid = _to_float(paid_row[0])
+                    total_paid = _to_float(paid_row.get("total_paid", amount)) if paid_row else amount
+                    tot_amount = _to_float(inv_row.get("total_amount", 0.0)) if inv_row else 0.0
 
-                    cur.execute(
-                        f"SELECT total_amount FROM {self._get_table('t0090')} WHERE id = %s",
-                        (invoice_id,),
-                    )
-                    inv_meta = cur.fetchone()
-                    tot_amount = 0.0
-                    if inv_meta:
-                        if isinstance(inv_meta, dict):
-                            tot_amount = _to_float(inv_meta.get("total_amount", 0.0))
-                        elif isinstance(inv_meta, (list, tuple)) and len(inv_meta) > 0:
-                            tot_amount = _to_float(inv_meta[0])
-
-                    inv_status = "Paid" if total_paid >= tot_amount else "Partially Paid"
+                    inv_status = "Paid" if total_paid >= tot_amount - 0.01 else "Partially Paid"
                     update_inv_query = f"""
                         UPDATE {self._get_table("t0090")}
                         SET status = %s,
@@ -1133,11 +1124,20 @@ class PortalRepository:
                     cur.execute(update_inv_query, (inv_status, payment_intent_id, session_id, payment_link, invoice_id))
                     inv_res = cur.fetchone()
                     if inv_res:
-                        res_id = inv_res.get("id", invoice_id) if isinstance(inv_res, dict) else invoice_id
-                        invoices_updated.append(res_id)
+                        invoices_updated.append(inv_res["id"])
 
                 elif invoice_ids:
-                    for inv_id in invoice_ids:
+                    # Multi-invoice deterministic lock ordering (sorted ascending)
+                    sorted_ids = sorted(list(set(invoice_ids)))
+                    placeholders = ', '.join('%s' for _ in sorted_ids)
+                    cur.execute(
+                        f'SELECT id, total_amount, status FROM {self._get_table("t0090")} WHERE id IN ({placeholders}) ORDER BY id ASC FOR UPDATE',
+                        tuple(sorted_ids)
+                    )
+                    locked_invoices = cur.fetchall()
+                    locked_map = {inv["id"]: inv for inv in locked_invoices}
+
+                    for inv_id in sorted_ids:
                         cur.execute(
                             f"""
                             SELECT COALESCE(SUM(amount), 0) as total_paid
@@ -1147,26 +1147,10 @@ class PortalRepository:
                             (inv_id,),
                         )
                         paid_row = cur.fetchone()
-                        total_paid = 0.0
-                        if paid_row:
-                            if isinstance(paid_row, dict):
-                                total_paid = _to_float(paid_row.get("total_paid", paid_row.get("paid_amount", 0.0)))
-                            elif isinstance(paid_row, (list, tuple)) and len(paid_row) > 0:
-                                total_paid = _to_float(paid_row[0])
+                        total_paid = _to_float(paid_row.get("total_paid", 0.0)) if paid_row else 0.0
+                        tot_amount = _to_float(locked_map[inv_id].get("total_amount", 0.0)) if inv_id in locked_map else 0.0
 
-                        cur.execute(
-                            f"SELECT total_amount FROM {self._get_table('t0090')} WHERE id = %s",
-                            (inv_id,),
-                        )
-                        inv_meta = cur.fetchone()
-                        tot_amount = 0.0
-                        if inv_meta:
-                            if isinstance(inv_meta, dict):
-                                tot_amount = _to_float(inv_meta.get("total_amount", 0.0))
-                            elif isinstance(inv_meta, (list, tuple)) and len(inv_meta) > 0:
-                                tot_amount = _to_float(inv_meta[0])
-
-                        inv_status = "Paid" if (total_paid >= tot_amount or len(invoice_ids) == 1) else "Paid"
+                        inv_status = "Paid" if total_paid >= tot_amount - 0.01 else ("Partially Paid" if total_paid > 0 else "Unpaid")
                         cur.execute(
                             f"""
                             UPDATE {self._get_table("t0090")}
@@ -1183,17 +1167,16 @@ class PortalRepository:
                         )
                         inv_res = cur.fetchone()
                         if inv_res:
-                            res_id = inv_res.get("id", inv_id) if isinstance(inv_res, dict) else inv_id
-                            invoices_updated.append(res_id)
+                            invoices_updated.append(inv_res["id"])
 
                 else:
-                    # General balance payment without specific invoice IDs
+                    # General balance settlement across open invoices, locked in FIFO order
                     cur.execute(
                         f"""
                         SELECT id, total_amount
                         FROM {self._get_table("t0090")}
                         WHERE partner_id = %s AND status IN ('Unpaid', 'Partially Paid', 'Draft', 'Overdue')
-                        ORDER BY issue_date ASC, id ASC
+                        ORDER BY issue_date ASC, id ASC FOR UPDATE
                         """,
                         (customer_id,),
                     )
@@ -1211,7 +1194,7 @@ class PortalRepository:
                         )
                         p_row = cur.fetchone()
                         p_paid = _to_float(p_row["total_paid"]) if p_row else 0.0
-                        if p_paid >= o_tot:
+                        if p_paid >= o_tot - 0.01:
                             cur.execute(
                                 f"""
                                 UPDATE {self._get_table("t0090")}
@@ -1225,8 +1208,7 @@ class PortalRepository:
                             )
                             inv_res = cur.fetchone()
                             if inv_res:
-                                res_id = inv_res.get("id", o_id) if isinstance(inv_res, dict) else o_id
-                                invoices_updated.append(res_id)
+                                invoices_updated.append(inv_res["id"])
 
                 # 5. Decrement Customer Balance in T0010
                 update_cust_query = f"""
@@ -1302,9 +1284,6 @@ class PortalRepository:
                     (je_id, ar_acc_id, 0.0, amount, f"Accounts receivable reduction - {customer.get('name')}", True, customer_business_id),
                 )
 
-            if should_release:
-                conn.commit()
-
             return {
                 "reconciled": True,
                 "already_processed": False,
@@ -1319,13 +1298,3 @@ class PortalRepository:
                 "session_id": session_id,
                 "payment_intent_id": payment_intent_id,
             }
-        except Exception:
-            if should_release:
-                try:
-                    conn.rollback()
-                except Exception:
-                    pass
-            raise
-        finally:
-            if should_release:
-                release_connection(conn)

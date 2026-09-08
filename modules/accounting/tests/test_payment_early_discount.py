@@ -447,10 +447,10 @@ class TestPaymentServiceSettlementAndDiscounts:
 
         assert "Early payment discount applied" not in (payment.get('notes') or '')
 
-        # Invoice discount is unchanged (0.0), status is still Unpaid because $980 < $1000
+        # Invoice discount is unchanged (0.0), status is Partially Paid because $980 < $1000
         updated_inv = self.invoice_repo.get(301)
         assert updated_inv['discount_amount'] == 0.0
-        assert updated_inv['status'] == 'Unpaid'
+        assert updated_inv['status'] == 'Partially Paid'
 
         # Customer balance reduced only by cash amount ($980), leaving $20 balance
         updated_cust = self.customer_repo.get(101)
@@ -492,7 +492,7 @@ class TestPaymentServiceSettlementAndDiscounts:
         assert "Early payment discount applied" not in (payment.get('notes') or '')
         updated_inv = self.invoice_repo.get(301)
         assert updated_inv['discount_amount'] == 0.0
-        assert updated_inv['status'] == 'Unpaid'
+        assert updated_inv['status'] == 'Partially Paid'
 
     def test_proportional_discount_for_partial_payment_before_cutoff(self):
         """Partial payment before cutoff earns proportional discount credit."""
@@ -513,10 +513,10 @@ class TestPaymentServiceSettlementAndDiscounts:
 
         assert "Early payment discount applied: $75.00 (3%)" in payment['notes']
 
-        # Invoice updated with $75 discount, status still Unpaid
+        # Invoice updated with $75 discount, status Partially Paid
         updated_inv = self.invoice_repo.get(302)
         assert updated_inv['discount_amount'] == 75.0
-        assert updated_inv['status'] == 'Unpaid'
+        assert updated_inv['status'] == 'Partially Paid'
 
         # Customer balance reduced by $2500 ($5000 - $2500 = $2500)
         updated_cust = self.customer_repo.get(102)

@@ -278,9 +278,9 @@ def test_portal_repo_reconcile_settlement_transaction_unit():
         None,  # idempotency: no existing payment
         {"id": 10, "name": "Acme", "balance": 1500.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
         {"id": 55, "payment_date": date(2026, 8, 23), "invoice_id": 42, "partner_id": 10, "amount": 500.0, "payment_method": "Stripe Card", "reference": "pi_123", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": "pi_123", "stripe_checkout_session_id": "cs_123", "payment_link": None, "created_at": None},  # payment
+        {"id": 42, "total_amount": 500.0, "status": "Unpaid"}, # lock invoice FOR UPDATE
         {"total_paid": 500.0},  # total paid query from t0091
-        {"total_amount": 500.0},  # total amount query from t0090
-        {"id": 42, "total_amount": 500.0, "status": "Paid"},  # updated invoice
+        {"id": 42},             # updated invoice returning id
         {"balance": 1000.0},      # updated customer balance
         {"id": 1},                # COA bank account
         {"id": 2},                # COA AR account
@@ -290,6 +290,7 @@ def test_portal_repo_reconcile_settlement_transaction_unit():
     ]
 
     with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("packages.database.connection.get_connection", return_value=mock_conn), \
          patch("modules.portal.repositories.portal_repo.release_connection"):
         result = repo.reconcile_settlement_transaction(
             customer_id=10,
@@ -323,17 +324,19 @@ def test_portal_repo_reconcile_settlement_multiple_invoices():
     mock_cur = MagicMock()
     mock_conn.cursor.return_value.__enter__.return_value = mock_cur
 
+    mock_cur.fetchall.side_effect = [
+        [{"id": 41, "total_amount": 400.0, "status": "Unpaid"}, {"id": 42, "total_amount": 400.0, "status": "Unpaid"}], # locked invoices
+    ]
+
     mock_cur.fetchone.side_effect = [
         None,  # idempotency: no existing payment
         {"id": 10, "name": "Acme", "balance": 1500.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
         {"id": 56, "payment_date": date(2026, 8, 23), "invoice_id": None, "partner_id": 10, "amount": 800.0, "payment_method": "Stripe ACH", "reference": "cs_ach_800", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": None, "stripe_checkout_session_id": "cs_ach_800", "payment_link": None, "created_at": None},  # payment
         # invoice 1
         {"total_paid": 400.0},
-        {"total_amount": 400.0},
         {"id": 41},
         # invoice 2
         {"total_paid": 400.0},
-        {"total_amount": 400.0},
         {"id": 42},
         # customer balance
         {"balance": 700.0},
@@ -347,6 +350,7 @@ def test_portal_repo_reconcile_settlement_multiple_invoices():
     ]
 
     with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("packages.database.connection.get_connection", return_value=mock_conn), \
          patch("modules.portal.repositories.portal_repo.release_connection"):
         result = repo.reconcile_settlement_transaction(
             customer_id=10,
@@ -396,6 +400,7 @@ def test_portal_repo_reconcile_idempotency():
     ]
 
     with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("packages.database.connection.get_connection", return_value=mock_conn), \
          patch("modules.portal.repositories.portal_repo.release_connection"):
         result = repo.reconcile_settlement_transaction(
             customer_id=10,
@@ -595,9 +600,9 @@ def test_portal_repo_reconcile_partial_invoice_payment():
         None,  # idempotency
         {"id": 10, "name": "Acme", "balance": 1500.0, "credit_limit": 5000.0, "min_order_amount": 0.0, "order_cutoff_time": None, "allow_reorders": True, "default_price_list_id": None, "default_tax_rate_id": None, "payment_term_id": None, "is_active": True},  # customer
         {"id": 60, "payment_date": date(2026, 8, 23), "invoice_id": 42, "partner_id": 10, "amount": 200.0, "payment_method": "Stripe Card", "reference": "pi_part_123", "status": "Completed", "notes": "Notes", "stripe_payment_intent_id": "pi_part_123", "stripe_checkout_session_id": "cs_part_123", "payment_link": None, "created_at": None},  # payment
+        {"id": 42, "total_amount": 500.0, "status": "Unpaid"}, # invoice lock FOR UPDATE
         {"total_paid": 200.0},   # total paid so far
-        {"total_amount": 500.0}, # invoice total is 500
-        {"id": 42, "total_amount": 500.0, "status": "Partially Paid"}, # invoice updated
+        {"id": 42},              # invoice updated returning id
         {"balance": 1300.0},     # customer balance
         {"id": 1},               # Bank account
         {"id": 2},               # AR account
@@ -607,6 +612,7 @@ def test_portal_repo_reconcile_partial_invoice_payment():
     ]
 
     with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("packages.database.connection.get_connection", return_value=mock_conn), \
          patch("modules.portal.repositories.portal_repo.release_connection"):
         result = repo.reconcile_settlement_transaction(
             customer_id=10,
@@ -655,6 +661,7 @@ def test_portal_repo_reconcile_general_balance_open_invoices_auto_paid():
     ]
 
     with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("packages.database.connection.get_connection", return_value=mock_conn), \
          patch("modules.portal.repositories.portal_repo.release_connection"):
         result = repo.reconcile_settlement_transaction(
             customer_id=10,
@@ -689,6 +696,7 @@ def test_portal_repo_reconcile_db_error_triggers_rollback():
     ]
 
     with patch("modules.portal.repositories.portal_repo.get_connection", return_value=mock_conn), \
+         patch("packages.database.connection.get_connection", return_value=mock_conn), \
          patch("modules.portal.repositories.portal_repo.release_connection"):
         with pytest.raises(Exception, match="Database disk error"):
             repo.reconcile_settlement_transaction(

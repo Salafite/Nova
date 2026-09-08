@@ -218,7 +218,11 @@ class StripeSettlementService:
             customer_email=result.get("customer_email"),
         )
 
-    def reconcile_checkout_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]:
+    def reconcile_checkout_session(
+        self,
+        session_data: Dict[str, Any],
+        conn=None,
+    ) -> Dict[str, Any]:
         """Reconcile a completed Stripe Checkout Session for B2B portal settlement."""
         session_id = session_data.get("id") or session_data.get("session_id")
         payment_intent_id = session_data.get("payment_intent") or session_data.get("payment_intent_id")
@@ -283,6 +287,7 @@ class StripeSettlementService:
         checkout_url = session_data.get("url")
 
         logger.info(f"Reconciling Stripe settlement for customer #{customer_id}, session {session_id}, amount ${amount:.2f}")
+        kwargs = {"conn": conn} if conn is not None else {}
         return self.portal_repo.reconcile_settlement_transaction(
             customer_id=customer_id,
             amount=amount,
@@ -293,9 +298,14 @@ class StripeSettlementService:
             payment_intent_id=payment_intent_id,
             payment_method=method_name,
             payment_link=checkout_url,
+            **kwargs,
         )
 
-    def reconcile_payment_intent(self, payment_intent_data: Dict[str, Any]) -> Dict[str, Any]:
+    def reconcile_payment_intent(
+        self,
+        payment_intent_data: Dict[str, Any],
+        conn=None,
+    ) -> Dict[str, Any]:
         """Reconcile a succeeded payment intent for B2B portal settlement."""
         payment_intent_id = payment_intent_data.get("id")
         metadata = payment_intent_data.get("metadata") or {}
@@ -341,6 +351,7 @@ class StripeSettlementService:
         else:
             method_name = "Stripe Online"
 
+        kwargs = {"conn": conn} if conn is not None else {}
         return self.portal_repo.reconcile_settlement_transaction(
             customer_id=customer_id,
             amount=amount,
@@ -351,12 +362,14 @@ class StripeSettlementService:
             payment_intent_id=payment_intent_id,
             payment_method=method_name,
             payment_link=None,
+            **kwargs,
         )
 
     def verify_and_reconcile_session(
         self,
         session_id: str,
         customer_id: Optional[int] = None,
+        conn=None,
     ) -> Dict[str, Any]:
         """Verify checkout session status via Stripe and reconcile if paid."""
         session_info = get_checkout_session(session_id)
@@ -372,7 +385,8 @@ class StripeSettlementService:
         session_status = session_info.get("status")
 
         if payment_status in ("paid", "no_payment_required") or session_status == "complete":
-            return self.reconcile_checkout_session(session_info)
+            kwargs = {"conn": conn} if conn is not None else {}
+            return self.reconcile_checkout_session(session_info, **kwargs)
 
         return {
             "reconciled": False,

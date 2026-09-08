@@ -3,6 +3,7 @@ from datetime import date, datetime
 from typing import Optional, Union, Dict, Any, List
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
+from packages.database.connection import db_transaction
 from modules.accounting.services.payment_term_service import (
     calculate_early_discount,
     calculate_discount_deadline,
@@ -69,7 +70,7 @@ CUSTOMER_REPO = CrudRepository(
 class PaymentService(CrudService):
     """
     Domain service for Payments (T0091), handling early payment discount evaluation,
-    invoice settlement, and customer balance reconciliation.
+    invoice settlement, and customer balance reconciliation with SELECT FOR UPDATE row-level locking.
     """
 
     def __init__(
@@ -91,6 +92,7 @@ class PaymentService(CrudService):
         payment_amount: Optional[float] = None,
         grace_days: int = 0,
         conn=None,
+        for_update: bool = False,
     ) -> Dict[str, Any]:
         """
         Evaluate whether an early payment discount is valid for a given invoice on the specified payment date.
@@ -101,13 +103,19 @@ class PaymentService(CrudService):
             payment_amount: Optional specific payment amount being proposed.
             grace_days: Optional grace period days allowed past discount cutoff date.
             conn: Optional database connection / transaction.
+            for_update: If True, uses SELECT FOR UPDATE to lock the invoice row.
 
         Returns:
             Dict containing eligibility status, discount percentage, discount savings amount,
             net amount due, cutoff dates, and balance summary.
         """
         kwargs = {'conn': conn} if conn is not None else {}
-        invoice = self.invoice_repo.get(int(invoice_id), **kwargs)
+        if for_update:
+            get_fn = getattr(self.invoice_repo, 'get_for_update', self.invoice_repo.get)
+            invoice = get_fn(int(invoice_id), conn=conn)
+        else:
+            invoice = self.invoice_repo.get(int(invoice_id), **kwargs)
+
         if not invoice:
             raise ValueError(f"Invoice {invoice_id} not found")
 
@@ -222,139 +230,166 @@ class PaymentService(CrudService):
     ) -> dict:
         """
         Record a payment (T0091), honoring early payment discounts if eligible,
-        settling invoice status, and updating customer balance.
+        settling invoice status, and updating customer balance using SELECT FOR UPDATE row locking.
         """
-        kwargs = {'conn': conn} if conn is not None else {}
-        payment_dict = dict(payload)
+        with db_transaction(conn) as tx_conn:
+            payment_dict = dict(payload)
 
-        # Normalize payment date
-        pay_date = _parse_date(payment_dict.get('payment_date'))
-        payment_dict['payment_date'] = pay_date
+            # Normalize payment date
+            pay_date = _parse_date(payment_dict.get('payment_date'))
+            payment_dict['payment_date'] = pay_date
 
-        amt = round(float(payment_dict.get('amount', 0.0) or 0.0), 2)
-        if amt <= 0:
-            raise ValueError("Payment amount must be greater than 0")
+            amt = round(float(payment_dict.get('amount', 0.0) or 0.0), 2)
+            if amt <= 0:
+                raise ValueError("Payment amount must be greater than 0")
 
-        status = payment_dict.get('status', 'Completed')
-        invoice_id = payment_dict.get('invoice_id')
-        partner_id = payment_dict.get('partner_id')
+            status = payment_dict.get('status', 'Completed')
+            invoice_id = payment_dict.get('invoice_id')
+            partner_id = payment_dict.get('partner_id')
 
-        discount_credit = 0.0
-        total_settlement_credit = amt
+            discount_credit = 0.0
+            total_settlement_credit = amt
 
-        if invoice_id:
-            inv = self.invoice_repo.get(int(invoice_id), **kwargs)
-            if not inv:
-                raise ValueError(f"Invoice {invoice_id} not found")
+            customer_get_for_update = (
+                getattr(self.customer_repo, 'get_for_update', self.customer_repo.get)
+                if self.customer_repo
+                else None
+            )
+            invoice_get_for_update = (
+                getattr(self.invoice_repo, 'get_for_update', self.invoice_repo.get)
+                if self.invoice_repo
+                else None
+            )
 
-            # Fallback partner_id from invoice if omitted
-            if not partner_id:
-                partner_id = inv.get('partner_id')
-                payment_dict['partner_id'] = partner_id
+            if invoice_id:
+                # Lock invoice row (T0090)
+                inv = invoice_get_for_update(int(invoice_id), conn=tx_conn)
+                if not inv:
+                    raise ValueError(f"Invoice {invoice_id} not found")
 
-            if apply_early_discount and status in ('Completed', 'Settled', 'Success', 'Paid'):
-                eval_res = self.evaluate_early_discount(
-                    invoice_id=invoice_id,
-                    payment_date=pay_date,
-                    grace_days=grace_days,
-                    conn=conn,
-                )
+                # Fallback partner_id from invoice if omitted
+                if not partner_id:
+                    partner_id = inv.get('partner_id')
+                    payment_dict['partner_id'] = partner_id
 
-                if eval_res.get('is_eligible') and eval_res.get('discount_amount', 0) > 0:
-                    max_discount = float(eval_res['discount_amount'])
-                    balance_due = float(eval_res['balance_due'])
-                    net_due = float(eval_res['net_amount_due'])
+                # Lock customer row (T0010) if partner_id present
+                if partner_id and customer_get_for_update:
+                    customer_get_for_update(int(partner_id), conn=tx_conn)
 
-                    # Check if paying full net due or paying full balance due
-                    if amt >= net_due and net_due > 0:
-                        discount_credit = max_discount
-                        total_settlement_credit = round(amt + discount_credit, 2)
-                    elif amt > 0 and balance_due > 0:
-                        # Proportional early discount for partial payments
-                        pct = float(eval_res['discount_percentage'])
-                        discount_credit = round(amt * (pct / (100.0 - pct)), 2)
-                        discount_credit = min(discount_credit, max_discount)
-                        total_settlement_credit = round(amt + discount_credit, 2)
+                if apply_early_discount and status in ('Completed', 'Settled', 'Success', 'Paid'):
+                    eval_res = self.evaluate_early_discount(
+                        invoice_id=invoice_id,
+                        payment_date=pay_date,
+                        grace_days=grace_days,
+                        conn=tx_conn,
+                        for_update=True,
+                    )
 
-                    # Annotate payment notes with discount details
-                    if discount_credit > 0:
-                        pct_val = eval_res['discount_percentage']
-                        pct_str = f"{int(pct_val)}%" if isinstance(pct_val, (int, float)) and float(pct_val).is_integer() else f"{pct_val}%"
-                        discount_note = f"Early payment discount applied: ${discount_credit:.2f} ({pct_str})"
-                        existing_notes = payment_dict.get('notes') or ''
-                        if discount_note not in existing_notes:
-                            payment_dict['notes'] = (
-                                f"{existing_notes.strip()} [{discount_note}]".strip()
-                                if existing_notes
-                                else discount_note
+                    if eval_res.get('is_eligible') and eval_res.get('discount_amount', 0) > 0:
+                        max_discount = float(eval_res['discount_amount'])
+                        balance_due = float(eval_res['balance_due'])
+                        net_due = float(eval_res['net_amount_due'])
+
+                        # Check if paying full net due or paying full balance due
+                        if amt >= net_due and net_due > 0:
+                            discount_credit = max_discount
+                            total_settlement_credit = round(amt + discount_credit, 2)
+                        elif amt > 0 and balance_due > 0:
+                            # Proportional early discount for partial payments
+                            pct = float(eval_res['discount_percentage'])
+                            discount_credit = round(amt * (pct / (100.0 - pct)), 2)
+                            discount_credit = min(discount_credit, max_discount)
+                            total_settlement_credit = round(amt + discount_credit, 2)
+
+                        # Annotate payment notes with discount details
+                        if discount_credit > 0:
+                            pct_val = eval_res['discount_percentage']
+                            pct_str = (
+                                f"{int(pct_val)}%"
+                                if isinstance(pct_val, (int, float)) and float(pct_val).is_integer()
+                                else f"{pct_val}%"
+                            )
+                            discount_note = f"Early payment discount applied: ${discount_credit:.2f} ({pct_str})"
+                            existing_notes = payment_dict.get('notes') or ''
+                            if discount_note not in existing_notes:
+                                payment_dict['notes'] = (
+                                    f"{existing_notes.strip()} [{discount_note}]".strip()
+                                    if existing_notes
+                                    else discount_note
+                                )
+
+                            # Update invoice discount_amount
+                            current_inv_disc = float(inv.get('discount_amount', 0.0) or 0.0)
+                            new_inv_disc = round(current_inv_disc + discount_credit, 2)
+                            self.invoice_repo.update(invoice_id, {'discount_amount': new_inv_disc}, conn=tx_conn)
+                            logger.info(
+                                f"Applied early discount of ${discount_credit:.2f} on invoice {invoice_id}"
                             )
 
-                        # Update invoice discount_amount
-                        current_inv_disc = float(inv.get('discount_amount', 0.0) or 0.0)
-                        new_inv_disc = round(current_inv_disc + discount_credit, 2)
-                        self.invoice_repo.update(invoice_id, {'discount_amount': new_inv_disc}, **kwargs)
-                        logger.info(
-                            f"Applied early discount of ${discount_credit:.2f} on invoice {invoice_id}"
+                # Create payment record (T0091)
+                payment_record = super().create(payment_dict, conn=tx_conn)
+
+                # Check if invoice is now fully settled and update status
+                if status in ('Completed', 'Settled', 'Success', 'Paid'):
+                    try:
+                        all_payments = self.repo.list(filters={'invoice_id': invoice_id}, conn=tx_conn)
+                        total_paid_cash = sum(
+                            float(p.get('amount', 0.0) or 0.0)
+                            for p in all_payments
+                            if p.get('status') in ('Completed', 'Settled', 'Success', 'Paid')
                         )
+                        inv_refresh = invoice_get_for_update(int(invoice_id), conn=tx_conn) or inv
+                        total_disc = float(inv_refresh.get('discount_amount', 0.0) or 0.0)
+                        inv_total = float(inv_refresh.get('total_amount', 0.0) or 0.0)
 
-            # Create payment record
-            payment_record = super().create(payment_dict, **kwargs)
+                        if (total_paid_cash + total_disc) >= (inv_total - 0.01):
+                            self.invoice_repo.update(invoice_id, {'status': 'Paid'}, conn=tx_conn)
+                            logger.info(f"Invoice {invoice_id} fully settled and status updated to Paid")
+                        elif total_paid_cash > 0:
+                            self.invoice_repo.update(invoice_id, {'status': 'Partially Paid'}, conn=tx_conn)
+                            logger.info(f"Invoice {invoice_id} partially paid and status updated to Partially Paid")
+                    except Exception as e:
+                        logger.error(f"Failed to check/update invoice {invoice_id} status: {e}")
 
-            # Check if invoice is now fully settled and update status
-            if status in ('Completed', 'Settled', 'Success', 'Paid'):
-                try:
-                    all_payments = self.repo.list(filters={'invoice_id': invoice_id}, **kwargs)
-                    total_paid_cash = sum(
-                        float(p.get('amount', 0.0) or 0.0)
-                        for p in all_payments
-                        if p.get('status') in ('Completed', 'Settled', 'Success', 'Paid')
-                    )
-                    inv_refresh = self.invoice_repo.get(int(invoice_id), **kwargs) or inv
-                    total_disc = float(inv_refresh.get('discount_amount', 0.0) or 0.0)
-                    inv_total = float(inv_refresh.get('total_amount', 0.0) or 0.0)
+                # Update customer balance
+                if status in ('Completed', 'Settled', 'Success', 'Paid') and partner_id and self.customer_repo:
+                    try:
+                        customer = customer_get_for_update(int(partner_id), conn=tx_conn)
+                        if customer:
+                            cur_bal = float(customer.get('balance', 0.0) or 0.0)
+                            new_bal = round(max(0.0, cur_bal - total_settlement_credit), 2)
+                            self.customer_repo.update(int(partner_id), {'balance': new_bal}, conn=tx_conn)
+                            logger.info(
+                                f"Updated customer {partner_id} balance from {cur_bal:.2f} to {new_bal:.2f} (credit: {total_settlement_credit:.2f})"
+                            )
+                    except Exception as e:
+                        logger.error(f"Failed to update customer {partner_id} balance: {e}")
+                        raise RuntimeError(f"Failed to update customer balance: {e}") from e
 
-                    if (total_paid_cash + total_disc) >= (inv_total - 0.01):
-                        self.invoice_repo.update(invoice_id, {'status': 'Paid'}, **kwargs)
-                        logger.info(f"Invoice {invoice_id} fully settled and status updated to Paid")
-                except Exception as e:
-                    logger.error(f"Failed to check/update invoice {invoice_id} status: {e}")
+                return payment_record
 
-            # Update customer balance
-            if status in ('Completed', 'Settled', 'Success', 'Paid') and partner_id and self.customer_repo:
-                try:
-                    customer = self.customer_repo.get(int(partner_id), **kwargs)
-                    if customer:
-                        cur_bal = float(customer.get('balance', 0.0) or 0.0)
-                        new_bal = round(max(0.0, cur_bal - total_settlement_credit), 2)
-                        self.customer_repo.update(int(partner_id), {'balance': new_bal}, **kwargs)
-                        logger.info(
-                            f"Updated customer {partner_id} balance from {cur_bal:.2f} to {new_bal:.2f} (credit: {total_settlement_credit:.2f})"
-                        )
-                except Exception as e:
-                    logger.error(f"Failed to update customer {partner_id} balance: {e}")
-                    raise RuntimeError(f"Failed to update customer balance: {e}") from e
+            else:
+                # Payment unlinked to specific invoice (e.g. on-account customer deposit)
+                if partner_id and customer_get_for_update:
+                    customer_get_for_update(int(partner_id), conn=tx_conn)
 
-            return payment_record
+                payment_record = super().create(payment_dict, conn=tx_conn)
 
-        else:
-            # Payment unlinked to specific invoice (e.g. on-account customer deposit)
-            payment_record = super().create(payment_dict, **kwargs)
+                if status in ('Completed', 'Settled', 'Success', 'Paid') and partner_id and self.customer_repo:
+                    try:
+                        customer = customer_get_for_update(int(partner_id), conn=tx_conn)
+                        if customer:
+                            cur_bal = float(customer.get('balance', 0.0) or 0.0)
+                            new_bal = round(max(0.0, cur_bal - amt), 2)
+                            self.customer_repo.update(int(partner_id), {'balance': new_bal}, conn=tx_conn)
+                            logger.info(
+                                f"Updated customer {partner_id} balance from {cur_bal:.2f} to {new_bal:.2f} (credit: {amt:.2f})"
+                            )
+                    except Exception as e:
+                        logger.error(f"Failed to update customer {partner_id} balance: {e}")
+                        raise RuntimeError(f"Failed to update customer balance: {e}") from e
 
-            if status in ('Completed', 'Settled', 'Success', 'Paid') and partner_id and self.customer_repo:
-                try:
-                    customer = self.customer_repo.get(int(partner_id), **kwargs)
-                    if customer:
-                        cur_bal = float(customer.get('balance', 0.0) or 0.0)
-                        new_bal = round(max(0.0, cur_bal - amt), 2)
-                        self.customer_repo.update(int(partner_id), {'balance': new_bal}, **kwargs)
-                        logger.info(
-                            f"Updated customer {partner_id} balance from {cur_bal:.2f} to {new_bal:.2f} (credit: {amt:.2f})"
-                        )
-                except Exception as e:
-                    logger.error(f"Failed to update customer {partner_id} balance: {e}")
-                    raise RuntimeError(f"Failed to update customer balance: {e}") from e
-
-            return payment_record
+                return payment_record
 
     def settle_invoice_payment(
         self,
@@ -366,22 +401,23 @@ class PaymentService(CrudService):
         """
         Convenience method to execute invoice payment settlement and return full structured result.
         """
-        payment_record = self.create(
-            payload=payment_payload,
-            apply_early_discount=apply_early_discount,
-            grace_days=grace_days,
-            conn=conn,
-        )
-        invoice_id = payment_payload.get('invoice_id')
-        invoice_record = self.invoice_repo.get(invoice_id, conn=conn) if invoice_id else None
-        partner_id = payment_payload.get('partner_id') or (invoice_record.get('partner_id') if invoice_record else None)
-        customer_record = self.customer_repo.get(partner_id, conn=conn) if partner_id else None
+        with db_transaction(conn) as tx_conn:
+            payment_record = self.create(
+                payload=payment_payload,
+                apply_early_discount=apply_early_discount,
+                grace_days=grace_days,
+                conn=tx_conn,
+            )
+            invoice_id = payment_payload.get('invoice_id')
+            invoice_record = self.invoice_repo.get(invoice_id, conn=tx_conn) if invoice_id else None
+            partner_id = payment_payload.get('partner_id') or (invoice_record.get('partner_id') if invoice_record else None)
+            customer_record = self.customer_repo.get(partner_id, conn=tx_conn) if partner_id else None
 
-        return {
-            'payment': payment_record,
-            'invoice': invoice_record,
-            'customer': customer_record,
-        }
+            return {
+                'payment': payment_record,
+                'invoice': invoice_record,
+                'customer': customer_record,
+            }
 
 
 # Module-level default repository and service instances

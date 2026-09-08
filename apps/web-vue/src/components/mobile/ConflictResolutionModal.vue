@@ -66,6 +66,10 @@
                 <span class="detail-label">Current Price:</span>
                 <span class="detail-val font-mono">{{ formatMoney(item.current_price) }}</span>
               </div>
+              <div v-if="item.requested_price !== undefined && item.requested_price !== item.current_price" class="detail-line">
+                <span class="detail-label">Requested Price:</span>
+                <span class="detail-val font-mono line-through">{{ formatMoney(item.requested_price) }}</span>
+              </div>
             </div>
 
             <!-- Resolution Action Choice -->
@@ -95,10 +99,10 @@
 
                 <!-- Substitute option -->
                 <button
-                  v-if="item.suggested_substitute || item.substitute_product_id"
+                  v-if="hasSubstituteOptions(item)"
                   class="btn-choice"
                   :class="{ selected: getResolutionAction(item) === 'substitute' }"
-                  @click="setResolution(item, 'substitute', { substitute_product_id: item.suggested_substitute?.id || item.substitute_product_id })"
+                  @click="selectSubstituteAction(item)"
                 >
                   <span class="material-symbols-outlined">swap_calls</span>
                   Substitute
@@ -106,10 +110,10 @@
 
                 <!-- Accept Price (if price mismatch) -->
                 <button
-                  v-if="item.reason === 'PRICE_MISMATCH' || item.conflict_type === 'PRICE_MISMATCH'"
+                  v-if="item.reason === 'PRICE_MISMATCH' || item.conflict_type === 'PRICE_MISMATCH' || (item.current_price !== undefined && item.requested_price !== undefined && item.current_price !== item.requested_price)"
                   class="btn-choice"
                   :class="{ selected: getResolutionAction(item) === 'accept_price' }"
-                  @click="setResolution(item, 'accept_price', { new_unit_price: item.current_price })"
+                  @click="setResolution(item, 'accept_price', { new_unit_price: item.current_price, accepted_price: item.current_price })"
                 >
                   <span class="material-symbols-outlined">check</span>
                   Accept New Price
@@ -125,6 +129,41 @@
                   Remove from Order
                 </button>
               </div>
+            </div>
+
+            <!-- Extra Controls when Adjust Qty or Substitute is selected -->
+            <div v-if="getResolutionAction(item) === 'adjust_qty'" class="extra-control-box">
+              <label class="control-label">Adjusted Quantity:</label>
+              <div class="qty-adjust-group">
+                <button class="btn-step" @click="changeAdjustedQty(item, -1)">-</button>
+                <input
+                  type="number"
+                  class="qty-input"
+                  :value="getResolutionData(item).adjusted_qty"
+                  @input="onAdjustedQtyInput(item, $event)"
+                  min="1"
+                  :max="item.available_qty || 9999"
+                />
+                <button class="btn-step" @click="changeAdjustedQty(item, 1)">+</button>
+              </div>
+            </div>
+
+            <div v-if="getResolutionAction(item) === 'substitute'" class="extra-control-box">
+              <label class="control-label">Select Substitute Item:</label>
+              <select
+                class="substitute-select"
+                :value="getResolutionData(item).substitute_product_id || ''"
+                @change="onSubstituteSelect(item, $event)"
+              >
+                <option value="" disabled>-- Choose Substitute Product --</option>
+                <option
+                  v-for="sub in getAvailableSubstitutes(item)"
+                  :key="sub.id || sub.product_id"
+                  :value="sub.id || sub.product_id"
+                >
+                  {{ sub.name || sub.product_name }} (SKU: {{ sub.sku }}) - {{ formatMoney(sub.base_price || sub.price || sub.unit_price) }}
+                </option>
+              </select>
             </div>
           </div>
         </div>
@@ -187,6 +226,7 @@ const conflictItems = computed(() => {
   }
   // Fallback to lines that have stock mismatch
   return (props.order.lines || []).map((line) => ({
+    line_number: line.line_number || 1,
     product_id: line.product_id,
     sku: line.sku,
     product_name: line.name || line.product_name,
@@ -206,8 +246,8 @@ watch(
         const id = item.product_id
         if ((item.available_qty || 0) > 0) {
           resolutionsMap.value[id] = { action: 'adjust_qty', adjusted_qty: item.available_qty }
-        } else if (item.reason === 'PRICE_MISMATCH') {
-          resolutionsMap.value[id] = { action: 'accept_price', new_unit_price: item.current_price }
+        } else if (item.reason === 'PRICE_MISMATCH' || item.conflict_type === 'PRICE_MISMATCH') {
+          resolutionsMap.value[id] = { action: 'accept_price', new_unit_price: item.current_price, accepted_price: item.current_price }
         } else {
           resolutionsMap.value[id] = { action: 'backorder' }
         }
@@ -221,12 +261,81 @@ function getResolutionAction(item) {
   return resolutionsMap.value[item.product_id]?.action || 'backorder'
 }
 
+function getResolutionData(item) {
+  return resolutionsMap.value[item.product_id] || {}
+}
+
 function setResolution(item, action, extras = {}) {
   resolutionsMap.value[item.product_id] = {
     action,
     product_id: item.product_id,
+    line_number: item.line_number || 1,
     ...extras
   }
+}
+
+function hasSubstituteOptions(item) {
+  if (item.suggested_substitute || item.substitute_product_id) return true
+  if (Array.isArray(item.suggested_substitutes) && item.suggested_substitutes.length > 0) return true
+  return store.products && store.products.length > 0
+}
+
+function getAvailableSubstitutes(item) {
+  const subs = []
+  if (item.suggested_substitutes && Array.isArray(item.suggested_substitutes)) {
+    subs.push(...item.suggested_substitutes)
+  }
+  if (item.suggested_substitute) {
+    if (!subs.some(s => (s.id || s.product_id) === (item.suggested_substitute.id || item.suggested_substitute.product_id))) {
+      subs.push(item.suggested_substitute)
+    }
+  }
+  // Add matching catalog products excluding current product
+  if (store.products && store.products.length > 0) {
+    const catalogFiltered = store.products.filter(p => p.id !== item.product_id && !subs.some(s => (s.id || s.product_id) === p.id))
+    subs.push(...catalogFiltered)
+  }
+  return subs
+}
+
+function getSubstituteProductId(item) {
+  const subs = getAvailableSubstitutes(item)
+  if (subs.length > 0) {
+    return subs[0].id || subs[0].product_id
+  }
+  return item.substitute_product_id || null
+}
+
+function selectSubstituteAction(item) {
+  const subId = getSubstituteProductId(item)
+  const subs = getAvailableSubstitutes(item)
+  const subItem = subs.find(s => (s.id || s.product_id) === subId)
+  setResolution(item, 'substitute', {
+    substitute_product_id: subId,
+    substitute_product_name: subItem?.name || subItem?.product_name || ''
+  })
+}
+
+function changeAdjustedQty(item, delta) {
+  const current = Number(getResolutionData(item).adjusted_qty) || 1
+  const max = item.available_qty || 9999
+  const next = Math.max(1, Math.min(max, current + delta))
+  setResolution(item, 'adjust_qty', { adjusted_qty: next })
+}
+
+function onAdjustedQtyInput(item, event) {
+  const val = Math.max(1, Number(event.target.value) || 1)
+  setResolution(item, 'adjust_qty', { adjusted_qty: val })
+}
+
+function onSubstituteSelect(item, event) {
+  const subId = Number(event.target.value)
+  const subs = getAvailableSubstitutes(item)
+  const subItem = subs.find(s => (s.id || s.product_id) === subId)
+  setResolution(item, 'substitute', {
+    substitute_product_id: subId,
+    substitute_product_name: subItem?.name || subItem?.product_name || ''
+  })
 }
 
 function truncateUuid(uuid) {
@@ -284,14 +393,23 @@ async function handleApplyResolutions() {
   if (!props.order) return
   resolving.value = true
 
-  const resolutionsList = Object.entries(resolutionsMap.value).map(([productId, config]) => ({
-    product_id: Number(productId),
-    ...config
-  }))
+  const resolutionsList = Object.entries(resolutionsMap.value).map(([productId, config]) => {
+    const item = conflictItems.value.find(i => String(i.product_id) === String(productId))
+    return {
+      line_number: item?.line_number || 1,
+      product_id: Number(productId),
+      action: config.action,
+      adjusted_qty: config.adjusted_qty !== undefined ? Number(config.adjusted_qty) : null,
+      substitute_product_id: config.substitute_product_id ? Number(config.substitute_product_id) : null,
+      substitute_product_name: config.substitute_product_name || null,
+      accepted_price: config.new_unit_price || config.accepted_price || null,
+      new_unit_price: config.new_unit_price || config.accepted_price || null
+    }
+  })
 
   try {
     const result = await store.resolveOrderConflict(props.order.client_order_uuid, resolutionsList)
-    if (result && result.success) {
+    if (result && (result.status === 'Synced' || result.status === 'AlreadySynced' || result.success)) {
       toast('Conflict resolved and order synced successfully!', 'success')
       emit('resolved', result)
       emit('close')
@@ -440,6 +558,10 @@ async function handleApplyResolutions() {
 
 .font-bold {
   font-weight: 700;
+}
+
+.line-through {
+  text-decoration: line-through;
 }
 
 /* Conflict items */
@@ -602,6 +724,58 @@ async function handleApplyResolutions() {
 
 .btn-choice .material-symbols-outlined {
   font-size: 16px;
+}
+
+/* Extra controls */
+.extra-control-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--bg-surface-low, #f9fafb);
+  border-radius: 8px;
+  border: 1px dashed var(--border-default);
+}
+
+.control-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.qty-adjust-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-step {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-input);
+  background: var(--bg-surface);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.qty-input {
+  width: 60px;
+  height: 28px;
+  text-align: center;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.substitute-select {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-input);
+  background: var(--bg-surface);
+  font-size: 12px;
+  color: var(--text-primary);
 }
 
 /* Modal Footer */

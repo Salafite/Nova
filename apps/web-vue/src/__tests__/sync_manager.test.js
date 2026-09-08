@@ -89,6 +89,30 @@ describe('SyncManager Service', () => {
       expect(syncMgr.isOnline).toBe(false)
       expect(offlineSpy).toHaveBeenCalledWith({ isOnline: false })
     })
+
+    it('automatically triggers background batch sync when internet access is restored', async () => {
+      syncMgr.isOnline = false
+      const syncSpy = vi.spyOn(syncMgr, 'syncQueue').mockResolvedValue({ success: true })
+      mockApi.get.mockResolvedValueOnce({ status: 200, data: { ok: true } })
+
+      await syncMgr._handleWindowOnline()
+
+      expect(syncMgr.isOnline).toBe(true)
+      expect(syncSpy).toHaveBeenCalledWith({ force: false })
+    })
+
+    it('registers and removes window event listeners on start and stop', async () => {
+      const addSpy = vi.spyOn(window, 'addEventListener')
+      const removeSpy = vi.spyOn(window, 'removeEventListener')
+
+      await syncMgr.start()
+      expect(addSpy).toHaveBeenCalledWith('online', expect.any(Function))
+      expect(addSpy).toHaveBeenCalledWith('offline', expect.any(Function))
+
+      syncMgr.stop()
+      expect(removeSpy).toHaveBeenCalledWith('online', expect.any(Function))
+      expect(removeSpy).toHaveBeenCalledWith('offline', expect.any(Function))
+    })
   })
 
   describe('Order Enqueueing and Metrics', () => {

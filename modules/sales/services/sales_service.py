@@ -354,29 +354,41 @@ class SalesOrderService(CrudService):
             if should_release:
                 conn.commit()
 
-            if new_status == 'Credit Hold' and hasattr(self, 'notification_service') and self.notification_service:
-                try:
-                    self.notification_service.notify_roles(
-                        title=f"Credit Hold: {result.get('order_number', '')}",
-                        message=f"Order {result.get('order_number', '')} placed on credit hold: {payload.get('hold_reason', 'Credit limit exceeded')}",
-                        notification_type='Credit Hold',
-                        reference_type='SalesOrder',
-                        reference_id=id_val,
-                        roles=['admin'],
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to send credit hold notification: {e}")
+            if new_status == 'Credit Hold':
+                customer_name = ''
+                customer_id = result.get('customer_id') or existing_order.get('customer_id')
+                if customer_id and hasattr(self, 'customer_repo') and self.customer_repo:
+                    try:
+                        customer = self.customer_repo.get(customer_id, conn=conn)
+                        if customer:
+                            customer_name = customer.get('name', '')
+                    except Exception:
+                        pass
 
-            if new_status == 'Credit Hold' and hasattr(self, '_dispatch_ws_broadcast'):
-                try:
-                    self._dispatch_ws_broadcast(
-                        order_id=id_val,
-                        order_number=result.get('order_number', ''),
-                        status='Credit Hold',
-                        customer_name='',
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to dispatch WS broadcast: {e}")
+                if hasattr(self, 'notification_service') and self.notification_service:
+                    try:
+                        cust_str = f" for {customer_name}" if customer_name else ""
+                        self.notification_service.notify_roles(
+                            title=f"Credit Hold: {result.get('order_number', '')}",
+                            message=f"Order {result.get('order_number', '')} placed on credit hold{cust_str}: {payload.get('hold_reason', 'Credit limit exceeded')}",
+                            notification_type='Credit Hold',
+                            reference_type='SalesOrder',
+                            reference_id=id_val,
+                            roles=['admin'],
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to send credit hold notification: {e}")
+
+                if hasattr(self, '_dispatch_ws_broadcast'):
+                    try:
+                        self._dispatch_ws_broadcast(
+                            order_id=id_val,
+                            order_number=result.get('order_number', ''),
+                            status='Credit Hold',
+                            customer_name=customer_name,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to dispatch WS broadcast: {e}")
 
             return result
         except Exception as e:
@@ -772,8 +784,12 @@ class SalesOrderService(CrudService):
                 logger.error(f"Cannot reserve stock for sales order {order_id}: No active warehouse found")
                 from fastapi import HTTPException
                 raise HTTPException(400, 'No active warehouse found for stock reservation')
-        lines = LINE_REPO.list(filters={'sales_order_id': order_id}, conn=conn)
+        lines = self.line_repo.list(filters={'sales_order_id': order_id}, conn=conn)
+        # Lock ordering: Sort lines by product_id to prevent database deadlocks across multi-line orders
+        lines = sorted(lines, key=lambda l: (l.get('product_id') or 0))
+
         svc = StockMovementService()
+        reserved_lines = []
         errors = []
         for line in lines:
             product_id = line.get('product_id')
@@ -782,13 +798,28 @@ class SalesOrderService(CrudService):
                 continue
             try:
                 svc.reserve_stock(product_id, warehouse_id, qty, 'sales_order', order_id, conn=conn)
+                reserved_lines.append((product_id, qty))
             except Exception as e:
                 logger.warning(f"Failed to reserve stock for product {product_id} (qty {qty}) on order {order_id}: {e}")
                 errors.append(f'Product {product_id}: {str(e)}')
+                break  # Stop immediately on failure to enforce total rollback!
+
         if errors:
+            # Enforce total rollback on unbottlenecked products if any line fails
+            for prod_id, r_qty in reserved_lines:
+                try:
+                    svc.release_stock(prod_id, warehouse_id, r_qty, 'sales_order', order_id, conn=conn)
+                except Exception as rel_err:
+                    logger.warning(f"Failed to release stock for product {prod_id} during rollback: {rel_err}")
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             error_msg = f'Stock reservation partial failure: {"; ".join(errors)}'
             logger.error(f"Sales order {order_id} stock reservation failed: {error_msg}")
             raise RuntimeError(error_msg)
+
         from modules.warehouse.services.pick_list_service import PickListService
         try:
             pl_service = PickListService()
@@ -796,6 +827,16 @@ class SalesOrderService(CrudService):
             logger.info(f"Successfully generated pick list for sales order {order_id} in warehouse {warehouse_id}")
         except Exception as e:
             logger.error(f"Failed to create pick list for sales order {order_id}: {e}")
+            for prod_id, r_qty in reserved_lines:
+                try:
+                    svc.release_stock(prod_id, warehouse_id, r_qty, 'sales_order', order_id, conn=conn)
+                except Exception as rel_err:
+                    logger.warning(f"Failed to release stock for product {prod_id} during pick list failure rollback: {rel_err}")
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             raise RuntimeError(f"Failed to create pick list for sales order {order_id}: {e}") from e
 
     def _release_order_stock(self, order_id, conn=None):
@@ -812,7 +853,9 @@ class SalesOrderService(CrudService):
                 logger.warning(f"No active warehouse found when releasing stock for sales order {order_id}")
                 return
             warehouse_id = warehouses[0]['id']
-        lines = LINE_REPO.list(filters={'sales_order_id': order_id}, conn=conn)
+        lines = self.line_repo.list(filters={'sales_order_id': order_id}, conn=conn)
+        # Lock ordering: Sort lines by product_id
+        lines = sorted(lines, key=lambda l: (l.get('product_id') or 0))
         svc = StockMovementService()
         errors = []
         for line in lines:
@@ -829,5 +872,6 @@ class SalesOrderService(CrudService):
             error_msg = f'Stock release partial failure: {"; ".join(errors)}'
             logger.error(f"Sales order {order_id} stock release failed: {error_msg}")
             raise RuntimeError(error_msg)
+
 
 

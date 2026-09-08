@@ -124,6 +124,94 @@ class TestAccountingMcp:
             assert res["discount_amount"] == 20.0
             assert res["net_amount_due"] == 980.0
 
+    def test_parse_bank_statement_mcp(self):
+        csv_data = "Date,Check Number,Payee,Amount\n2026-09-01,1001,Customer ABC,500.00\n2026-09-02,1002,Customer XYZ,250.00"
+        res = accounting_mcp._parse_bank_statement(file_content=csv_data, file_name="statement.csv", file_type="CSV")
+        assert res["file_type"] == "CSV"
+        assert res["total_transactions"] == 2
+        assert len(res["transactions"]) == 2
+        assert res["transactions"][0]["check_number"] == "1001"
+        assert res["transactions"][0]["amount"] == 500.00
+
+    def test_auto_match_bank_statement_checks_mcp(self):
+        with patch.object(accounting_mcp._matching_svc, "match_statement_transactions") as mock_match:
+            mock_match.return_value = {
+                "statement_id": 1,
+                "total_transactions": 2,
+                "matched_count": 2,
+                "unmatched_count": 0,
+                "matches": [
+                    {"transaction_id": 10, "matched_payment_id": 100, "check_number": "1001", "score": 1.0},
+                ],
+            }
+            res = accounting_mcp._auto_match_bank_statement_checks(statement_id=1, date_tolerance_days=15, min_score_threshold=0.8)
+            assert res["matched_count"] == 2
+            assert res["matches"][0]["check_number"] == "1001"
+            mock_match.assert_called_once_with(
+                statement_id=1,
+                date_tolerance_days=15,
+                min_score_threshold=0.8,
+            )
+
+    def test_confirm_batch_check_clearing_mcp(self):
+        with patch.object(accounting_mcp._clearing_svc, "clear_matched_checks_batch") as mock_clear:
+            mock_clear.return_value = {
+                "statement_id": 1,
+                "cleared_count": 2,
+                "total_amount": 750.0,
+                "cleared_payment_ids": [100, 101],
+                "journal_entry_ids": [501, 502],
+                "statement_status": "Reconciled",
+            }
+            res = accounting_mcp._confirm_batch_check_clearing(statement_id=1, transaction_ids=[10, 11])
+            assert res["cleared_count"] == 2
+            assert res["total_amount"] == 750.0
+            assert res["statement_status"] == "Reconciled"
+            mock_clear.assert_called_once_with(
+                statement_id=1,
+                transaction_ids=[10, 11],
+            )
+
+    def test_process_bounced_check_mcp(self):
+        with patch.object(accounting_mcp._bounced_svc, "process_bounced_check") as mock_bounce:
+            mock_bounce.return_value = {
+                "bounced_check_number": "1001",
+                "bounced_reason": "NSF - Non-Sufficient Funds",
+                "penalty_fee": 35.0,
+                "payment_amount": 500.0,
+                "reopened_invoice_id": 42,
+                "customer_id": 5,
+                "status": "Bounced",
+            }
+            res = accounting_mcp._process_bounced_check(
+                payment_id=100,
+                bounced_reason="NSF - Non-Sufficient Funds",
+                penalty_fee=35.0,
+            )
+            assert res["status"] == "Bounced"
+            assert res["penalty_fee"] == 35.0
+            assert res["reopened_invoice_id"] == 42
+            mock_bounce.assert_called_once_with(
+                clearing_record_id=None,
+                payment_id=100,
+                statement_transaction_id=None,
+                check_number=None,
+                bounced_date=None,
+                bounced_reason="NSF - Non-Sufficient Funds",
+                penalty_fee=35.0,
+                notes=None,
+            )
+
+    def test_list_bounced_checks_mcp(self):
+        with patch.object(accounting_mcp._bounced_svc, "list_bounced_checks") as mock_list:
+            mock_list.return_value = [
+                {"id": 1, "check_number": "1001", "status": "Bounced", "penalty_fee": 35.0},
+            ]
+            res = accounting_mcp._list_bounced_checks(customer_id=5)
+            assert len(res) == 1
+            assert res[0]["check_number"] == "1001"
+            mock_list.assert_called_once_with(customer_id=5)
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools, list_resources
@@ -135,8 +223,14 @@ class TestAccountingMcp:
         assert "list_payment_terms" in names
         assert "get_payment_term" in names
         assert "preview_invoice_early_discount" in names
+        assert "parse_bank_statement" in names
+        assert "auto_match_bank_statement_checks" in names
+        assert "confirm_batch_check_clearing" in names
+        assert "process_bounced_check" in names
+        assert "list_bounced_checks" in names
 
         uris = [r.uri for r in list_resources()]
         assert "nova://accounting/payment-terms" in uris
         assert "nova://accounting/invoices" in uris
+
 

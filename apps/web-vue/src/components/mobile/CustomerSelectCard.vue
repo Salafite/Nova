@@ -56,7 +56,7 @@
                 {{ cust.city }}
               </span>
               <span class="meta-item credit-highlight">
-                Credit: {{ formatMoney(cust.available_credit ?? (cust.credit_limit - cust.balance)) }}
+                Credit: {{ formatMoney(cust.available_credit !== undefined && cust.available_credit !== null ? cust.available_credit : ((Number(cust.credit_limit) || 0) - (Number(cust.balance) || 0))) }}
               </span>
             </div>
           </div>

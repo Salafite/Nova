@@ -158,7 +158,7 @@ export class SyncManager {
   // -------------------------------------------------------------------------
 
   _handleWindowOnline() {
-    this.checkHeartbeat().then(isReachable => {
+    return this.checkHeartbeat().then(isReachable => {
       if (isReachable) {
         this._setOnlineState(true)
         if (this.autoSync) {
@@ -569,14 +569,33 @@ export class SyncManager {
         client_order_uuid: clientOrderUuid,
         customer_id: queuedOrder.customer_id,
         warehouse_id: queuedOrder.warehouse_id || 1,
-        lines: queuedOrder.lines,
-        customer_notes: queuedOrder.customer_notes,
-        shipping_address: queuedOrder.shipping_address,
-        payment_term_id: queuedOrder.payment_term_id,
-        requested_delivery_date: queuedOrder.requested_delivery_date,
-        sales_rep_id: queuedOrder.sales_rep_id
+        lines: (queuedOrder.lines || []).map((l, idx) => ({
+          line_number: l.line_number || idx + 1,
+          product_id: Number(l.product_id),
+          product_name: l.product_name || l.name || '',
+          sku: l.sku || '',
+          qty: Number(l.qty) || 1,
+          unit_price: Number(l.unit_price) || 0,
+          discount_pct: Number(l.discount_pct || l.discount_rate || 0),
+          line_total: Number(l.line_total || l.total || l.subtotal) || 0,
+          uom_id: l.uom_id || null,
+          notes: l.notes || null
+        })),
+        customer_notes: queuedOrder.customer_notes || null,
+        shipping_address: queuedOrder.shipping_address || null,
+        payment_term_id: queuedOrder.payment_term_id || null,
+        requested_delivery_date: queuedOrder.requested_delivery_date || null,
+        sales_rep_id: queuedOrder.sales_rep_id || null
       },
-      resolutions: resolutionActions
+      resolutions: (resolutionActions || []).map((res) => ({
+        line_number: res.line_number || null,
+        product_id: Number(res.product_id),
+        action: res.action,
+        adjusted_qty: res.adjusted_qty !== undefined ? Number(res.adjusted_qty) : (res.new_qty !== undefined ? Number(res.new_qty) : null),
+        substitute_product_id: res.substitute_product_id ? Number(res.substitute_product_id) : null,
+        substitute_product_name: res.substitute_product_name || null,
+        accepted_price: res.accepted_price !== undefined ? Number(res.accepted_price) : (res.new_unit_price !== undefined ? Number(res.new_unit_price) : null)
+      }))
     }
 
     try {
@@ -585,7 +604,7 @@ export class SyncManager {
 
       if (result.status === 'Synced' || result.status === 'AlreadySynced') {
         await this.db.updateQueueOrderStatus(clientOrderUuid, 'Synced', {
-          server_order_id: result.order_id,
+          server_order_id: result.server_order_id || result.order_id,
           order_number: result.order_number,
           synced_at: new Date().toISOString(),
           conflicts: [],
@@ -594,7 +613,11 @@ export class SyncManager {
       } else if (result.status === 'Conflict') {
         await this.db.updateQueueOrderStatus(clientOrderUuid, 'Conflict', {
           conflicts: result.conflicts || [],
-          error_message: result.error_message
+          error_message: result.message || result.error_message || 'Stock or price conflict detected'
+        })
+      } else if (result.status === 'Failed') {
+        await this.db.updateQueueOrderStatus(clientOrderUuid, 'Failed', {
+          error_message: result.message || 'Conflict resolution failed'
         })
       }
 

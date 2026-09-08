@@ -10,6 +10,7 @@ class TestInvoiceCatchWeightService:
     def setup_method(self):
         self.mock_inv_repo = MagicMock()
         self.mock_customer_repo = MagicMock()
+        self.mock_customer_repo.get_for_update = self.mock_customer_repo.get
         self.mock_order_repo = MagicMock()
         self.mock_line_repo = MagicMock()
 
@@ -153,7 +154,8 @@ class TestInvoiceCatchWeightService:
         assert 'Catch-weight adjustment: +60.00' in inv_payload['notes']
 
         # Verify customer balance updated (400 + 1260 = 1660)
-        self.mock_customer_repo.update.assert_called_once_with(100, {'balance': 1660.0}, conn=None)
+        self.mock_customer_repo.update.assert_called_once()
+        assert self.mock_customer_repo.update.call_args[0] == (100, {'balance': 1660.0})
 
     def test_recalculate_and_invoice_order_end_to_end(self):
         """Recalculate order from line items, update order header, create invoice, and update customer balance."""
@@ -196,18 +198,20 @@ class TestInvoiceCatchWeightService:
             result = self.service.recalculate_and_invoice_order(20)
 
         # Verify order header updated: subtotal 1060, tax 106, grand_total 1166
-        self.mock_order_repo.update.assert_called_once_with(20, {
+        self.mock_order_repo.update.assert_called_once()
+        assert self.mock_order_repo.update.call_args[0] == (20, {
             'subtotal': 1060.0,
             'tax': 106.0,
             'grand_total': 1166.0,
-        }, conn=None)
+        })
 
         # Verify line updated
-        self.mock_line_repo.update.assert_called_once_with(501, {
+        self.mock_line_repo.update.assert_called_once()
+        assert self.mock_line_repo.update.call_args[0] == (501, {
             'is_catch_weight': True,
             'recalculated_total': 1060.0,
             'catch_weight_actual': 53.0,
-        }, conn=None)
+        })
 
         # Verify invoice created
         self.mock_inv_repo.create.assert_called_once()
@@ -218,7 +222,8 @@ class TestInvoiceCatchWeightService:
         assert inv_payload['actual_total_weight'] == 53.0
 
         # Verify customer balance updated
-        self.mock_customer_repo.update.assert_called_once_with(200, {'balance': 1166.0}, conn=None)
+        self.mock_customer_repo.update.assert_called_once()
+        assert self.mock_customer_repo.update.call_args[0] == (200, {'balance': 1166.0})
 
     def test_get_catch_weight_breakdown(self):
         """Retrieve breakdown for an invoice."""

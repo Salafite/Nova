@@ -10,6 +10,7 @@ class TestInvoiceServiceDirectCreation:
     def setup_method(self):
         self.mock_inv_repo = MagicMock()
         self.mock_customer_repo = MagicMock()
+        self.mock_customer_repo.get_for_update = self.mock_customer_repo.get
         self.mock_order_repo = MagicMock()
         self.mock_line_repo = MagicMock()
         self.mock_payment_term_repo = MagicMock()
@@ -175,6 +176,7 @@ class TestInvoiceServiceCreateFromOrder:
     def setup_method(self):
         self.mock_inv_repo = MagicMock()
         self.mock_customer_repo = MagicMock()
+        self.mock_customer_repo.get_for_update = self.mock_customer_repo.get
         self.mock_order_repo = MagicMock()
         self.mock_line_repo = MagicMock()
         self.mock_payment_term_repo = MagicMock()
@@ -232,7 +234,8 @@ class TestInvoiceServiceCreateFromOrder:
         assert invoice['total_amount'] == 2000.0
 
         # Customer balance updated (100.0 + 2000.0 = 2100.0)
-        self.mock_customer_repo.update.assert_called_once_with(105, {'balance': 2100.0}, conn=None)
+        self.mock_customer_repo.update.assert_called_once()
+        assert self.mock_customer_repo.update.call_args[0] == (105, {'balance': 2100.0})
 
     def test_create_from_order_inherits_customer_payment_term_when_order_term_omitted(self):
         """When order has no payment_term_id, term is inherited from customer profile."""
@@ -307,6 +310,7 @@ class TestInvoiceServiceRecalculateAndInvoiceOrder:
     def setup_method(self):
         self.mock_inv_repo = MagicMock()
         self.mock_customer_repo = MagicMock()
+        self.mock_customer_repo.get_for_update = self.mock_customer_repo.get
         self.mock_order_repo = MagicMock()
         self.mock_line_repo = MagicMock()
         self.mock_payment_term_repo = MagicMock()
@@ -382,4 +386,5 @@ class TestInvoiceServiceRecalculateAndInvoiceOrder:
         assert invoice['early_discount_amount'] == 24.20  # 2% of 1210.0
 
         # Customer balance updated (200.0 + 1210.0 = 1410.0)
-        self.mock_customer_repo.update.assert_called_once_with(300, {'balance': 1410.0}, conn=None)
+        self.mock_customer_repo.update.assert_called_once()
+        assert self.mock_customer_repo.update.call_args[0] == (300, {'balance': 1410.0})
