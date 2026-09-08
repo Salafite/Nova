@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import date, datetime, timezone
 from fastapi import HTTPException
 
@@ -23,6 +23,9 @@ class PurchaseReturnService(CrudService):
         lines_repo: Optional[CrudRepository] = None,
         batch_repo: Optional[CrudRepository] = None,
         grn_repo: Optional[CrudRepository] = None,
+        grn_line_repo: Optional[CrudRepository] = None,
+        po_repo: Optional[CrudRepository] = None,
+        po_line_repo: Optional[CrudRepository] = None,
         stock_service: Optional[Any] = None,
     ):
         super().__init__(repo or CrudRepository(
@@ -108,6 +111,9 @@ class PurchaseReturnService(CrudService):
                 'is_active',
             ],
         )
+        self.grn_line_repo = grn_line_repo
+        self.po_repo = po_repo
+        self.po_line_repo = po_line_repo
         self.stock_service = stock_service or StockMovementService()
 
     def _get_lines_repo(self) -> CrudRepository:
@@ -131,6 +137,67 @@ class PurchaseReturnService(CrudService):
                 'photos',
                 'quarantine_status',
                 'disposition',
+                'line_number',
+                'business_id',
+                'is_active',
+            ],
+        )
+
+    def _get_grn_line_repo(self) -> CrudRepository:
+        if self.grn_line_repo is not None:
+            return self.grn_line_repo
+        return CrudRepository(
+            'T0076',
+            business_columns=[
+                'id',
+                'receipt_id',
+                'purchase_order_line_id',
+                'product_id',
+                'product_name',
+                'qty_received',
+                'qty_ordered',
+                'uom_id',
+                'line_number',
+                'batch_number',
+                'manufacturing_date',
+                'expiry_date',
+                'business_id',
+                'is_active',
+            ],
+        )
+
+    def _get_po_repo(self) -> CrudRepository:
+        if self.po_repo is not None:
+            return self.po_repo
+        return CrudRepository(
+            'T0014',
+            business_columns=[
+                'id',
+                'order_number',
+                'supplier_id',
+                'order_date',
+                'total',
+                'status',
+                'warehouse_id',
+                'business_id',
+                'is_active',
+            ],
+        )
+
+    def _get_po_line_repo(self) -> CrudRepository:
+        if self.po_line_repo is not None:
+            return self.po_line_repo
+        return CrudRepository(
+            'T0015',
+            business_columns=[
+                'id',
+                'purchase_order_id',
+                'product_id',
+                'product_name',
+                'uom_id',
+                'qty',
+                'unit_price',
+                'line_total',
                 'line_number',
                 'business_id',
                 'is_active',
@@ -528,4 +595,262 @@ class PurchaseReturnService(CrudService):
             update_payload['notes'] = f"{existing_notes}\nCancellation reason: {reason}".strip()
 
         return self.update(id_val, update_payload)
+
+    def create_from_goods_receipt(
+        self,
+        grn_id: int,
+        rejection_payload: Optional[Union[dict, Any]] = None,
+        conn=None,
+    ) -> dict:
+        """
+        Creates an RMA / Purchase Return record directly from a Goods Receipt (T0075/T0076)
+        and dock-side quality rejections. Pre-fills supplier, PO reference, batch metadata,
+        unit pricing, and quarantine line items.
+        """
+        kwargs = {'conn': conn} if conn is not None else {}
+        grn = self.grn_repo.get(grn_id, **kwargs)
+        if not grn:
+            raise HTTPException(404, f"Goods receipt with id {grn_id} not found")
+
+        po_id = grn.get('purchase_order_id')
+        supplier_id = None
+        business_id = grn.get('business_id')
+        return_date = date.today().isoformat()
+        reason = None
+        notes = None
+        attachments = []
+        payload_lines = None
+
+        if rejection_payload:
+            if isinstance(rejection_payload, dict):
+                supplier_id = rejection_payload.get('supplier_id')
+                if rejection_payload.get('purchase_order_id'):
+                    po_id = rejection_payload.get('purchase_order_id')
+                if rejection_payload.get('rejection_date') or rejection_payload.get('return_date'):
+                    d = rejection_payload.get('rejection_date') or rejection_payload.get('return_date')
+                    return_date = d.isoformat() if isinstance(d, date) else str(d)
+                reason = rejection_payload.get('reason')
+                notes = rejection_payload.get('notes')
+                attachments = rejection_payload.get('attachments') or []
+                payload_lines = rejection_payload.get('lines')
+                if rejection_payload.get('business_id'):
+                    business_id = rejection_payload.get('business_id')
+            else:
+                supplier_id = getattr(rejection_payload, 'supplier_id', None)
+                p_po_id = getattr(rejection_payload, 'purchase_order_id', None)
+                if p_po_id:
+                    po_id = p_po_id
+                d = getattr(rejection_payload, 'rejection_date', None) or getattr(rejection_payload, 'return_date', None)
+                if d:
+                    return_date = d.isoformat() if isinstance(d, date) else str(d)
+                reason = getattr(rejection_payload, 'reason', None)
+                notes = getattr(rejection_payload, 'notes', None)
+                attachments = getattr(rejection_payload, 'attachments', None) or []
+                payload_lines = getattr(rejection_payload, 'lines', None)
+                b_id = getattr(rejection_payload, 'business_id', None)
+                if b_id:
+                    business_id = b_id
+
+        # Lookup supplier from PO if not provided
+        if not supplier_id and po_id:
+            po_repo = self._get_po_repo()
+            try:
+                po = po_repo.get(po_id, **kwargs)
+                if po and po.get('supplier_id'):
+                    supplier_id = po.get('supplier_id')
+            except Exception:
+                pass
+
+        if not supplier_id:
+            raise HTTPException(400, "Supplier ID is required or cannot be determined from Goods Receipt / Purchase Order")
+
+        if not reason:
+            receipt_num = grn.get('receipt_number') or f"#{grn_id}"
+            reason = f"Dock-side receiving rejection for Goods Receipt {receipt_num}"
+
+        # Build lines
+        lines_to_create = []
+        po_line_repo = self._get_po_line_repo()
+
+        if payload_lines and len(payload_lines) > 0:
+            for item in payload_lines:
+                if isinstance(item, dict):
+                    pid = item.get('product_id')
+                    pname = item.get('product_name') or (f"Product #{pid}" if pid else "Unknown Item")
+                    qty = float(item.get('qty_rejected') or item.get('qty') or 1.0)
+                    unit_price = float(item.get('unit_price') or 0.0)
+                    uom_id = item.get('uom_id')
+                    batch_id = item.get('batch_id')
+                    batch_num = item.get('batch_number')
+                    exp_date = item.get('expiry_date')
+                    rcode = item.get('reason_code') or 'rejected'
+                    photos = item.get('photos') or []
+                    qstatus = item.get('quarantine_status') or 'Quarantine'
+                    disp = item.get('disposition') or 'Return to Vendor'
+                    rdetails = item.get('reason_details')
+                else:
+                    pid = getattr(item, 'product_id', None)
+                    pname = getattr(item, 'product_name', None) or (f"Product #{pid}" if pid else "Unknown Item")
+                    qty = float(getattr(item, 'qty_rejected', None) or getattr(item, 'qty', None) or 1.0)
+                    unit_price = float(getattr(item, 'unit_price', None) or 0.0)
+                    uom_id = getattr(item, 'uom_id', None)
+                    batch_id = getattr(item, 'batch_id', None)
+                    batch_num = getattr(item, 'batch_number', None)
+                    exp_date = getattr(item, 'expiry_date', None)
+                    rcode = getattr(item, 'reason_code', None) or 'rejected'
+                    photos = getattr(item, 'photos', None) or []
+                    qstatus = getattr(item, 'quarantine_status', None) or 'Quarantine'
+                    disp = getattr(item, 'disposition', None) or 'Return to Vendor'
+                    rdetails = getattr(item, 'reason_details', None)
+
+                if isinstance(exp_date, date):
+                    exp_date = exp_date.isoformat()
+
+                if rdetails and rcode:
+                    rcode_str = f"{rcode}: {rdetails}" if not str(rcode).endswith(f": {rdetails}") else str(rcode)
+                else:
+                    rcode_str = str(rcode)
+
+                # If unit price not provided, lookup from PO line
+                if unit_price <= 0 and po_id and pid:
+                    try:
+                        po_lines = po_line_repo.list(filters={'purchase_order_id': po_id, 'product_id': pid}, **kwargs)
+                        if po_lines and po_lines[0].get('unit_price'):
+                            unit_price = float(po_lines[0]['unit_price'])
+                    except Exception:
+                        pass
+
+                # If batch_id not provided but batch_num exists, lookup from batch_repo
+                if not batch_id and batch_num and self.batch_repo:
+                    try:
+                        b_filters = {'batch_number': str(batch_num).strip()}
+                        if pid:
+                            b_filters['product_id'] = pid
+                        batches = self.batch_repo.list(filters=b_filters, **kwargs)
+                        if batches:
+                            batch_id = batches[0]['id']
+                    except Exception:
+                        pass
+
+                line_total = qty * unit_price
+                lines_to_create.append({
+                    'product_id': pid,
+                    'product_name': pname,
+                    'qty': qty,
+                    'unit_price': unit_price,
+                    'line_total': line_total,
+                    'uom_id': uom_id,
+                    'batch_id': batch_id,
+                    'batch_number': batch_num,
+                    'expiry_date': exp_date,
+                    'reason_code': rcode_str,
+                    'photos': photos,
+                    'quarantine_status': qstatus,
+                    'disposition': disp,
+                })
+        else:
+            # Fallback: Create lines from all GRN line items in T0076
+            grn_line_repo = self._get_grn_line_repo()
+            grn_lines = grn_line_repo.list(filters={'receipt_id': grn_id}, **kwargs)
+            if not grn_lines:
+                raise HTTPException(400, f"Goods receipt {grn_id} has no line items to return")
+
+            for grn_line in grn_lines:
+                pid = grn_line.get('product_id')
+                pname = grn_line.get('product_name') or (f"Product #{pid}" if pid else "Unknown Item")
+                qty = float(grn_line.get('qty_received') or grn_line.get('qty_ordered') or 1.0)
+                unit_price = 0.0
+                if po_id and pid:
+                    try:
+                        po_lines = po_line_repo.list(filters={'purchase_order_id': po_id, 'product_id': pid}, **kwargs)
+                        if po_lines and po_lines[0].get('unit_price'):
+                            unit_price = float(po_lines[0]['unit_price'])
+                    except Exception:
+                        pass
+
+                exp_date = grn_line.get('expiry_date')
+                if isinstance(exp_date, date):
+                    exp_date = exp_date.isoformat()
+
+                batch_num = grn_line.get('batch_number')
+                batch_id = None
+                if batch_num and self.batch_repo:
+                    try:
+                        b_filters = {'batch_number': str(batch_num).strip()}
+                        if pid:
+                            b_filters['product_id'] = pid
+                        batches = self.batch_repo.list(filters=b_filters, **kwargs)
+                        if batches:
+                            batch_id = batches[0]['id']
+                    except Exception:
+                        pass
+
+                line_total = qty * unit_price
+                lines_to_create.append({
+                    'product_id': pid,
+                    'product_name': pname,
+                    'qty': qty,
+                    'unit_price': unit_price,
+                    'line_total': line_total,
+                    'uom_id': grn_line.get('uom_id'),
+                    'batch_id': batch_id,
+                    'batch_number': batch_num,
+                    'expiry_date': exp_date,
+                    'reason_code': 'rejected',
+                    'photos': [],
+                    'quarantine_status': 'Quarantine',
+                    'disposition': 'Return to Vendor',
+                })
+
+        total_amount = sum(l['line_total'] for l in lines_to_create)
+        return_number = self._generate_return_number(conn=conn)
+
+        header_payload = {
+            'return_number': return_number,
+            'goods_receipt_id': grn_id,
+            'purchase_order_id': po_id,
+            'supplier_id': supplier_id,
+            'return_date': return_date,
+            'status': RMAStatus.DRAFT.value,
+            'total_amount': total_amount,
+            'reason': reason,
+            'notes': notes,
+            'attachments': attachments,
+        }
+        if business_id:
+            header_payload['business_id'] = business_id
+
+        created_return = self.repo.create(header_payload, **kwargs)
+        return_id = created_return['id']
+
+        lines_repo = self._get_lines_repo()
+        created_lines = []
+        for idx, line_data in enumerate(lines_to_create):
+            line_data['return_id'] = return_id
+            line_data['line_number'] = idx + 1
+            if business_id:
+                line_data['business_id'] = business_id
+            c_line = lines_repo.create(line_data, **kwargs)
+            created_lines.append(c_line)
+
+        created_return['lines'] = created_lines
+        return created_return
+
+    def create_dock_rejection(
+        self,
+        rejection: Union[dict, Any],
+        conn=None,
+    ) -> dict:
+        """
+        Convenience wrapper for dock-side quality receiving rejection to create an RMA directly.
+        """
+        if isinstance(rejection, dict):
+            grn_id = rejection.get('goods_receipt_id')
+        else:
+            grn_id = getattr(rejection, 'goods_receipt_id', None)
+
+        if not grn_id:
+            raise HTTPException(400, "goods_receipt_id is required for dock rejection RMA creation")
+
+        return self.create_from_goods_receipt(grn_id=grn_id, rejection_payload=rejection, conn=conn)
 

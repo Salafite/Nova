@@ -452,3 +452,163 @@ class TestPurchaseReturnServiceStateMachine:
         assert sm_kwargs['warehouse_id'] == 4
         assert sm_kwargs['qty_change'] == -8.0
 
+    def test_create_from_goods_receipt_with_explicit_lines(self, service, mock_repo):
+        service.grn_repo = MagicMock()
+        service.lines_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.po_line_repo = MagicMock()
+        service.batch_repo = MagicMock()
+
+        grn_data = {
+            'id': 100,
+            'receipt_number': 'GRN-202609-001',
+            'purchase_order_id': 20,
+            'warehouse_id': 1,
+            'business_id': 1,
+        }
+        service.grn_repo.get.return_value = grn_data
+        service.po_repo.get.return_value = {'id': 20, 'supplier_id': 55}
+        service.batch_repo.list.return_value = [{'id': 88, 'batch_number': 'LOT-123'}]
+
+        mock_repo.create.side_effect = lambda data, **kw: {'id': 10, **data}
+        service.lines_repo.create.side_effect = lambda data, **kw: {'id': 500, **data}
+
+        rejection_payload = {
+            'supplier_id': 55,
+            'reason': 'Damaged boxes during unloading',
+            'notes': 'Dock inspection supervisor signoff',
+            'lines': [
+                {
+                    'product_id': 301,
+                    'product_name': 'Avocados Grade A',
+                    'qty_rejected': 10.0,
+                    'unit_price': 15.0,
+                    'batch_number': 'LOT-123',
+                    'reason_code': 'damaged',
+                    'reason_details': 'Crushed packaging',
+                    'photos': [{'url': 'http://example.com/img1.jpg'}],
+                }
+            ],
+            'attachments': [{'filename': 'bol_dock_copy.pdf'}],
+        }
+
+        result = service.create_from_goods_receipt(100, rejection_payload)
+
+        assert result['id'] == 10
+        assert result['status'] == RMAStatus.DRAFT.value
+        assert result['goods_receipt_id'] == 100
+        assert result['purchase_order_id'] == 20
+        assert result['supplier_id'] == 55
+        assert result['total_amount'] == 150.0
+        assert result['reason'] == 'Damaged boxes during unloading'
+        assert result['return_number'].startswith('RMA-')
+        assert len(result['lines']) == 1
+
+        line = result['lines'][0]
+        assert line['return_id'] == 10
+        assert line['product_id'] == 301
+        assert line['qty'] == 10.0
+        assert line['unit_price'] == 15.0
+        assert line['line_total'] == 150.0
+        assert line['batch_id'] == 88
+        assert line['quarantine_status'] == 'Quarantine'
+        assert line['disposition'] == 'Return to Vendor'
+        assert 'damaged: Crushed packaging' in line['reason_code']
+
+    def test_create_from_goods_receipt_fallback_to_grn_lines(self, service, mock_repo):
+        service.grn_repo = MagicMock()
+        service.grn_line_repo = MagicMock()
+        service.lines_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.po_line_repo = MagicMock()
+        service.batch_repo = MagicMock()
+
+        grn_data = {
+            'id': 101,
+            'receipt_number': 'GRN-202609-002',
+            'purchase_order_id': 21,
+            'warehouse_id': 1,
+        }
+        service.grn_repo.get.return_value = grn_data
+        service.po_repo.get.return_value = {'id': 21, 'supplier_id': 60}
+        service.grn_line_repo.list.return_value = [
+            {
+                'id': 1,
+                'receipt_id': 101,
+                'product_id': 401,
+                'product_name': 'Tomatoes',
+                'qty_received': 20.0,
+                'uom_id': 2,
+                'batch_number': 'LOT-TOM-01',
+                'expiry_date': '2026-10-01',
+            }
+        ]
+        service.po_line_repo.list.return_value = [{'product_id': 401, 'unit_price': 5.0}]
+        service.batch_repo.list.return_value = []
+
+        mock_repo.create.side_effect = lambda data, **kw: {'id': 11, **data}
+        service.lines_repo.create.side_effect = lambda data, **kw: {'id': 501, **data}
+
+        result = service.create_from_goods_receipt(101)
+
+        assert result['id'] == 11
+        assert result['supplier_id'] == 60
+        assert result['total_amount'] == 100.0  # 20.0 * 5.0
+        assert len(result['lines']) == 1
+        assert result['lines'][0]['qty'] == 20.0
+        assert result['lines'][0]['unit_price'] == 5.0
+        assert result['lines'][0]['line_total'] == 100.0
+        assert result['lines'][0]['batch_number'] == 'LOT-TOM-01'
+
+    def test_create_from_goods_receipt_not_found_raises_404(self, service):
+        service.grn_repo = MagicMock()
+        service.grn_repo.get.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            service.create_from_goods_receipt(999)
+        assert exc_info.value.status_code == 404
+
+    def test_create_from_goods_receipt_missing_supplier_raises_400(self, service):
+        service.grn_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.grn_repo.get.return_value = {'id': 105, 'purchase_order_id': None}
+        service.po_repo.get.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            service.create_from_goods_receipt(105, {})
+        assert exc_info.value.status_code == 400
+        assert 'supplier id is required' in exc_info.value.detail.lower()
+
+    def test_create_dock_rejection_convenience_method(self, service, mock_repo):
+        service.grn_repo = MagicMock()
+        service.lines_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.po_line_repo = MagicMock()
+        service.batch_repo = MagicMock()
+
+        grn_data = {'id': 102, 'purchase_order_id': 22}
+        service.grn_repo.get.return_value = grn_data
+        service.po_repo.get.return_value = {'id': 22, 'supplier_id': 70}
+        mock_repo.create.side_effect = lambda data, **kw: {'id': 12, **data}
+        service.lines_repo.create.side_effect = lambda data, **kw: {'id': 502, **data}
+
+        dock_payload = {
+            'goods_receipt_id': 102,
+            'supplier_id': 70,
+            'lines': [
+                {
+                    'product_id': 501,
+                    'product_name': 'Cheese',
+                    'qty_rejected': 5.0,
+                    'unit_price': 12.0,
+                    'reason_code': 'expired',
+                }
+            ],
+        }
+
+        result = service.create_dock_rejection(dock_payload)
+        assert result['id'] == 12
+        assert result['goods_receipt_id'] == 102
+        assert result['total_amount'] == 60.0
+
+
