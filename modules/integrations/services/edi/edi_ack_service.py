@@ -278,7 +278,9 @@ def generate_997_ack(
     else:
         interchange = inbound
 
-    active_delims = delimiters or (EdiDelimiters.from_partner(partner) if partner else interchange.delimiters) or EdiDelimiters.x12_default()
+    active_delims = delimiters or (interchange.delimiters if interchange and interchange.standard != 'EDIFACT' else None) or (EdiDelimiters.from_partner(partner) if partner else None) or EdiDelimiters.x12_default()
+    if active_delims.segment_terminator == "'":
+        active_delims = EdiDelimiters.x12_default()
     tx_err_map = transaction_errors or {}
 
     # Swap sender and receiver for outbound response
@@ -343,8 +345,8 @@ def generate_997_ack(
 
     # Process functional groups from inbound interchange
     inbound_groups = interchange.groups
-    if not inbound_groups and interchange.messages:
-        # Synthesize functional group from standalone messages
+    if not inbound_groups:
+        # Synthesize functional group from standalone messages or fallback
         default_fg = "PO"
         if interchange.messages and interchange.messages[0].doc_type == "856":
             default_fg = "SH"
@@ -353,12 +355,16 @@ def generate_997_ack(
         elif interchange.messages and interchange.messages[0].doc_type == "832":
             default_fg = "SC"
 
+        fallback_txs = interchange.messages or [
+            EdiTransactionSet(doc_type="850", control_number="0001")
+        ]
+
         inbound_groups = [
             EdiFunctionalGroup(
                 functional_code=default_fg,
                 group_control_number=interchange.control_number or "1",
                 version="004010",
-                transactions=interchange.messages,
+                transactions=fallback_txs,
             )
         ]
 
@@ -504,7 +510,9 @@ def generate_contrl_ack(
     else:
         interchange = inbound
 
-    active_delims = delimiters or (EdiDelimiters.from_partner(partner) if partner else interchange.delimiters) or EdiDelimiters.edifact_default()
+    active_delims = delimiters or (interchange.delimiters if interchange and interchange.standard == 'EDIFACT' else None) or (EdiDelimiters.from_partner(partner) if partner else None) or EdiDelimiters.edifact_default()
+    if active_delims.segment_terminator == "~":
+        active_delims = EdiDelimiters.edifact_default()
     msg_err_map = message_errors or {}
 
     out_sender = sender_id or interchange.receiver_id or "NOVA_ERP"

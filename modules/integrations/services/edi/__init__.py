@@ -78,6 +78,17 @@ from modules.integrations.services.edi.cross_reference_service import (
     cross_reference_service,
 )
 
+from modules.integrations.services.edi.edi_850_service import (
+    Edi850Header,
+    Edi850LineItem,
+    ParsedEdi850Order,
+    parse_x12_850,
+    parse_edifact_orders,
+    parse_inbound_order_edi,
+    Edi850Service,
+    edi_850_service,
+)
+
 __all__ = [
     "EdiDelimiters",
     "EdiSegment",
@@ -143,4 +154,12 @@ __all__ = [
     "OrderCrossReferenceSummary",
     "CrossReferenceService",
     "cross_reference_service",
+    "Edi850Header",
+    "Edi850LineItem",
+    "ParsedEdi850Order",
+    "parse_x12_850",
+    "parse_edifact_orders",
+    "parse_inbound_order_edi",
+    "Edi850Service",
+    "edi_850_service",
 ]
