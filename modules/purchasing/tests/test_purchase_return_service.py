@@ -982,6 +982,143 @@ class TestPurchaseReturnServiceStateMachine:
                 service.delete_attachment(6, 'non_existent_id')
             assert exc.value.status_code == 404
 
+    def test_delete_attachment_from_line_item(self, service, mock_repo):
+        return_rec = {
+            'id': 7,
+            'return_number': 'RMA-0007',
+            'attachments': [],
+        }
+        mock_repo.get.return_value = return_rec
+
+        mock_lines_repo = MagicMock()
+        service.lines_repo = mock_lines_repo
+
+        line_rec = {
+            'id': 105,
+            'return_id': 7,
+            'product_name': 'Bananas',
+            'photos': [{'id': 'photo_line_1', 'filename': 'bruise.jpg'}],
+        }
+        mock_lines_repo.get.return_value = line_rec
+
+        with patch.object(service, '_get_lines', return_value=[line_rec]):
+            del_res = service.delete_attachment(7, 'photo_line_1')
+            assert del_res['success'] is True
+            assert del_res['deleted_id'] == 'photo_line_1'
+            mock_lines_repo.update.assert_called_once_with(105, {'photos': []})
+
+    def test_create_from_goods_receipt_with_pydantic_payload(self, service, mock_repo):
+        from modules.purchasing.models.purchase_return import ReceivingRejectionCreate, DockRejectionLineItem
+
+        service.grn_repo = MagicMock()
+        service.lines_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.po_line_repo = MagicMock()
+        service.batch_repo = MagicMock()
+
+        grn_data = {
+            'id': 200,
+            'receipt_number': 'GRN-200',
+            'purchase_order_id': 50,
+            'warehouse_id': 2,
+            'business_id': 3,
+        }
+        service.grn_repo.get.return_value = grn_data
+        service.po_repo.get.return_value = {'id': 50, 'supplier_id': 88}
+        service.batch_repo.list.return_value = [{'id': 999, 'batch_number': 'LOT-PYD-1'}]
+
+        mock_repo.create.side_effect = lambda data, **kw: {'id': 25, **data}
+        service.lines_repo.create.side_effect = lambda data, **kw: {'id': 600, **data}
+
+        pydantic_payload = ReceivingRejectionCreate(
+            goods_receipt_id=200,
+            supplier_id=88,
+            purchase_order_id=50,
+            reason="Quality inspection failed on arrival",
+            notes="Rejected by receiving supervisor",
+            business_id=3,
+            lines=[
+                DockRejectionLineItem(
+                    product_id=500,
+                    product_name="Grade A Milk",
+                    qty_rejected=10.0,
+                    unit_price=4.5,
+                    batch_number="LOT-PYD-1",
+                    reason_code="qc_failed",
+                    reason_details="Temperature above threshold",
+                )
+            ]
+        )
+
+        result = service.create_from_goods_receipt(200, pydantic_payload)
+
+        assert result['id'] == 25
+        assert result['supplier_id'] == 88
+        assert result['total_amount'] == 45.0
+        assert result['business_id'] == 3
+        assert len(result['lines']) == 1
+        assert result['lines'][0]['batch_id'] == 999
+        assert result['lines'][0]['line_total'] == 45.0
+        assert 'qc_failed: Temperature above threshold' in result['lines'][0]['reason_code']
+
+    def test_get_return_slip_data_graceful_missing_related_entities(self, service, mock_repo):
+        service.supplier_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.grn_repo = MagicMock()
+        service.invoice_repo = MagicMock()
+        service.invoice_repo.list.return_value = []
+        service.invoice_repo.get.return_value = None
+        service.user_repo = MagicMock()
+        service.tenant_repo = MagicMock()
+        service.uom_repo = MagicMock()
+        service.batch_repo = MagicMock()
+
+        # Minimal return record with none of the optional IDs
+        return_record = {
+            'id': 99,
+            'return_number': 'RMA-MINIMAL-01',
+            'return_date': '2026-09-08',
+            'status': 'Draft',
+            'supplier_id': 100,
+            'purchase_order_id': None,
+            'goods_receipt_id': None,
+            'debit_memo_id': None,
+            'total_amount': 0.0,
+            'approved_by': None,
+            'business_id': None,
+            'attachments': None,
+        }
+        mock_repo.get.return_value = return_record
+        service.supplier_repo.get.return_value = {'id': 100, 'name': 'Direct Supplier'}
+
+        lines = [
+            {
+                'id': 1,
+                'return_id': 99,
+                'product_name': 'Sample Widget',
+                'qty': 1.0,
+                'unit_price': 10.0,
+                'line_total': 10.0,
+                'uom_id': None,
+                'batch_id': None,
+                'batch_number': None,
+                'photos': None,
+            }
+        ]
+
+        with patch.object(service, '_get_lines', return_value=lines):
+            slip = service.get_return_slip_data(99)
+            assert slip['return_id'] == 99
+            assert slip['supplier_name'] == 'Direct Supplier'
+            assert 'Nova' in slip['company_name']
+            assert slip['po_number'] is None
+            assert slip['grn_number'] is None
+            assert slip['debit_memo_number'] is None
+            assert len(slip['lines']) == 1
+            assert slip['lines'][0]['uom'] == 'Units'
+            assert len(slip['attachments']) == 0
+
+
 
 
 
