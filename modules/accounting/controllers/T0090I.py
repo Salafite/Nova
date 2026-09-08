@@ -68,7 +68,6 @@ router = APIRouter(
     tags=['T0090 - Invoices'],
     dependencies=[Depends(require_permission(perm))],
 )
-)
 
 
 @router.get('/debit-memos', response_model=List[InvoiceResponse])
