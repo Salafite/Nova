@@ -428,7 +428,7 @@ def generate_x12_856(
                             lin_elements.extend(["BP", item.buyer_sku])
                         if item.vendor_sku:
                             lin_elements.extend(["VP", item.vendor_sku])
-                        elif item.sku and not item.buyer_sku:
+                        elif item.sku and item.sku != item.buyer_sku:
                             lin_elements.extend(["IN", item.sku])
                         if item.gtin:
                             lin_elements.extend(["UP", item.gtin])
@@ -457,7 +457,7 @@ def generate_x12_856(
                         lin_elements.extend(["BP", item.buyer_sku])
                     if item.vendor_sku:
                         lin_elements.extend(["VP", item.vendor_sku])
-                    elif item.sku and not item.buyer_sku:
+                    elif item.sku and item.sku != item.buyer_sku:
                         lin_elements.extend(["IN", item.sku])
                     if item.gtin:
                         lin_elements.extend(["UP", item.gtin])
@@ -486,7 +486,7 @@ def generate_x12_856(
                 lin_elements.extend(["BP", item.buyer_sku])
             if item.vendor_sku:
                 lin_elements.extend(["VP", item.vendor_sku])
-            elif item.sku and not item.buyer_sku:
+            elif item.sku and item.sku != item.buyer_sku:
                 lin_elements.extend(["IN", item.sku])
             if item.gtin:
                 lin_elements.extend(["UP", item.gtin])
