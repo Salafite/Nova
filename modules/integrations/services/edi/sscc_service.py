@@ -683,7 +683,11 @@ class SsccService(CrudService):
             with c.cursor() as cur:
                 cur.execute('SELECT nextval(\'"Nova".seq_sscc_pallet_id\')')
                 row = cur.fetchone()
-                return row[0] if row else None
+                if row and isinstance(row[0], (int, float)):
+                    return int(row[0])
+                if row and isinstance(row[0], str) and row[0].isdigit():
+                    return int(row[0])
+                return None
 
         if conn is not None:
             try:
