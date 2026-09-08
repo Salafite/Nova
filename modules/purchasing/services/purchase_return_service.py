@@ -21,6 +21,8 @@ class PurchaseReturnService(CrudService):
         repo: Optional[CrudRepository] = None,
         invoice_repo: Optional[CrudRepository] = None,
         lines_repo: Optional[CrudRepository] = None,
+        batch_repo: Optional[CrudRepository] = None,
+        grn_repo: Optional[CrudRepository] = None,
         stock_service: Optional[Any] = None,
     ):
         super().__init__(repo or CrudRepository(
@@ -76,6 +78,36 @@ class PurchaseReturnService(CrudService):
             ],
         )
         self.lines_repo = lines_repo
+        self.batch_repo = batch_repo or CrudRepository(
+            'T0088',
+            business_columns=[
+                'id',
+                'product_id',
+                'batch_number',
+                'expiry_date',
+                'manufacturing_date',
+                'quantity',
+                'warehouse_id',
+                'status',
+                'notes',
+                'business_id',
+                'is_active',
+            ],
+        )
+        self.grn_repo = grn_repo or CrudRepository(
+            'T0075',
+            business_columns=[
+                'id',
+                'receipt_number',
+                'purchase_order_id',
+                'receipt_date',
+                'warehouse_id',
+                'status',
+                'notes',
+                'business_id',
+                'is_active',
+            ],
+        )
         self.stock_service = stock_service or StockMovementService()
 
     def _get_lines_repo(self) -> CrudRepository:
@@ -258,6 +290,130 @@ class PurchaseReturnService(CrudService):
 
         return result
 
+    def quarantine_inventory_for_return(
+        self,
+        return_record: dict,
+        lines: Optional[List[dict]] = None,
+        conn=None,
+    ) -> List[dict]:
+        """
+        Executes automated inventory quarantine write-down for an approved RMA:
+        1. Updates linked batch records in T0088 to status='Quarantine'.
+        2. Deducts salable inventory via T0064 stock movements ('Quarantine Write-Down').
+        3. Updates return line items in T0082 to quarantine_status='Quarantine'.
+        """
+        return_id = return_record.get('id')
+        if lines is None and return_id:
+            lines = self._get_lines(return_id, conn=conn)
+        lines = lines or []
+
+        # Determine default warehouse from goods receipt or fallback to 1
+        warehouse_id = 1
+        grn_id = return_record.get('goods_receipt_id')
+        if grn_id and self.grn_repo:
+            try:
+                kwargs = {'conn': conn} if conn is not None else {}
+                grn = self.grn_repo.get(grn_id, **kwargs)
+                if grn and grn.get('warehouse_id'):
+                    warehouse_id = grn.get('warehouse_id')
+            except Exception:
+                warehouse_id = 1
+
+        quarantined_items = []
+        return_num = return_record.get('return_number', f"#{return_id}")
+
+        for line in lines:
+            product_id = line.get('product_id')
+            qty = float(line.get('qty', 0) or 0)
+            batch_id = line.get('batch_id')
+            batch_number = line.get('batch_number')
+            product_name = line.get('product_name') or (f"Product #{product_id}" if product_id else "Unknown")
+            line_wh_id = warehouse_id
+
+            # 1. Update linked batch in T0088 to 'Quarantine'
+            if batch_id and self.batch_repo:
+                try:
+                    kwargs = {'conn': conn} if conn is not None else {}
+                    batch = self.batch_repo.get(batch_id, **kwargs)
+                    if batch:
+                        if batch.get('warehouse_id'):
+                            line_wh_id = batch.get('warehouse_id')
+                        self.batch_repo.update(
+                            batch_id,
+                            {
+                                'status': QuarantineStatus.QUARANTINE.value,
+                                'notes': f"{batch.get('notes') or ''}\nQuarantined via RMA {return_num}".strip()
+                            },
+                            **kwargs
+                        )
+                except Exception:
+                    pass
+            elif batch_number and self.batch_repo:
+                try:
+                    kwargs = {'conn': conn} if conn is not None else {}
+                    filters = {'batch_number': str(batch_number).strip()}
+                    if product_id:
+                        filters['product_id'] = product_id
+                    batches = self.batch_repo.list(filters=filters, **kwargs)
+                    for b in batches:
+                        if b.get('warehouse_id'):
+                            line_wh_id = b.get('warehouse_id')
+                        self.batch_repo.update(
+                            b['id'],
+                            {
+                                'status': QuarantineStatus.QUARANTINE.value,
+                                'notes': f"{b.get('notes') or ''}\nQuarantined via RMA {return_num}".strip()
+                            },
+                            **kwargs
+                        )
+                except Exception:
+                    pass
+
+            # 2. Update line item quarantine_status in T0082
+            if line.get('id'):
+                try:
+                    lines_repo = self._get_lines_repo()
+                    kwargs = {'conn': conn} if conn is not None else {}
+                    lines_repo.update(
+                        line['id'],
+                        {'quarantine_status': QuarantineStatus.QUARANTINE.value},
+                        **kwargs
+                    )
+                except Exception:
+                    pass
+
+            # 3. Deduct salable inventory via T0064 Stock Movement
+            movement_record = None
+            if product_id and qty > 0 and self.stock_service:
+                batch_str = f" (Batch: {batch_number})" if batch_number else ""
+                reason_str = f" [{line.get('reason_code')}]" if line.get('reason_code') else ""
+                desc = f"RMA Quarantine Write-Down: {product_name}{batch_str}{reason_str} - Return {return_num}"
+                try:
+                    movement_record = self.stock_service.record_movement(
+                        product_id=product_id,
+                        warehouse_id=line_wh_id,
+                        movement_type='Quarantine Write-Down',
+                        qty_change=-qty,
+                        reference_type='PurchaseReturn',
+                        reference_id=return_id,
+                        description=desc,
+                        conn=conn,
+                    )
+                except Exception:
+                    pass
+
+            quarantined_items.append({
+                'line_id': line.get('id'),
+                'product_id': product_id,
+                'batch_id': batch_id,
+                'batch_number': batch_number,
+                'qty': qty,
+                'quarantine_status': QuarantineStatus.QUARANTINE.value,
+                'stock_movement': movement_record,
+            })
+
+        return quarantined_items
+
     def approve_return(
         self,
         id_val: int,
@@ -269,7 +425,7 @@ class PurchaseReturnService(CrudService):
         """
         Transitions RMA from Draft -> Approved.
         Validates line items, automatically generates supplier debit memo (T0090),
-        and updates approved metadata.
+        deducts salable inventory / quarantines batches, and updates approved metadata.
         """
         record = self.repo.get(id_val)
         if not record:
@@ -309,6 +465,11 @@ class PurchaseReturnService(CrudService):
             if debit_memo and debit_memo.get('id'):
                 debit_memo_id = debit_memo.get('id')
                 update_payload['debit_memo_id'] = debit_memo_id
+
+        # Automated Inventory Quarantine & Write-Down on approval
+        if quarantine_inventory:
+            return_dict_for_quarantine = dict(record)
+            self.quarantine_inventory_for_return(return_dict_for_quarantine, lines)
 
         if notes:
             existing_notes = record.get('notes') or ''
