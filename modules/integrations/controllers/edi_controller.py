@@ -500,8 +500,17 @@ def resolve_line_cross_reference(
         customer_id=customer_id,
         price_tolerance_percent=price_tolerance_percent,
     )
+    is_matched = False
+    errors_list = []
+    if res.sku_resolution:
+        is_matched = getattr(res.sku_resolution, "matched", getattr(res.sku_resolution, "is_matched", False))
+        if hasattr(res.sku_resolution, "errors") and res.sku_resolution.errors:
+            errors_list = res.sku_resolution.errors
+        elif getattr(res.sku_resolution, "error_message", None):
+            errors_list = [res.sku_resolution.error_message]
+
     return {
-        "is_matched": res.sku_resolution.is_matched if res.sku_resolution else False,
+        "is_matched": is_matched,
         "product_id": res.product_id,
         "product_name": res.product_name,
         "resolved_sku": res.internal_sku,
@@ -510,7 +519,7 @@ def resolve_line_cross_reference(
         "contract_price": res.expected_price,
         "price_discrepancy": res.discrepancy_info.model_dump() if res.discrepancy_info else None,
         "has_discrepancy": res.has_discrepancy,
-        "errors": res.sku_resolution.errors if res.sku_resolution else [],
+        "errors": errors_list,
     }
 
 
