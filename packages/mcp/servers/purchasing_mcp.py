@@ -5,6 +5,7 @@ from modules.core.context import get_current_tenant
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
 from modules.purchasing.services.demand_forecast_service import DemandForecastService
+from modules.purchasing.services.purchase_return_service import PurchaseReturnService
 from packages.mcp.registry import register_tool, get_current_user
 from packages.mcp.types import Tool
 
@@ -70,6 +71,13 @@ _product_repo = CrudRepository('T0003', business_columns=['id', 'name', 'sku', '
 _supplier_repo = CrudRepository('T0011', business_columns=['id', 'name', 'category', 'phone', 'email', 'payment_terms', 'rating', 'is_active'])
 
 _forecast_svc = DemandForecastService()
+_pr_service = PurchaseReturnService(
+    repo=_pr_repo,
+    lines_repo=_pr_line_repo,
+    supplier_repo=_supplier_repo,
+    po_repo=_po_repo,
+    po_line_repo=_po_line_repo,
+)
 
 
 def register_tools():
@@ -93,6 +101,127 @@ def register_tools():
             "status": {"type": "string"}, "limit": {"type": "integer"},
         },
     }), _list_rfq)
+    register_tool(
+        Tool(
+            name="create_purchase_return_rma",
+            description="Create a new purchase return / Return Merchandise Authorization (RMA) record with batch-linked line items, rejection reasons, and optional inspection photos",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "supplier_id": {
+                        "type": "integer",
+                        "description": "Supplier ID",
+                    },
+                    "purchase_order_id": {
+                        "type": "integer",
+                        "description": "Optional Purchase Order ID reference",
+                    },
+                    "goods_receipt_id": {
+                        "type": "integer",
+                        "description": "Optional Goods Receipt ID reference",
+                    },
+                    "return_date": {
+                        "type": "string",
+                        "description": "Return date in YYYY-MM-DD format (defaults to today)",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Overall return reason or RMA justification",
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Additional notes or driver handover instructions",
+                    },
+                    "attachments": {
+                        "type": "array",
+                        "description": "List of attachment metadata or URLs",
+                        "items": {"type": "object"},
+                    },
+                    "lines": {
+                        "type": "array",
+                        "description": "List of return line items with batch and reason details",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "product_id": {"type": "integer", "description": "Product ID"},
+                                "product_name": {"type": "string", "description": "Product name"},
+                                "qty": {"type": "number", "description": "Quantity to return"},
+                                "unit_price": {"type": "number", "description": "Unit price (defaults to product cost or 0)"},
+                                "uom_id": {"type": "integer", "description": "Unit of measure ID"},
+                                "batch_id": {"type": "integer", "description": "Inventory batch ID (T0088)"},
+                                "batch_number": {"type": "string", "description": "Batch / lot number"},
+                                "expiry_date": {"type": "string", "description": "Batch expiry date (YYYY-MM-DD)"},
+                                "reason_code": {
+                                    "type": "string",
+                                    "description": "Rejection reason code (damaged, expired, rejected, wrong_item, qc_failed, defective, over_delivery, other)",
+                                },
+                                "disposition": {"type": "string", "description": "Disposition (e.g. Return to Vendor, Quarantine, Scrap)"},
+                                "quarantine_status": {"type": "string", "description": "Quarantine status (e.g. Quarantine, Pending Review)"},
+                                "photos": {
+                                    "type": "array",
+                                    "description": "List of line-specific photo attachments/URLs",
+                                    "items": {"type": "object"},
+                                },
+                            },
+                            "required": ["product_id", "qty"],
+                        },
+                    },
+                },
+                "required": ["supplier_id"],
+            },
+        ),
+        _create_purchase_return_rma,
+    )
+    register_tool(
+        Tool(
+            name="get_purchase_return_details",
+            description="Get complete details of a purchase return / Return Merchandise Authorization (RMA) record by ID, including line items, batch tracking, debit memo links, and supplier info",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer", "description": "Purchase return (RMA) ID"},
+                },
+                "required": ["id"],
+            },
+        ),
+        _get_purchase_return_details,
+    )
+    register_tool(
+        Tool(
+            name="approve_purchase_return",
+            description="Approve a Purchase Return (RMA) in Draft status, automatically generating a supplier Debit Memo (T0090) and isolating returned inventory into Quarantine status",
+            tier="tier2",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "description": "Purchase return (RMA) ID to approve",
+                    },
+                    "approved_by": {
+                        "type": "integer",
+                        "description": "Optional user ID of the approver (defaults to authenticated user)",
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Optional approval notes or reason",
+                    },
+                    "create_debit_memo": {
+                        "type": "boolean",
+                        "description": "Whether to automatically generate supplier debit memo in T0090 (default true)",
+                    },
+                    "quarantine_inventory": {
+                        "type": "boolean",
+                        "description": "Whether to automatically write down stock movements and quarantine batches (default true)",
+                    },
+                },
+                "required": ["id"],
+            },
+        ),
+        _approve_purchase_return,
+    )
     register_tool(
         Tool(
             name="calculate_restock_forecast",
@@ -201,6 +330,123 @@ def _list_pr(status: str = None, supplier_id: int = None, limit: int = 50):
     if status: filters["status"] = status
     if supplier_id: filters["supplier_id"] = supplier_id
     return _pr_svc.list(filters=filters or None, limit=limit)
+
+def _create_purchase_return_rma(
+    supplier_id: int,
+    purchase_order_id: Optional[int] = None,
+    goods_receipt_id: Optional[int] = None,
+    return_date: Optional[str] = None,
+    reason: Optional[str] = None,
+    notes: Optional[str] = None,
+    attachments: Optional[List[Any]] = None,
+    lines: Optional[List[Dict[str, Any]]] = None,
+):
+    if goods_receipt_id is not None and (lines is None or len(lines) == 0):
+        rejection_payload = {
+            "supplier_id": supplier_id,
+            "purchase_order_id": purchase_order_id,
+            "return_date": return_date,
+            "reason": reason,
+            "notes": notes,
+            "attachments": attachments or [],
+        }
+        return _pr_service.create_from_goods_receipt(goods_receipt_id, rejection_payload=rejection_payload)
+
+    line_items_data = []
+    total_amount = 0.0
+
+    if lines:
+        for idx, line in enumerate(lines, start=1):
+            qty = float(line.get("qty", 1.0))
+            p_id = line.get("product_id")
+            p_name = line.get("product_name")
+            unit_price = line.get("unit_price")
+
+            if not p_name or unit_price is None:
+                if p_id:
+                    try:
+                        p_data = _product_repo.get(p_id)
+                        if p_data:
+                            p_name = p_name or p_data.get("name", f"Product #{p_id}")
+                            if unit_price is None:
+                                unit_price = float(p_data.get("cost_price", 0.0) or 0.0)
+                    except Exception:
+                        pass
+                p_name = p_name or (f"Product #{p_id}" if p_id else "Unknown Item")
+                unit_price = float(unit_price or 0.0)
+
+            unit_price = float(unit_price)
+            line_total = round(qty * unit_price, 2)
+            total_amount += line_total
+
+            line_items_data.append({
+                "product_id": p_id,
+                "product_name": p_name,
+                "qty": qty,
+                "unit_price": unit_price,
+                "line_total": line_total,
+                "uom_id": line.get("uom_id"),
+                "batch_id": line.get("batch_id"),
+                "batch_number": line.get("batch_number"),
+                "expiry_date": line.get("expiry_date"),
+                "reason_code": line.get("reason_code") or "rejected",
+                "photos": line.get("photos") or [],
+                "quarantine_status": line.get("quarantine_status") or "Quarantine",
+                "disposition": line.get("disposition") or "Return to Vendor",
+                "line_number": idx,
+            })
+
+    header_payload = {
+        "supplier_id": supplier_id,
+        "purchase_order_id": purchase_order_id,
+        "goods_receipt_id": goods_receipt_id,
+        "return_date": return_date or date.today().isoformat(),
+        "reason": reason or "Vendor Return RMA",
+        "notes": notes,
+        "total_amount": round(total_amount, 2),
+        "attachments": attachments or [],
+    }
+
+    created_header = _pr_service.create(header_payload)
+    return_id = created_header.get("id")
+
+    created_lines = []
+    for line_data in line_items_data:
+        line_data["return_id"] = return_id
+        c_line = _pr_line_repo.create(line_data)
+        created_lines.append(c_line)
+
+    created_header["lines"] = created_lines
+    return created_header
+
+def _get_purchase_return_details(id: int):
+    return _pr_service.get_return_details(id)
+
+def _approve_purchase_return(
+    id: int,
+    approved_by: Optional[int] = None,
+    notes: Optional[str] = None,
+    create_debit_memo: bool = True,
+    quarantine_inventory: bool = True,
+):
+    if approved_by is None:
+        user = get_current_user()
+        if user and isinstance(user, dict) and user.get("id"):
+            approved_by = user.get("id")
+
+    result = _pr_service.approve_return(
+        id_val=id,
+        approved_by=approved_by,
+        notes=notes,
+        create_debit_memo=create_debit_memo,
+        quarantine_inventory=quarantine_inventory,
+    )
+    return {
+        "return": result,
+        "debit_memo_id": result.get("debit_memo_id"),
+        "status": result.get("status"),
+        "message": f"Purchase Return {result.get('return_number', id)} approved successfully. Status set to Approved with inventory quarantined.",
+    }
 
 def _list_rfq(status: str = None, limit: int = 50):
     filters = {}
