@@ -15,8 +15,53 @@ _po_svc = CrudService(_po_repo)
 _po_line_repo = CrudRepository('T0015', business_columns=['id', 'purchase_order_id', 'product_id', 'product_name', 'uom_id', 'qty', 'unit_price', 'line_total', 'line_number'])
 _po_line_svc = CrudService(_po_line_repo)
 
-_pr_repo = CrudRepository('T0081', business_columns=['id', 'return_number', 'purchase_order_id', 'supplier_id', 'return_date', 'status', 'reason', 'notes'])
+_pr_repo = CrudRepository(
+    'T0081',
+    business_columns=[
+        'id',
+        'return_number',
+        'purchase_order_id',
+        'goods_receipt_id',
+        'supplier_id',
+        'debit_memo_id',
+        'return_date',
+        'status',
+        'total_amount',
+        'reason',
+        'notes',
+        'attachments',
+        'approved_at',
+        'approved_by',
+        'business_id',
+        'is_active',
+    ],
+)
 _pr_svc = CrudService(_pr_repo)
+
+_pr_line_repo = CrudRepository(
+    'T0082',
+    business_columns=[
+        'id',
+        'return_id',
+        'product_id',
+        'product_name',
+        'qty',
+        'unit_price',
+        'line_total',
+        'uom_id',
+        'batch_id',
+        'batch_number',
+        'expiry_date',
+        'reason_code',
+        'photos',
+        'quarantine_status',
+        'disposition',
+        'line_number',
+        'business_id',
+        'is_active',
+    ],
+)
+_pr_line_svc = CrudService(_pr_line_repo)
 
 _rfq_repo = CrudRepository('T0071', business_columns=['id', 'rfq_number', 'title', 'description', 'status', 'due_date', 'notes'])
 _rfq_svc = CrudService(_rfq_repo)

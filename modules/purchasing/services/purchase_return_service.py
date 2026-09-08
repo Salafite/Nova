@@ -41,5 +41,27 @@ class PurchaseReturnService(CrudService):
         return result
 
     def _get_lines(self, return_id):
-        repo = CrudRepository('T0082', business_columns=['id', 'return_id', 'product_id', 'product_name', 'qty'])
+        repo = CrudRepository(
+            'T0082',
+            business_columns=[
+                'id',
+                'return_id',
+                'product_id',
+                'product_name',
+                'qty',
+                'unit_price',
+                'line_total',
+                'uom_id',
+                'batch_id',
+                'batch_number',
+                'expiry_date',
+                'reason_code',
+                'photos',
+                'quarantine_status',
+                'disposition',
+                'line_number',
+                'business_id',
+                'is_active',
+            ],
+        )
         return repo.list(filters={'return_id': return_id})
