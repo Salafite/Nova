@@ -13,6 +13,10 @@
               <span class="material-symbols-outlined icon-xs">bolt</span>
               {{ t('fefo-picking-badge', 'FEFO Picking') }}
             </span>
+            <span v-if="hasColdChainItems" class="badge badge-cold-chain">
+              <span class="material-symbols-outlined icon-xs">ac_unit</span>
+              {{ t('cold-chain-picking-badge', 'Cold-Chain Picking') }}
+            </span>
             <span v-if="hasCatchWeightItems" class="badge badge-cw">
               <span class="material-symbols-outlined icon-xs">scale</span>
               {{ t('dual-uom-catch-weight', 'Dual UOM / Catch-Weight') }}
@@ -70,6 +74,28 @@
         </div>
       </div>
 
+      <!-- Cold-Chain Thermal Sequencing Guidance Banner -->
+      <div v-if="hasColdChainItems" class="thermal-banner mb-4">
+        <div class="flex items-center gap-3 w-full">
+          <span class="material-symbols-outlined thermal-banner-icon">ac_unit</span>
+          <div class="flex-1">
+            <h4 class="thermal-banner-title">
+              {{ t('thermal-sequencing-title', 'Thermal Picking Sequencing Enforced') }}
+              <span class="thermal-sequence-tag">{{ t('thermal-sequence-order', 'Ambient ➔ Chilled ➔ Frozen ➔ Deep Freeze') }}</span>
+            </h4>
+            <p class="thermal-banner-desc">
+              {{ t('thermal-sequencing-desc', 'Refrigerated and frozen items are sequenced last before loading to minimize exposure and maintain cold-chain HACCP integrity.') }}
+            </p>
+          </div>
+          <div class="thermal-zones-count flex gap-2">
+            <span v-if="hasZoneType('Ambient')" class="badge badge-ambient">Ambient ({{ zoneCount('Ambient') }})</span>
+            <span v-if="hasZoneType('Chilled')" class="badge badge-chilled">Chilled ({{ zoneCount('Chilled') }})</span>
+            <span v-if="hasZoneType('Frozen')" class="badge badge-frozen">Frozen ({{ zoneCount('Frozen') }})</span>
+            <span v-if="hasZoneType('Deep Freeze')" class="badge badge-deep-freeze">Deep Freeze ({{ zoneCount('Deep Freeze') }})</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Pick List Summary Card -->
       <div class="detail-card mb-4">
         <div class="grid-stats">
@@ -88,6 +114,13 @@
           <div class="info-row">
             <span class="info-label">{{ t('progress', 'Progress') }}:</span>
             <span class="font-bold">{{ pickList.progress_pct || 0 }}%</span>
+          </div>
+          <div v-if="hasColdChainItems" class="info-row">
+            <span class="info-label">{{ t('cold-chain-profile', 'Cold-Chain') }}:</span>
+            <span class="badge badge-cold-chain">
+              <span class="material-symbols-outlined icon-xs">thermostat</span>
+              {{ coldChainItemsCount }} {{ t('items-monitored', 'monitored items') }}
+            </span>
           </div>
           <div v-if="hasCatchWeightItems" class="info-row">
             <span class="info-label">{{ t('weighed-total', 'Actual Weight') }}:</span>
@@ -181,7 +214,9 @@
             <thead>
               <tr>
                 <th class="w-8">#</th>
+                <th v-if="hasColdChainItems" class="text-center w-16">{{ t('thermal-seq', 'Seq') }}</th>
                 <th>{{ t('product', 'Product') }}</th>
+                <th v-if="hasColdChainItems">{{ t('temperature-zone', 'Temp Zone') }}</th>
                 <th>{{ t('suggested-fefo-lot', 'Suggested Lot (FEFO)') }}</th>
                 <th>{{ t('expiry-date', 'Expiry Date') }}</th>
                 <th>{{ t('picked-lot-override', 'Picked Lot Selection') }}</th>
@@ -194,6 +229,11 @@
             <tbody>
               <tr v-for="item in items" :key="item.id" :class="{ 'row-picked': isItemFullyPicked(item), 'row-discrepancy': isItemOut(item) }">
                 <td class="cell-mono">{{ item.line_number }}</td>
+                <td v-if="hasColdChainItems" class="text-center">
+                  <span class="badge" :class="'badge-' + getZoneTypeClass(item)" :title="t('thermal-priority-rank', `Thermal Pick Priority #${getThermalRank(item)}: ${getZoneLabel(item)}`)">
+                    #{{ getThermalRank(item) }}
+                  </span>
+                </td>
                 <td>
                   <div class="flex items-center gap-2 flex-wrap">
                     <strong>{{ item.product_name || `#${item.product_id}` }}</strong>
@@ -201,13 +241,32 @@
                       <span class="material-symbols-outlined icon-xs">scale</span>
                       {{ t('catch-weight-item', 'Catch Weight') }}
                     </span>
+                    <span v-if="isColdChainItem(item)" class="badge" :class="'badge-' + getZoneTypeClass(item)" :title="t('cold-chain-zone', `Temperature Zone: ${getZoneLabel(item)}`)">
+                      <span class="material-symbols-outlined icon-xs">{{ getZoneIcon(item) }}</span>
+                      {{ getZoneLabel(item) }}
+                    </span>
                   </div>
                   <div class="text-muted text-xs flex items-center gap-2 mt-1">
                     <span v-if="item.product_id">ID: #{{ item.product_id }}</span>
                     <span v-if="isCatchWeightItem(item) && item.tolerance_pct != null" class="badge-tol">
                       {{ t('tol-limit', 'Tol') }}: ±{{ item.tolerance_pct }}%
                     </span>
+                    <span v-if="isColdChainItem(item) && formatTempRange(item)" class="badge-tol">
+                      {{ formatTempRange(item) }}
+                    </span>
                   </div>
+                </td>
+                <td v-if="hasColdChainItems">
+                  <div v-if="isColdChainItem(item)">
+                    <span class="badge" :class="'badge-' + getZoneTypeClass(item)">
+                      <span class="material-symbols-outlined icon-xs">{{ getZoneIcon(item) }}</span>
+                      {{ getZoneLabel(item) }}
+                    </span>
+                    <div v-if="formatTempRange(item)" class="text-xs text-muted mt-1 font-mono">
+                      {{ formatTempRange(item) }}
+                    </div>
+                  </div>
+                  <span v-else class="text-muted text-xs">{{ t('ambient-standard', 'Ambient') }}</span>
                 </td>
 
                 <!-- Suggested FEFO Lot -->
@@ -414,6 +473,13 @@
                 <!-- In Progress Pick Actions -->
                 <td class="text-center" v-if="pickList.status === 'In Progress'">
                   <div class="pick-actions-wrap">
+                    <span
+                      v-if="hasUnpickedPriorThermalItems(item) && (item.qty_picked || 0) < (item.qty_ordered || 0)"
+                      class="badge-thermal-warn"
+                      :title="t('thermal-sequence-warn', 'Thermal Warning: Pick ambient items first to avoid cold-chain defrost exposure')"
+                    >
+                      <span class="material-symbols-outlined icon-xs">thermostat_auto</span>
+                    </span>
                     <input
                       type="number"
                       class="pick-input"
@@ -676,6 +742,101 @@ const totalPickedQty = computed(() => {
 const hasCatchWeightItems = computed(() => {
   return items.value.some(isCatchWeightItem)
 })
+
+const hasColdChainItems = computed(() => {
+  return items.value.some(isColdChainItem)
+})
+
+const coldChainItemsCount = computed(() => {
+  return items.value.filter(isColdChainItem).length
+})
+
+function isColdChainItem(item) {
+  if (!item) return false
+  return Boolean(
+    item.is_cold_chain ||
+    (item.temp_zone_type && item.temp_zone_type !== 'Ambient') ||
+    (item.min_temperature !== null && item.min_temperature !== undefined) ||
+    (item.max_temperature !== null && item.max_temperature !== undefined) ||
+    (item.critical_temp_limit !== null && item.critical_temp_limit !== undefined)
+  )
+}
+
+function hasZoneType(type) {
+  return items.value.some(i => {
+    const zType = i.temp_zone_type || 'Ambient'
+    return zType.toLowerCase() === (type || '').toLowerCase()
+  })
+}
+
+function zoneCount(type) {
+  return items.value.filter(i => {
+    const zType = i.temp_zone_type || 'Ambient'
+    return zType.toLowerCase() === (type || '').toLowerCase()
+  }).length
+}
+
+function getZoneTypeClass(itemOrType) {
+  let zone = typeof itemOrType === 'string' ? itemOrType : (itemOrType?.temp_zone_type || 'Ambient')
+  zone = (zone || 'Ambient').toLowerCase().replace(/\s+/g, '-')
+  return zone
+}
+
+function getZoneIcon(itemOrType) {
+  const zone = typeof itemOrType === 'string' ? itemOrType : (itemOrType?.temp_zone_type || 'Ambient')
+  const z = (zone || '').toLowerCase()
+  if (z.includes('deep')) return 'mode_heat_off'
+  if (z.includes('froz')) return 'severe_cold'
+  if (z.includes('chill')) return 'ac_unit'
+  return 'inventory_2'
+}
+
+function getZoneLabel(item) {
+  if (!item) return 'Ambient'
+  return item.temp_zone_type || 'Ambient'
+}
+
+function getThermalRank(item) {
+  if (!item) return 1
+  if (item.thermal_priority_rank !== undefined && item.thermal_priority_rank !== null) {
+    return Number(item.thermal_priority_rank)
+  }
+  const z = (item.temp_zone_type || '').toLowerCase()
+  if (z.includes('deep')) return 4
+  if (z.includes('froz')) return 3
+  if (z.includes('chill')) return 2
+  return 1
+}
+
+function formatTempRange(item) {
+  if (!item) return ''
+  const min = item.min_temperature
+  const max = item.max_temperature
+  if (min !== null && min !== undefined && max !== null && max !== undefined) {
+    return `${min}°C to ${max}°C`
+  }
+  if (max !== null && max !== undefined) {
+    return `Max ${max}°C`
+  }
+  if (min !== null && min !== undefined) {
+    return `Min ${min}°C`
+  }
+  if (item.critical_temp_limit !== null && item.critical_temp_limit !== undefined) {
+    return `≤ ${item.critical_temp_limit}°C`
+  }
+  return ''
+}
+
+function hasUnpickedPriorThermalItems(item) {
+  if (!item) return false
+  const currentRank = getThermalRank(item)
+  return items.value.some(other => {
+    if (other.id === item.id) return false
+    const otherRank = getThermalRank(other)
+    const isOtherUnpicked = (other.qty_picked || 0) < (other.qty_ordered || 0)
+    return otherRank < currentRank && isOtherUnpicked
+  })
+}
 
 const catchWeightUnit = computed(() => {
   const cw = items.value.find(i => i.catch_weight_uom)
@@ -1443,5 +1604,18 @@ select.form-input { appearance: auto; }
 .alert-warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; color: #92400e; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .btn-danger-action { background: #dc2626; color: #fff; border: none; }
 .btn-danger-action:hover { background: #b91c1c; }
+
+/* Cold-chain & Thermal picking styling */
+.badge-cold-chain { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 700; }
+.badge-ambient { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.badge-chilled { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+.badge-frozen { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+.badge-deep-freeze { background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.badge-thermal-warn { display: inline-flex; align-items: center; color: #d97706; }
+.thermal-banner { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 12px 16px; }
+.thermal-banner-icon { font-size: 26px; color: #16a34a; }
+.thermal-banner-title { font-size: 13px; font-weight: 700; color: #166534; margin: 0; display: flex; align-items: center; gap: 6px; }
+.thermal-sequence-tag { font-weight: 600; font-size: 11px; color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 4px; }
+.thermal-banner-desc { font-size: 12px; color: #14532d; margin: 2px 0 0; }
 </style>
 
