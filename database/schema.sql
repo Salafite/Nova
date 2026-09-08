@@ -2672,6 +2672,13 @@ CREATE TABLE IF NOT EXISTS "Nova".t0082 (
     line_total NUMERIC(12,2),
     uom_id INT,
     line_number INT,
+    batch_id INT,
+    batch_number VARCHAR(100),
+    expiry_date DATE,
+    reason_code VARCHAR(50),
+    photos JSONB DEFAULT '[]'::jsonb,
+    quarantine_status VARCHAR(30) DEFAULT 'Quarantine',
+    disposition VARCHAR(50) DEFAULT 'Return to Vendor',
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2685,15 +2692,26 @@ CREATE INDEX IF NOT EXISTS idx_t0082_business_id ON "Nova".t0082(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_business_id_id ON "Nova".t0082(business_id, id);
 
 
-COMMENT ON TABLE "Nova".t0082 IS 'Purchase Return Lines';
+COMMENT ON TABLE "Nova".t0082 IS 'Purchase Return Lines / RMA Line Items';
 COMMENT ON COLUMN "Nova".t0082.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0082.return_id IS 'Reference to Return';
+COMMENT ON COLUMN "Nova".t0082.return_id IS 'Reference to Return (T0081)';
 COMMENT ON COLUMN "Nova".t0082.product_id IS 'Reference to Product';
 COMMENT ON COLUMN "Nova".t0082.uom_id IS 'Reference to Uom';
+COMMENT ON COLUMN "Nova".t0082.batch_id IS 'Reference to Batch Number (T0088)';
+COMMENT ON COLUMN "Nova".t0082.batch_number IS 'Batch or lot number identifier';
+COMMENT ON COLUMN "Nova".t0082.expiry_date IS 'Batch expiration date';
+COMMENT ON COLUMN "Nova".t0082.reason_code IS 'Return reason code (damaged, expired, rejected, wrong_item, qc_failed)';
+COMMENT ON COLUMN "Nova".t0082.photos IS 'Line item inspection photos metadata';
+COMMENT ON COLUMN "Nova".t0082.quarantine_status IS 'Quarantine tracking status (Quarantine, Released, Scrapped)';
+COMMENT ON COLUMN "Nova".t0082.disposition IS 'Disposition action (Return to Vendor, Scrap, Supplier Credit)';
 COMMENT ON COLUMN "Nova".t0082.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0082_return_id ON "Nova".t0082(return_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_product_id ON "Nova".t0082(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_uom_id ON "Nova".t0082(uom_id);
+CREATE INDEX IF NOT EXISTS idx_t0082_batch_id ON "Nova".t0082(batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0082_batch_number ON "Nova".t0082(batch_number);
+CREATE INDEX IF NOT EXISTS idx_t0082_reason_code ON "Nova".t0082(reason_code);
+CREATE INDEX IF NOT EXISTS idx_t0082_quarantine_status ON "Nova".t0082(quarantine_status);
 CREATE INDEX IF NOT EXISTS idx_t0082_active ON "Nova".t0082(is_active);
 
 -- Price List Items
