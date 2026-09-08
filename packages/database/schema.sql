@@ -2593,11 +2593,17 @@ CREATE TABLE IF NOT EXISTS "Nova".t0081 (
     id SERIAL PRIMARY KEY,
     return_number VARCHAR(200),
     purchase_order_id INT,
+    goods_receipt_id INT,
     supplier_id INT,
+    debit_memo_id INT,
     return_date DATE,
-    status VARCHAR(30) NOT NULL DEFAULT 'Active',
+    status VARCHAR(30) NOT NULL DEFAULT 'Draft',
     reason VARCHAR(200),
+    total_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    attachments JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
+    approved_at TIMESTAMPTZ,
+    approved_by INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2611,14 +2617,23 @@ CREATE INDEX IF NOT EXISTS idx_t0081_business_id ON "Nova".t0081(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0081_business_id_id ON "Nova".t0081(business_id, id);
 
 
-COMMENT ON TABLE "Nova".t0081 IS 'Purchase Returns';
+COMMENT ON TABLE "Nova".t0081 IS 'Purchase Returns / RMA Headers';
 COMMENT ON COLUMN "Nova".t0081.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0081.purchase_order_id IS 'Reference to Purchase_Order';
+COMMENT ON COLUMN "Nova".t0081.goods_receipt_id IS 'Reference to Goods Receipt';
 COMMENT ON COLUMN "Nova".t0081.supplier_id IS 'Reference to Supplier';
-COMMENT ON COLUMN "Nova".t0081.status IS 'Status';
+COMMENT ON COLUMN "Nova".t0081.debit_memo_id IS 'Reference to generated Debit Memo';
+COMMENT ON COLUMN "Nova".t0081.status IS 'RMA status (Draft, Approved, Returned, Cancelled)';
+COMMENT ON COLUMN "Nova".t0081.total_amount IS 'Total return credit value';
+COMMENT ON COLUMN "Nova".t0081.attachments IS 'Inspection photos and documentation metadata';
+COMMENT ON COLUMN "Nova".t0081.approved_at IS 'Timestamp of RMA approval';
+COMMENT ON COLUMN "Nova".t0081.approved_by IS 'User who approved the RMA';
 COMMENT ON COLUMN "Nova".t0081.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0081_purchase_order_id ON "Nova".t0081(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_goods_receipt_id ON "Nova".t0081(goods_receipt_id);
 CREATE INDEX IF NOT EXISTS idx_t0081_supplier_id ON "Nova".t0081(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_debit_memo_id ON "Nova".t0081(debit_memo_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_approved_by ON "Nova".t0081(approved_by);
 CREATE INDEX IF NOT EXISTS idx_t0081_status ON "Nova".t0081(status);
 CREATE INDEX IF NOT EXISTS idx_t0081_active ON "Nova".t0081(is_active);
 
