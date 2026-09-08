@@ -186,3 +186,76 @@ class RMAApprovalRequest(BaseModel):
     create_debit_memo: bool = True
     quarantine_inventory: bool = True
 
+
+class AttachmentUploadRequest(BaseModel):
+    filename: str = Field(..., max_length=255)
+    content_type: Optional[str] = Field("image/jpeg", max_length=100)
+    data_base64: Optional[str] = None
+    url: Optional[str] = None
+    description: Optional[str] = None
+    line_id: Optional[int] = None
+
+
+class ReturnSlipLineData(BaseModel):
+    id: Optional[int] = None
+    line_number: int = 0
+    product_id: Optional[int] = None
+    product_name: str
+    qty: float
+    uom: Optional[str] = None
+    unit_price: float = 0.0
+    line_total: float = 0.0
+    batch_number: Optional[str] = None
+    expiry_date: Optional[date] = None
+    reason_code: Optional[str] = None
+    reason_label: Optional[str] = None
+    quarantine_status: Optional[str] = None
+    disposition: Optional[str] = None
+    photos: List[Any] = Field(default_factory=list)
+
+
+class ReturnSlipData(BaseModel):
+    return_id: int
+    return_number: str
+    return_date: date
+    status: str
+    company_name: Optional[str] = None
+    company_address: Optional[str] = None
+    company_phone: Optional[str] = None
+    supplier_id: int
+    supplier_name: Optional[str] = None
+    supplier_code: Optional[str] = None
+    supplier_contact: Optional[str] = None
+    supplier_phone: Optional[str] = None
+    supplier_email: Optional[str] = None
+    supplier_address: Optional[str] = None
+    purchase_order_id: Optional[int] = None
+    po_number: Optional[str] = None
+    goods_receipt_id: Optional[int] = None
+    grn_number: Optional[str] = None
+    debit_memo_id: Optional[int] = None
+    debit_memo_number: Optional[str] = None
+    total_amount: float = 0.0
+    currency: str = "USD"
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    approved_by_name: Optional[str] = None
+    lines: List[ReturnSlipLineData] = Field(default_factory=list)
+    attachments: List[Any] = Field(default_factory=list)
+    driver_name: Optional[str] = None
+    driver_signature_date: Optional[date] = None
+    acknowledgment_text: Optional[str] = (
+        "Received the returned merchandise listed above in the condition stated. "
+        "Supplier acknowledgment verifies debit memo claims."
+    )
+
+
+class PurchaseReturnDetailResponse(PurchaseReturnResponse):
+    supplier_name: Optional[str] = None
+    po_number: Optional[str] = None
+    grn_number: Optional[str] = None
+    debit_memo_number: Optional[str] = None
+    lines: List[PurchaseReturnLineResponse] = Field(default_factory=list)
+
+
