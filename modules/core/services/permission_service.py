@@ -119,11 +119,19 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0121': 'SALES_VIEW',         # Customer Group Price Lists
     'T0122': 'SALES_VIEW',         # Customer Contracts
     'T0123': 'SALES_VIEW',         # Promotional Campaign Rules
+    'T0124': 'SALES_VIEW',         # Driver GPS Telemetry
+    'T0125': 'SALES_VIEW',         # Customer Live Tracking Sessions
+    'T0126': 'SALES_VIEW',         # Geofence Detection Events
 }
 
 # Non-T-code custom route and tag mappings
 CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/categories': 'PRODUCTS_VIEW',
+    '/api/sales/tracking': 'SALES_VIEW',
+    '/api/sales/delivery-routes': 'SALES_VIEW',
+    '/api/delivery-routes': 'SALES_VIEW',
+    'Real-Time Driver GPS Tracking & Fleet Map': 'SALES_VIEW',
+    'Delivery Route Planning & Driver Dispatch': 'SALES_VIEW',
     '/api/v1/migration': 'ADMIN_MIGRATION',
     '/api/v1/migration/connectors/test': 'ADMIN_MIGRATION',
     '/api/v1/migration/connectors/discover': 'ADMIN_MIGRATION',
