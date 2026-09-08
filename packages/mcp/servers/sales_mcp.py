@@ -41,6 +41,10 @@ _lines_svc = CrudService(_lines_repo)
 from datetime import date
 from modules.sales.services.credit_service import CreditService
 from modules.sales.services.delivery_route_service import delivery_route_service as _delivery_route_svc
+from modules.sales.services.driver_tracking_service import driver_tracking_service as _tracking_svc
+from modules.sales.services.eta_calculation_service import eta_service as _eta_svc
+from modules.sales.services.customer_delivery_notification_service import customer_notification_service as _notif_svc
+from modules.sales.models.delivery_tracking import GPSLocationPing, CustomerNotificationPayload
 _credit_svc = CreditService(customer_repo=_customers_repo)
 
 
