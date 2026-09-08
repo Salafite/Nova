@@ -66,6 +66,18 @@ from modules.integrations.services.edi.edi_ack_service import (
     EDIFACT_UCD_ERROR_CODES,
 )
 
+from modules.integrations.services.edi.cross_reference_service import (
+    normalize_sku_type,
+    EDI_SKU_QUALIFIERS,
+    SkuResolutionResult,
+    UomConversionResult,
+    PriceVerificationResult,
+    LineCrossReferenceResult,
+    OrderCrossReferenceSummary,
+    CrossReferenceService,
+    cross_reference_service,
+)
+
 __all__ = [
     "EdiDelimiters",
     "EdiSegment",
@@ -122,4 +134,13 @@ __all__ = [
     "EDIFACT_UCM_SYNTAX_ERROR_CODES",
     "EDIFACT_UCS_ERROR_CODES",
     "EDIFACT_UCD_ERROR_CODES",
+    "normalize_sku_type",
+    "EDI_SKU_QUALIFIERS",
+    "SkuResolutionResult",
+    "UomConversionResult",
+    "PriceVerificationResult",
+    "LineCrossReferenceResult",
+    "OrderCrossReferenceSummary",
+    "CrossReferenceService",
+    "cross_reference_service",
 ]
