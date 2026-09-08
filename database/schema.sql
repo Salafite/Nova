@@ -832,7 +832,8 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
-    update_number   INT NOT NULL DEFAULT 1
+    update_number   INT NOT NULL DEFAULT 1,
+    is_active       BOOLEAN NOT NULL DEFAULT true
 );
 COMMENT ON COLUMN "Nova".t0090.freight_amount IS 'Freight / shipping charges billed on invoice';
 COMMENT ON COLUMN "Nova".t0090.discount_amount IS 'Customer discount deducted on invoice';
