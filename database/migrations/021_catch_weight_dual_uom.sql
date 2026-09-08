@@ -90,4 +90,32 @@ COMMENT ON COLUMN "Nova".t0090.nominal_total_weight IS 'Total nominal weight acr
 COMMENT ON COLUMN "Nova".t0090.actual_total_weight IS 'Total actual scale weight across invoiced catch-weight items';
 COMMENT ON COLUMN "Nova".t0090.weight_adjustment_amount IS 'Net financial adjustment due to catch-weight variance vs nominal';
 
+-- 6. Stock Movements (t0064): Dual UOM & Net Scale Weight Tracking
+ALTER TABLE "Nova".t0064
+    ADD COLUMN IF NOT EXISTS is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN IF NOT EXISTS weight_change NUMERIC(12,4) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS weight_balance_after NUMERIC(12,4) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS weight_uom VARCHAR(50) DEFAULT NULL;
+
+COMMENT ON COLUMN "Nova".t0064.is_catch_weight IS 'Flag indicating movement is for a catch-weight product';
+COMMENT ON COLUMN "Nova".t0064.weight_change IS 'Net scale weight change (+ for stock in, - for stock out)';
+COMMENT ON COLUMN "Nova".t0064.weight_balance_after IS 'Net weight balance after this transaction';
+COMMENT ON COLUMN "Nova".t0064.weight_uom IS 'Weight unit of measure (e.g. kg, lbs)';
+
+CREATE INDEX IF NOT EXISTS idx_t0064_is_catch_weight ON "Nova".t0064(is_catch_weight);
+
+-- 7. Stock Levels (t0009): Dual UOM Balance & Weight Tracking
+ALTER TABLE "Nova".t0009
+    ADD COLUMN IF NOT EXISTS weight_qty NUMERIC(12,4) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS reserved_weight_qty NUMERIC(12,4) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS in_transit_weight_qty NUMERIC(12,4) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS weight_uom VARCHAR(50) DEFAULT NULL;
+
+COMMENT ON COLUMN "Nova".t0009.weight_qty IS 'Total on-hand physical net weight across packages';
+COMMENT ON COLUMN "Nova".t0009.reserved_weight_qty IS 'Reserved physical weight for confirmed orders';
+COMMENT ON COLUMN "Nova".t0009.in_transit_weight_qty IS 'In-transit physical weight between warehouses';
+COMMENT ON COLUMN "Nova".t0009.weight_uom IS 'Unit of measure for weight quantities (e.g. kg, lbs)';
+
+CREATE INDEX IF NOT EXISTS idx_t0009_weight_qty ON "Nova".t0009(weight_qty);
+
 COMMIT;

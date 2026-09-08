@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any, Union
 from fastapi import HTTPException
 from modules.core.repositories.base import CrudRepository
 from packages.database.connection import db_transaction
@@ -6,6 +6,24 @@ from packages.database.connection import db_transaction
 STOCK_REPO = CrudRepository(
     'T0009',
     business_columns=['id', 'product_id', 'warehouse_id', 'qty', 'reserved_qty', 'in_transit_qty', 'reorder_level']
+)
+
+PRODUCT_REPO = CrudRepository(
+    'T0003',
+    business_columns=[
+        'id', 'name', 'sku', 'price', 'cost_price', 'category', 'is_catch_weight',
+        'pricing_uom_id', 'nominal_weight', 'tolerance_pct', 'pricing_basis', 'weight'
+    ]
+)
+
+UOM_REPO = CrudRepository(
+    'T0001',
+    business_columns=['id', 'uom_code', 'uom_name', 'category', 'is_base_unit']
+)
+
+WAREHOUSE_REPO = CrudRepository(
+    'T0008',
+    business_columns=['id', 'warehouse_name', 'warehouse_code']
 )
 
 
@@ -26,6 +44,34 @@ def _get_or_create_stock(product_id: int, warehouse_id: int, conn=None, for_upda
             'reorder_level': 0
         }, conn=conn)
     return stock
+
+
+def _get_product_master(product_id: int, conn=None) -> Optional[dict]:
+    try:
+        return PRODUCT_REPO.get(product_id, conn=conn)
+    except Exception:
+        return None
+
+
+def _get_uom_code(uom_id: Optional[int], conn=None) -> Optional[str]:
+    if not uom_id:
+        return None
+    try:
+        uom = UOM_REPO.get(uom_id, conn=conn)
+        return uom.get('uom_code') if uom else None
+    except Exception:
+        return None
+
+
+def _get_warehouse_name(warehouse_id: Optional[int], conn=None) -> Optional[str]:
+    if not warehouse_id:
+        return None
+    try:
+        wh = WAREHOUSE_REPO.get(warehouse_id, conn=conn)
+        return wh.get('warehouse_name') if wh else None
+    except Exception:
+        return None
+
 
 
 class StockMovementService:

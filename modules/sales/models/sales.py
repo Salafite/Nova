@@ -103,6 +103,8 @@ class SalesLineCreate(BaseModel):
     uom_id: Optional[int] = None
     qty: float = Field(..., gt=0)
     unit_price: float = Field(..., ge=0)
+    cost_price: float = 0
+    discount: float = 0
     line_total: float = Field(..., ge=0)
     line_number: int = 0
     is_catch_weight: bool = False
@@ -111,6 +113,7 @@ class SalesLineCreate(BaseModel):
     nominal_weight: Optional[float] = Field(None, ge=0)
     catch_weight_actual: Optional[float] = Field(None, ge=0)
     recalculated_total: Optional[float] = Field(None, ge=0)
+    business_id: Optional[int] = None
 
 class SalesLineUpdate(BaseModel):
     sales_order_id: Optional[int] = None
@@ -119,6 +122,8 @@ class SalesLineUpdate(BaseModel):
     uom_id: Optional[int] = None
     qty: Optional[float] = Field(None, gt=0)
     unit_price: Optional[float] = Field(None, ge=0)
+    cost_price: Optional[float] = None
+    discount: Optional[float] = None
     line_total: Optional[float] = Field(None, ge=0)
     line_number: Optional[int] = None
     is_catch_weight: Optional[bool] = None
@@ -127,15 +132,18 @@ class SalesLineUpdate(BaseModel):
     nominal_weight: Optional[float] = Field(None, ge=0)
     catch_weight_actual: Optional[float] = Field(None, ge=0)
     recalculated_total: Optional[float] = Field(None, ge=0)
+    business_id: Optional[int] = None
 
 class SalesLineResponse(AuditMixin):
     id: int
     sales_order_id: int
-    product_id: Optional[int]
+    product_id: Optional[int] = None
     product_name: str
-    uom_id: Optional[int]
+    uom_id: Optional[int] = None
     qty: float
     unit_price: float
+    cost_price: float = 0
+    discount: float = 0
     line_total: float
     line_number: int
     is_catch_weight: bool = False
@@ -144,6 +152,18 @@ class SalesLineResponse(AuditMixin):
     nominal_weight: Optional[float] = None
     catch_weight_actual: Optional[float] = None
     recalculated_total: Optional[float] = None
+
+
+class SalesOrderRecalculateResponse(BaseModel):
+    order_id: int
+    is_catch_weight: bool
+    original_subtotal: float
+    recalculated_subtotal: float
+    weight_adjustment_amount: float
+    nominal_total_weight: Optional[float] = None
+    actual_total_weight: Optional[float] = None
+    grand_total: float
+    tax: Optional[float] = None
 
 
 class InstallmentPlanCreate(BaseModel):

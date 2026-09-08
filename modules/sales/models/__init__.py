@@ -2,6 +2,7 @@ from modules.sales.models.sales import (
     SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse,
     CreditHoldOverrideRequest, CreditHoldRejectRequest,
     SalesLineCreate, SalesLineUpdate, SalesLineResponse,
+    SalesOrderRecalculateResponse,
     InstallmentPlanCreate, InstallmentPlanUpdate, InstallmentPlanResponse,
     InstallPaymentCreate, InstallPaymentUpdate, InstallPaymentResponse,
 )

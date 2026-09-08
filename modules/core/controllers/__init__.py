@@ -32,6 +32,12 @@ def _load_all_routers():
         pass
 
     try:
+        from modules.inventory.controllers.predictive_inventory_controller import router as predictive_inventory_router
+        _all_routers.append(predictive_inventory_router)
+    except Exception:
+        pass
+
+    try:
         from modules.accounting.controllers.bank_reconciliation_controller import router as bank_reconciliation_router
         _all_routers.append(bank_reconciliation_router)
     except Exception:

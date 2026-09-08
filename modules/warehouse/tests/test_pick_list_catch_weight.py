@@ -755,3 +755,116 @@ class TestPickListApprovalControllerEndpoints:
             T0101I.approve_tolerance(id=999, body={})
         assert exc_info.value.status_code == 404
 
+    def test_complete_picking_controller_endpoint_blocked_by_discrepancy(self, monkeypatch):
+        from modules.warehouse.controllers import T0101I
+        import pytest
+        from fastapi import HTTPException
+
+        mock_svc = MagicMock()
+        mock_svc.complete_picking.side_effect = ValueError("Cannot complete pick list 100: Unapproved catch-weight tolerance discrepancies exist on items: Item #10")
+        monkeypatch.setattr(T0101I, 'pl_service', mock_svc)
+
+        with pytest.raises(HTTPException) as exc_info:
+            T0101I.complete_picking(id=100)
+        assert exc_info.value.status_code == 400
+        assert "Unapproved catch-weight tolerance discrepancies exist" in exc_info.value.detail
+
+    def test_complete_picking_controller_endpoint_success(self, monkeypatch):
+        from modules.warehouse.controllers import T0101I
+
+        mock_svc = MagicMock()
+        mock_svc.complete_picking.return_value = {
+            'id': 100,
+            'status': 'Completed',
+            'has_discrepancies': False,
+            'discrepancy_count': 0,
+        }
+        monkeypatch.setattr(T0101I, 'pl_service', mock_svc)
+
+        result = T0101I.complete_picking(id=100)
+        assert result['status'] == 'Completed'
+        assert result['has_discrepancies'] is False
+        mock_svc.complete_picking.assert_called_once_with(100)
+
+
+class TestPickListBarcodeScanningIntegration:
+    def setup_method(self):
+        self.mock_pl_repo = MagicMock()
+        self.mock_pli_repo = MagicMock()
+        self.mock_product_repo = MagicMock()
+        self.mock_uom_repo = MagicMock()
+        self.mock_batch_service = MagicMock()
+        self.service = PickListService(
+            repo=self.mock_pl_repo,
+            pli_repo=self.mock_pli_repo,
+            product_repo=self.mock_product_repo,
+            uom_repo=self.mock_uom_repo,
+            batch_service=self.mock_batch_service,
+        )
+
+    def test_pick_item_with_gs1_barcode(self):
+        self.mock_pli_repo.get.return_value = {
+            'id': 10,
+            'pick_list_id': 1,
+            'product_id': 50,
+            'qty_ordered': 1.0,
+            'nominal_weight': 12.0,
+            'tolerance_pct': 5.0,
+            'catch_weight_actual': None,
+            'catch_weight_uom': 'kg',
+            'tolerance_status': 'Not Applicable',
+            'supervisor_approved': False,
+        }
+        self.mock_batch_service.repo.list.return_value = [
+            {'id': 201, 'batch_number': 'LOT123', 'product_id': 50, 'quantity': 10.0, 'status': 'Available'}
+        ]
+
+        # GS1 barcode with 12.50 kg net weight (AI 3102) and batch LOT123 (AI 10)
+        gs1_barcode = "(01)00614141000039(3102)001250(10)LOT123"
+        self.service.pick_item(
+            item_id=10,
+            qty_picked=1.0,
+            barcode=gs1_barcode,
+        )
+
+        self.mock_pli_repo.update.assert_called_once()
+        args, kwargs = self.mock_pli_repo.update.call_args
+        update_data = args[1]
+        assert update_data['catch_weight_actual'] == 12.50
+        assert update_data['catch_weight_uom'] == 'kg'
+        assert update_data['picked_batch_number'] == 'LOT123'
+        assert update_data['picked_batch_id'] == 201
+        assert update_data['tolerance_variance_pct'] == 4.17
+        assert update_data['tolerance_status'] == 'Within Tolerance'
+
+    def test_pick_item_with_scale_ean_barcode(self):
+        self.mock_pli_repo.get.return_value = {
+            'id': 11,
+            'pick_list_id': 1,
+            'product_id': 51,
+            'qty_ordered': 1.0,
+            'nominal_weight': 1.20,
+            'tolerance_pct': 5.0,
+            'catch_weight_actual': None,
+            'catch_weight_uom': 'kg',
+            'tolerance_status': 'Not Applicable',
+            'supervisor_approved': False,
+        }
+
+        # Scale EAN-13 barcode: 20 + 1234 + 01250 (1.250 kg) + 6
+        scale_barcode = "2012340012506"
+        self.service.pick_item(
+            item_id=11,
+            qty_picked=1.0,
+            barcode=scale_barcode,
+        )
+
+        self.mock_pli_repo.update.assert_called_once()
+        args, kwargs = self.mock_pli_repo.update.call_args
+        update_data = args[1]
+        assert update_data['catch_weight_actual'] == 1.250
+        assert update_data['catch_weight_uom'] == 'kg'
+        assert update_data['tolerance_variance_pct'] == 4.17
+        assert update_data['tolerance_status'] == 'Within Tolerance'
+
+
