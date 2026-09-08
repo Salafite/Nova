@@ -611,4 +611,235 @@ class TestPurchaseReturnServiceStateMachine:
         assert result['goods_receipt_id'] == 102
         assert result['total_amount'] == 60.0
 
+    def test_format_reason_label_mappings(self):
+        from modules.purchasing.services.purchase_return_service import format_reason_label
+        assert format_reason_label('damaged') == 'Damaged Goods'
+        assert format_reason_label('expired') == 'Expired Product'
+        assert format_reason_label('rejected') == 'Receiving Rejected'
+        assert format_reason_label('wrong_item') == 'Wrong Item / Mismatch'
+        assert format_reason_label('qc_failed') == 'QC Inspection Failed'
+        assert format_reason_label('defective') == 'Defective / Poor Quality'
+        assert format_reason_label('over_delivery') == 'Over Delivery / Excess'
+        assert format_reason_label('other') == 'Other Discrepancy'
+        assert format_reason_label('damaged: broken seal') == 'Damaged Goods (broken seal)'
+        assert format_reason_label(None) == 'Not Specified'
+        assert format_reason_label('custom_reason') == 'Custom Reason'
+
+    def test_get_return_slip_data_aggregates_all_metadata(self, service, mock_repo):
+        service.supplier_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.grn_repo = MagicMock()
+        service.invoice_repo = MagicMock()
+        service.user_repo = MagicMock()
+        service.tenant_repo = MagicMock()
+        service.uom_repo = MagicMock()
+        service.batch_repo = MagicMock()
+
+        return_record = {
+            'id': 10,
+            'return_number': 'RMA-202609-00010',
+            'return_date': '2026-09-08',
+            'status': 'Approved',
+            'supplier_id': 50,
+            'purchase_order_id': 20,
+            'goods_receipt_id': 30,
+            'debit_memo_id': 40,
+            'total_amount': 250.0,
+            'reason': 'Damaged boxes and expired dairy products',
+            'notes': 'Dock driver agreed to return',
+            'approved_at': '2026-09-08T09:00:00Z',
+            'approved_by': 99,
+            'business_id': 1,
+            'attachments': [{'id': 'att-1', 'url': 'https://cdn.example.com/dock-slip.jpg'}],
+        }
+        mock_repo.get.return_value = return_record
+
+        lines = [
+            {
+                'id': 101,
+                'return_id': 10,
+                'line_number': 1,
+                'product_id': 1001,
+                'product_name': 'Organic Whole Milk 1L',
+                'qty': 20.0,
+                'unit_price': 5.0,
+                'line_total': 100.0,
+                'uom_id': 1,
+                'batch_id': 501,
+                'batch_number': 'LOT-MILK-99',
+                'expiry_date': '2026-09-01',
+                'reason_code': 'expired',
+                'quarantine_status': 'Quarantine',
+                'disposition': 'Return to Vendor',
+                'photos': [{'id': 'photo-1', 'url': 'https://cdn.example.com/expired-carton.jpg'}],
+            },
+            {
+                'id': 102,
+                'return_id': 10,
+                'line_number': 2,
+                'product_id': 1002,
+                'product_name': 'Greek Yogurt 500g',
+                'qty': 30.0,
+                'unit_price': 5.0,
+                'line_total': 150.0,
+                'uom_id': 2,
+                'batch_id': 502,
+                'batch_number': 'LOT-YOG-88',
+                'expiry_date': '2026-09-15',
+                'reason_code': 'damaged: broken foil seal',
+                'quarantine_status': 'Quarantine',
+                'disposition': 'Return to Vendor',
+                'photos': [{'id': 'photo-2', 'url': 'https://cdn.example.com/broken-seal.jpg'}],
+            },
+        ]
+        with patch.object(service, '_get_lines', return_value=lines):
+            # Mock supplier lookup
+            service.supplier_repo.get.return_value = {
+                'id': 50,
+                'name': 'Fresh Farms Dairy Ltd',
+                'supplier_code': 'SUP-0050',
+                'contact': 'Alice Smith',
+                'phone': '+1-555-444-3322',
+                'email': 'returns@freshfarms.example',
+                'address': '450 Dairy Road, Greenfield, CA',
+            }
+            # Mock PO lookup
+            service.po_repo.get.return_value = {'id': 20, 'order_number': 'PO-2026-0088'}
+            # Mock GRN lookup
+            service.grn_repo.get.return_value = {'id': 30, 'receipt_number': 'GRN-2026-0045'}
+            # Mock Debit Memo lookup
+            service.invoice_repo.get.return_value = {'id': 40, 'invoice_number': 'DM-2026-0012'}
+            # Mock User lookup
+            service.user_repo.get.return_value = {'id': 99, 'full_name': 'Sarah Quality Lead'}
+            # Mock Tenant lookup
+            service.tenant_repo.get.return_value = {'id': 1, 'tenant_name': 'Nova Organics Hub'}
+            # Mock UOM lookup
+            service.uom_repo.get.side_effect = lambda uom_id, **kw: {'id': uom_id, 'uom_code': 'CS' if uom_id == 1 else 'EA'}
+
+            slip = service.get_return_slip_data(10)
+
+            # Check header aggregation
+            assert slip['return_id'] == 10
+            assert slip['return_number'] == 'RMA-202609-00010'
+            assert slip['status'] == 'Approved'
+            assert slip['company_name'] == 'Nova Organics Hub'
+            assert slip['supplier_name'] == 'Fresh Farms Dairy Ltd'
+            assert slip['supplier_code'] == 'SUP-0050'
+            assert slip['supplier_contact'] == 'Alice Smith'
+            assert slip['supplier_phone'] == '+1-555-444-3322'
+            assert slip['supplier_email'] == 'returns@freshfarms.example'
+            assert slip['supplier_address'] == '450 Dairy Road, Greenfield, CA'
+            assert slip['po_number'] == 'PO-2026-0088'
+            assert slip['grn_number'] == 'GRN-2026-0045'
+            assert slip['debit_memo_id'] == 40
+            assert slip['debit_memo_number'] == 'DM-2026-0012'
+            assert slip['approved_by_name'] == 'Sarah Quality Lead'
+            assert slip['total_amount'] == 250.0
+            assert 'Supplier acknowledgment verifies debit memo claims' in slip['acknowledgment_text']
+
+            # Check lines aggregation
+            assert len(slip['lines']) == 2
+            line1 = slip['lines'][0]
+            assert line1['product_name'] == 'Organic Whole Milk 1L'
+            assert line1['qty'] == 20.0
+            assert line1['uom'] == 'CS'
+            assert line1['batch_number'] == 'LOT-MILK-99'
+            assert line1['expiry_date'] == '2026-09-01'
+            assert line1['reason_code'] == 'expired'
+            assert line1['reason_label'] == 'Expired Product'
+            assert line1['quarantine_status'] == 'Quarantine'
+
+            line2 = slip['lines'][1]
+            assert line2['uom'] == 'EA'
+            assert line2['reason_label'] == 'Damaged Goods (broken foil seal)'
+
+            # Check aggregated photo attachments
+            assert len(slip['attachments']) == 3
+            attachment_urls = [a.get('url') for a in slip['attachments']]
+            assert 'https://cdn.example.com/dock-slip.jpg' in attachment_urls
+            assert 'https://cdn.example.com/expired-carton.jpg' in attachment_urls
+            assert 'https://cdn.example.com/broken-seal.jpg' in attachment_urls
+
+    def test_get_return_slip_data_fallback_batch_lookup(self, service, mock_repo):
+        service.supplier_repo = MagicMock()
+        service.batch_repo = MagicMock()
+        service.uom_repo = MagicMock()
+
+        return_record = {
+            'id': 15,
+            'return_number': 'RMA-202609-00015',
+            'return_date': '2026-09-08',
+            'status': 'Approved',
+            'supplier_id': 60,
+            'total_amount': 50.0,
+        }
+        mock_repo.get.return_value = return_record
+        service.supplier_repo.get.return_value = {'id': 60, 'name': 'Bakery Supplies'}
+
+        # Line without explicit batch_number and expiry_date, but with batch_id
+        lines = [
+            {
+                'id': 201,
+                'return_id': 15,
+                'product_id': 2001,
+                'product_name': 'Flour 25kg',
+                'qty': 2.0,
+                'unit_price': 25.0,
+                'line_total': 50.0,
+                'batch_id': 888,
+                'batch_number': None,
+                'expiry_date': None,
+                'reason_code': 'rejected',
+            }
+        ]
+        service.batch_repo.get.return_value = {
+            'id': 888,
+            'batch_number': 'LOT-FLOUR-888',
+            'expiry_date': '2027-01-01',
+        }
+
+        with patch.object(service, '_get_lines', return_value=lines):
+            slip = service.get_return_slip_data(15)
+            assert slip['lines'][0]['batch_number'] == 'LOT-FLOUR-888'
+            assert slip['lines'][0]['expiry_date'] == '2027-01-01'
+            assert slip['lines'][0]['reason_label'] == 'Receiving Rejected'
+
+    def test_get_return_slip_data_not_found_raises_404(self, service, mock_repo):
+        mock_repo.get.return_value = None
+        with pytest.raises(HTTPException) as exc_info:
+            service.get_return_slip_data(9999)
+        assert exc_info.value.status_code == 404
+
+    def test_get_return_details_aggregates_line_and_header_info(self, service, mock_repo):
+        service.supplier_repo = MagicMock()
+        service.po_repo = MagicMock()
+        service.grn_repo = MagicMock()
+        service.invoice_repo = MagicMock()
+
+        return_record = {
+            'id': 30,
+            'return_number': 'RMA-202609-00030',
+            'supplier_id': 12,
+            'purchase_order_id': 34,
+            'goods_receipt_id': 56,
+            'debit_memo_id': 78,
+            'status': 'Approved',
+        }
+        mock_repo.get.return_value = return_record
+        service.supplier_repo.get.return_value = {'id': 12, 'name': 'ABC Supplies'}
+        service.po_repo.get.return_value = {'id': 34, 'order_number': 'PO-34'}
+        service.grn_repo.get.return_value = {'id': 56, 'receipt_number': 'GRN-56'}
+        service.invoice_repo.get.return_value = {'id': 78, 'invoice_number': 'DM-78'}
+
+        lines = [{'id': 1, 'return_id': 30, 'product_name': 'Item X', 'qty': 10.0}]
+        with patch.object(service, '_get_lines', return_value=lines):
+            details = service.get_return_details(30)
+            assert details['id'] == 30
+            assert details['supplier_name'] == 'ABC Supplies'
+            assert details['po_number'] == 'PO-34'
+            assert details['grn_number'] == 'GRN-56'
+            assert details['debit_memo_number'] == 'DM-78'
+            assert len(details['lines']) == 1
+
+
 

@@ -15,6 +15,34 @@ VALID_RETURN_STATUS_TRANSITIONS: Dict[str, List[str]] = {
 }
 
 
+REASON_CODE_LABELS: Dict[str, str] = {
+    'damaged': 'Damaged Goods',
+    'expired': 'Expired Product',
+    'rejected': 'Receiving Rejected',
+    'wrong_item': 'Wrong Item / Mismatch',
+    'qc_failed': 'QC Inspection Failed',
+    'defective': 'Defective / Poor Quality',
+    'over_delivery': 'Over Delivery / Excess',
+    'other': 'Other Discrepancy',
+}
+
+
+def format_reason_label(reason_code: Optional[str]) -> str:
+    if not reason_code:
+        return 'Not Specified'
+    code_str = str(reason_code).strip()
+    code_lower = code_str.lower()
+    if code_lower in REASON_CODE_LABELS:
+        return REASON_CODE_LABELS[code_lower]
+    if ':' in code_str:
+        prefix, suffix = code_str.split(':', 1)
+        prefix_clean = prefix.strip().lower()
+        suffix_clean = suffix.strip()
+        if prefix_clean in REASON_CODE_LABELS:
+            return f"{REASON_CODE_LABELS[prefix_clean]} ({suffix_clean})"
+    return code_str.replace('_', ' ').title()
+
+
 class PurchaseReturnService(CrudService):
     def __init__(
         self,
@@ -27,6 +55,10 @@ class PurchaseReturnService(CrudService):
         po_repo: Optional[CrudRepository] = None,
         po_line_repo: Optional[CrudRepository] = None,
         stock_service: Optional[Any] = None,
+        supplier_repo: Optional[CrudRepository] = None,
+        user_repo: Optional[CrudRepository] = None,
+        uom_repo: Optional[CrudRepository] = None,
+        tenant_repo: Optional[CrudRepository] = None,
     ):
         super().__init__(repo or CrudRepository(
             'T0081',
@@ -115,6 +147,10 @@ class PurchaseReturnService(CrudService):
         self.po_repo = po_repo
         self.po_line_repo = po_line_repo
         self.stock_service = stock_service or StockMovementService()
+        self.supplier_repo = supplier_repo
+        self.user_repo = user_repo
+        self.uom_repo = uom_repo
+        self.tenant_repo = tenant_repo
 
     def _get_lines_repo(self) -> CrudRepository:
         if self.lines_repo is not None:
@@ -200,6 +236,68 @@ class PurchaseReturnService(CrudService):
                 'line_total',
                 'line_number',
                 'business_id',
+                'is_active',
+            ],
+        )
+
+    def _get_supplier_repo(self) -> CrudRepository:
+        if self.supplier_repo is not None:
+            return self.supplier_repo
+        return CrudRepository(
+            'T0011',
+            business_columns=[
+                'id',
+                'name',
+                'category',
+                'phone',
+                'email',
+                'payment_terms',
+                'rating',
+                'is_active',
+            ],
+        )
+
+    def _get_user_repo(self) -> CrudRepository:
+        if self.user_repo is not None:
+            return self.user_repo
+        return CrudRepository(
+            'T0021',
+            business_columns=[
+                'id',
+                'username',
+                'full_name',
+                'email',
+                'role',
+                'status',
+            ],
+        )
+
+    def _get_uom_repo(self) -> CrudRepository:
+        if self.uom_repo is not None:
+            return self.uom_repo
+        return CrudRepository(
+            'T0001',
+            business_columns=[
+                'id',
+                'uom_code',
+                'uom_name',
+                'category',
+                'is_base_unit',
+                'is_active',
+            ],
+        )
+
+    def _get_tenant_repo(self) -> CrudRepository:
+        if self.tenant_repo is not None:
+            return self.tenant_repo
+        return CrudRepository(
+            'T0059',
+            business_columns=[
+                'id',
+                'tenant_code',
+                'tenant_name',
+                'domain',
+                'config',
                 'is_active',
             ],
         )
@@ -853,4 +951,261 @@ class PurchaseReturnService(CrudService):
             raise HTTPException(400, "goods_receipt_id is required for dock rejection RMA creation")
 
         return self.create_from_goods_receipt(grn_id=grn_id, rejection_payload=rejection, conn=conn)
+
+    def get_return_details(self, return_id: int, conn=None) -> dict:
+        """
+        Retrieves complete purchase return details including header, lines,
+        linked supplier name, PO number, GRN number, and Debit Memo number.
+        """
+        kwargs = {'conn': conn} if conn is not None else {}
+        return_rec = self.repo.get(return_id, **kwargs)
+        if not return_rec:
+            raise HTTPException(404, f"Purchase return with id {return_id} not found")
+
+        result = dict(return_rec)
+        lines = self._get_lines(return_id, conn=conn)
+        result['lines'] = lines
+
+        # Lookup supplier name
+        supplier_id = return_rec.get('supplier_id')
+        if supplier_id:
+            try:
+                supp_repo = self._get_supplier_repo()
+                supp = supp_repo.get(supplier_id, **kwargs)
+                if supp:
+                    result['supplier_name'] = supp.get('name')
+            except Exception:
+                pass
+
+        # Lookup PO number
+        po_id = return_rec.get('purchase_order_id')
+        if po_id:
+            try:
+                po_repo = self._get_po_repo()
+                po = po_repo.get(po_id, **kwargs)
+                if po:
+                    result['po_number'] = po.get('order_number') or po.get('po_number')
+            except Exception:
+                pass
+
+        # Lookup GRN number
+        grn_id = return_rec.get('goods_receipt_id')
+        if grn_id and self.grn_repo:
+            try:
+                grn = self.grn_repo.get(grn_id, **kwargs)
+                if grn:
+                    result['grn_number'] = grn.get('receipt_number') or grn.get('grn_number')
+            except Exception:
+                pass
+
+        # Lookup Debit Memo number
+        debit_memo = self.get_debit_memo(return_id, conn=conn)
+        if debit_memo:
+            result['debit_memo_number'] = debit_memo.get('invoice_number') or debit_memo.get('debit_memo_number')
+            if not result.get('debit_memo_id'):
+                result['debit_memo_id'] = debit_memo.get('id')
+
+        return result
+
+    def get_return_slip_data(self, return_id: int, conn=None) -> dict:
+        """
+        Generates aggregated Return Slip data for printing and supplier submission:
+        - Supplier contact details (name, code, contact person, phone, email, address)
+        - Header references (RMA #, PO #, GRN #, Debit Memo #, approval info)
+        - Itemized lines with batch numbers, expiry dates, UOM, formatted reason labels, quarantine status, photos
+        - Aggregated inspection photo attachments
+        - Driver sign-off / acknowledgment block
+        """
+        kwargs = {'conn': conn} if conn is not None else {}
+        return_rec = self.repo.get(return_id, **kwargs)
+        if not return_rec:
+            raise HTTPException(404, f"Purchase return with id {return_id} not found")
+
+        lines = self._get_lines(return_id, conn=conn)
+
+        # 1. Supplier details
+        supplier_id = return_rec.get('supplier_id')
+        supplier_name = None
+        supplier_code = None
+        supplier_contact = None
+        supplier_phone = None
+        supplier_email = None
+        supplier_address = None
+
+        if supplier_id:
+            try:
+                supp_repo = self._get_supplier_repo()
+                supp = supp_repo.get(supplier_id, **kwargs)
+                if supp:
+                    supplier_name = supp.get('name')
+                    supplier_code = supp.get('supplier_code') or supp.get('code') or f"SUP-{supplier_id:04d}"
+                    supplier_contact = supp.get('contact') or supp.get('contact_person') or supp.get('name')
+                    supplier_phone = supp.get('phone')
+                    supplier_email = supp.get('email')
+                    supplier_address = supp.get('address') or supp.get('location') or supp.get('city')
+            except Exception:
+                pass
+
+        # 2. Purchase Order reference
+        po_id = return_rec.get('purchase_order_id')
+        po_number = None
+        if po_id:
+            try:
+                po_repo = self._get_po_repo()
+                po = po_repo.get(po_id, **kwargs)
+                if po:
+                    po_number = po.get('order_number') or po.get('po_number')
+            except Exception:
+                pass
+
+        # 3. Goods Receipt reference
+        grn_id = return_rec.get('goods_receipt_id')
+        grn_number = None
+        if grn_id and self.grn_repo:
+            try:
+                grn = self.grn_repo.get(grn_id, **kwargs)
+                if grn:
+                    grn_number = grn.get('receipt_number') or grn.get('grn_number')
+            except Exception:
+                pass
+
+        # 4. Debit Memo reference
+        debit_memo_id = return_rec.get('debit_memo_id')
+        debit_memo_number = None
+        debit_memo = self.get_debit_memo(return_id, conn=conn)
+        if debit_memo:
+            debit_memo_id = debit_memo.get('id')
+            debit_memo_number = debit_memo.get('invoice_number') or debit_memo.get('debit_memo_number')
+
+        # 5. Approved By user details
+        approved_by_id = return_rec.get('approved_by')
+        approved_by_name = None
+        if approved_by_id:
+            try:
+                user_repo = self._get_user_repo()
+                u = user_repo.get(approved_by_id, **kwargs)
+                if u:
+                    approved_by_name = u.get('full_name') or u.get('username')
+            except Exception:
+                pass
+
+        # 6. Company / Tenant details
+        company_name = "Nova Logistics & Wholesale Distribution"
+        company_address = "100 Logistics Blvd, Dock Area B, Suite 400"
+        company_phone = "+1 (800) 555-NOVA"
+        business_id = return_rec.get('business_id')
+        if business_id:
+            try:
+                tenant_repo = self._get_tenant_repo()
+                t = tenant_repo.get(business_id, **kwargs)
+                if t:
+                    company_name = t.get('tenant_name') or company_name
+            except Exception:
+                pass
+
+        # 7. Itemized return lines aggregation
+        uom_repo = self._get_uom_repo()
+        slip_lines = []
+        all_inspection_photos = []
+
+        for idx, line in enumerate(lines):
+            uom_name = None
+            uom_id = line.get('uom_id')
+            if uom_id:
+                try:
+                    uom_rec = uom_repo.get(uom_id, **kwargs)
+                    if uom_rec:
+                        uom_name = uom_rec.get('uom_code') or uom_rec.get('uom_name')
+                except Exception:
+                    pass
+
+            batch_id = line.get('batch_id')
+            batch_num = line.get('batch_number')
+            exp_date = line.get('expiry_date')
+            if (not batch_num or not exp_date) and batch_id and self.batch_repo:
+                try:
+                    batch_rec = self.batch_repo.get(batch_id, **kwargs)
+                    if batch_rec:
+                        if not batch_num:
+                            batch_num = batch_rec.get('batch_number')
+                        if not exp_date:
+                            exp_date = batch_rec.get('expiry_date')
+                except Exception:
+                    pass
+
+            qty = float(line.get('qty', 0) or 0)
+            unit_price = float(line.get('unit_price', 0) or 0)
+            line_total = float(line.get('line_total') or (qty * unit_price))
+            rcode = line.get('reason_code')
+            photos = line.get('photos') or []
+            if isinstance(photos, list):
+                for p in photos:
+                    if p not in all_inspection_photos:
+                        all_inspection_photos.append(p)
+
+            slip_line = {
+                'id': line.get('id'),
+                'line_number': line.get('line_number') or (idx + 1),
+                'product_id': line.get('product_id'),
+                'product_name': line.get('product_name') or f"Product #{line.get('product_id')}",
+                'qty': qty,
+                'uom': uom_name or 'Units',
+                'unit_price': unit_price,
+                'line_total': line_total,
+                'batch_number': batch_num,
+                'expiry_date': exp_date,
+                'reason_code': rcode,
+                'reason_label': format_reason_label(rcode),
+                'quarantine_status': line.get('quarantine_status') or 'Quarantine',
+                'disposition': line.get('disposition') or 'Return to Vendor',
+                'photos': photos,
+            }
+            slip_lines.append(slip_line)
+
+        # 8. Aggregated attachments
+        header_attachments = return_rec.get('attachments') or []
+        combined_attachments = list(header_attachments)
+        for p in all_inspection_photos:
+            if p not in combined_attachments:
+                combined_attachments.append(p)
+
+        total_amount = float(return_rec.get('total_amount') or sum(l['line_total'] for l in slip_lines))
+
+        return {
+            'return_id': return_rec.get('id'),
+            'return_number': return_rec.get('return_number', f"RMA-{return_id:05d}"),
+            'return_date': return_rec.get('return_date') or date.today().isoformat(),
+            'status': return_rec.get('status', RMAStatus.DRAFT.value),
+            'company_name': company_name,
+            'company_address': company_address,
+            'company_phone': company_phone,
+            'supplier_id': supplier_id,
+            'supplier_name': supplier_name,
+            'supplier_code': supplier_code,
+            'supplier_contact': supplier_contact,
+            'supplier_phone': supplier_phone,
+            'supplier_email': supplier_email,
+            'supplier_address': supplier_address,
+            'purchase_order_id': po_id,
+            'po_number': po_number,
+            'goods_receipt_id': grn_id,
+            'grn_number': grn_number,
+            'debit_memo_id': debit_memo_id,
+            'debit_memo_number': debit_memo_number,
+            'total_amount': total_amount,
+            'currency': 'USD',
+            'reason': return_rec.get('reason'),
+            'notes': return_rec.get('notes'),
+            'approved_at': return_rec.get('approved_at'),
+            'approved_by_name': approved_by_name,
+            'lines': slip_lines,
+            'attachments': combined_attachments,
+            'driver_name': return_rec.get('driver_name'),
+            'driver_signature_date': return_rec.get('driver_signature_date'),
+            'acknowledgment_text': (
+                "Received the returned merchandise listed above in the condition stated. "
+                "Supplier acknowledgment verifies debit memo claims."
+            ),
+        }
+
 
