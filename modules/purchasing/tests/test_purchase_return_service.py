@@ -13,8 +13,13 @@ class TestPurchaseReturnServiceStateMachine:
         return repo
 
     @pytest.fixture
-    def service(self, mock_repo):
-        svc = PurchaseReturnService(mock_repo)
+    def mock_invoice_repo(self):
+        repo = MagicMock()
+        return repo
+
+    @pytest.fixture
+    def service(self, mock_repo, mock_invoice_repo):
+        svc = PurchaseReturnService(repo=mock_repo, invoice_repo=mock_invoice_repo)
         svc.stock_service = MagicMock()
         return svc
 
@@ -35,14 +40,16 @@ class TestPurchaseReturnServiceStateMachine:
         assert result['return_number'].startswith('RMA-')
         assert 'return_date' in result
 
-    def test_approve_return_success(self, service, mock_repo):
+    def test_approve_return_success_with_debit_memo(self, service, mock_repo, mock_invoice_repo):
         existing_return = {
             'id': 1,
             'return_number': 'RMA-202609-0001',
             'status': 'Draft',
             'supplier_id': 10,
+            'purchase_order_id': 5,
             'total_amount': 0.0,
             'notes': None,
+            'debit_memo_id': None,
         }
         lines = [
             {'id': 1, 'return_id': 1, 'product_id': 101, 'product_name': 'Item A', 'qty': 5.0, 'unit_price': 10.0, 'line_total': 50.0},
@@ -50,6 +57,15 @@ class TestPurchaseReturnServiceStateMachine:
         ]
         mock_repo.get.return_value = existing_return
         mock_repo.update.side_effect = lambda id_val, data: {**existing_return, **data}
+        mock_invoice_repo.create.return_value = {
+            'id': 99,
+            'invoice_number': 'DM-00001',
+            'invoice_type': 'Debit Memo',
+            'partner_id': 10,
+            'purchase_return_id': 1,
+            'total_amount': 100.0,
+            'status': 'Unpaid',
+        }
 
         with patch.object(service, '_get_lines', return_value=lines):
             result = service.approve_return(1, approved_by=42, notes='Approved by QA')
@@ -58,7 +74,97 @@ class TestPurchaseReturnServiceStateMachine:
             assert result['approved_by'] == 42
             assert result['approved_at'] is not None
             assert result['total_amount'] == 100.0
+            assert result['debit_memo_id'] == 99
             assert 'Approved by QA' in result['notes']
+
+            # Verify debit memo created with proper supplier, PO reference, and total amount
+            assert mock_invoice_repo.create.called
+            dm_payload = mock_invoice_repo.create.call_args[0][0]
+            assert dm_payload['invoice_type'] == 'Debit Memo'
+            assert dm_payload['partner_id'] == 10
+            assert dm_payload['purchase_order_id'] == 5
+            assert dm_payload['purchase_return_id'] == 1
+            assert dm_payload['total_amount'] == 100.0
+            assert dm_payload['status'] == 'Unpaid'
+
+    def test_approve_return_skips_debit_memo_when_disabled(self, service, mock_repo, mock_invoice_repo):
+        existing_return = {
+            'id': 1,
+            'return_number': 'RMA-202609-0001',
+            'status': 'Draft',
+            'supplier_id': 10,
+            'total_amount': 0.0,
+            'notes': None,
+            'debit_memo_id': None,
+        }
+        lines = [
+            {'id': 1, 'return_id': 1, 'product_id': 101, 'product_name': 'Item A', 'qty': 5.0, 'unit_price': 10.0, 'line_total': 50.0},
+        ]
+        mock_repo.get.return_value = existing_return
+        mock_repo.update.side_effect = lambda id_val, data: {**existing_return, **data}
+
+        with patch.object(service, '_get_lines', return_value=lines):
+            result = service.approve_return(1, approved_by=42, create_debit_memo=False)
+
+            assert result['status'] == RMAStatus.APPROVED.value
+            assert result.get('debit_memo_id') is None
+            assert not mock_invoice_repo.create.called
+
+    def test_approve_return_does_not_duplicate_existing_debit_memo(self, service, mock_repo, mock_invoice_repo):
+        existing_return = {
+            'id': 1,
+            'return_number': 'RMA-202609-0001',
+            'status': 'Draft',
+            'supplier_id': 10,
+            'total_amount': 50.0,
+            'notes': None,
+            'debit_memo_id': 77,  # already has debit memo
+        }
+        lines = [
+            {'id': 1, 'return_id': 1, 'product_id': 101, 'product_name': 'Item A', 'qty': 5.0, 'unit_price': 10.0, 'line_total': 50.0},
+        ]
+        mock_repo.get.return_value = existing_return
+        mock_repo.update.side_effect = lambda id_val, data: {**existing_return, **data}
+
+        with patch.object(service, '_get_lines', return_value=lines):
+            result = service.approve_return(1, approved_by=42, create_debit_memo=True)
+
+            assert result['status'] == RMAStatus.APPROVED.value
+            assert not mock_invoice_repo.create.called
+
+    def test_create_debit_memo_for_return_direct(self, service, mock_invoice_repo):
+        return_rec = {
+            'id': 10,
+            'return_number': 'RMA-202609-0010',
+            'supplier_id': 25,
+            'purchase_order_id': 12,
+            'return_date': '2026-09-08',
+            'total_amount': 250.0,
+            'business_id': 2,
+        }
+        lines = [
+            {'id': 1, 'return_id': 10, 'qty': 10.0, 'unit_price': 25.0, 'line_total': 250.0},
+        ]
+        mock_invoice_repo.create.side_effect = lambda data: {'id': 50, **data}
+
+        dm = service.create_debit_memo_for_return(return_rec, lines)
+        assert dm['id'] == 50
+        assert dm['invoice_type'] == 'Debit Memo'
+        assert dm['partner_id'] == 25
+        assert dm['purchase_order_id'] == 12
+        assert dm['purchase_return_id'] == 10
+        assert dm['total_amount'] == 250.0
+        assert dm['status'] == 'Unpaid'
+        assert dm['business_id'] == 2
+
+    def test_get_debit_memo_lookup(self, service, mock_repo, mock_invoice_repo):
+        mock_repo.get.return_value = {'id': 1, 'debit_memo_id': 88}
+        mock_invoice_repo.get.return_value = {'id': 88, 'invoice_type': 'Debit Memo', 'total_amount': 150.0}
+
+        dm = service.get_debit_memo(1)
+        assert dm is not None
+        assert dm['id'] == 88
+        assert dm['total_amount'] == 150.0
 
     def test_approve_return_fails_when_no_lines(self, service, mock_repo):
         existing_return = {

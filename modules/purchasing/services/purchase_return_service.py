@@ -16,11 +16,71 @@ VALID_RETURN_STATUS_TRANSITIONS: Dict[str, List[str]] = {
 
 
 class PurchaseReturnService(CrudService):
-    def __init__(self, repo: CrudRepository):
-        super().__init__(repo)
-        self.stock_service = StockMovementService()
+    def __init__(
+        self,
+        repo: Optional[CrudRepository] = None,
+        invoice_repo: Optional[CrudRepository] = None,
+        lines_repo: Optional[CrudRepository] = None,
+        stock_service: Optional[Any] = None,
+    ):
+        super().__init__(repo or CrudRepository(
+            'T0081',
+            business_columns=[
+                'id',
+                'return_number',
+                'purchase_order_id',
+                'goods_receipt_id',
+                'supplier_id',
+                'debit_memo_id',
+                'return_date',
+                'status',
+                'total_amount',
+                'reason',
+                'notes',
+                'attachments',
+                'approved_at',
+                'approved_by',
+                'business_id',
+                'is_active',
+            ],
+        ))
+        self.invoice_repo = invoice_repo or CrudRepository(
+            'T0090',
+            business_columns=[
+                'id',
+                'invoice_number',
+                'invoice_type',
+                'partner_id',
+                'sales_order_id',
+                'purchase_order_id',
+                'purchase_return_id',
+                'sales_rep_id',
+                'payment_term_id',
+                'issue_date',
+                'due_date',
+                'discount_due_date',
+                'discount_percentage',
+                'discount_days',
+                'early_discount_amount',
+                'total_amount',
+                'freight_amount',
+                'discount_amount',
+                'status',
+                'notes',
+                'is_catch_weight',
+                'nominal_total_weight',
+                'actual_total_weight',
+                'weight_adjustment_amount',
+                'business_id',
+                'is_active',
+            ],
+        )
+        self.lines_repo = lines_repo
+        self.stock_service = stock_service or StockMovementService()
 
     def _get_lines_repo(self) -> CrudRepository:
+        if self.lines_repo is not None:
+            return self.lines_repo
         return CrudRepository(
             'T0082',
             business_columns=[
@@ -45,15 +105,93 @@ class PurchaseReturnService(CrudService):
             ],
         )
 
-    def _get_lines(self, return_id: int) -> List[Dict[str, Any]]:
+    def _get_lines(self, return_id: int, conn=None) -> List[Dict[str, Any]]:
         repo = self._get_lines_repo()
-        return repo.list(filters={'return_id': return_id})
+        kwargs = {'conn': conn} if conn is not None else {}
+        return repo.list(filters={'return_id': return_id}, **kwargs)
 
-    def _generate_return_number(self) -> str:
-        prefix = datetime.now().strftime('RMA-%Y%m-')
-        existing = self.repo.list()
-        count = len(existing) + 1
-        return f"{prefix}{count:04d}"
+    def _generate_return_number(self, conn=None) -> str:
+        try:
+            from packages.database.sequence import generate_document_number
+            return generate_document_number('seq_purchase_return_number', prefix='RMA', padding=5, conn=conn)
+        except Exception:
+            prefix = datetime.now().strftime('RMA-%Y%m-')
+            existing = self.repo.list(conn=conn) if hasattr(self.repo, 'list') else []
+            count = (len(existing) if isinstance(existing, list) else 0) + 1
+            return f"{prefix}{count:04d}"
+
+    def _generate_debit_memo_number(self, conn=None) -> str:
+        try:
+            from packages.database.sequence import generate_invoice_number
+            return generate_invoice_number(conn=conn, prefix="DM")
+        except Exception:
+            prefix = datetime.now().strftime('DM-%Y%m-')
+            existing = self.invoice_repo.list(filters={'invoice_type': 'Debit Memo'}, conn=conn) if hasattr(self.invoice_repo, 'list') else []
+            count = (len(existing) if isinstance(existing, list) else 0) + 1
+            return f"{prefix}{count:04d}"
+
+    def create_debit_memo_for_return(
+        self,
+        return_record: dict,
+        lines: Optional[List[dict]] = None,
+        conn=None,
+    ) -> dict:
+        """
+        Generates and posts a T0090 Debit Memo record linked to the supplier
+        with calculated line item credits and accounting references.
+        """
+        return_id = return_record.get('id')
+        if lines is None and return_id:
+            lines = self._get_lines(return_id, conn=conn)
+        lines = lines or []
+
+        calculated_total = sum(
+            float(l.get('line_total') or (float(l.get('qty', 0)) * float(l.get('unit_price', 0))))
+            for l in lines
+        )
+        total_amount = float(return_record.get('total_amount') or calculated_total or 0.0)
+
+        debit_memo_number = self._generate_debit_memo_number(conn=conn)
+        issue_date = return_record.get('return_date') or date.today().isoformat()
+        if isinstance(issue_date, date):
+            issue_date = issue_date.isoformat()
+
+        return_num = return_record.get('return_number', f"#{return_id}")
+        debit_memo_payload = {
+            'invoice_number': debit_memo_number,
+            'invoice_type': 'Debit Memo',
+            'partner_id': return_record.get('supplier_id'),
+            'purchase_order_id': return_record.get('purchase_order_id'),
+            'purchase_return_id': return_id,
+            'issue_date': issue_date,
+            'due_date': issue_date,
+            'total_amount': total_amount,
+            'discount_amount': 0.0,
+            'freight_amount': 0.0,
+            'status': 'Unpaid',
+            'notes': f"Automated Debit Memo for Purchase Return (RMA) {return_num}".strip(),
+        }
+        if return_record.get('business_id'):
+            debit_memo_payload['business_id'] = return_record.get('business_id')
+
+        kwargs = {'conn': conn} if conn is not None else {}
+        debit_memo = self.invoice_repo.create(debit_memo_payload, **kwargs)
+        return debit_memo
+
+    def get_debit_memo(self, return_id: int, conn=None) -> Optional[dict]:
+        """
+        Retrieves the linked debit memo record for a given purchase return / RMA.
+        """
+        record = self.repo.get(return_id, conn=conn) if conn else self.repo.get(return_id)
+        if not record:
+            return None
+        debit_memo_id = record.get('debit_memo_id')
+        kwargs = {'conn': conn} if conn is not None else {}
+        if debit_memo_id:
+            return self.invoice_repo.get(debit_memo_id, **kwargs)
+        # Fallback to query by purchase_return_id
+        memos = self.invoice_repo.list(filters={'purchase_return_id': return_id, 'invoice_type': 'Debit Memo'}, **kwargs)
+        return memos[0] if memos else None
 
     def create(self, payload: dict) -> dict:
         if not payload.get('return_number'):
@@ -130,7 +268,8 @@ class PurchaseReturnService(CrudService):
     ) -> dict:
         """
         Transitions RMA from Draft -> Approved.
-        Validates line items and updates approved metadata.
+        Validates line items, automatically generates supplier debit memo (T0090),
+        and updates approved metadata.
         """
         record = self.repo.get(id_val)
         if not record:
@@ -159,6 +298,17 @@ class PurchaseReturnService(CrudService):
         }
         if calculated_total > 0:
             update_payload['total_amount'] = calculated_total
+
+        # Automated Debit Memo creation on approval
+        debit_memo_id = record.get('debit_memo_id')
+        if create_debit_memo and not debit_memo_id:
+            return_dict_for_dm = dict(record)
+            if calculated_total > 0:
+                return_dict_for_dm['total_amount'] = calculated_total
+            debit_memo = self.create_debit_memo_for_return(return_dict_for_dm, lines)
+            if debit_memo and debit_memo.get('id'):
+                debit_memo_id = debit_memo.get('id')
+                update_payload['debit_memo_id'] = debit_memo_id
 
         if notes:
             existing_notes = record.get('notes') or ''
