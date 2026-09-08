@@ -57,7 +57,8 @@ def verify_schema(conn=None) -> dict:
         ORDER BY table_name
     """)
     tables = [r[0] for r in cur.fetchall()]
-    expected_tables = [f"t{i:04d}" for i in range(1, 110)]
+    edi_tables = ['t0124', 't0125', 't0126', 't0127', 't0128']
+    expected_tables = [f"t{i:04d}" for i in range(1, 110)] + edi_tables
     missing_tables = [t for t in expected_tables if t not in tables]
     if missing_tables:
         errors.append(f"Missing tables ({len(missing_tables)}): {missing_tables}")
@@ -215,6 +216,8 @@ def verify_schema(conn=None) -> dict:
         "credit_hold_enum_present": credit_hold_enum_present,
         "t0012_hold_columns_present": [c for c in expected_hold_cols if c in t0012_cols],
         "missing_hold_columns": missing_hold_cols,
+        "edi_tables_present": [t for t in edi_tables if t in tables],
+        "missing_edi_tables": [t for t in edi_tables if t not in tables],
         "total_columns": total_cols,
         "total_primary_keys": total_pks,
         "total_indexes": total_indexes,
@@ -248,6 +251,10 @@ def print_verification_report(results: dict):
     print(f"  - Tenant Foreign Keys:      {results['tenant_fks_count']}/{results['business_tables_count']} referencing T0059")
     print(f"  - Single Indexes:           {results['tenant_single_indexes_count']}/{results['business_tables_count']} on business_id")
     print(f"  - Composite Indexes:        {results['tenant_composite_indexes_count']}/{results['business_tables_count']} on (business_id, id)")
+    print("------------------------------------------------------------")
+    print(" B2B EDI Gateway & Supplier Catalog Status (T0124-T0128):")
+    edi_count = len(results.get('edi_tables_present', []))
+    print(f"  - EDI Tables Present:        {edi_count}/5 ({', '.join(results.get('edi_tables_present', []))})")
     print("------------------------------------------------------------")
     print(" Credit Hold Workflow Status:")
     print(f"  - 'Credit Hold' in order_status enum: {'YES' if results.get('credit_hold_enum_present') else 'NO'}")
