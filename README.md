@@ -106,6 +106,7 @@ docker compose up -d
 - **Migration** — CSV import with preview and rollback
 - **User Management** — Roles, permissions, audit log
 - **Multi-Tenant Isolation** — Native database-level scoping, JWT context propagation, role-based security, and cross-tenant access protection
+- **Catch Weight & Dual UoM** — Native support for perishable goods (meats, cheeses, produce) with dual units of measure (case/pack vs exact kg/lb weight), GS1-128 barcode weight capture, tolerance approval gates, dual-balance stock ledger, and dynamic invoice recalculation (see [docs/catch_weight_dual_uom.md](docs/catch_weight_dual_uom.md))
 - **AI & MCP Integration** — 15 Model Context Protocol servers exposing domain tools for natural language querying and automation with 2-tier safety rails
 
 ## Roadmap

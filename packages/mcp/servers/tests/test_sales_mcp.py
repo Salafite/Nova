@@ -212,6 +212,51 @@ class TestRecalculateCatchWeight:
         assert result == recalc_result
         sales_mcp._orders_svc.recalculate_order_catch_weight.assert_called_once_with(1)
 
+    def test_recalculate_via_registry(self, clear_registry, mock_svc):
+        register_tools()
+        recalc_result = {
+            "order_id": 1,
+            "is_catch_weight": True,
+            "original_subtotal": 500.0,
+            "recalculated_subtotal": 524.0,
+            "weight_adjustment_amount": 24.0,
+            "nominal_total_weight": 25.0,
+            "actual_total_weight": 26.2,
+            "grand_total": 550.2,
+        }
+        sales_mcp._orders_svc.recalculate_order_catch_weight.return_value = recalc_result
+        user = {"id": 1, "role": "Admin", "permissions": ["SALES_VIEW"]}
+        res = registry.call_tool("recalculate_order_catch_weight", {"id": 1}, user=user)
+        assert res == recalc_result
+        sales_mcp._orders_svc.recalculate_order_catch_weight.assert_called_once_with(1)
+
+    def test_create_order_line_via_registry(self, clear_registry, mock_svc):
+        register_tools()
+        mock_line = {
+            "id": 1,
+            "sales_order_id": 1,
+            "product_name": "Parmesan",
+            "qty": 2,
+            "unit_price": 50.0,
+            "is_catch_weight": True,
+            "pricing_uom_id": 2,
+            "unit_price_pricing_uom": 10.0,
+            "nominal_weight": 10.0,
+        }
+        sales_mcp._lines_svc.create.return_value = mock_line
+        user = {"id": 1, "role": "Admin", "permissions": ["SALES_VIEW"]}
+        res = registry.call_tool("create_order_line", {
+            "sales_order_id": 1,
+            "product_name": "Parmesan",
+            "qty": 2,
+            "unit_price": 50.0,
+            "is_catch_weight": True,
+            "pricing_uom_id": 2,
+            "unit_price_pricing_uom": 10.0,
+            "nominal_weight": 10.0,
+        }, user=user)
+        assert res == mock_line
+
 
 class TestUpdateOrderStatus:
     def test_updates(self, mock_svc):

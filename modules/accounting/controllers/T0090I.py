@@ -1,8 +1,13 @@
 import logging
-from typing import Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
-from modules.accounting.models import InvoiceCreate, InvoiceUpdate, InvoiceResponse
+from modules.accounting.models import (
+    InvoiceCreate,
+    InvoiceUpdate,
+    InvoiceResponse,
+    InvoiceCatchWeightBreakdownResponse,
+)
 from modules.accounting.models.einvoice import (
     QRCodeResponse,
     ClearanceSubmissionResponse,
@@ -76,7 +81,7 @@ def create_invoice_from_order(order_id: int):
         raise HTTPException(500, f"Failed to create invoice from order: {e}")
 
 
-@router.get('/{id}/catch-weight-breakdown')
+@router.get('/{id}/catch-weight-breakdown', response_model=InvoiceCatchWeightBreakdownResponse)
 def get_invoice_catch_weight_breakdown(id: int):
     """Retrieve catch-weight breakdown details for an invoice."""
     try:

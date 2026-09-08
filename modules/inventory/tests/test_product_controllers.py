@@ -320,3 +320,38 @@ def test_t0007_update_product_uom_dual_uom(cursor):
     assert data['tolerance_pct'] == 6.0
 
 
+def test_t0003_create_product_invalid_tolerance(cursor):
+    payload = {
+        'name': 'Bad Tolerance Product',
+        'sku': 'BAD-TOL-1',
+        'price': 100.0,
+        'is_catch_weight': True,
+        'tolerance_pct': 150.0,  # Invalid: > 100
+    }
+    resp = client.post('/api/T0003I/', json=payload)
+    assert resp.status_code == 422
+
+
+def test_t0003_create_product_negative_nominal_weight(cursor):
+    payload = {
+        'name': 'Negative Weight Product',
+        'sku': 'NEG-WT-1',
+        'price': 100.0,
+        'is_catch_weight': True,
+        'nominal_weight': -5.0,  # Invalid: < 0
+    }
+    resp = client.post('/api/T0003I/', json=payload)
+    assert resp.status_code == 422
+
+
+def test_t0007_create_product_uom_invalid_tolerance(cursor):
+    payload = {
+        'product_id': 101,
+        'base_uom_id': 1,
+        'is_catch_weight': True,
+        'tolerance_pct': -10.0,  # Invalid: < 0
+    }
+    resp = client.post('/api/T0007I/', json=payload)
+    assert resp.status_code == 422
+
+

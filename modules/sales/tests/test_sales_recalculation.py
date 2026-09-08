@@ -407,11 +407,7 @@ class TestSalesOrderDeliveryAndInvoicing:
             'status': 'Shipped',
             'order_date': date(2026, 8, 23),
         }
-        self.mock_order_repo.get.side_effect = [
-            order_data,  # for status check
-            order_data,  # for recalculation
-            dict(order_data, subtotal=1176.0, grand_total=1176.0),  # after recalculation in _create_invoice
-        ]
+        self.mock_order_repo.get.return_value = order_data
         self.mock_line_repo.list.return_value = [
             {
                 'id': 201,
@@ -550,11 +546,7 @@ class TestSalesOrderDeliveryAndInvoicing:
             'status': 'Shipped',
             'order_date': date(2026, 8, 1),
         }
-        self.mock_order_repo.get.side_effect = [
-            order_data,
-            order_data,
-            order_data,
-        ]
+        self.mock_order_repo.get.return_value = order_data
         self.mock_line_repo.list.return_value = []
         self.mock_pl_repo.list.return_value = []
         self.mock_customer_repo.get.return_value = {
@@ -612,11 +604,7 @@ class TestSalesOrderDeliveryAndInvoicing:
             'status': 'Shipped',
             'order_date': date(2026, 8, 15),
         }
-        self.mock_order_repo.get.side_effect = [
-            order_data,
-            order_data,
-            order_data,
-        ]
+        self.mock_order_repo.get.return_value = order_data
         self.mock_line_repo.list.return_value = []
         self.mock_pl_repo.list.return_value = []
         self.mock_customer_repo.get.return_value = {
@@ -685,7 +673,7 @@ class TestSalesOrderControllerEndpoints:
 
         result = T0012I.preview_order_catch_weight_recalculation(id=100)
         assert result['weight_adjustment_amount'] == 60.0
-        mock_svc.recalculate_order_catch_weight.assert_called_once_with(100)
+        mock_svc.recalculate_order_catch_weight.assert_called_once_with(100, preview=True)
 
     def test_recalculate_not_found_raises_404(self, monkeypatch):
         mock_svc = MagicMock()
