@@ -457,3 +457,184 @@ class TestToolRegistrationAndRegistryIntegration:
         res = call_tool("list_edi_partners", {"is_active": True}, user=user_context)
         assert len(res) == 1
         assert res[0]["partner_name"] == "Carrefour"
+
+
+class TestIntegrationsMultiTenantIsolation:
+    """Comprehensive tests verifying tenant boundary isolation across all EDI operations."""
+
+    def test_partner_crud_isolation_between_tenants(self, mock_partner_svc):
+        register_tools()
+        captured_tenants = []
+
+        def spy_list_partners(*args, **kwargs):
+            from modules.core.context import get_current_tenant
+            t = get_current_tenant()
+            captured_tenants.append(t)
+            return [{"id": 1, "partner_code": f"PARTNER-T{t}", "business_id": t}]
+
+        mock_partner_svc.list.side_effect = spy_list_partners
+
+        # Call with Tenant 101
+        res_101 = call_tool("list_edi_partners", {}, user={"id": 1, "business_id": 101})
+        assert res_101[0]["business_id"] == 101
+
+        # Call with Tenant 202
+        res_202 = call_tool("list_edi_partners", {}, user={"id": 2, "business_id": 202})
+        assert res_202[0]["business_id"] == 202
+
+        assert captured_tenants == [101, 202]
+
+    def test_ingest_edi_document_tenant_context_propagation(self, mock_edi_850_svc):
+        register_tools()
+        captured_tenants = []
+
+        def spy_ingest(*args, **kwargs):
+            from modules.core.context import get_current_tenant
+            t = get_current_tenant()
+            captured_tenants.append(t)
+            return EdiIngestResult(
+                transaction_id=100,
+                transaction_number=f"TXN-T{t}",
+                status="PROCESSED",
+                standard="ANSI_X12",
+                document_type="850",
+                sales_order_number=f"SO-T{t}",
+                tenant_id=t,
+            )
+
+        mock_edi_850_svc.ingest_inbound_order.side_effect = spy_ingest
+
+        res = call_tool(
+            "ingest_edi_document",
+            {"raw_payload": "ISA*00*...~ST*850*0001~SE*3*0001~IEA*1*1~"},
+            user={"id": 5, "business_id": 303},
+        )
+        assert res["transaction_id"] == 100
+        assert captured_tenants == [303]
+
+    def test_reprocess_edi_transaction_tenant_isolation(self, mock_edi_850_svc):
+        register_tools()
+        captured_tenants = []
+
+        def spy_reprocess(*args, **kwargs):
+            from modules.core.context import get_current_tenant
+            t = get_current_tenant()
+            captured_tenants.append(t)
+            return EdiIngestResult(
+                transaction_id=kwargs.get("transaction_id", 0),
+                transaction_number="TXN-42",
+                status="PROCESSED",
+                standard="ANSI_X12",
+                document_type="850",
+                sales_order_number="SO-REPROCESSED",
+            )
+
+        mock_edi_850_svc.reprocess_transaction.side_effect = spy_reprocess
+
+        res = call_tool(
+            "reprocess_edi_transaction",
+            {"id": 42, "force_confirm": True},
+            user={"id": 10, "business_id": 404},
+        )
+        assert res["transaction_id"] == 42
+        assert captured_tenants == [404]
+
+    def test_generate_edi_asn_tenant_isolation(self, mock_edi_856_svc):
+        register_tools()
+        captured_tenants = []
+
+        def spy_asn(*args, **kwargs):
+            from modules.core.context import get_current_tenant
+            t = get_current_tenant()
+            captured_tenants.append(t)
+            return EdiAsnGenerateResponse(
+                transaction_id=500,
+                transaction_number=f"ASN-T{t}",
+                delivery_id=kwargs.get("delivery_id", 0),
+                control_number="000000001",
+                standard="ANSI_X12",
+                document_type="856",
+                sscc_pallets_count=1,
+                sscc_barcodes=["000123456700000018"],
+                edi_payload="ISA*...~",
+            )
+
+        mock_edi_856_svc.generate_asn_for_delivery.side_effect = spy_asn
+
+        res = call_tool(
+            "generate_edi_asn",
+            {"delivery_id": 88, "carrier_name": "DHL"},
+            user={"id": 12, "business_id": 505},
+        )
+        assert res["transaction_id"] == 500
+        assert res["delivery_id"] == 88
+        assert captured_tenants == [505]
+
+    def test_sync_supplier_catalog_tenant_isolation(self, mock_edi_catalog_svc):
+        register_tools()
+        captured_tenants = []
+
+        def spy_catalog(*args, **kwargs):
+            from modules.core.context import get_current_tenant
+            t = get_current_tenant()
+            captured_tenants.append(t)
+            return EdiCatalogSyncResponse(
+                partner_id=kwargs.get("partner_id", 0),
+                catalog_code=kwargs.get("catalog_code", ""),
+                total_items=5,
+                matched_items=5,
+                unmatched_items=0,
+                price_updated_items=1,
+                sync_status="SYNCED",
+            )
+
+        mock_edi_catalog_svc.sync_catalog.side_effect = spy_catalog
+
+        res = call_tool(
+            "sync_supplier_catalog",
+            {"partner_id": 3, "catalog_code": "CAT-2026", "items": [{"buyer_sku": "SKU-1"}]},
+            user={"id": 15, "business_id": 606},
+        )
+        assert res["sync_status"] == "SYNCED"
+        assert captured_tenants == [606]
+
+
+class TestIntegrationsMcpJsonRpc:
+    """Tests verifying JSON-RPC stdio protocol execution with integrations_mcp."""
+
+    def test_jsonrpc_tools_list_contains_integrations_tools(self):
+        import io
+        import json
+        import sys
+        from packages.mcp.server import McpServer
+        from packages.mcp.stdio import run_stdio
+
+        register_tools()
+        server = McpServer(name="integrations-test", version="1.0")
+
+        req = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/list",
+            "params": {},
+        }
+        stdin = io.StringIO(json.dumps(req) + "\n")
+        stdout = io.StringIO()
+
+        old_stdin, old_stdout = sys.stdin, sys.stdout
+        sys.stdin, sys.stdout = stdin, stdout
+        try:
+            run_stdio(server, user={"id": 1, "business_id": 777})
+        finally:
+            sys.stdin, sys.stdout = old_stdin, old_stdout
+
+        lines = [json.loads(line) for line in stdout.getvalue().strip().split("\n") if line.strip()]
+        assert len(lines) == 1
+        tools = lines[0]["result"]["tools"]
+        tool_names = [t["name"] for t in tools]
+        assert "list_edi_partners" in tool_names
+        assert "ingest_edi_document" in tool_names
+        assert "generate_edi_asn" in tool_names
+        assert "transmit_edi_invoice" in tool_names
+        assert "sync_supplier_catalog" in tool_names
+
