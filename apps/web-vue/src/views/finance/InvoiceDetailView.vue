@@ -22,6 +22,14 @@
         </div>
         <div class="flex gap-2 flex-wrap items-center">
           <button
+            class="btn-outline"
+            @click="downloadFiscalPdf"
+            :title="t('download-fiscal-pdf', 'Download Bilingual Fiscal PDF')"
+          >
+            <span class="material-symbols-outlined icon-xs">picture_as_pdf</span>
+            {{ t('fiscal-pdf', 'Fiscal PDF') }}
+          </button>
+          <button
             v-if="invoice.sales_order_id && invoice.status !== 'Paid'"
             class="btn-outline btn-cw"
             @click="syncWithOrder"
@@ -402,7 +410,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { api } from '../../api/client.js'
+import { api, CONFIG } from '../../api/client.js'
 import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
 import SkeletonCard from '../../components/SkeletonCard.vue'
@@ -675,6 +683,13 @@ async function syncWithOrder() {
   } finally {
     syncing.value = false
   }
+}
+
+function downloadFiscalPdf() {
+  if (!invoice.value?.id) return
+  const token = localStorage.getItem('nova_token')
+  const base = CONFIG.apiBase || ''
+  window.open(`${base}/api/T0090I/${invoice.value.id}/fiscal-pdf`, '_blank')
 }
 
 async function savePayment() {
