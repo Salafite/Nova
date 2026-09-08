@@ -656,93 +656,455 @@
       </div>
     </div>
 
-    <!-- Create / Edit RMA Modal -->
+    <!-- Comprehensive RMA Creation & Editing Modal (Multi-line, Batch Selector, Unit Price, & Photo Uploader) -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal-content">
+      <div class="modal-content modal-xl">
+        <!-- Header -->
         <div class="modal-header">
           <div class="modal-title-wrap">
-            <span class="material-symbols-outlined modal-header-icon">edit_document</span>
+            <span class="material-symbols-outlined modal-header-icon text-primary">assignment_return</span>
             <div>
               <h3>{{ editing ? t('edit-preturn', 'Edit Purchase Return (RMA)') : t('new-preturn', 'New Purchase Return (RMA)') }}</h3>
-              <p class="modal-subtitle">{{ t('rma-form-sub', 'Log supplier return details for dock-side or warehouse inspection') }}</p>
+              <p class="modal-subtitle">{{ t('rma-form-sub', 'Itemized return authorization, supplier debit claim, batch quarantine & inspection photos') }}</p>
             </div>
           </div>
           <button class="btn-icon" @click="closeModal" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
         </div>
 
         <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ t('return-number', 'RMA / Return #') }}</label>
+          <!-- Section 1: Header Information & Reference Documents -->
+          <div class="form-section-card mb-6">
+            <div class="form-section-title">
+              <span class="material-symbols-outlined section-icon">description</span>
+              <span>{{ t('rma-header-info', '1. Return Header & References') }}</span>
+            </div>
+
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label>{{ t('return-number', 'RMA / Return #') }}</label>
+                <input
+                  type="text"
+                  v-model="form.return_number"
+                  class="form-input font-mono"
+                  maxlength="30"
+                  :placeholder="t('auto-generated-if-blank', 'Auto-generated if blank')"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>{{ t('supplier', 'Supplier') }} <span class="required">*</span></label>
+                <select v-model="form.supplier_id" required class="form-input" @change="onSupplierChange">
+                  <option value="">-- {{ t('select-supplier', 'Select Supplier') }} --</option>
+                  <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name || s.company_name }} (#{{ s.id }})</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>{{ t('purchase-order', 'Source Purchase Order') }}</label>
+                <select v-model="form.purchase_order_id" class="form-input">
+                  <option value="">-- {{ t('none-standalone', 'None / Standalone') }} --</option>
+                  <option v-for="o in filteredOrders" :key="o.id" :value="o.id">
+                    {{ o.order_number || ('PO #' + o.id) }} ({{ supplierName(o.supplier_id) }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>{{ t('goods-receipt', 'Goods Receipt (GRN)') }}</label>
+                <div class="grn-select-wrap">
+                  <select v-model="form.goods_receipt_id" class="form-input" @change="onGrnChange">
+                    <option value="">-- {{ t('none', 'None') }} --</option>
+                    <option v-for="g in filteredGoodsReceipts" :key="g.id" :value="g.id">
+                      GRN #{{ g.id }} - {{ g.receipt_number || g.receipt_date || '' }}
+                    </option>
+                  </select>
+                  <button
+                    v-if="form.goods_receipt_id"
+                    type="button"
+                    class="btn-sm btn-outline btn-import-grn"
+                    @click="importLinesFromGRN(form.goods_receipt_id)"
+                    :title="t('import-grn-items', 'Import all items from this Goods Receipt')"
+                  >
+                    <span class="material-symbols-outlined icon-xs">download</span> {{ t('import-grn', 'Import GRN') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid-3 mt-3">
+              <div class="form-group">
+                <label>{{ t('return-date', 'Return Date') }} <span class="required">*</span></label>
+                <input type="date" v-model="form.return_date" required class="form-input font-mono" />
+              </div>
+
+              <div class="form-group">
+                <label>{{ t('rejection-reason', 'Overall Reason / Summary') }}</label>
+                <input
+                  type="text"
+                  v-model="form.reason"
+                  class="form-input"
+                  :placeholder="t('reason-placeholder', 'e.g. Temperature excursion during transit, damaged pallets')"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>{{ t('claim-amount-preview', 'Calculated Claim Total ($)') }}</label>
+                <div class="calculated-total-box font-mono">
+                  <span class="total-currency">$</span>
+                  <span class="total-val">{{ totalLinesAmount.toFixed(2) }}</span>
+                  <span class="total-badge">{{ form.lines.length }} {{ t('lines-unit', 'lines') }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label>{{ t('notes', 'Inspection Notes & Driver / Dock Observations') }}</label>
+              <textarea
+                v-model="form.notes"
+                class="form-input"
+                rows="2"
+                :placeholder="t('notes-placeholder', 'Additional notes regarding dock inspection, supplier notification, carrier bill of lading, or disposal...')"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Section 2: Multi-line Item Entry & Batch Selector -->
+          <div class="form-section-card mb-6">
+            <div class="lines-section-header">
+              <div class="form-section-title">
+                <span class="material-symbols-outlined section-icon">list_alt</span>
+                <span>{{ t('itemized-return-lines', '2. Itemized Return Lines & Batches') }}</span>
+                <span class="badge badge-subtle">{{ form.lines.length }} {{ t('items', 'items') }}</span>
+              </div>
+              <div class="lines-actions">
+                <button
+                  type="button"
+                  class="btn-outline btn-sm"
+                  @click="generateAllBatches"
+                  :title="t('gen-all-batches-title', 'Auto-generate batch/lot numbers for lines missing one')"
+                >
+                  <span class="material-symbols-outlined icon-xs">qr_code_2</span> {{ t('auto-batches', 'Auto Batch') }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-primary btn-sm"
+                  @click="addLine"
+                >
+                  <span class="material-symbols-outlined icon-xs">add</span> {{ t('add-return-item', 'Add Return Item') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Empty lines state -->
+            <div v-if="!form.lines.length" class="empty-lines-box">
+              <span class="material-symbols-outlined empty-lines-icon">playlist_add</span>
+              <p>{{ t('no-lines-in-rma', 'No items added to this return authorization yet.') }}</p>
+              <div class="flex gap-2 justify-center mt-2">
+                <button type="button" class="btn-primary btn-sm" @click="addLine">
+                  <span class="material-symbols-outlined icon-xs">add</span> {{ t('add-line', 'Add Item') }}
+                </button>
+                <button
+                  v-if="form.goods_receipt_id"
+                  type="button"
+                  class="btn-outline btn-sm"
+                  @click="importLinesFromGRN(form.goods_receipt_id)"
+                >
+                  <span class="material-symbols-outlined icon-xs">download</span> {{ t('import-from-grn', 'Import from Selected GRN') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Lines Table Editor -->
+            <div v-else class="lines-editor-wrap">
+              <table class="lines-editor-table">
+                <thead>
+                  <tr>
+                    <th class="w-8">#</th>
+                    <th style="width: 22%">{{ t('product', 'Product') }} <span class="required">*</span></th>
+                    <th style="width: 18%">{{ t('batch-lot', 'Batch / Lot #') }}</th>
+                    <th style="width: 11%">{{ t('exp-date', 'Expiry Date') }}</th>
+                    <th style="width: 9%" class="col-num">{{ t('qty', 'Qty') }} <span class="required">*</span></th>
+                    <th style="width: 10%" class="col-num">{{ t('unit-price', 'Unit Price ($)') }}</th>
+                    <th style="width: 10%" class="col-num">{{ t('line-total', 'Total ($)') }}</th>
+                    <th style="width: 14%">{{ t('reason-code', 'Reason Code') }}</th>
+                    <th style="width: 12%">{{ t('disposition', 'Disposition') }}</th>
+                    <th class="w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(line, idx) in form.lines" :key="line.id || idx" class="line-row">
+                    <td class="cell-mono text-center">{{ idx + 1 }}</td>
+
+                    <!-- Product Selector -->
+                    <td>
+                      <div class="product-input-cell">
+                        <select
+                          v-model="line.product_id"
+                          class="form-input form-input-sm"
+                          @change="onProductSelect(line)"
+                        >
+                          <option value="">-- {{ t('select-product', 'Select Product') }} --</option>
+                          <option v-for="p in products" :key="p.id" :value="p.id">
+                            {{ p.name || p.sku }} ({{ p.sku ? p.sku + ' - ' : '' }}#{{ p.id }})
+                          </option>
+                        </select>
+                        <input
+                          v-if="!line.product_id"
+                          type="text"
+                          v-model="line.product_name"
+                          class="form-input form-input-xs mt-1"
+                          :placeholder="t('or-custom-product-name', 'Or type custom item name...')"
+                        />
+                      </div>
+                    </td>
+
+                    <!-- Batch / Lot Selector -->
+                    <td>
+                      <div class="batch-input-cell">
+                        <div class="batch-flex-row">
+                          <input
+                            type="text"
+                            v-model="line.batch_number"
+                            class="form-input form-input-sm font-mono batch-text-input"
+                            :placeholder="t('lot-batch-placeholder', 'e.g. LOT-2026-001')"
+                            @change="onManualBatchInput(line)"
+                          />
+                          <button
+                            type="button"
+                            class="btn-gen-batch"
+                            @click="generateBatchForLine(line, idx)"
+                            :title="t('auto-gen-batch', 'Auto-generate lot number')"
+                          >
+                            <span class="material-symbols-outlined icon-xs">autorenew</span>
+                          </button>
+                        </div>
+                        <!-- Quick batch suggestion dropdown if product has registered batches -->
+                        <div v-if="getBatchesForProduct(line.product_id).length" class="batch-suggestions">
+                          <select
+                            class="form-input form-input-xs batch-quick-select"
+                            @change="e => onBatchOptionSelect(line, e.target.value)"
+                          >
+                            <option value="">-- {{ t('pick-registered-batch', 'Pick from inventory batches') }} --</option>
+                            <option
+                              v-for="b in getBatchesForProduct(line.product_id)"
+                              :key="b.id"
+                              :value="b.id"
+                            >
+                              {{ b.batch_number }} (Qty: {{ b.quantity || 0 }}, Exp: {{ b.expiry_date || 'N/A' }})
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Expiration Date -->
+                    <td>
+                      <input
+                        type="date"
+                        v-model="line.expiry_date"
+                        class="form-input form-input-sm font-mono"
+                        :title="t('expiry-date', 'Expiration Date')"
+                      />
+                    </td>
+
+                    <!-- Quantity -->
+                    <td>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0.01"
+                        v-model.number="line.qty"
+                        class="form-input form-input-sm col-num font-mono font-bold"
+                        placeholder="1"
+                        required
+                      />
+                    </td>
+
+                    <!-- Unit Price ($) -->
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        v-model.number="line.unit_price"
+                        class="form-input form-input-sm col-num font-mono"
+                        placeholder="0.00"
+                      />
+                    </td>
+
+                    <!-- Line Total ($) -->
+                    <td class="col-num font-mono font-bold line-total-cell">
+                      ${{ ((Number(line.qty) || 0) * (Number(line.unit_price) || 0)).toFixed(2) }}
+                    </td>
+
+                    <!-- Reason Code -->
+                    <td>
+                      <select v-model="line.reason_code" class="form-input form-input-sm reason-select">
+                        <option v-for="rc in REASON_CODES" :key="rc.value" :value="rc.value">
+                          {{ rc.label }}
+                        </option>
+                      </select>
+                    </td>
+
+                    <!-- Disposition -->
+                    <td>
+                      <select v-model="line.disposition" class="form-input form-input-sm disposition-select">
+                        <option v-for="disp in DISPOSITIONS" :key="disp.value" :value="disp.value">
+                          {{ disp.label }}
+                        </option>
+                      </select>
+                    </td>
+
+                    <!-- Remove Button -->
+                    <td class="text-center">
+                      <button
+                        type="button"
+                        class="btn-icon btn-icon-danger"
+                        @click="removeLine(idx)"
+                        :title="t('remove-line', 'Remove line item')"
+                      >
+                        <span class="material-symbols-outlined">delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr class="editor-summary-row">
+                    <td colspan="4" class="text-right font-bold text-secondary">
+                      {{ t('total-items-qty', 'Total Items & Claim:') }}
+                    </td>
+                    <td class="col-num font-mono font-bold">
+                      {{ totalLinesQty }}
+                    </td>
+                    <td></td>
+                    <td class="col-num font-mono font-bold text-primary highlight-claim">
+                      ${{ totalLinesAmount.toFixed(2) }}
+                    </td>
+                    <td colspan="3"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section 3: Inspection Photos & Attachment Uploader -->
+          <div class="form-section-card">
+            <div class="photos-section-header">
+              <div class="form-section-title">
+                <span class="material-symbols-outlined section-icon">photo_camera</span>
+                <span>{{ t('inspection-photos-title', '3. Inspection Photos & Evidence') }}</span>
+                <span class="badge badge-subtle">{{ (form.attachments || []).length }} {{ t('photos', 'photos') }}</span>
+              </div>
+              <div class="flex gap-2">
+                <label class="btn-outline btn-sm file-upload-btn">
+                  <span class="material-symbols-outlined icon-xs">upload_file</span>
+                  {{ t('upload-photos', 'Upload Image Files') }}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    class="hidden-file-input"
+                    @change="handleFileUpload"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <p class="section-desc mb-3">
+              {{ t('photos-instructions', 'Upload clear inspection photos of damaged cartons, broken seals, expired date stamps, or temperature logs for supplier recovery proof.') }}
+            </p>
+
+            <!-- URL direct entry bar -->
+            <div class="url-input-bar mb-4">
               <input
                 type="text"
-                v-model="form.return_number"
-                class="form-input font-mono"
-                maxlength="30"
-                :placeholder="t('auto-generated-if-blank', 'Auto-generated if blank')"
+                v-model="newPhotoUrl"
+                class="form-input form-input-sm flex-1"
+                :placeholder="t('paste-photo-url', 'Or paste image URL (https://...)...')"
+                @keydown.enter.prevent="addPhotoByUrl"
               />
+              <input
+                type="text"
+                v-model="newPhotoDesc"
+                class="form-input form-input-sm photo-desc-input"
+                :placeholder="t('caption-placeholder', 'Caption (e.g. Broken pallet dock 4)')"
+                @keydown.enter.prevent="addPhotoByUrl"
+              />
+              <button
+                type="button"
+                class="btn-outline btn-sm"
+                :disabled="!newPhotoUrl.trim()"
+                @click="addPhotoByUrl"
+              >
+                <span class="material-symbols-outlined icon-xs">add_link</span> {{ t('add-url', 'Add URL') }}
+              </button>
             </div>
-            <div class="form-group">
-              <label>{{ t('supplier', 'Supplier') }} <span class="required">*</span></label>
-              <select v-model="form.supplier_id" required class="form-input">
-                <option value="">-- {{ t('select-supplier', 'Select Supplier') }} --</option>
-                <option v-for="s in suppliers" :key="s.id" :value="s.id">{{ s.name }} (#{{ s.id }})</option>
-              </select>
+
+            <!-- Uploaded Photos Grid Preview -->
+            <div v-if="(form.attachments || []).length" class="photos-upload-grid">
+              <div
+                v-for="(att, pIdx) in form.attachments"
+                :key="att.id || pIdx"
+                class="photo-edit-card"
+              >
+                <div class="photo-preview-wrap">
+                  <img
+                    v-if="att.url || att.thumbnail_url || att.data_base64"
+                    :src="att.url || att.thumbnail_url || (att.data_base64 ? `data:${att.content_type || 'image/jpeg'};base64,${att.data_base64}` : '')"
+                    :alt="att.filename || 'Evidence Photo'"
+                    class="photo-thumb-img"
+                  />
+                  <div v-else class="photo-no-preview">
+                    <span class="material-symbols-outlined">broken_image</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="photo-remove-btn"
+                    @click="removeAttachment(pIdx)"
+                    :title="t('remove-photo', 'Remove photo')"
+                  >
+                    <span class="material-symbols-outlined icon-xs">close</span>
+                  </button>
+                </div>
+                <div class="photo-info-wrap">
+                  <span class="photo-filename" :title="att.filename">{{ att.filename || ('Photo #' + (pIdx + 1)) }}</span>
+                  <input
+                    type="text"
+                    v-model="att.description"
+                    class="form-input form-input-xs photo-caption-input"
+                    :placeholder="t('photo-notes', 'Notes / observation...')"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="no-photos-box">
+              <span class="material-symbols-outlined icon-muted">add_photo_alternate</span>
+              <p class="text-xs text-muted">{{ t('no-photos-yet', 'No inspection photos attached yet.') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="modal-footer">
+          <div class="modal-footer-summary">
+            <div class="claim-summary-pill">
+              <span class="summary-pill-label">{{ t('total-claim-summary', 'Total Claim Recovery:') }}</span>
+              <strong class="summary-pill-val font-mono">${{ totalLinesAmount.toFixed(2) }}</strong>
+              <span class="summary-pill-sub">({{ form.lines.length }} {{ t('items', 'items') }})</span>
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ t('purchase-order', 'Purchase Order') }}</label>
-              <select v-model="form.purchase_order_id" class="form-input">
-                <option value="">-- {{ t('none-standalone', 'None / Standalone') }} --</option>
-                <option v-for="o in orders" :key="o.id" :value="o.id">{{ o.order_number }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>{{ t('goods-receipt', 'Goods Receipt (GRN)') }}</label>
-              <select v-model="form.goods_receipt_id" class="form-input">
-                <option value="">-- {{ t('none', 'None') }} --</option>
-                <option v-for="g in goodsReceipts" :key="g.id" :value="g.id">GRN #{{ g.id }} - {{ g.receipt_number || g.date || '' }}</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>{{ t('return-date', 'Return Date') }} <span class="required">*</span></label>
-              <input type="date" v-model="form.return_date" required class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>{{ t('total-amount', 'Claim Amount ($)') }}</label>
-              <input type="number" step="0.01" min="0" v-model.number="form.total_amount" class="form-input font-mono" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>{{ t('reason', 'Rejection / Return Reason') }}</label>
-            <input
-              type="text"
-              v-model="form.reason"
-              class="form-input"
-              :placeholder="t('reason-placeholder', 'e.g. Damaged crates during unloading, temperature excursion')"
-            />
-          </div>
-
-          <div class="form-group">
-            <label>{{ t('notes', 'Inspection Notes & Observations') }}</label>
-            <textarea
-              v-model="form.notes"
-              class="form-input"
-              rows="3"
-              :placeholder="t('notes-placeholder', 'Additional notes regarding driver departure, credit agreement, or lot disposition...')"
-            ></textarea>
-          </div>
-
-          <div class="modal-actions">
+          <div class="modal-footer-btns">
             <button class="btn-outline" @click="closeModal">{{ t('cancel', 'Cancel') }}</button>
-            <button class="btn-primary" :disabled="saving || !form.supplier_id" @click="saveItem">
-              {{ saving ? t('saving', 'Saving...') : t('save', 'Save Return') }}
+            <button
+              class="btn-primary"
+              :disabled="saving || !form.supplier_id || !form.lines.length"
+              @click="saveItem"
+            >
+              <span v-if="saving" class="material-symbols-outlined spinner">progress_activity</span>
+              <span v-else class="material-symbols-outlined">save</span>
+              {{ saving ? t('saving', 'Saving...') : (editing ? t('update-rma', 'Update RMA') : t('create-rma', 'Save & Create RMA')) }}
             </button>
           </div>
         </div>
@@ -772,12 +1134,34 @@ import ErrorState from '../../components/ErrorState.vue'
 const { show: toast } = useToast()
 const { t, dir } = useI18n()
 
+// Predefined RMA Reason Codes with friendly labels
+const REASON_CODES = [
+  { value: 'damaged', label: 'Damaged in Transit / Unloading', color: 'pill-danger' },
+  { value: 'expired', label: 'Expired / Short-Dated Stock', color: 'pill-warning' },
+  { value: 'rejected', label: 'Receiving Dock Rejection', color: 'pill-danger' },
+  { value: 'wrong_item', label: 'Wrong Item / Specification', color: 'pill-info' },
+  { value: 'qc_failed', label: 'QC Inspection Failed', color: 'pill-danger' },
+  { value: 'defective', label: 'Defective / Spoiled Quality', color: 'pill-warning' },
+  { value: 'over_delivery', label: 'Over Delivery / Excess', color: 'pill-neutral' },
+  { value: 'other', label: 'Other Rejection Reason', color: 'pill-neutral' },
+]
+
+const DISPOSITIONS = [
+  { value: 'Return to Vendor', label: 'Return to Vendor' },
+  { value: 'Scrap', label: 'Scrap & Write-Off' },
+  { value: 'Supplier Credit', label: 'Supplier Credit Only' },
+  { value: 'Replacement', label: 'Request Replacement' },
+]
+
 const loading = ref(true)
 const error = ref('')
 const items = ref([])
 const suppliers = ref([])
 const orders = ref([])
 const goodsReceipts = ref([])
+const goodsReceiptLines = ref([])
+const products = ref([])
+const batches = ref([])
 
 // Filters & Tabs
 const activeTab = ref('all')
@@ -788,6 +1172,7 @@ const showModal = ref(false)
 const editing = ref(false)
 const editId = ref(null)
 const saving = ref(false)
+const deletedLineIds = ref([])
 
 const showDetailModal = ref(false)
 const loadingDetail = ref(false)
@@ -808,7 +1193,11 @@ const cancelReason = ref('')
 
 const confirmTarget = ref(null)
 
-// Form data for RMA header
+// Direct photo URL input
+const newPhotoUrl = ref('')
+const newPhotoDesc = ref('')
+
+// Form data for comprehensive RMA header & lines
 const form = ref({
   return_number: '',
   supplier_id: '',
@@ -819,6 +1208,8 @@ const form = ref({
   total_amount: 0,
   reason: '',
   notes: '',
+  lines: [],
+  attachments: [],
 })
 
 // KPI Computations
@@ -836,11 +1227,10 @@ const stats = computed(() => {
   return { total, draft, approved, returned, cancelled, totalClaimValue }
 })
 
-// Filtered items list
+// Filtered items list for main table
 const filteredItems = computed(() => {
   let list = items.value || []
 
-  // Tab filter
   if (activeTab.value !== 'all') {
     if (activeTab.value === 'Returned') {
       list = list.filter(i => i.status === 'Returned' || i.status === 'Received')
@@ -849,7 +1239,6 @@ const filteredItems = computed(() => {
     }
   }
 
-  // Search filter
   const q = searchQuery.value.trim().toLowerCase()
   if (q) {
     list = list.filter(i => {
@@ -864,6 +1253,40 @@ const filteredItems = computed(() => {
   }
 
   return list
+})
+
+// Filter POs by selected supplier in modal
+const filteredOrders = computed(() => {
+  if (!form.value.supplier_id) return orders.value || []
+  return (orders.value || []).filter(o => o.supplier_id === Number(form.value.supplier_id))
+})
+
+// Filter Goods Receipts by selected supplier or selected PO
+const filteredGoodsReceipts = computed(() => {
+  let list = goodsReceipts.value || []
+  if (form.value.supplier_id) {
+    list = list.filter(g => !g.supplier_id || g.supplier_id === Number(form.value.supplier_id))
+  }
+  if (form.value.purchase_order_id) {
+    list = list.filter(g => !g.purchase_order_id || g.purchase_order_id === Number(form.value.purchase_order_id))
+  }
+  return list
+})
+
+// Dynamic total claim amount calculated from lines sum
+const totalLinesAmount = computed(() => {
+  if (!form.value.lines || !form.value.lines.length) return 0
+  return form.value.lines.reduce((sum, line) => {
+    const qty = Number(line.qty) || 0
+    const price = Number(line.unit_price) || 0
+    return sum + (qty * price)
+  }, 0)
+})
+
+// Total quantity summed across lines
+const totalLinesQty = computed(() => {
+  if (!form.value.lines || !form.value.lines.length) return 0
+  return form.value.lines.reduce((sum, line) => sum + (Number(line.qty) || 0), 0)
 })
 
 function statusBadge(status) {
@@ -897,6 +1320,7 @@ function reasonCodeClass(code) {
     qc_failed: 'pill-danger',
     defective: 'pill-warning',
     over_delivery: 'pill-neutral',
+    other: 'pill-neutral',
   }
   return map[code] || 'pill-neutral'
 }
@@ -918,13 +1342,13 @@ function formatReasonCode(code) {
 function supplierName(id) {
   if (!id) return '-'
   const s = suppliers.value.find(x => x.id === id)
-  return s ? s.name : `Supplier #${id}`
+  return s ? (s.name || s.company_name) : `Supplier #${id}`
 }
 
 function poNumber(id) {
   if (!id) return '-'
   const o = orders.value.find(x => x.id === id)
-  return o ? o.order_number : `PO #${id}`
+  return o ? (o.order_number || `PO #${id}`) : `PO #${id}`
 }
 
 function today() {
@@ -949,20 +1373,31 @@ function formatDateTime(val) {
   }
 }
 
+function getBatchesForProduct(productId) {
+  if (!productId) return []
+  return (batches.value || []).filter(b => b.product_id === Number(productId))
+}
+
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    const [retRes, supRes, ordRes, grnRes] = await Promise.all([
+    const [retRes, supRes, ordRes, grnRes, grnLineRes, prodRes, batchRes] = await Promise.all([
       api.get('/T0081I/'),
-      api.get('/T0011I/'),
-      api.get('/T0014I/'),
+      api.get('/T0011I/').catch(() => api.get('/T0103I/').catch(() => ({ data: [] }))),
+      api.get('/T0014I/').catch(() => ({ data: [] })),
       api.get('/T0075I/').catch(() => ({ data: [] })),
+      api.get('/T0076I/').catch(() => ({ data: [] })),
+      api.get('/T0003I/').catch(() => ({ data: [] })),
+      api.get('/T0088I/').catch(() => ({ data: [] })),
     ])
     items.value = retRes.data || []
     suppliers.value = supRes.data || []
     orders.value = ordRes.data || []
     goodsReceipts.value = grnRes.data || []
+    goodsReceiptLines.value = grnLineRes.data || []
+    products.value = prodRes.data || []
+    batches.value = batchRes.data || []
   } catch {
     error.value = t('failed-load', 'Failed to load purchase returns data')
   } finally {
@@ -978,7 +1413,6 @@ async function viewDetails(item) {
     const res = await api.get(`/T0081I/${item.id}/details`)
     selectedDetail.value = res.data || item
   } catch {
-    // fallback to item
     selectedDetail.value = item
   } finally {
     loadingDetail.value = false
@@ -990,11 +1424,232 @@ function closeDetailModal() {
   selectedDetail.value = null
 }
 
+function onSupplierChange() {
+  // If selected PO does not belong to new supplier, reset it
+  if (form.value.purchase_order_id) {
+    const po = orders.value.find(o => o.id === Number(form.value.purchase_order_id))
+    if (po && form.value.supplier_id && po.supplier_id !== Number(form.value.supplier_id)) {
+      form.value.purchase_order_id = ''
+    }
+  }
+  // Reset GRN if supplier does not match
+  if (form.value.goods_receipt_id) {
+    const grn = goodsReceipts.value.find(g => g.id === Number(form.value.goods_receipt_id))
+    if (grn && form.value.supplier_id && grn.supplier_id && grn.supplier_id !== Number(form.value.supplier_id)) {
+      form.value.goods_receipt_id = ''
+    }
+  }
+}
+
+function onGrnChange() {
+  const grnId = form.value.goods_receipt_id
+  if (!grnId) return
+  const grn = goodsReceipts.value.find(g => g.id === Number(grnId))
+  if (grn) {
+    if (grn.supplier_id && !form.value.supplier_id) {
+      form.value.supplier_id = grn.supplier_id
+    }
+    if (grn.purchase_order_id && !form.value.purchase_order_id) {
+      form.value.purchase_order_id = grn.purchase_order_id
+    }
+  }
+}
+
+// 1-Click Import Line Items from Goods Receipt
+function importLinesFromGRN(grnId) {
+  if (!grnId) return
+  const grn = goodsReceipts.value.find(g => g.id === Number(grnId))
+  if (grn && grn.supplier_id) {
+    form.value.supplier_id = grn.supplier_id
+  }
+  if (grn && grn.purchase_order_id) {
+    form.value.purchase_order_id = grn.purchase_order_id
+  }
+
+  const matchingLines = (goodsReceiptLines.value || []).filter(l => l.receipt_id === Number(grnId))
+  if (!matchingLines.length) {
+    toast(t('no-grn-lines-found', 'No line items found for Goods Receipt #' + grnId), 'info')
+    return
+  }
+
+  const newLines = matchingLines.map(gl => {
+    const prod = products.value.find(p => p.id === gl.product_id)
+    const unitPrice = prod ? (prod.cost_price || prod.price || 0) : 0
+    return {
+      product_id: gl.product_id || '',
+      product_name: gl.product_name || (prod ? (prod.name || prod.sku) : `Product #${gl.product_id}`),
+      batch_number: gl.batch_number || '',
+      batch_id: null,
+      expiry_date: gl.expiry_date ? gl.expiry_date.slice(0, 10) : '',
+      qty: Number(gl.qty_received) || Number(gl.qty_ordered) || 1,
+      unit_price: Number(unitPrice) || 0,
+      reason_code: 'rejected',
+      disposition: 'Return to Vendor',
+      quarantine_status: 'Quarantine',
+    }
+  })
+
+  // Append or replace if only 1 empty line
+  if (form.value.lines.length === 1 && !form.value.lines[0].product_id && !form.value.lines[0].product_name) {
+    form.value.lines = newLines
+  } else {
+    form.value.lines = [...form.value.lines, ...newLines]
+  }
+
+  toast(t('imported-grn-lines-success', `Imported ${newLines.length} item(s) from GRN #${grnId}`), 'success')
+}
+
+function addLine() {
+  form.value.lines.push({
+    product_id: '',
+    product_name: '',
+    batch_number: '',
+    batch_id: null,
+    expiry_date: '',
+    qty: 1,
+    unit_price: 0,
+    reason_code: 'damaged',
+    disposition: 'Return to Vendor',
+    quarantine_status: 'Quarantine',
+  })
+}
+
+function removeLine(idx) {
+  const line = form.value.lines[idx]
+  if (line && line.id) {
+    deletedLineIds.value.push(line.id)
+  }
+  form.value.lines.splice(idx, 1)
+}
+
+function onProductSelect(line) {
+  if (!line.product_id) return
+  const p = products.value.find(x => x.id === Number(line.product_id))
+  if (p) {
+    line.product_name = p.name || p.sku || `Product #${p.id}`
+    if (!line.unit_price || line.unit_price === 0) {
+      line.unit_price = Number(p.cost_price || p.price || 0)
+    }
+  }
+
+  // Check if batches exist for this product and pre-fill if none set
+  const prodBatches = getBatchesForProduct(line.product_id)
+  if (prodBatches.length && !line.batch_number) {
+    const firstBatch = prodBatches[0]
+    line.batch_number = firstBatch.batch_number
+    line.batch_id = firstBatch.id
+    if (firstBatch.expiry_date) {
+      line.expiry_date = firstBatch.expiry_date.slice(0, 10)
+    }
+  }
+}
+
+function onBatchOptionSelect(line, batchId) {
+  if (!batchId) return
+  const b = batches.value.find(x => x.id === Number(batchId))
+  if (b) {
+    line.batch_id = b.id
+    line.batch_number = b.batch_number
+    if (b.expiry_date) {
+      line.expiry_date = b.expiry_date.slice(0, 10)
+    }
+    if (b.product_id && !line.product_id) {
+      line.product_id = b.product_id
+      onProductSelect(line)
+    }
+  }
+}
+
+function onManualBatchInput(line) {
+  if (!line.batch_number) {
+    line.batch_id = null
+    return
+  }
+  // Try to find matching registered batch
+  const matched = (batches.value || []).find(b => b.batch_number && b.batch_number.trim().toLowerCase() === line.batch_number.trim().toLowerCase())
+  if (matched) {
+    line.batch_id = matched.id
+    if (!line.expiry_date && matched.expiry_date) {
+      line.expiry_date = matched.expiry_date.slice(0, 10)
+    }
+  }
+}
+
+function generateBatchForLine(line, idx) {
+  const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const seq = String((idx !== undefined ? idx : form.value.lines.indexOf(line)) + 1).padStart(3, '0')
+  line.batch_number = `LOT-${d}-${seq}`
+  line.batch_id = null
+}
+
+function generateAllBatches() {
+  const d = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  form.value.lines.forEach((line, idx) => {
+    if (!line.batch_number || !line.batch_number.trim()) {
+      const seq = String(idx + 1).padStart(3, '0')
+      line.batch_number = `LOT-${d}-${seq}`
+      line.batch_id = null
+    }
+  })
+}
+
+// Inspection Photo Upload via File input (FileReader Base64)
+function handleFileUpload(e) {
+  const files = e.target?.files
+  if (!files || !files.length) return
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const result = event.target?.result
+      if (!result) return
+      const base64Data = result.split(',')[1] || result
+      form.value.attachments.push({
+        id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        filename: file.name,
+        content_type: file.type || 'image/jpeg',
+        size_bytes: file.size,
+        data_base64: base64Data,
+        description: '',
+      })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Reset file input
+  e.target.value = ''
+}
+
+function addPhotoByUrl() {
+  if (!newPhotoUrl.value.trim()) return
+  form.value.attachments.push({
+    id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    filename: newPhotoUrl.value.split('/').pop() || 'web_photo.jpg',
+    url: newPhotoUrl.value.trim(),
+    content_type: 'image/jpeg',
+    description: newPhotoDesc.value.trim() || '',
+  })
+  newPhotoUrl.value = ''
+  newPhotoDesc.value = ''
+}
+
+function removeAttachment(idx) {
+  form.value.attachments.splice(idx, 1)
+}
+
 function openAdd() {
   editing.value = false
   editId.value = null
+  deletedLineIds.value = []
+  newPhotoUrl.value = ''
+  newPhotoDesc.value = ''
+
+  const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const randSeq = Math.floor(100 + Math.random() * 900)
+
   form.value = {
-    return_number: '',
+    return_number: `RMA-${dateCode}-${randSeq}`,
     supplier_id: '',
     purchase_order_id: '',
     goods_receipt_id: '',
@@ -1003,24 +1658,108 @@ function openAdd() {
     total_amount: 0,
     reason: '',
     notes: '',
+    lines: [
+      {
+        product_id: '',
+        product_name: '',
+        batch_number: '',
+        batch_id: null,
+        expiry_date: '',
+        qty: 1,
+        unit_price: 0,
+        reason_code: 'damaged',
+        disposition: 'Return to Vendor',
+        quarantine_status: 'Quarantine',
+      }
+    ],
+    attachments: [],
   }
   showModal.value = true
 }
 
-function editItem(item) {
+async function editItem(item) {
   editing.value = true
   editId.value = item.id
-  form.value = {
-    return_number: item.return_number,
-    supplier_id: item.supplier_id,
-    purchase_order_id: item.purchase_order_id || '',
-    goods_receipt_id: item.goods_receipt_id || '',
-    return_date: item.return_date || today(),
-    status: item.status || 'Draft',
-    total_amount: item.total_amount || 0,
-    reason: item.reason || '',
-    notes: item.notes || '',
+  deletedLineIds.value = []
+  newPhotoUrl.value = ''
+  newPhotoDesc.value = ''
+
+  try {
+    // Load full details including existing line items and attachments
+    const res = await api.get(`/T0081I/${item.id}/details`)
+    const full = res.data || item
+
+    const loadedLines = (full.lines || []).map((l, idx) => ({
+      id: l.id,
+      product_id: l.product_id || '',
+      product_name: l.product_name || '',
+      batch_number: l.batch_number || '',
+      batch_id: l.batch_id || null,
+      expiry_date: l.expiry_date ? l.expiry_date.slice(0, 10) : '',
+      qty: Number(l.qty) || 1,
+      unit_price: Number(l.unit_price) || 0,
+      reason_code: l.reason_code || 'damaged',
+      disposition: l.disposition || 'Return to Vendor',
+      quarantine_status: l.quarantine_status || 'Quarantine',
+      line_number: l.line_number || idx + 1,
+    }))
+
+    form.value = {
+      return_number: full.return_number || item.return_number,
+      supplier_id: full.supplier_id || item.supplier_id,
+      purchase_order_id: full.purchase_order_id || item.purchase_order_id || '',
+      goods_receipt_id: full.goods_receipt_id || item.goods_receipt_id || '',
+      return_date: full.return_date || item.return_date || today(),
+      status: full.status || item.status || 'Draft',
+      total_amount: Number(full.total_amount) || Number(item.total_amount) || 0,
+      reason: full.reason || item.reason || '',
+      notes: full.notes || item.notes || '',
+      lines: loadedLines.length ? loadedLines : [
+        {
+          product_id: '',
+          product_name: '',
+          batch_number: '',
+          batch_id: null,
+          expiry_date: '',
+          qty: 1,
+          unit_price: 0,
+          reason_code: 'damaged',
+          disposition: 'Return to Vendor',
+          quarantine_status: 'Quarantine',
+        }
+      ],
+      attachments: Array.isArray(full.attachments) ? [...full.attachments] : [],
+    }
+  } catch {
+    // Fallback if details endpoint fails
+    form.value = {
+      return_number: item.return_number,
+      supplier_id: item.supplier_id,
+      purchase_order_id: item.purchase_order_id || '',
+      goods_receipt_id: item.goods_receipt_id || '',
+      return_date: item.return_date || today(),
+      status: item.status || 'Draft',
+      total_amount: item.total_amount || 0,
+      reason: item.reason || '',
+      notes: item.notes || '',
+      lines: [
+        {
+          product_id: '',
+          product_name: '',
+          batch_number: '',
+          batch_id: null,
+          expiry_date: '',
+          qty: 1,
+          unit_price: 0,
+          reason_code: 'damaged',
+          disposition: 'Return to Vendor',
+          quarantine_status: 'Quarantine',
+        }
+      ],
+      attachments: Array.isArray(item.attachments) ? [...item.attachments] : [],
+    }
   }
+
   showModal.value = true
 }
 
@@ -1029,26 +1768,100 @@ function closeModal() {
 }
 
 async function saveItem() {
+  if (!form.value.supplier_id) {
+    toast(t('supplier-required', 'Supplier is required'), 'error')
+    return
+  }
+
+  // Filter valid lines (must have product selected or product_name typed)
+  const validLines = (form.value.lines || []).filter(l => l.product_id || (l.product_name && l.product_name.trim()))
+  if (!validLines.length) {
+    toast(t('at-least-one-line-item', 'At least one line item is required for RMA authorization'), 'error')
+    return
+  }
+
   saving.value = true
   try {
-    const payload = {
-      ...form.value,
+    const finalTotal = totalLinesAmount.value
+
+    const headerPayload = {
+      return_number: form.value.return_number ? form.value.return_number.trim() : null,
       supplier_id: Number(form.value.supplier_id),
       purchase_order_id: form.value.purchase_order_id ? Number(form.value.purchase_order_id) : null,
       goods_receipt_id: form.value.goods_receipt_id ? Number(form.value.goods_receipt_id) : null,
-      total_amount: Number(form.value.total_amount) || 0,
-      notes: form.value.notes || null,
+      return_date: form.value.return_date || today(),
+      status: form.value.status || 'Draft',
+      total_amount: finalTotal,
       reason: form.value.reason || null,
-      return_number: form.value.return_number ? form.value.return_number.trim() : null,
+      notes: form.value.notes || null,
+      attachments: form.value.attachments || [],
     }
 
     if (editing.value) {
-      await api.put(`/T0081I/${editId.value}`, payload)
-      toast(t('rma-updated', 'RMA updated successfully'), 'success')
+      // 1. Update RMA Header
+      await api.put(`/T0081I/${editId.value}`, headerPayload)
+
+      // 2. Delete removed line items
+      for (const lineId of deletedLineIds.value) {
+        await api.delete(`/T0082I/${lineId}`).catch(() => {})
+      }
+
+      // 3. Update or create line items
+      for (let i = 0; i < validLines.length; i++) {
+        const l = validLines[i]
+        const linePayload = {
+          return_id: editId.value,
+          product_id: l.product_id ? Number(l.product_id) : null,
+          product_name: l.product_name || (products.value.find(p => p.id === Number(l.product_id))?.name || `Product #${l.product_id}`),
+          qty: Number(l.qty) || 1,
+          unit_price: Number(l.unit_price) || 0,
+          batch_number: l.batch_number ? l.batch_number.trim() : null,
+          batch_id: l.batch_id ? Number(l.batch_id) : null,
+          expiry_date: l.expiry_date || null,
+          reason_code: l.reason_code || 'damaged',
+          disposition: l.disposition || 'Return to Vendor',
+          quarantine_status: l.quarantine_status || 'Quarantine',
+          line_number: i + 1,
+        }
+
+        if (l.id) {
+          await api.put(`/T0082I/${l.id}`, linePayload)
+        } else {
+          await api.post('/T0082I/', linePayload)
+        }
+      }
+
+      toast(t('rma-updated', 'RMA updated successfully with all lines and attachments'), 'success')
     } else {
-      await api.post('/T0081I/', payload)
-      toast(t('rma-created', 'RMA created successfully'), 'success')
+      // Create new RMA
+      const res = await api.post('/T0081I/', headerPayload)
+      const newRmaId = res.data?.id
+
+      if (newRmaId && validLines.length) {
+        const linesPayload = validLines.map((l, i) => ({
+          return_id: newRmaId,
+          product_id: l.product_id ? Number(l.product_id) : null,
+          product_name: l.product_name || (products.value.find(p => p.id === Number(l.product_id))?.name || `Product #${l.product_id}`),
+          qty: Number(l.qty) || 1,
+          unit_price: Number(l.unit_price) || 0,
+          batch_number: l.batch_number ? l.batch_number.trim() : null,
+          batch_id: l.batch_id ? Number(l.batch_id) : null,
+          expiry_date: l.expiry_date || null,
+          reason_code: l.reason_code || 'damaged',
+          disposition: l.disposition || 'Return to Vendor',
+          quarantine_status: l.quarantine_status || 'Quarantine',
+          line_number: i + 1,
+        }))
+
+        await api.post('/T0082I/bulk', {
+          return_id: newRmaId,
+          lines: linesPayload,
+        })
+      }
+
+      toast(t('rma-created', 'Purchase Return (RMA) created successfully'), 'success')
     }
+
     closeModal()
     await load()
   } catch (err) {
@@ -1214,10 +2027,12 @@ onMounted(() => {
 .col-num { text-align: right; }
 .col-actions { width: 140px; text-align: center; }
 .text-center { text-align: center; }
+.text-right { text-align: right; }
 .text-xs { font-size: 11px; }
 .text-muted { color: var(--text-muted); }
 .text-secondary { color: var(--text-secondary); }
 .font-mono { font-family: monospace; }
+.font-bold { font-weight: 700; }
 .italic { font-style: italic; }
 
 .rma-link { color: var(--color-primary); cursor: pointer; text-decoration: none; font-weight: 700; }
@@ -1259,6 +2074,7 @@ onMounted(() => {
 .badge-warning { background: #fef3c7; color: #d97706; }
 .badge-danger { background: #fee2e2; color: #dc2626; }
 .badge-inactive { background: var(--bg-surface-low); color: var(--text-subtle); }
+.badge-subtle { background: #f3f4f6; color: #4b5563; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; }
 .status-dot-icon { font-size: 14px; }
 
 /* Action Buttons */
@@ -1285,6 +2101,10 @@ onMounted(() => {
 
 .btn-outline { display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--text-primary); padding: 8px 18px; border: 1px solid var(--border-default); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-outline:hover { background: var(--bg-surface-hover); }
+.btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+.icon-xs { font-size: 16px; }
 
 /* Empty state */
 .empty-state { text-align: center; padding: 48px; color: var(--text-faint); font-size: 14px; background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 12px; }
@@ -1292,33 +2112,102 @@ onMounted(() => {
 
 /* Modals */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-.modal-content { background: var(--bg-surface); border-radius: 12px; width: 580px; max-width: 92vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
-.modal-lg { width: 880px; }
+.modal-content { background: var(--bg-surface); border-radius: 12px; width: 620px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
+.modal-lg { width: 900px; }
+.modal-xl { width: 1100px; max-width: 96vw; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--border-default); }
 .modal-title-wrap { display: flex; align-items: center; gap: 10px; }
-.modal-header-icon { font-size: 26px; color: var(--color-primary); }
+.modal-header-icon { font-size: 26px; }
 .modal-header h3 { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
 .modal-subtitle { font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0; }
 .modal-header-actions { display: flex; align-items: center; gap: 10px; }
-.modal-body { padding: 24px; flex: 1; }
+.modal-body { padding: 24px; flex: 1; overflow-y: auto; }
 .modal-footer { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-top: 1px solid var(--border-default); background: var(--bg-surface-low); }
+.modal-footer-btns { display: flex; align-items: center; gap: 10px; }
 .footer-left { display: flex; align-items: center; gap: 8px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-/* Forms */
+/* Form Sections */
+.form-section-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 10px; padding: 18px; }
+.form-section-title { font-size: 14px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+.section-icon { font-size: 20px; color: var(--color-primary); }
+.section-desc { font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0; }
+
+.form-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 14px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 14px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-.form-group { margin-bottom: 14px; }
+.form-group { margin-bottom: 0; }
 .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
 .form-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border-input); border-radius: 6px; font-size: 13px; outline: none; background: var(--bg-surface); color: var(--text-primary); box-sizing: border-box; }
 .form-input:focus { border-color: var(--color-primary); }
+.form-input-sm { padding: 5px 8px; font-size: 12px; }
+.form-input-xs { padding: 3px 6px; font-size: 11px; }
 select.form-input { appearance: auto; }
 textarea.form-input { resize: vertical; }
 .required { color: #dc2626; }
+.text-primary { color: var(--color-primary); }
 .text-success { color: #16a34a; }
 .text-warning { color: #d97706; }
 
+.grn-select-wrap { display: flex; gap: 6px; align-items: center; }
+.btn-import-grn { white-space: nowrap; }
+
+.calculated-total-box { display: flex; align-items: center; gap: 4px; background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; border-radius: 6px; padding: 7px 12px; font-weight: 700; height: 36px; box-sizing: border-box; }
+.total-currency { font-size: 13px; opacity: 0.8; }
+.total-val { font-size: 16px; }
+.total-badge { margin-left: auto; font-size: 11px; background: rgba(109, 40, 217, 0.12); padding: 2px 6px; border-radius: 4px; font-family: sans-serif; font-weight: 600; }
+
 .checkbox-label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer; user-select: none; }
 .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-primary); }
+
+/* Lines Editor Specifics */
+.lines-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.lines-actions { display: flex; align-items: center; gap: 8px; }
+.empty-lines-box { text-align: center; padding: 32px 16px; background: var(--bg-surface-low); border: 1px dashed var(--border-default); border-radius: 8px; color: var(--text-muted); font-size: 13px; }
+.empty-lines-icon { font-size: 36px; color: var(--border-default); margin-bottom: 8px; display: block; }
+
+.lines-editor-wrap { overflow-x: auto; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-surface); }
+.lines-editor-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.lines-editor-table th { background: var(--bg-surface-low); padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border-default); text-align: left; white-space: nowrap; }
+.lines-editor-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-light); vertical-align: top; }
+.line-row:hover { background: var(--bg-surface-hover); }
+
+.batch-input-cell { display: flex; flex-direction: column; gap: 4px; }
+.batch-flex-row { display: flex; align-items: center; gap: 4px; }
+.batch-text-input { font-size: 11px; }
+.btn-gen-batch { background: var(--bg-surface-low); border: 1px solid var(--border-input); border-radius: 4px; padding: 4px 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.15s; }
+.btn-gen-batch:hover { color: var(--color-primary); border-color: var(--color-primary); background: var(--bg-surface-hover); }
+.batch-quick-select { font-size: 10px; color: var(--text-secondary); }
+
+.line-total-cell { padding-top: 10px !important; font-size: 13px; color: var(--text-primary); }
+.editor-summary-row td { background: var(--bg-surface-low); padding: 10px 10px; border-top: 2px solid var(--border-default); border-bottom: none; font-size: 13px; }
+.highlight-claim { font-size: 15px; }
+
+/* Photos Uploader Specifics */
+.photos-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.hidden-file-input { display: none; }
+.file-upload-btn { cursor: pointer; user-select: none; }
+
+.url-input-bar { display: flex; gap: 8px; align-items: center; }
+.photo-desc-input { max-width: 280px; }
+
+.photos-upload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
+.photo-edit-card { border: 1px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-surface); display: flex; flex-direction: column; }
+.photo-preview-wrap { position: relative; height: 110px; background: var(--bg-surface-low); overflow: hidden; }
+.photo-thumb-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-no-preview { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.photo-remove-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s; }
+.photo-remove-btn:hover { background: #dc2626; }
+.photo-info-wrap { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.photo-filename { font-size: 11px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.no-photos-box { text-align: center; padding: 20px; background: var(--bg-surface-low); border: 1px dashed var(--border-light); border-radius: 8px; }
+.icon-muted { font-size: 28px; color: var(--border-default); margin-bottom: 4px; display: block; }
+
+.claim-summary-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-surface); border: 1px solid var(--border-default); padding: 6px 14px; border-radius: 8px; font-size: 13px; }
+.summary-pill-label { color: var(--text-muted); font-size: 12px; }
+.summary-pill-val { font-size: 16px; color: var(--color-primary); }
+.summary-pill-sub { font-size: 11px; color: var(--text-muted); }
 
 /* Detail Modal Specifics */
 .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
@@ -1356,16 +2245,25 @@ textarea.form-input { resize: vertical; }
 .spinner { animation: spin 1s linear infinite; font-size: 20px; color: var(--color-primary); }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.mb-2 { margin-bottom: 8px; }
 .mb-3 { margin-bottom: 12px; }
 .mb-4 { margin-bottom: 16px; }
 .mb-6 { margin-bottom: 24px; }
 .mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
 .py-4 { padding-top: 16px; padding-bottom: 16px; }
+.flex { display: flex; }
+.flex-1 { flex: 1; }
+.gap-2 { gap: 8px; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.items-center { align-items: center; }
 
-[dir="rtl"] .data-table th { text-align: right; }
-[dir="rtl"] .data-table td { text-align: right; }
+[dir="rtl"] .data-table th,
+[dir="rtl"] .lines-editor-table th { text-align: right; }
+[dir="rtl"] .data-table td,
+[dir="rtl"] .lines-editor-table td { text-align: right; }
 [dir="rtl"] .col-num { text-align: left; }
 [dir="rtl"] .info-callout { border-left: none; border-right: 3px solid var(--color-primary); }
+[dir="rtl"] .total-badge { margin-left: 0; margin-right: auto; }
 </style>
-
