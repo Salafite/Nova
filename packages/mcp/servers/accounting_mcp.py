@@ -120,7 +120,12 @@ def _get_debit_memo_for_rma(purchase_return_id: int):
         "status": dm.get("status"),
         "issue_date": str(dm.get("issue_date")) if dm.get("issue_date") else None,
         "notes": dm.get("notes"),
-        "message": f"Debit Memo {dm.get('invoice_number', f'#{dm.get('id')}')} found for RMA #{purchase_return_id} (Total: ${float(dm.get('total_amount', 0.0) or 0.0):.2f}, Status: {dm.get('status')})",
+        "message": (
+            f"Debit Memo {dm.get('invoice_number') or '#' + str(dm.get('id'))} "
+            f"found for RMA #{purchase_return_id} "
+            f"(Total: ${float(dm.get('total_amount', 0.0) or 0.0):.2f}, "
+            f"Status: {dm.get('status')})"
+        ),
     }
 
 
