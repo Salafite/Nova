@@ -764,16 +764,18 @@ CREATE INDEX IF NOT EXISTS idx_t0030_business_id_id ON "Nova".t0030(business_id,
 CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     id              SERIAL PRIMARY KEY,
     invoice_number  VARCHAR(50) NOT NULL UNIQUE,
-    invoice_type    VARCHAR(10) NOT NULL DEFAULT 'Sales',
+    invoice_type    VARCHAR(30) NOT NULL DEFAULT 'Sales',
     partner_id      INT NOT NULL,
     sales_order_id  INT REFERENCES "Nova".t0012(id),
+    purchase_order_id INT REFERENCES "Nova".t0015(id),
+    purchase_return_id INT REFERENCES "Nova".t0081(id),
     issue_date      DATE NOT NULL,
     due_date        DATE NOT NULL,
     total_amount    NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
     freight_amount  NUMERIC(12,2) NOT NULL DEFAULT 0,
     discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
     sales_rep_id    INT REFERENCES "Nova".t0021(id),
-    status          VARCHAR(20) NOT NULL DEFAULT 'Draft',
+    status          VARCHAR(20) NOT NULL DEFAULT 'Unpaid',
     notes           TEXT,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -785,9 +787,14 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
 COMMENT ON COLUMN "Nova".t0090.freight_amount IS 'Freight / shipping charges billed on invoice';
 COMMENT ON COLUMN "Nova".t0090.discount_amount IS 'Customer discount deducted on invoice';
 COMMENT ON COLUMN "Nova".t0090.sales_rep_id IS 'Assigned sales representative (User ID)';
+COMMENT ON COLUMN "Nova".t0090.purchase_order_id IS 'Purchase order reference for purchase invoices';
+COMMENT ON COLUMN "Nova".t0090.purchase_return_id IS 'Purchase return / RMA reference for supplier debit memos';
 COMMENT ON COLUMN "Nova".t0090.business_id IS 'Tenant / business organization identifier (FK to T0059)';
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id ON "Nova".t0090(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id_id ON "Nova".t0090(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0090_purchase_return_id ON "Nova".t0090(purchase_return_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_purchase_order_id ON "Nova".t0090(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_invoice_type ON "Nova".t0090(invoice_type);
 
 
 

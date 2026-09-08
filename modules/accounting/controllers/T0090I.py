@@ -11,6 +11,8 @@ repo = CrudRepository(
         'invoice_type',
         'partner_id',
         'sales_order_id',
+        'purchase_order_id',
+        'purchase_return_id',
         'sales_rep_id',
         'payment_term_id',
         'issue_date',
