@@ -11,4 +11,6 @@ from modules.purchasing.models.purchase import (
 from modules.purchasing.models.purchase_return import (
     PurchaseReturnCreate, PurchaseReturnUpdate, PurchaseReturnResponse,
     PurchaseReturnLineCreate, PurchaseReturnLineUpdate, PurchaseReturnLineResponse,
+    RMAReasonCode, RMAStatus, QuarantineStatus, RMADisposition,
+    InspectionAttachment, DockRejectionLineItem, ReceivingRejectionCreate, RMAApprovalRequest,
 )
