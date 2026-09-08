@@ -84,9 +84,12 @@ class DeliveryRunStopCreate(BaseModel):
     delivery_address: str = Field(..., description="Full street delivery address")
     customer_phone: Optional[str] = Field(None, max_length=50, description="Customer contact phone")
     contact_person: Optional[str] = Field(None, max_length=100, description="Customer contact person")
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
+    geofence_radius_meters: Optional[int] = Field(150, ge=10)
     estimated_arrival: Optional[datetime] = Field(None, description="Estimated arrival time")
     actual_arrival: Optional[datetime] = Field(None, description="Actual drop-off timestamp")
-    status: str = Field("Pending", max_length=30, description="Stop status: Pending | Delivered | Failed | Skipped")
+    status: str = Field("Pending", max_length=30, description="Stop status: Pending | Delivered | Failed | Skipped | Arrived | In Transit")
     notes: Optional[str] = None
     business_id: Optional[int] = None
 
@@ -101,6 +104,14 @@ class DeliveryRunStopUpdate(BaseModel):
     delivery_address: Optional[str] = None
     customer_phone: Optional[str] = Field(None, max_length=50)
     contact_person: Optional[str] = Field(None, max_length=100)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    geofence_radius_meters: Optional[int] = None
+    geofence_arrived_at: Optional[datetime] = None
+    geofence_departed_at: Optional[datetime] = None
+    live_eta_timestamp: Optional[datetime] = None
+    live_remaining_distance_km: Optional[float] = None
+    tracking_token: Optional[str] = None
     estimated_arrival: Optional[datetime] = None
     actual_arrival: Optional[datetime] = None
     status: Optional[str] = Field(None, max_length=30)
@@ -121,6 +132,14 @@ class DeliveryRunStopResponse(AuditMixin):
     delivery_address: str
     customer_phone: Optional[str] = None
     contact_person: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    geofence_radius_meters: Optional[int] = 150
+    geofence_arrived_at: Optional[datetime] = None
+    geofence_departed_at: Optional[datetime] = None
+    live_eta_timestamp: Optional[datetime] = None
+    live_remaining_distance_km: Optional[float] = None
+    tracking_token: Optional[str] = None
     estimated_arrival: Optional[datetime] = None
     actual_arrival: Optional[datetime] = None
     status: str = "Pending"

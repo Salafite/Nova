@@ -119,16 +119,26 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0121': 'SALES_VIEW',         # Customer Group Price Lists
     'T0122': 'SALES_VIEW',         # Customer Contracts
     'T0123': 'SALES_VIEW',         # Promotional Campaign Rules
+    'T0137': 'SALES_VIEW',         # Driver GPS Telemetry
+    'T0138': 'SALES_VIEW',         # Customer Live Tracking Sessions
+    'T0139': 'SALES_VIEW',         # Geofence Detection Events
     'T0124': 'WAREHOUSE_VIEW',     # Warehouse Temperature Zones
     'T0125': 'WAREHOUSE_VIEW',     # Warehouse Bins & Staging Areas
     'T0126': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments
     'T0127': 'QUALITY_VIEW',       # Temperature Excursion Alerts
     'T0128': 'QUALITY_VIEW',       # HACCP Checkpoint Logs & Compliance Reports
+    'T0129': 'FINANCE_VIEW',       # E-Invoice Clearance Records
+    'T0130': 'FINANCE_VIEW',       # Fiscal Authority Profiles
 }
 
 # Non-T-code custom route and tag mappings
 CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/categories': 'PRODUCTS_VIEW',
+    '/api/sales/tracking': 'SALES_VIEW',
+    '/api/sales/delivery-routes': 'SALES_VIEW',
+    '/api/delivery-routes': 'SALES_VIEW',
+    'Real-Time Driver GPS Tracking & Fleet Map': 'SALES_VIEW',
+    'Delivery Route Planning & Driver Dispatch': 'SALES_VIEW',
     '/api/v1/migration': 'ADMIN_MIGRATION',
     '/api/v1/migration/connectors/test': 'ADMIN_MIGRATION',
     '/api/v1/migration/connectors/discover': 'ADMIN_MIGRATION',
@@ -151,6 +161,8 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/T0025I': 'ADMIN_VIEW',
     '/api/T0100I': 'ADMIN_VIEW',
     '/api/T0104I': 'ADMIN_MIGRATION',
+    '/api/T0129I': 'FINANCE_VIEW',
+    '/api/T0130I': 'FINANCE_VIEW',
     '/api/sales/mobile': 'FIELD_SALES_MOBILE',
     'Categories': 'PRODUCTS_VIEW',
     'Migration': 'ADMIN_MIGRATION',
@@ -194,6 +206,8 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'Replenishment': 'INVENTORY_VIEW',
     'Field Sales Mobile': 'FIELD_SALES_MOBILE',
     'Field Sales': 'FIELD_SALES_MOBILE',
+    'T0129 - E-Invoice Clearance Records': 'FINANCE_VIEW',
+    'T0130 - Fiscal Authority Profiles': 'FINANCE_VIEW',
 }
 
 # Role to granted permissions mapping
@@ -214,6 +228,7 @@ _ROLE_PERMISSIONS: dict[str, list[str]] = {
         'INVENTORY_VIEW',
         'WAREHOUSE_VIEW',
         'FINANCE_VIEW',
+        'ACCOUNTING_VIEW',
         'MFG_VIEW',
         'PLANNING_VIEW',
         'SHOPFLOOR_VIEW',
@@ -236,6 +251,7 @@ _ROLE_PERMISSIONS: dict[str, list[str]] = {
         'INVENTORY_VIEW',
         'WAREHOUSE_VIEW',
         'FINANCE_VIEW',
+        'ACCOUNTING_VIEW',
         'BI_VIEW',
         'FIELD_SALES_MOBILE',
     ],
@@ -268,12 +284,234 @@ _ROLE_PERMISSIONS: dict[str, list[str]] = {
         'PORTAL_ORDER',
         'PORTAL_PAY',
     ],
+    'Financial Manager': [
+        'DASHBOARD_VIEW',
+        'FINANCE_VIEW',
+        'ACCOUNTING_VIEW',
+        'SALES_VIEW',
+        'CRM_VIEW',
+        'CUSTOMERS_VIEW',
+        'PURCHASING_VIEW',
+        'SUPPLIERS_VIEW',
+        'PRODUCTS_VIEW',
+        'INVENTORY_VIEW',
+        'BI_VIEW',
+    ],
+    'Warehouse Manager': [
+        'DASHBOARD_VIEW',
+        'WAREHOUSE_VIEW',
+        'INVENTORY_VIEW',
+        'PRODUCTS_VIEW',
+        'PURCHASING_VIEW',
+    ],
+    'Purchasing Manager': [
+        'DASHBOARD_VIEW',
+        'PURCHASING_VIEW',
+        'SUPPLIERS_VIEW',
+        'PRODUCTS_VIEW',
+        'INVENTORY_VIEW',
+        'WAREHOUSE_VIEW',
+        'FINANCE_VIEW',
+    ],
+    'HR Manager': [
+        'DASHBOARD_VIEW',
+        'HR_VIEW',
+    ],
+    'Project Manager': [
+        'DASHBOARD_VIEW',
+        'PROJECTS_VIEW',
+    ],
+    'Manufacturing Manager': [
+        'DASHBOARD_VIEW',
+        'MFG_VIEW',
+        'PLANNING_VIEW',
+        'SHOPFLOOR_VIEW',
+        'QUALITY_VIEW',
+        'INVENTORY_VIEW',
+        'WAREHOUSE_VIEW',
+    ],
+}
+
+# Centralized mapping of MCP tool names to required permission keys
+MCP_TOOL_PERMISSIONS: dict[str, str] = {
+    # Database Server
+    'list_tables': 'ADMIN_VIEW',
+    'describe_table': 'ADMIN_VIEW',
+    'execute_read_query': 'ADMIN_VIEW',
+
+    # Admin Server
+    'list_users': 'ADMIN_VIEW',
+    'get_audit_log': 'ADMIN_VIEW',
+    'list_settings': 'ADMIN_VIEW',
+    'get_setting': 'ADMIN_VIEW',
+    'list_notifications': 'ADMIN_VIEW',
+    'list_scheduled_tasks': 'ADMIN_VIEW',
+    'list_modules': 'ADMIN_VIEW',
+
+    # Notifications Server
+    'list_user_notifications': 'ADMIN_VIEW',
+    'mark_notification_read': 'ADMIN_VIEW',
+    'mark_all_notifications_read': 'ADMIN_VIEW',
+
+    # Migration Server
+    'test_legacy_connection': 'ADMIN_MIGRATION',
+    'discover_legacy_schema': 'ADMIN_MIGRATION',
+    'run_migration_dry_run': 'ADMIN_MIGRATION',
+    'commit_migration_batch': 'ADMIN_MIGRATION',
+    'rollback_migration_batch': 'ADMIN_MIGRATION',
+    'get_migration_reconciliation': 'ADMIN_MIGRATION',
+
+    # Inventory Server
+    'list_products': 'PRODUCTS_VIEW',
+    'get_product': 'PRODUCTS_VIEW',
+    'create_product': 'PRODUCTS_VIEW',
+    'update_product': 'PRODUCTS_VIEW',
+    'delete_product': 'PRODUCTS_VIEW',
+    'search_products': 'PRODUCTS_VIEW',
+    'check_stock': 'INVENTORY_VIEW',
+    'list_categories': 'PRODUCTS_VIEW',
+    'list_warehouses': 'WAREHOUSE_VIEW',
+    'list_uoms': 'PRODUCTS_VIEW',
+    'list_brands': 'PRODUCTS_VIEW',
+    'list_replenishment_suggestions': 'INVENTORY_VIEW',
+    'generate_replenishment_transfers': 'INVENTORY_VIEW',
+
+    # Warehouse Server
+    'list_goods_receipts': 'WAREHOUSE_VIEW',
+    'list_serial_numbers': 'INVENTORY_VIEW',
+    'list_batch_numbers': 'INVENTORY_VIEW',
+    'get_batch_number': 'INVENTORY_VIEW',
+    'allocate_fefo_lots': 'WAREHOUSE_VIEW',
+    'list_pick_lists': 'WAREHOUSE_VIEW',
+    'get_pick_list': 'WAREHOUSE_VIEW',
+    'pick_item': 'WAREHOUSE_VIEW',
+    'approve_pick_tolerance': 'WAREHOUSE_VIEW',
+    'check_pick_list_discrepancies': 'WAREHOUSE_VIEW',
+    'get_batch_recall_report': 'WAREHOUSE_VIEW',
+    'list_stock_transfers': 'WAREHOUSE_VIEW',
+    'get_stock_transfer': 'WAREHOUSE_VIEW',
+    'create_stock_transfer': 'WAREHOUSE_VIEW',
+    'dispatch_stock_transfer': 'WAREHOUSE_VIEW',
+    'receive_stock_transfer': 'WAREHOUSE_VIEW',
+    'verify_barcode': 'WAREHOUSE_VIEW',
+    'verify_pick_barcode': 'WAREHOUSE_VIEW',
+    'verify_goods_receipt_barcode': 'WAREHOUSE_VIEW',
+
+    # Sales Server
+    'list_orders': 'SALES_VIEW',
+    'get_order': 'SALES_VIEW',
+    'create_order': 'SALES_VIEW',
+    'create_order_line': 'SALES_VIEW',
+    'list_order_lines': 'SALES_VIEW',
+    'update_order_status': 'SALES_VIEW',
+    'confirm_order': 'SALES_VIEW',
+    'cancel_order': 'SALES_VIEW',
+    'list_customers': 'CRM_VIEW',
+    'get_customer_aging': 'SALES_VIEW',
+    'list_quotations': 'SALES_VIEW',
+    'convert_quotation_to_order': 'SALES_VIEW',
+    'list_deliveries': 'SALES_VIEW',
+    'list_price_lists': 'SALES_VIEW',
+    'list_tax_rates': 'SALES_VIEW',
+    'get_field_sales_catalog': 'FIELD_SALES_MOBILE',
+    'sync_offline_orders': 'FIELD_SALES_MOBILE',
+    'check_offline_order_conflicts': 'FIELD_SALES_MOBILE',
+    'calculate_sales_rep_commissions': 'SALES_VIEW',
+    'recalculate_order_catch_weight': 'SALES_VIEW',
+    'check_customer_credit': 'SALES_VIEW',
+    'override_credit_hold': 'SALES_VIEW',
+    'reject_credit_hold': 'SALES_VIEW',
+    'capture_proof_of_delivery': 'SALES_VIEW',
+    'log_cod_collection': 'SALES_VIEW',
+    'get_delivery_fulfillment_metrics': 'SALES_VIEW',
+    'get_driver_handover_report': 'SALES_VIEW',
+
+    # POS Server
+    'pos_customer_lookup': 'POS_VIEW',
+    'pos_checkout': 'POS_VIEW',
+
+    # Purchasing Server
+    'list_purchase_orders': 'PURCHASING_VIEW',
+    'get_purchase_order': 'PURCHASING_VIEW',
+    'list_purchase_returns': 'PURCHASING_VIEW',
+    'list_rfqs': 'PURCHASING_VIEW',
+    'calculate_restock_forecast': 'PURCHASING_VIEW',
+    'propose_draft_purchase_order': 'PURCHASING_VIEW',
+
+    # Accounting Server
+    'list_chart_of_accounts': 'FINANCE_VIEW',
+    'list_invoices': 'FINANCE_VIEW',
+    'get_invoice': 'FINANCE_VIEW',
+    'list_payments': 'FINANCE_VIEW',
+    'list_payment_terms': 'FINANCE_VIEW',
+    'get_payment_term': 'FINANCE_VIEW',
+    'preview_invoice_early_discount': 'FINANCE_VIEW',
+    'parse_bank_statement': 'ACCOUNTING_VIEW',
+    'auto_match_bank_statement_checks': 'ACCOUNTING_VIEW',
+    'confirm_batch_check_clearing': 'ACCOUNTING_VIEW',
+    'list_bounced_checks': 'ACCOUNTING_VIEW',
+    'process_bounced_check': 'ACCOUNTING_VIEW',
+
+    # HR Server
+    'list_employees': 'HR_VIEW',
+    'get_employee': 'HR_VIEW',
+    'list_departments': 'HR_VIEW',
+    'list_attendance': 'HR_VIEW',
+    'list_leave_requests': 'HR_VIEW',
+    'list_payroll_entries': 'HR_VIEW',
+    'list_shifts': 'HR_VIEW',
+    'list_job_openings': 'HR_VIEW',
+
+    # BI Server
+    'list_kpis': 'BI_VIEW',
+    'get_kpi_values': 'BI_VIEW',
+    'list_dashboards': 'BI_VIEW',
+    'get_dashboard_widgets': 'BI_VIEW',
+    'get_customer_profitability_matrix': 'BI_VIEW',
+    'get_product_category_margins': 'BI_VIEW',
+    'get_executive_margin_summary': 'BI_VIEW',
+    'export_executive_analytics_report': 'BI_VIEW',
+
+    # CRM Server
+    'list_leads': 'CRM_VIEW',
+    'list_opportunities': 'CRM_VIEW',
+    'list_suppliers': 'PURCHASING_VIEW',
+    'list_customer_groups': 'CRM_VIEW',
+
+    # Projects Server
+    'list_projects': 'PROJECTS_VIEW',
+    'get_project': 'PROJECTS_VIEW',
+    'list_tasks': 'PROJECTS_VIEW',
+    'list_milestones': 'PROJECTS_VIEW',
+
+    # Manufacturing Server
+    'list_manufacturing_orders': 'MFG_VIEW',
+    'list_boms': 'MFG_VIEW',
+    'list_qc_inspections': 'MFG_VIEW',
+    'list_shop_jobs': 'MFG_VIEW',
+
+    # Maintenance Server
+    'list_assets': 'MAINTENANCE_VIEW',
+    'list_maintenance_schedules': 'MAINTENANCE_VIEW',
+    'list_work_orders': 'MAINTENANCE_VIEW',
 }
 
 
 def derive_permissions(role: str) -> list[str]:
     """Return default permissions list for a given user role."""
-    return _ROLE_PERMISSIONS.get(role, ['DASHBOARD_VIEW'])
+    if not role:
+        return ['DASHBOARD_VIEW']
+    if role in _ROLE_PERMISSIONS:
+        return _ROLE_PERMISSIONS[role]
+    normalized = str(role).strip().lower()
+    normalized_spaced = normalized.replace('_', ' ')
+    for k, v in _ROLE_PERMISSIONS.items():
+        k_lower = k.lower()
+        if k_lower == normalized or k_lower == normalized_spaced:
+            return v
+    if "manager" in normalized or "admin" in normalized:
+        return _ROLE_PERMISSIONS.get("Manager", ['DASHBOARD_VIEW'])
+    return ['DASHBOARD_VIEW']
 
 
 def get_required_permission(prefix: str = '', tag: str = '') -> str:
@@ -299,6 +537,11 @@ def get_required_permission(prefix: str = '', tag: str = '') -> str:
     return 'ADMIN_VIEW'
 
 
+def get_mcp_tool_permission(tool_name: str) -> str | None:
+    """Return the required permission key for an MCP tool name, or None if not restricted."""
+    return MCP_TOOL_PERMISSIONS.get(tool_name)
+
+
 def has_permission(user_permissions: list[str] | None, required_permission: str | None) -> bool:
     """Check if the provided user permissions satisfy the required permission."""
     if not required_permission:
@@ -310,5 +553,7 @@ def has_permission(user_permissions: list[str] | None, required_permission: str 
     if required_permission in user_permissions:
         return True
     if required_permission == 'ADMIN_MIGRATION' and 'ADMIN_VIEW' in user_permissions:
+        return True
+    if required_permission in ('FINANCE_VIEW', 'ACCOUNTING_VIEW') and ('FINANCE_VIEW' in user_permissions or 'ACCOUNTING_VIEW' in user_permissions):
         return True
     return False
