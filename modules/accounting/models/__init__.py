@@ -17,6 +17,12 @@ from modules.accounting.models.check_clearing import (
     CheckClearingRecordCreate, CheckClearingRecordUpdate, CheckClearingRecordResponse,
     BANK_STATEMENT_REPO, STATEMENT_TRANSACTION_REPO, CHECK_CLEARING_RECORD_REPO,
 )
+from modules.accounting.models.einvoice import (
+    FiscalProfileCreate, FiscalProfileUpdate, FiscalProfileResponse,
+    EInvoiceCreate, EInvoiceUpdate, EInvoiceResponse,
+    ClearanceSubmissionRequest, ClearanceSubmissionResponse, QRCodeResponse,
+    FISCAL_PROFILE_REPO, EINVOICE_REPO, EINVOICE_RECORD_REPO,
+)
 from modules.accounting.models.reminder import (
     ARReminderTemplateCreate, ARReminderTemplateUpdate, ARReminderTemplateResponse,
     ARReminderRuleCreate, ARReminderRuleUpdate, ARReminderRuleResponse,

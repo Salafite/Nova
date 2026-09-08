@@ -13,6 +13,11 @@ from modules.accounting.services.bank_statement_parser import BankStatementParse
 from modules.accounting.services.check_matching_service import CheckMatchingService
 from modules.accounting.services.check_clearing_service import CheckClearingService
 from modules.accounting.services.bounced_check_service import BouncedCheckService
+from modules.accounting.services.einvoice_service import EInvoiceService
+from modules.accounting.models.einvoice import (
+    EINVOICE_RECORD_REPO,
+    FISCAL_PROFILE_REPO,
+)
 from modules.accounting.services.ar_reminder_service import (
     ARReminderService,
     ar_reminder_service,
@@ -36,6 +41,15 @@ _pay_svc = PaymentService(_pay_repo, _inv_repo, payment_term_repo=_terms_repo)
 _matching_svc = CheckMatchingService()
 _clearing_svc = CheckClearingService()
 _bounced_svc = BouncedCheckService()
+
+_einvoice_repo = EINVOICE_RECORD_REPO
+_fiscal_profile_repo = FISCAL_PROFILE_REPO
+_einvoice_svc = EInvoiceService(
+    repo=_einvoice_repo,
+    fiscal_profile_repo=_fiscal_profile_repo,
+    invoice_repo=_inv_repo,
+)
+
 _reminder_svc = ar_reminder_service
 
 
@@ -208,6 +222,170 @@ def _list_bounced_checks(
     if limit and len(results) > limit:
         return results[:limit]
     return results
+
+
+def _generate_einvoice_xml(
+    invoice_id: int,
+    profile_id: Optional[int] = None,
+    subtype: Optional[str] = None,
+):
+    xml_content = _einvoice_svc.generate_ubl_xml(
+        invoice_id=invoice_id,
+        profile_id=profile_id,
+        subtype=subtype,
+    )
+    rec = _einvoice_svc.get_by_invoice_id(invoice_id)
+    return {
+        "invoice_id": invoice_id,
+        "ubl_xml": xml_content,
+        "invoice_uuid": rec.get("invoice_uuid") if rec else None,
+        "invoice_hash": rec.get("invoice_hash") if rec else None,
+        "qr_code_tlv": rec.get("qr_code_tlv") if rec else None,
+        "clearance_status": rec.get("clearance_status") if rec else "Draft",
+        "subtype": rec.get("subtype") if rec else subtype,
+        "icv": rec.get("icv") if rec else None,
+    }
+
+
+def _sign_einvoice(
+    invoice_id: int,
+    profile_id: Optional[int] = None,
+):
+    return _einvoice_svc.sign_einvoice(
+        invoice_id=invoice_id,
+        profile_id=profile_id,
+    )
+
+
+def _submit_einvoice_clearance(
+    invoice_id: int,
+    profile_id: Optional[int] = None,
+    environment: Optional[str] = None,
+    auto_sign: bool = True,
+):
+    result = _einvoice_svc.submit_clearance(
+        invoice_id=invoice_id,
+        profile_id=profile_id,
+        environment=environment,
+        auto_sign=auto_sign,
+    )
+    if hasattr(result, "model_dump"):
+        return result.model_dump()
+    elif hasattr(result, "dict"):
+        return result.dict()
+    return result
+
+
+def _get_einvoice_status(invoice_id: int):
+    rec = _einvoice_svc.get_by_invoice_id(invoice_id=invoice_id)
+    if rec:
+        return rec
+    return {
+        "invoice_id": invoice_id,
+        "clearance_status": "Not_Generated",
+        "message": f"No e-invoice record found for invoice {invoice_id}",
+    }
+
+
+def _get_einvoice_qr_code(invoice_id: int):
+    qr_res = _einvoice_svc.generate_qr_code(invoice_id=invoice_id)
+    if hasattr(qr_res, "model_dump"):
+        return qr_res.model_dump()
+    elif hasattr(qr_res, "dict"):
+        return qr_res.dict()
+    return qr_res
+
+
+def _get_fiscal_profile(profile_id: Optional[int] = None):
+    return _einvoice_svc.get_active_fiscal_profile(profile_id=profile_id)
+
+
+def _configure_fiscal_profile(
+    profile_id: Optional[int] = None,
+    profile_name: Optional[str] = "Main Fiscal Profile",
+    authority_code: Optional[str] = "ZATCA",
+    seller_name: Optional[str] = None,
+    seller_name_ar: Optional[str] = None,
+    tax_id: Optional[str] = None,
+    commercial_registration_number: Optional[str] = None,
+    building_number: Optional[str] = None,
+    street_name: Optional[str] = None,
+    street_name_ar: Optional[str] = None,
+    district: Optional[str] = None,
+    district_ar: Optional[str] = None,
+    city: Optional[str] = None,
+    city_ar: Optional[str] = None,
+    postal_code: Optional[str] = None,
+    country_code: Optional[str] = "SA",
+    environment: Optional[str] = "Sandbox",
+    api_base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    api_secret: Optional[str] = None,
+    certificate: Optional[str] = None,
+    private_key: Optional[str] = None,
+    public_key: Optional[str] = None,
+    is_default: Optional[bool] = True,
+    is_active: Optional[bool] = True,
+):
+    payload = {}
+    if profile_name is not None:
+        payload["profile_name"] = profile_name
+    if authority_code is not None:
+        payload["authority_code"] = authority_code
+    if seller_name is not None:
+        payload["seller_name"] = seller_name
+    if seller_name_ar is not None:
+        payload["seller_name_ar"] = seller_name_ar
+    if tax_id is not None:
+        payload["tax_id"] = tax_id
+    if commercial_registration_number is not None:
+        payload["commercial_registration_number"] = commercial_registration_number
+    if building_number is not None:
+        payload["building_number"] = building_number
+    if street_name is not None:
+        payload["street_name"] = street_name
+    if street_name_ar is not None:
+        payload["street_name_ar"] = street_name_ar
+    if district is not None:
+        payload["district"] = district
+    if district_ar is not None:
+        payload["district_ar"] = district_ar
+    if city is not None:
+        payload["city"] = city
+    if city_ar is not None:
+        payload["city_ar"] = city_ar
+    if postal_code is not None:
+        payload["postal_code"] = postal_code
+    if country_code is not None:
+        payload["country_code"] = country_code
+    if environment is not None:
+        payload["environment"] = environment
+    if api_base_url is not None:
+        payload["api_base_url"] = api_base_url
+    if api_key is not None:
+        payload["api_key"] = api_key
+    if api_secret is not None:
+        payload["api_secret"] = api_secret
+    if certificate is not None:
+        payload["certificate"] = certificate
+    if private_key is not None:
+        payload["private_key"] = private_key
+    if public_key is not None:
+        payload["public_key"] = public_key
+    if is_default is not None:
+        payload["is_default"] = is_default
+    if is_active is not None:
+        payload["is_active"] = is_active
+
+    if profile_id:
+        _fiscal_profile_repo.update(profile_id, payload)
+        return _fiscal_profile_repo.get(profile_id)
+    else:
+        if "seller_name" not in payload or not payload["seller_name"]:
+            payload["seller_name"] = "Nova Global Trading LLC"
+        if "tax_id" not in payload or not payload["tax_id"]:
+            payload["tax_id"] = "300012345600003"
+        return _fiscal_profile_repo.create(payload)
 
 
 def _send_customer_reminder(
@@ -489,6 +667,136 @@ def register_tools():
     )
     register_tool(
         Tool(
+            name="generate_einvoice_xml",
+            description="Generate OASIS UBL 2.1 XML e-invoice document (Standard B2B or Simplified B2C) for a sales invoice",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
+                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0130)"},
+                    "subtype": {"type": "string", "description": "Invoice subtype code ('0100000' for Standard B2B, '0200000' for Simplified B2C)"},
+                },
+                "required": ["invoice_id"],
+            },
+        ),
+        _generate_einvoice_xml,
+    )
+    register_tool(
+        Tool(
+            name="sign_einvoice",
+            description="Cryptographically sign an e-invoice with ECDSA/RSA private key, compute SHA-256 canonical hash, and embed signature into UBL XML",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
+                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0130)"},
+                },
+                "required": ["invoice_id"],
+            },
+        ),
+        _sign_einvoice,
+    )
+    register_tool(
+        Tool(
+            name="submit_einvoice_clearance",
+            description="Submit an e-invoice to government fiscal authority (e.g. ZATCA) for B2B clearance or B2C reporting",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
+                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0130)"},
+                    "environment": {"type": "string", "description": "Gateway environment ('Sandbox', 'Simulation', 'Production')"},
+                    "auto_sign": {"type": "boolean", "description": "Automatically sign the document before submission if not yet signed (default true)"},
+                },
+                "required": ["invoice_id"],
+            },
+        ),
+        _submit_einvoice_clearance,
+    )
+    register_tool(
+        Tool(
+            name="get_einvoice_status",
+            description="Retrieve e-invoice fiscal clearance status, clearance UUID, cryptographic hash, and validation outcomes",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
+                },
+                "required": ["invoice_id"],
+            },
+        ),
+        _get_einvoice_status,
+    )
+    register_tool(
+        Tool(
+            name="get_einvoice_qr_code",
+            description="Generate or fetch Base64 Tag-Length-Value (TLV) QR code payload compliant with national tax authority standards (e.g. ZATCA)",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
+                },
+                "required": ["invoice_id"],
+            },
+        ),
+        _get_einvoice_qr_code,
+    )
+    register_tool(
+        Tool(
+            name="get_fiscal_profile",
+            description="Get the active fiscal authority configuration profile (seller legal details, tax ID, CSID/certificate, environment)",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "profile_id": {"type": "integer", "description": "Optional profile ID. If omitted, returns active/default profile."},
+                },
+            },
+        ),
+        _get_fiscal_profile,
+    )
+    register_tool(
+        Tool(
+            name="configure_fiscal_profile",
+            description="Create or update fiscal authority integration profile and tax credentials (ZATCA / PEPPOL / European e-Invoicing)",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "profile_id": {"type": "integer", "description": "Optional profile ID to update an existing profile"},
+                    "profile_name": {"type": "string", "description": "Descriptive name for the fiscal profile"},
+                    "authority_code": {"type": "string", "description": "Authority code ('ZATCA', 'PEPPOL', etc.)"},
+                    "seller_name": {"type": "string", "description": "Official legal seller name in English/Latin"},
+                    "seller_name_ar": {"type": "string", "description": "Official legal seller name in Arabic"},
+                    "tax_id": {"type": "string", "description": "VAT / Tax registration ID"},
+                    "commercial_registration_number": {"type": "string", "description": "CR number"},
+                    "building_number": {"type": "string", "description": "Building / unit number"},
+                    "street_name": {"type": "string", "description": "Street name"},
+                    "district": {"type": "string", "description": "District / neighborhood"},
+                    "city": {"type": "string", "description": "City"},
+                    "postal_code": {"type": "string", "description": "Postal code"},
+                    "country_code": {"type": "string", "description": "ISO 2-letter country code (default 'SA')"},
+                    "environment": {"type": "string", "description": "Environment ('Sandbox', 'Simulation', 'Production')"},
+                    "api_base_url": {"type": "string", "description": "Authority API base URL"},
+                    "api_key": {"type": "string", "description": "API key / client ID"},
+                    "api_secret": {"type": "string", "description": "API secret"},
+                    "certificate": {"type": "string", "description": "X.509 security certificate PEM"},
+                    "private_key": {"type": "string", "description": "Private key PEM"},
+                    "public_key": {"type": "string", "description": "Public key PEM"},
+                    "is_default": {"type": "boolean", "description": "Set as default profile"},
+                    "is_active": {"type": "boolean", "description": "Whether profile is active"},
+                },
+            },
+        ),
+        _configure_fiscal_profile,
+    )
+    register_tool(
+        Tool(
             name="send_customer_reminder",
             description="Send an on-demand or automated AR collection reminder to a customer via email or WhatsApp",
             tier="tier1",
@@ -576,6 +884,14 @@ def register_tools():
     register_resource(
         Resource(uri="nova://accounting/invoices", name="All Invoices", description="List of all invoices"),
         _list_invoices,
+    )
+    register_resource(
+        Resource(uri="nova://accounting/fiscal-profiles", name="Fiscal Profiles", description="List of all fiscal authority profiles"),
+        _fiscal_profile_repo.list,
+    )
+    register_resource(
+        Resource(uri="nova://accounting/einvoices", name="All E-Invoices", description="List of all e-invoice records"),
+        _einvoice_repo.list,
     )
 
 

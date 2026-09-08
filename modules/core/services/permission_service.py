@@ -127,6 +127,8 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0126': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments
     'T0127': 'QUALITY_VIEW',       # Temperature Excursion Alerts
     'T0128': 'QUALITY_VIEW',       # HACCP Checkpoint Logs & Compliance Reports
+    'T0129': 'FINANCE_VIEW',       # E-Invoice Clearance Records
+    'T0130': 'FINANCE_VIEW',       # Fiscal Authority Profiles
 }
 
 # Non-T-code custom route and tag mappings
@@ -159,6 +161,8 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     '/api/T0025I': 'ADMIN_VIEW',
     '/api/T0100I': 'ADMIN_VIEW',
     '/api/T0104I': 'ADMIN_MIGRATION',
+    '/api/T0129I': 'FINANCE_VIEW',
+    '/api/T0130I': 'FINANCE_VIEW',
     '/api/sales/mobile': 'FIELD_SALES_MOBILE',
     'Categories': 'PRODUCTS_VIEW',
     'Migration': 'ADMIN_MIGRATION',
@@ -202,6 +206,8 @@ CUSTOM_ROUTE_PERMISSIONS: dict[str, str] = {
     'Replenishment': 'INVENTORY_VIEW',
     'Field Sales Mobile': 'FIELD_SALES_MOBILE',
     'Field Sales': 'FIELD_SALES_MOBILE',
+    'T0129 - E-Invoice Clearance Records': 'FINANCE_VIEW',
+    'T0130 - Fiscal Authority Profiles': 'FINANCE_VIEW',
 }
 
 # Role to granted permissions mapping

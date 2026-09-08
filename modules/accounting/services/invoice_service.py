@@ -137,6 +137,7 @@ class InvoiceService(CrudService):
         pl_repo: CrudRepository = None,
         pli_repo: CrudRepository = None,
         payment_term_repo: CrudRepository = None,
+        einvoice_service: Any = None,
     ):
         super().__init__(repo or INVOICE_REPO)
         self.customer_repo = customer_repo or CUSTOMER_REPO
@@ -145,6 +146,21 @@ class InvoiceService(CrudService):
         self.pl_repo = pl_repo or PL_REPO
         self.pli_repo = pli_repo or PLI_REPO
         self.payment_term_repo = payment_term_repo or PAYMENT_TERM_REPO
+        self._einvoice_service = einvoice_service
+
+    @property
+    def einvoice_service(self):
+        if self._einvoice_service is None:
+            try:
+                from modules.accounting.services.einvoice_service import EInvoiceService
+                self._einvoice_service = EInvoiceService(
+                    invoice_repo=self.repo,
+                    customer_repo=self.customer_repo,
+                    line_repo=self.line_repo,
+                )
+            except Exception as exc:
+                logger.warning(f"Could not initialize EInvoiceService: {exc}")
+        return self._einvoice_service
 
     def validate_order_tolerance_approvals(self, order_id: int, conn=None):
         """
@@ -250,7 +266,13 @@ class InvoiceService(CrudService):
             else:
                 payload['early_discount_amount'] = 0.0
 
-        return super().create(payload, conn=conn)
+        invoice = super().create(payload, conn=conn)
+        if self.einvoice_service and invoice and invoice.get('id'):
+            try:
+                self.einvoice_service.process_invoice_einvoice(invoice, auto_submit=False, conn=conn)
+            except Exception as exc:
+                logger.debug(f"E-Invoice auto-generation skipped or deferred: {exc}")
+        return invoice
 
     def calculate_catch_weight_summary(self, lines: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -512,4 +534,40 @@ class InvoiceService(CrudService):
             'sales_order_id': sales_order_id,
             'lines': lines,
         }
+
+    def get_einvoice_qr(self, invoice_id: int, conn=None):
+        """Retrieve or generate Base64 TLV QR code for an invoice."""
+        if not self.einvoice_service:
+            raise RuntimeError("EInvoiceService is not initialized")
+        return self.einvoice_service.generate_qr_code(invoice_id, conn=conn)
+
+    def generate_einvoice_xml(self, invoice_id: int, profile_id: Optional[int] = None, subtype: Optional[str] = None, conn=None) -> str:
+        """Generate OASIS UBL 2.1 XML document for an invoice."""
+        if not self.einvoice_service:
+            raise RuntimeError("EInvoiceService is not initialized")
+        return self.einvoice_service.generate_ubl_xml(invoice_id, profile_id=profile_id, subtype=subtype, conn=conn)
+
+    def sign_einvoice(self, invoice_id: int, profile_id: Optional[int] = None, conn=None) -> dict:
+        """Cryptographically sign invoice UBL XML and update cryptographic seal."""
+        if not self.einvoice_service:
+            raise RuntimeError("EInvoiceService is not initialized")
+        return self.einvoice_service.sign_einvoice(invoice_id, profile_id=profile_id, conn=conn)
+
+    def submit_einvoice_clearance(self, invoice_id: int, profile_id: Optional[int] = None, environment: Optional[str] = None, auto_sign: bool = True, conn=None):
+        """Submit invoice to fiscal authority for clearance or reporting."""
+        if not self.einvoice_service:
+            raise RuntimeError("EInvoiceService is not initialized")
+        return self.einvoice_service.submit_clearance(
+            invoice_id=invoice_id,
+            profile_id=profile_id,
+            environment=environment,
+            auto_sign=auto_sign,
+            conn=conn,
+        )
+
+    def get_einvoice_status(self, invoice_id: int, conn=None):
+        """Retrieve the e-invoice clearance record (T0129) for an invoice."""
+        if not self.einvoice_service:
+            return None
+        return self.einvoice_service.get_by_invoice_id(invoice_id, conn=conn)
 
