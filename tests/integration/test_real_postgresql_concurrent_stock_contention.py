@@ -59,7 +59,7 @@ from packages.auth.deps import get_current_user
 import packages.mcp.servers.inventory_mcp as inv_mcp
 import packages.mcp.servers.sales_mcp as sales_mcp
 import packages.mcp.servers.warehouse_mcp as wh_mcp
-from packages.mcp.registry import propose_action, confirm_action
+from packages.mcp.registry import propose_action, confirm_action, _current_user
 
 
 pytestmark = [pytest.mark.real_db, pytest.mark.integration]
@@ -1143,12 +1143,17 @@ class TestRealPostgresRestApiAndMcpStockContention:
             })
             order_ids.append(ord_rec['id'])
 
-        # Propose confirm_order for each
+        # Propose confirm_order for each (RBAC: set user with SALES_VIEW permission)
+        sales_user = {"id": 1, "username": "test_sales", "role": "Sales Rep", "permissions": ["SALES_VIEW"], "business_id": isolated_tenant}
         action_ids = []
         for oid in order_ids:
             with tenant_context(isolated_tenant):
-                prop = propose_action('confirm_order', {'order_id': oid})
-                action_ids.append((oid, prop['action_id']))
+                token = _current_user.set(sales_user)
+                try:
+                    prop = propose_action('confirm_order', {'order_id': oid})
+                    action_ids.append((oid, prop['action_id']))
+                finally:
+                    _current_user.reset(token)
 
         barrier = threading.Barrier(num_orders)
         confirmed_mcp = []
@@ -1157,14 +1162,18 @@ class TestRealPostgresRestApiAndMcpStockContention:
 
         def mcp_worker(oid, aid):
             with tenant_context(isolated_tenant):
+                token = _current_user.set(sales_user)
                 try:
-                    barrier.wait()
-                    res = confirm_action(aid)
-                    with lock:
-                        confirmed_mcp.append((oid, res))
-                except Exception as e:
-                    with lock:
-                        rejected_mcp.append((oid, str(e)))
+                    try:
+                        barrier.wait()
+                        res = confirm_action(aid)
+                        with lock:
+                            confirmed_mcp.append((oid, res))
+                    except Exception as e:
+                        with lock:
+                            rejected_mcp.append((oid, str(e)))
+                finally:
+                    _current_user.reset(token)
 
         threads = [threading.Thread(target=mcp_worker, args=(oid, aid)) for oid, aid in action_ids]
         for t in threads:

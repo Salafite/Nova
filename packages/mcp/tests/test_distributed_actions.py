@@ -87,16 +87,17 @@ class TestDistributedActions:
         tool = Tool(name="cancel_order", description="Cancel order", input_schema={})
         register_tool(tool, lambda order_id: f"cancelled {order_id}")
 
-        proposal = propose_action("cancel_order", {"order_id": 123})
+        user = {"id": 1, "role": "Admin"}
+        proposal = propose_action("cancel_order", {"order_id": 123}, user=user)
         action_id = proposal["action_id"]
 
         # First confirmation succeeds
-        res1 = confirm_action(action_id)
+        res1 = confirm_action(action_id, user=user)
         assert res1 == "cancelled 123"
 
         # Second confirmation fails with ValueError
         with pytest.raises(ValueError, match="Action not found or expired"):
-            confirm_action(action_id)
+            confirm_action(action_id, user=user)
 
     def test_ttl_expiration(self):
         """Expired actions in Redis cannot be confirmed."""

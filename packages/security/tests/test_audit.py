@@ -7,6 +7,8 @@ import pytest
 
 from packages.security.audit import (
     record_security_event,
+    record_mcp_tool_execution,
+    record_mcp_propose_confirm,
     log_security_event,
     log_cross_tenant_access,
     record_cross_tenant_attempt,
@@ -126,3 +128,163 @@ class TestSecurityAudit:
         with patch("packages.security.audit.record_security_event") as mock_record:
             record_cross_tenant_attempt("T0001", 1)
             assert mock_record.called
+
+    def test_record_mcp_tool_execution_success(self):
+        with patch("packages.security.audit._audit_repo.create") as mock_create:
+            mock_create.return_value = {"id": 200, "table_name": "MCP_TOOL", "action": "MCP_SUCCESS"}
+
+            result = record_mcp_tool_execution(
+                tool_name="list_products",
+                arguments={"limit": 10},
+                result=[{"id": 1, "name": "Widget"}],
+                status="SUCCESS",
+                user_id=10,
+                business_id=2,
+                role="Manager",
+                required_permission="PRODUCT_READ",
+                latency_ms=45.2,
+            )
+
+            assert result is not None
+            assert result["id"] == 200
+            assert mock_create.called
+            call_payload, kwargs = mock_create.call_args
+            entry = call_payload[0]
+            assert entry["table_name"] == "MCP_TOOL"
+            assert entry["action"] == "MCP_SUCCESS"
+            assert entry["changed_by"] == 10
+            assert entry["business_id"] == 2
+            assert kwargs.get("business_id") == 2
+
+            parsed = json.loads(entry["changed_data"])
+            assert parsed["event"] == "mcp_tool_execution"
+            assert parsed["tool_name"] == "list_products"
+            assert parsed["arguments"] == {"limit": 10}
+            assert parsed["status"] == "SUCCESS"
+            assert parsed["user_id"] == 10
+            assert parsed["role"] == "Manager"
+            assert parsed["tenant_id"] == 2
+            assert parsed["required_permission"] == "PRODUCT_READ"
+            assert parsed["latency_ms"] == 45.2
+
+    def test_record_mcp_tool_execution_denied_and_error(self, caplog):
+        with patch("packages.security.audit._audit_repo.create", return_value={"id": 201}):
+            with caplog.at_level(logging.WARNING, logger="security.audit"):
+                res = record_mcp_tool_execution(
+                    tool_name="delete_product",
+                    arguments={"id": 99},
+                    status="DENIED",
+                    user_id=5,
+                    business_id=1,
+                    role="Viewer",
+                    required_permission="PRODUCT_DELETE",
+                    error="Permission denied: PRODUCT_DELETE required",
+                )
+                assert res == {"id": 201}
+                assert "MCP tool [delete_product] DENIED" in caplog.text
+
+        with patch("packages.security.audit._audit_repo.create", return_value={"id": 202}):
+            with caplog.at_level(logging.ERROR, logger="security.audit"):
+                res = record_mcp_tool_execution(
+                    tool_name="execute_read_query",
+                    arguments={"query": "SELECT 1"},
+                    status="ERROR",
+                    user_id=5,
+                    business_id=1,
+                    role="Admin",
+                    error="Syntax error in SQL",
+                )
+                assert res == {"id": 202}
+                assert "MCP tool [execute_read_query] ERROR" in caplog.text
+
+    def test_record_mcp_propose_confirm(self, caplog):
+        with patch("packages.security.audit._audit_repo.create") as mock_create:
+            mock_create.return_value = {"id": 300}
+
+            result = record_mcp_propose_confirm(
+                action_type="PROPOSE",
+                tool_name="delete_product",
+                action_id="act-12345",
+                arguments={"id": 42},
+                preview="Delete product 42",
+                status="SUCCESS",
+                user_id=7,
+                business_id=3,
+                role="Manager",
+            )
+
+            assert result == {"id": 300}
+            call_payload, kwargs = mock_create.call_args
+            entry = call_payload[0]
+            assert entry["table_name"] == "MCP_ACTION"
+            assert entry["record_id"] == 42
+            assert entry["action"] == "MCP_PROPOSE"
+            assert entry["changed_by"] == 7
+            assert entry["business_id"] == 3
+
+            parsed = json.loads(entry["changed_data"])
+            assert parsed["event"] == "mcp_propose_confirm"
+            assert parsed["action_type"] == "PROPOSE"
+            assert parsed["action_id"] == "act-12345"
+            assert parsed["tool_name"] == "delete_product"
+            assert parsed["arguments"] == {"id": 42}
+            assert parsed["preview"] == "Delete product 42"
+
+    def test_record_mcp_tool_execution_record_id_extraction_and_tenant_context(self):
+        with tenant_context(88):
+            with patch("packages.security.audit._audit_repo.create") as mock_create:
+                mock_create.return_value = {"id": 205}
+
+                # Using 'record_id' in arguments
+                res = record_mcp_tool_execution(
+                    tool_name="update_order",
+                    arguments={"record_id": 999, "status": "confirmed"},
+                    status="SUCCESS",
+                    user_id=14,
+                )
+
+                assert res == {"id": 205}
+                call_payload, kwargs = mock_create.call_args
+                entry = call_payload[0]
+                assert entry["record_id"] == 999
+                assert entry["business_id"] == 88
+                assert kwargs.get("business_id") == 88
+
+                parsed = json.loads(entry["changed_data"])
+                assert parsed["tenant_id"] == 88
+                assert parsed["arguments"] == {"record_id": 999, "status": "confirmed"}
+
+    def test_record_mcp_propose_confirm_denied_and_error(self, caplog):
+        with patch("packages.security.audit._audit_repo.create", return_value={"id": 301}):
+            with caplog.at_level(logging.WARNING, logger="security.audit"):
+                res = record_mcp_propose_confirm(
+                    action_type="PROPOSE",
+                    tool_name="cancel_order",
+                    action_id="act-fail-1",
+                    arguments={"id": 10},
+                    status="DENIED",
+                    user_id=8,
+                    business_id=2,
+                    role="Viewer",
+                    error="Permission denied: SALES_VIEW required",
+                )
+                assert res == {"id": 301}
+                assert "MCP action [PROPOSE:act-fail-1] DENIED" in caplog.text
+
+        with patch("packages.security.audit._audit_repo.create", return_value={"id": 302}):
+            with caplog.at_level(logging.ERROR, logger="security.audit"):
+                res = record_mcp_propose_confirm(
+                    action_type="CONFIRM",
+                    tool_name="confirm_order",
+                    action_id="act-fail-2",
+                    arguments={"id": 20},
+                    status="ERROR",
+                    user_id=8,
+                    business_id=2,
+                    role="Admin",
+                    error="Order already cancelled",
+                )
+                assert res == {"id": 302}
+                assert "MCP action [CONFIRM:act-fail-2] ERROR" in caplog.text
+
+
