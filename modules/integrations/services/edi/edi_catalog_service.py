@@ -1655,6 +1655,32 @@ class EdiCatalogService:
             "errors": sync_result.errors,
         }
 
+    def export_catalog(
+        self,
+        partner_id: int,
+        standard: Optional[str] = None,
+        catalog_code: Optional[str] = None,
+        category: Optional[str] = None,
+        currency: str = "USD",
+        price_list_id: Optional[int] = None,
+        items_override: Optional[List[Dict[str, Any]]] = None,
+        control_number: Optional[str] = None,
+        log_transaction: bool = True,
+        business_id: Optional[int] = None,
+    ) -> CatalogExportResult:
+        """Alias and flexible wrapper for export_catalog_edi."""
+        cat_code = catalog_code or f"CAT-{partner_id}"
+        return self.export_catalog_edi(
+            partner_id=partner_id,
+            catalog_code=cat_code,
+            format_override=standard,
+            items_override=items_override,
+            price_list_id=price_list_id,
+            control_number=control_number,
+            log_transaction=log_transaction,
+            business_id=business_id,
+        )
+
 
 # Singleton instance
 edi_catalog_service = EdiCatalogService()

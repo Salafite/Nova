@@ -693,20 +693,20 @@ def generate_edifact_invoic(
     # DTM: Dates
     now = datetime.now(timezone.utc)
     inv_date_str = header.issue_date.strftime("%Y%m%d") if header.issue_date else now.strftime("%Y%m%d")
-    builder.add_segment("DTM", f"137:{inv_date_str}:102")  # 137 = Document / Invoice date
+    builder.add_segment("DTM", ["137", inv_date_str, "102"])  # 137 = Document / Invoice date
 
     if header.due_date:
-        builder.add_segment("DTM", f"140:{header.due_date.strftime('%Y%m%d')}:102")  # 140 = Due date
+        builder.add_segment("DTM", ["140", header.due_date.strftime('%Y%m%d'), "102"])  # 140 = Due date
 
     # RFF: References
     if header.buyer_po_number:
-        builder.add_segment("RFF", f"ON:{header.buyer_po_number}")
+        builder.add_segment("RFF", ["ON", header.buyer_po_number])
     if header.delivery_number:
-        builder.add_segment("RFF", f"DQ:{header.delivery_number}")
+        builder.add_segment("RFF", ["DQ", header.delivery_number])
     if header.sales_order_number:
-        builder.add_segment("RFF", f"VN:{header.sales_order_number}")
+        builder.add_segment("RFF", ["VN", header.sales_order_number])
     if header.seller_vat_id:
-        builder.add_segment("RFF", f"VA:{header.seller_vat_id}")
+        builder.add_segment("RFF", ["VA", header.seller_vat_id])
 
     # NAD: Parties
     # 1. Supplier / Seller (SU)
@@ -715,7 +715,7 @@ def generate_edifact_invoic(
     builder.add_segment(
         "NAD",
         "SU",
-        f"{seller_id}::9",
+        [seller_id, "", "9"],
         "",
         seller_name,
         header.seller_address or "",
@@ -731,7 +731,7 @@ def generate_edifact_invoic(
     builder.add_segment(
         "NAD",
         "BY",
-        f"{buyer_id}::9",
+        [buyer_id, "", "9"],
         "",
         buyer_name,
         header.buyer_address or "",
@@ -747,7 +747,7 @@ def generate_edifact_invoic(
     builder.add_segment(
         "NAD",
         "DP",
-        f"{st_id}::9",
+        [st_id, "", "9"],
         "",
         st_name,
         header.ship_to_address or "",
@@ -761,7 +761,7 @@ def generate_edifact_invoic(
     builder.add_segment(
         "NAD",
         "IV",
-        f"{buyer_id}::9",
+        [buyer_id, "", "9"],
         "",
         buyer_name,
         header.buyer_address or "",
@@ -773,16 +773,16 @@ def generate_edifact_invoic(
 
     # CUX: Currency
     if header.currency:
-        builder.add_segment("CUX", f"2:{header.currency}:4")
+        builder.add_segment("CUX", ["2", header.currency, "4"])
 
     # PAT / PCD / MOA / DTM: Payment Terms
     builder.add_segment("PAT", "1")  # 1 = Basic payment terms
     if header.discount_percentage > 0:
-        builder.add_segment("PCD", f"12:{header.discount_percentage:.2f}")  # 12 = Discount percentage
+        builder.add_segment("PCD", ["12", f"{header.discount_percentage:.2f}"])  # 12 = Discount percentage
     if header.early_discount_amount > 0:
-        builder.add_segment("MOA", f"52:{header.early_discount_amount:.2f}")  # 52 = Discount amount
+        builder.add_segment("MOA", ["52", f"{header.early_discount_amount:.2f}"])  # 52 = Discount amount
     if header.discount_due_date:
-        builder.add_segment("DTM", f"12:{header.discount_due_date.strftime('%Y%m%d')}:102")
+        builder.add_segment("DTM", ["12", header.discount_due_date.strftime('%Y%m%d'), "102"])
 
     # LIN Line Item Loops
     total_qty = 0.0
@@ -791,24 +791,24 @@ def generate_edifact_invoic(
 
         # LIN: Line Identification
         gtin_val = line.gtin or ""
-        item_id_str = f"{gtin_val}:SRV" if gtin_val else f"{line.sku}:EN"
-        builder.add_segment("LIN", str(line.line_number), "", item_id_str)
+        item_id_list = [gtin_val, "SRV"] if gtin_val else [line.sku, "EN"]
+        builder.add_segment("LIN", str(line.line_number), "", item_id_list)
 
         # PIA: Additional Identification (Buyer / Vendor SKU)
         pia_parts = []
         if line.buyer_sku:
-            pia_parts.append(f"{line.buyer_sku}:IN")
+            pia_parts.append([line.buyer_sku, "IN"])
         if line.vendor_sku:
-            pia_parts.append(f"{line.vendor_sku}:VN")
+            pia_parts.append([line.vendor_sku, "VN"])
         elif line.sku and line.sku != line.buyer_sku:
-            pia_parts.append(f"{line.sku}:VN")
+            pia_parts.append([line.sku, "VN"])
 
         if pia_parts:
             builder.add_segment("PIA", "1", *pia_parts)
 
         # IMD: Item Description
         if line.product_name:
-            builder.add_segment("IMD", "F", "", f":::{line.product_name}")
+            builder.add_segment("IMD", "F", "", ["", "", "", line.product_name])
 
         # QTY: Quantity Invoiced (47) & Delivered (46)
         uom_code = line.uom or "PCE"
@@ -817,54 +817,54 @@ def generate_edifact_invoic(
         elif uom_code == "CA":
             uom_code = "CS"
 
-        builder.add_segment("QTY", f"47:{line.qty_invoiced}:{uom_code}")
+        builder.add_segment("QTY", ["47", str(line.qty_invoiced), uom_code])
         if line.qty_delivered is not None:
-            builder.add_segment("QTY", f"46:{line.qty_delivered}:{uom_code}")
+            builder.add_segment("QTY", ["46", str(line.qty_delivered), uom_code])
 
         # MOA: Line Total Amount (203 = Line Item Amount)
-        builder.add_segment("MOA", f"203:{line.net_amount:.2f}")
+        builder.add_segment("MOA", ["203", f"{line.net_amount:.2f}"])
 
         # PRI: Net Calculation Price (AAA = Net Price)
-        builder.add_segment("PRI", f"AAA:{line.unit_price:.4f}:{uom_code}:NTP")
+        builder.add_segment("PRI", ["AAA", f"{line.unit_price:.4f}", uom_code, "NTP"])
 
         # TAX: Line VAT
         if line.tax_rate_percent > 0 or line.tax_amount > 0:
-            builder.add_segment("TAX", "7", "VAT", "", f":::{line.tax_rate_percent:.2f}", "S")
+            builder.add_segment("TAX", "7", "VAT", "", ["", "", "", f"{line.tax_rate_percent:.2f}"], "S")
 
         # ALC: Line Discount (if any)
         if line.discount_amount > 0:
             builder.add_segment("ALC", "A", "", "", "1")
-            builder.add_segment("MOA", f"204:{line.discount_amount:.2f}")
+            builder.add_segment("MOA", ["204", f"{line.discount_amount:.2f}"])
 
     # UNS: Section Control
     builder.add_segment("UNS", "S")
 
     # CNT: Control Totals
-    builder.add_segment("CNT", f"2:{len(invoice_doc.lines)}")  # 2 = Line item count
-    builder.add_segment("CNT", f"1:{total_qty}")  # 1 = Total quantity
+    builder.add_segment("CNT", ["2", str(len(invoice_doc.lines))])  # 2 = Line item count
+    builder.add_segment("CNT", ["1", str(int(total_qty) if total_qty.is_integer() else total_qty)])  # 1 = Total quantity
 
     # MOA Summary Monetary Totals
     # 77: Invoice Total Amount (Grand Total)
-    builder.add_segment("MOA", f"77:{header.grand_total:.2f}")
+    builder.add_segment("MOA", ["77", f"{header.grand_total:.2f}"])
     # 79: Total Line Items Amount (Subtotal)
-    builder.add_segment("MOA", f"79:{header.subtotal:.2f}")
+    builder.add_segment("MOA", ["79", f"{header.subtotal:.2f}"])
     # 125: Taxable Amount
-    builder.add_segment("MOA", f"125:{header.subtotal:.2f}")
+    builder.add_segment("MOA", ["125", f"{header.subtotal:.2f}"])
     # 176: Total Tax Amount
     if header.tax_amount > 0:
-        builder.add_segment("MOA", f"176:{header.tax_amount:.2f}")
+        builder.add_segment("MOA", ["176", f"{header.tax_amount:.2f}"])
     # 131: Total Freight / Charge Amount
     if header.freight_amount > 0:
-        builder.add_segment("MOA", f"131:{header.freight_amount:.2f}")
+        builder.add_segment("MOA", ["131", f"{header.freight_amount:.2f}"])
     # 52: Total Discount Amount
     if header.discount_amount > 0:
-        builder.add_segment("MOA", f"52:{header.discount_amount:.2f}")
+        builder.add_segment("MOA", ["52", f"{header.discount_amount:.2f}"])
 
     # TAX Summary Breakdown
     if header.tax_amount > 0 or header.tax_rate_percent > 0:
-        builder.add_segment("TAX", "7", "VAT", "", f":::{header.tax_rate_percent:.2f}", "S")
-        builder.add_segment("MOA", f"124:{header.tax_amount:.2f}")  # 124 = Tax amount
-        builder.add_segment("MOA", f"125:{header.subtotal:.2f}")  # 125 = Taxable amount
+        builder.add_segment("TAX", "7", "VAT", "", ["", "", "", f"{header.tax_rate_percent:.2f}"], "S")
+        builder.add_segment("MOA", ["124", f"{header.tax_amount:.2f}"])  # 124 = Tax amount
+        builder.add_segment("MOA", ["125", f"{header.subtotal:.2f}"])  # 125 = Taxable amount
 
     return builder.build()
 
@@ -881,23 +881,11 @@ def parse_x12_810(
     Parses an ANSI X12 810 Invoice interchange into a structured EdiInvoiceDocument.
     """
     interchange = parse_x12(raw_edi, delimiters=delimiters)
-    if not interchange.groups:
-        raise EdiSyntaxError("No functional groups found in X12 810 message")
+    tx_sets = interchange.all_transactions()
+    if not tx_sets:
+        raise EdiSyntaxError("No 810 transaction sets found in X12 message")
 
-    tx_set = None
-    for group in interchange.groups:
-        for tx in group.transactions:
-            if tx.doc_type == "810":
-                tx_set = tx
-                break
-        if tx_set:
-            break
-
-    if not tx_set:
-        tx_set = interchange.groups[0].transactions[0] if interchange.groups[0].transactions else None
-
-    if not tx_set:
-        raise EdiSyntaxError("No 810 transaction set found in X12 message")
+    tx_set = tx_sets[0]
 
     header = EdiInvoiceHeader(
         invoice_number="",
@@ -914,26 +902,23 @@ def parse_x12_810(
 
         if tag == "BIG":
             # BIG*InvoiceDate*InvoiceNumber*PODate*PONumber***TxType
-            if len(seg.elements) > 0 and seg.elements[0]:
+            d_str = seg.get(1)
+            if d_str and len(d_str) >= 8 and d_str[:8].isdigit():
                 try:
-                    d_str = seg.elements[0]
                     header.issue_date = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:8]))
                 except Exception:
                     pass
-            if len(seg.elements) > 1:
-                header.invoice_number = seg.elements[1]
-            if len(seg.elements) > 3 and seg.elements[3]:
-                header.buyer_po_number = seg.elements[3]
-            if len(seg.elements) > 6 and seg.elements[6] in ("CR", "CN"):
+            header.invoice_number = seg.get(2, "")
+            header.buyer_po_number = seg.get(4) or None
+            if seg.get(7) in ("CR", "CN"):
                 header.invoice_type = "Credit Note"
 
         elif tag == "CUR":
-            if len(seg.elements) > 1:
-                header.currency = seg.elements[1]
+            header.currency = seg.get(2, "USD")
 
         elif tag == "REF":
-            ref_qual = seg.get(0, "")
-            ref_val = seg.get(1, "")
+            ref_qual = seg.get(1, "")
+            ref_val = seg.get(2, "")
             if ref_qual == "VN":
                 header.sales_order_number = ref_val
             elif ref_qual == "SI":
@@ -944,9 +929,9 @@ def parse_x12_810(
                 header.seller_vat_id = ref_val
 
         elif tag == "N1":
-            party_type = seg.get(0, "")
-            party_name = seg.get(1, "")
-            party_id = seg.get(3, "")
+            party_type = seg.get(1, "")
+            party_name = seg.get(2, "")
+            party_id = seg.get(4, "")
             if party_type == "SE":
                 header.seller_name = party_name
                 header.seller_id = party_id
@@ -960,25 +945,33 @@ def parse_x12_810(
                 header.remit_to_name = party_name
                 header.remit_to_id = party_id
 
+        elif tag == "N3":
+            pass
+
+        elif tag == "N4":
+            pass
+
         elif tag == "ITD":
             # ITD*TermsCode*BasisDate*DiscPct*DiscDueDate*DiscDays*NetDueDate*NetDays*DiscAmt****TermsDesc
             try:
-                if seg.get(2):
-                    header.discount_percentage = float(seg.get(2))
                 if seg.get(3):
-                    d_str = seg.get(3)
-                    header.discount_due_date = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:8]))
+                    header.discount_percentage = float(seg.get(3))
                 if seg.get(4):
-                    header.discount_days = int(seg.get(4))
+                    d_str = seg.get(4)
+                    if len(d_str) >= 8 and d_str[:8].isdigit():
+                        header.discount_due_date = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:8]))
                 if seg.get(5):
-                    d_str = seg.get(5)
-                    header.due_date = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:8]))
+                    header.discount_days = int(seg.get(5))
                 if seg.get(6):
-                    header.net_days = int(seg.get(6))
+                    d_str = seg.get(6)
+                    if len(d_str) >= 8 and d_str[:8].isdigit():
+                        header.due_date = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:8]))
                 if seg.get(7):
-                    header.early_discount_amount = float(seg.get(7))
-                if seg.get(11):
-                    header.payment_term_name = seg.get(11)
+                    header.net_days = int(seg.get(7))
+                if seg.get(8):
+                    header.early_discount_amount = float(seg.get(8))
+                if seg.get(12):
+                    header.payment_term_name = seg.get(12)
             except Exception as e:
                 logger.debug(f"Error parsing ITD terms: {e}")
 
@@ -987,10 +980,10 @@ def parse_x12_810(
             if current_line:
                 lines.append(current_line)
 
-            line_no = int(seg.get(0, "1")) if seg.get(0, "1").isdigit() else len(lines) + 1
-            qty_inv = float(seg.get(1, "1.0"))
-            uom = seg.get(2, "EA")
-            price = float(seg.get(3, "0.0"))
+            line_no = int(seg.get(1, "1")) if seg.get(1, "1").isdigit() else len(lines) + 1
+            qty_inv = float(seg.get(2, "1.0"))
+            uom = seg.get(3, "EA")
+            price = float(seg.get(4, "0.0"))
 
             buyer_sku = None
             vendor_sku = None
@@ -1000,9 +993,9 @@ def parse_x12_810(
             # Parse paired qualifiers (elements starting at index 5)
             idx = 5
             while idx < len(seg.elements) - 1:
-                q = seg.elements[idx]
-                v = seg.elements[idx + 1]
-                if q in ("CB", "BP", "IN"):
+                q = str(seg.elements[idx]).upper()
+                v = str(seg.elements[idx + 1])
+                if q in ("CB", "BP"):
                     buyer_sku = v
                 elif q in ("VN", "VP"):
                     vendor_sku = v
@@ -1028,15 +1021,15 @@ def parse_x12_810(
             )
 
         elif tag == "PID" and current_line:
-            desc = seg.get(4, "")
+            desc = seg.get(5, "")
             if desc:
                 current_line.product_name = desc
 
         elif tag == "SAC":
-            ind = seg.get(0, "A")
-            sac_code = seg.get(1, "F800")
-            amt = float(seg.get(4, "0.0")) if seg.get(4) else 0.0
-            desc = seg.get(11, "")
+            ind = seg.get(1, "A")
+            sac_code = seg.get(2, "F800")
+            amt = float(seg.get(5, "0.0")) if seg.get(5) else 0.0
+            desc = seg.get(12, "")
 
             if current_line and not header.grand_total:
                 # Line level allowance
@@ -1061,8 +1054,8 @@ def parse_x12_810(
                     header.weight_adjustment_amount = amt if ind == "C" else -amt
 
         elif tag == "TXI":
-            tax_amt = float(seg.get(1, "0.0")) if seg.get(1) else 0.0
-            tax_rate = float(seg.get(2, "0.0")) if seg.get(2) else 0.0
+            tax_amt = float(seg.get(2, "0.0")) if seg.get(2) else 0.0
+            tax_rate = float(seg.get(3, "0.0")) if seg.get(3) else 0.0
             if current_line and not header.grand_total:
                 current_line.tax_amount = tax_amt
                 current_line.tax_rate_percent = tax_rate
@@ -1079,9 +1072,12 @@ def parse_x12_810(
                 )
 
         elif tag == "TDS":
-            if seg.get(0):
+            if current_line:
+                lines.append(current_line)
+                current_line = None
+            if seg.get(1):
                 try:
-                    header.grand_total = float(seg.get(0))
+                    header.grand_total = float(seg.get(1))
                 except Exception:
                     pass
 
@@ -1117,23 +1113,11 @@ def parse_edifact_invoic(
     Parses a UN/EDIFACT INVOIC message into a structured EdiInvoiceDocument.
     """
     interchange = parse_edifact(raw_edi, delimiters=delimiters)
-    if not interchange.groups:
-        raise EdiSyntaxError("No functional groups found in EDIFACT message")
+    tx_sets = interchange.all_transactions()
+    if not tx_sets:
+        raise EdiSyntaxError("No INVOIC messages found in UN/EDIFACT document")
 
-    tx_set = None
-    for group in interchange.groups:
-        for tx in group.transactions:
-            if tx.doc_type == "INVOIC":
-                tx_set = tx
-                break
-        if tx_set:
-            break
-
-    if not tx_set:
-        tx_set = interchange.groups[0].transactions[0] if interchange.groups[0].transactions else None
-
-    if not tx_set:
-        raise EdiSyntaxError("No INVOIC message found in EDIFACT interchange")
+    tx_set = tx_sets[0]
 
     header = EdiInvoiceHeader(
         invoice_number="",
@@ -1149,32 +1133,31 @@ def parse_edifact_invoic(
         tag = seg.tag
 
         if tag == "BGM":
-            code = seg.get(0, "380")
-            header.invoice_number = seg.get(1, "")
+            code = seg.get(1, "380")
+            header.invoice_number = seg.get(2, "")
             if code == "381":
                 header.invoice_type = "Credit Note"
 
         elif tag == "DTM":
-            dtm_val = seg.get(0, "")
-            parts = dtm_val.split(":")
-            if len(parts) >= 2:
-                q, d_str = parts[0], parts[1]
-                try:
-                    d_obj = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:8]))
-                    if q == "137":
-                        header.issue_date = d_obj
-                    elif q == "140":
-                        header.due_date = d_obj
-                    elif q == "12":
-                        header.discount_due_date = d_obj
-                except Exception:
-                    pass
+            dtm_comp = seg.get_composite(1)
+            if len(dtm_comp) >= 2:
+                q, d_str = dtm_comp[0], dtm_comp[1]
+                if len(d_str) >= 8 and d_str[:8].isdigit():
+                    try:
+                        d_obj = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:8]))
+                        if q == "137":
+                            header.issue_date = d_obj
+                        elif q == "140":
+                            header.due_date = d_obj
+                        elif q == "12":
+                            header.discount_due_date = d_obj
+                    except Exception:
+                        pass
 
         elif tag == "RFF":
-            rff_val = seg.get(0, "")
-            parts = rff_val.split(":", 1)
-            if len(parts) == 2:
-                q, val = parts[0], parts[1]
+            rff_comp = seg.get_composite(1)
+            if len(rff_comp) >= 2:
+                q, val = rff_comp[0], rff_comp[1]
                 if q == "ON":
                     header.buyer_po_number = val
                 elif q == "DQ":
@@ -1185,13 +1168,13 @@ def parse_edifact_invoic(
                     header.seller_vat_id = val
 
         elif tag == "NAD":
-            party_type = seg.get(0, "")
-            party_id_comp = seg.get(1, "")
-            p_id = party_id_comp.split(":")[0] if party_id_comp else ""
-            p_name = seg.get(3, "")
-            p_addr = seg.get(4, "")
-            p_city = seg.get(5, "")
-            p_country = seg.get(8, "")
+            party_type = seg.get(1, "")
+            id_comp = seg.get_composite(2)
+            p_id = id_comp[0] if id_comp else seg.get(2, "")
+            p_name = seg.get(4, "") or seg.get(3, "")
+            p_addr = seg.get(5, "") or seg.get(4, "")
+            p_city = seg.get(6, "") or seg.get(5, "")
+            p_country = seg.get(9, "") or seg.get(8, "")
 
             if party_type == "SU":
                 header.seller_name = p_name
@@ -1213,24 +1196,22 @@ def parse_edifact_invoic(
                 header.ship_to_country = p_country
 
         elif tag == "CUX":
-            cux_val = seg.get(0, "")
-            parts = cux_val.split(":")
-            if len(parts) >= 2:
-                header.currency = parts[1]
+            cux_comp = seg.get_composite(1)
+            if len(cux_comp) >= 2:
+                header.currency = cux_comp[1]
 
         elif tag == "PCD":
-            pcd_val = seg.get(0, "")
-            parts = pcd_val.split(":")
-            if len(parts) >= 2 and parts[0] == "12":
-                header.discount_percentage = float(parts[1])
+            pcd_comp = seg.get_composite(1)
+            if len(pcd_comp) >= 2 and pcd_comp[0] == "12":
+                header.discount_percentage = float(pcd_comp[1])
 
         elif tag == "LIN":
             if current_line:
                 lines.append(current_line)
 
-            line_no = int(seg.get(0, "1")) if seg.get(0, "1").isdigit() else len(lines) + 1
-            item_comp = seg.get(2, "")
-            gtin = item_comp.split(":")[0] if item_comp else None
+            line_no = int(seg.get(1, "1")) if seg.get(1, "1").isdigit() else len(lines) + 1
+            item_comp = seg.get_composite(3)
+            gtin = item_comp[0] if item_comp else (seg.get(3) or None)
 
             current_line = EdiInvoiceLine(
                 line_number=line_no,
@@ -1243,28 +1224,37 @@ def parse_edifact_invoic(
 
         elif tag == "PIA" and current_line:
             for el in seg.elements[1:]:
-                parts = el.split(":")
-                if len(parts) >= 2:
-                    sku_val, q = parts[0], parts[1]
+                if isinstance(el, list) and len(el) >= 2:
+                    sku_val, q = el[0], el[1]
                     if q == "IN":
                         current_line.buyer_sku = sku_val
                     elif q == "VN":
                         current_line.vendor_sku = sku_val
                         current_line.sku = sku_val
+                elif isinstance(el, str) and ":" in el:
+                    parts = el.split(":")
+                    if len(parts) >= 2:
+                        sku_val, q = parts[0], parts[1]
+                        if q == "IN":
+                            current_line.buyer_sku = sku_val
+                        elif q == "VN":
+                            current_line.vendor_sku = sku_val
+                            current_line.sku = sku_val
 
         elif tag == "IMD" and current_line:
-            desc_comp = seg.get(2, "")
+            desc_comp = seg.get_composite(3)
             if desc_comp:
-                desc = desc_comp.split(":")[-1]
+                desc = desc_comp[-1]
                 if desc:
                     current_line.product_name = desc
+            elif seg.get(3):
+                current_line.product_name = seg.get(3)
 
         elif tag == "QTY" and current_line:
-            qty_val = seg.get(0, "")
-            parts = qty_val.split(":")
-            if len(parts) >= 2:
-                q_type, amt = parts[0], float(parts[1])
-                uom_val = parts[2] if len(parts) > 2 else "EA"
+            qty_comp = seg.get_composite(1)
+            if len(qty_comp) >= 2:
+                q_type, amt = qty_comp[0], float(qty_comp[1])
+                uom_val = qty_comp[2] if len(qty_comp) > 2 else "EA"
                 if q_type == "47":
                     current_line.qty_invoiced = amt
                     current_line.uom = uom_val
@@ -1272,26 +1262,30 @@ def parse_edifact_invoic(
                     current_line.qty_delivered = amt
 
         elif tag == "PRI" and current_line:
-            pri_val = seg.get(0, "")
-            parts = pri_val.split(":")
-            if len(parts) >= 2:
-                current_line.unit_price = float(parts[1])
+            pri_comp = seg.get_composite(1)
+            if len(pri_comp) >= 2:
+                current_line.unit_price = float(pri_comp[1])
                 current_line.net_amount = round(current_line.qty_invoiced * current_line.unit_price, 2)
 
         elif tag == "TAX":
-            tax_rate_comp = seg.get(3, "")
-            rate = float(tax_rate_comp.split(":")[-1]) if tax_rate_comp else 0.0
+            tax_comp = seg.get_composite(4) or seg.get_composite(5)
+            rate = float(tax_comp[-1]) if tax_comp and tax_comp[-1] else 0.0
             if current_line:
                 current_line.tax_rate_percent = rate
             else:
                 header.tax_rate_percent = rate
 
+        elif tag == "UNS":
+            # Section control: 'S' signals start of summary section
+            if current_line:
+                lines.append(current_line)
+                current_line = None
+
         elif tag == "MOA":
-            moa_val = seg.get(0, "")
-            parts = moa_val.split(":")
-            if len(parts) >= 2:
-                q, amt = parts[0], float(parts[1])
-                if current_line and not header.grand_total:
+            moa_comp = seg.get_composite(1)
+            if len(moa_comp) >= 2:
+                q, amt = moa_comp[0], float(moa_comp[1])
+                if current_line:
                     if q == "203":
                         current_line.net_amount = amt
                     elif q == "204":
@@ -1301,7 +1295,7 @@ def parse_edifact_invoic(
                         header.grand_total = amt
                     elif q == "79":
                         header.subtotal = amt
-                    elif q == "176" or q == "124":
+                    elif q in ("176", "124"):
                         header.tax_amount = amt
                     elif q == "131":
                         header.freight_amount = amt
@@ -1446,7 +1440,7 @@ class Edi810Service(CrudService):
                 filters={"sales_order_id": sales_order_id},
                 conn=conn,
             )
-            if deliveries:
+            if isinstance(deliveries, list) and deliveries and isinstance(deliveries[0], dict):
                 delivery = deliveries[0]
 
         # 6. Fetch Sales Lines (T0013) & Delivery Lines (T0078)
@@ -1458,7 +1452,7 @@ class Edi810Service(CrudService):
             )
 
         del_lines = []
-        if delivery:
+        if isinstance(delivery, dict) and delivery.get("id"):
             del_lines = self.delivery_line_repo.list(
                 filters={"delivery_id": delivery["id"]},
                 conn=conn,
@@ -1501,10 +1495,10 @@ class Edi810Service(CrudService):
                 disc_due_d = None
 
         buyer_po = None
-        if so and so.get("notes") and "PO" in str(so.get("notes")):
-            buyer_po = str(so.get("notes"))
-        elif so and so.get("client_order_uuid"):
+        if so and so.get("client_order_uuid"):
             buyer_po = str(so.get("client_order_uuid"))
+        elif so and so.get("notes") and "PO" in str(so.get("notes")):
+            buyer_po = str(so.get("notes")).replace("PO# ", "").replace("PO#", "").strip()
         else:
             buyer_po = f"PO-{sales_order_id}" if sales_order_id else "PO-001"
 
@@ -1527,8 +1521,8 @@ class Edi810Service(CrudService):
             sales_order_id=sales_order_id,
             sales_order_number=str(so.get("order_number")) if so and so.get("order_number") else None,
             buyer_po_number=buyer_po,
-            delivery_id=delivery.get("id") if delivery else None,
-            delivery_number=str(delivery.get("delivery_number")) if delivery and delivery.get("delivery_number") else None,
+            delivery_id=delivery.get("id") if isinstance(delivery, dict) and delivery.get("id") else None,
+            delivery_number=str(delivery.get("delivery_number")) if isinstance(delivery, dict) and delivery.get("delivery_number") else None,
             issue_date=issue_d,
             due_date=due_d,
             discount_due_date=disc_due_d,

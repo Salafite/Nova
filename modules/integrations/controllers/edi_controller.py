@@ -314,87 +314,83 @@ def get_transaction_ack_payload(
 # ---------------------------------------------------------------------------
 
 @router.post("/asn/generate", response_model=EdiAsnGenerateResponse)
-@router.post("/asn/{delivery_id}", response_model=EdiAsnGenerateResponse)
 def generate_edi_asn(
-    delivery_id: Optional[int] = None,
-    payload: Optional[EdiAsnGenerateRequest] = None,
+    payload: EdiAsnGenerateRequest,
     user: dict = Depends(get_current_user),
 ):
     """
     Generate and transmit an Outbound EDI 856 (Advance Shipping Notice) or UN/EDIFACT DESADV
     with SSCC-18 pallet hierarchy, pick batches, and carrier dispatch details.
     """
-    target_delivery_id = delivery_id or (payload.delivery_id if payload else None)
-    if not target_delivery_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Delivery shipment ID is required",
-        )
-
-    partner_id = payload.partner_id if payload else None
-    carrier_name = payload.carrier_name if payload else None
-    tracking_number = payload.tracking_number if payload else None
-    vehicle_number = payload.vehicle_number if payload else None
-    seal_number = payload.seal_number if payload else None
-
     try:
         response = edi_856_service.generate_asn_for_delivery(
-            delivery_id=target_delivery_id,
-            partner_id=partner_id,
-            carrier_name=carrier_name,
-            tracking_number=tracking_number,
-            vehicle_number=vehicle_number,
-            seal_number=seal_number,
+            delivery_id=payload.delivery_id,
+            partner_id=payload.partner_id,
+            carrier_name=payload.carrier_name,
+            tracking_number=payload.tracking_number,
+            vehicle_number=payload.vehicle_number,
+            seal_number=payload.seal_number,
             auto_generate_sscc=True,
         )
         return response
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
     except Exception as e:
-        logger.error(f"ASN generation failed for delivery #{target_delivery_id}: {e}", exc_info=True)
+        logger.error(f"ASN generation failed for delivery #{payload.delivery_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"ASN generation failed: {str(e)}",
         )
 
 
+@router.post("/asn/{delivery_id}", response_model=EdiAsnGenerateResponse)
+def generate_edi_asn_by_delivery(
+    delivery_id: int,
+    payload: Optional[EdiAsnGenerateRequest] = None,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Generate ASN for a specific delivery shipment ID.
+    """
+    req = payload or EdiAsnGenerateRequest(delivery_id=delivery_id)
+    req.delivery_id = delivery_id
+    return generate_edi_asn(payload=req, user=user)
+
+
 @router.post("/invoice/transmit", response_model=EdiInvoiceTransmitResponse)
-@router.post("/invoice/{invoice_id}", response_model=EdiInvoiceTransmitResponse)
 def transmit_edi_invoice(
-    invoice_id: Optional[int] = None,
-    payload: Optional[EdiInvoiceTransmitRequest] = None,
+    payload: EdiInvoiceTransmitRequest,
     user: dict = Depends(get_current_user),
 ):
     """
     Generate and transmit an Outbound EDI 810 (Sales Invoice) or UN/EDIFACT INVOIC
     matching delivered line items, tax breakdowns, discounts, and buyer purchase orders.
     """
-    target_invoice_id = invoice_id or (payload.invoice_id if payload else None)
-    if not target_invoice_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invoice ID is required",
-        )
-
-    deliv_id = payload.delivery_id if payload else None
-    part_id = payload.partner_id if payload else None
-
     try:
-        req = EdiInvoiceTransmitRequest(
-            invoice_id=target_invoice_id,
-            delivery_id=deliv_id,
-            partner_id=part_id,
-        )
-        response = edi_810_service.transmit_invoice(req)
+        response = edi_810_service.transmit_invoice(payload)
         return response
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
     except Exception as e:
-        logger.error(f"EDI Invoice transmission failed for invoice #{target_invoice_id}: {e}", exc_info=True)
+        logger.error(f"EDI Invoice transmission failed for invoice #{payload.invoice_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invoice transmission failed: {str(e)}",
         )
+
+
+@router.post("/invoice/{invoice_id}", response_model=EdiInvoiceTransmitResponse)
+def transmit_edi_invoice_by_id(
+    invoice_id: int,
+    payload: Optional[EdiInvoiceTransmitRequest] = None,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Transmit EDI invoice for a specific invoice ID.
+    """
+    req = payload or EdiInvoiceTransmitRequest(invoice_id=invoice_id)
+    req.invoice_id = invoice_id
+    return transmit_edi_invoice(payload=req, user=user)
 
 
 # ---------------------------------------------------------------------------
@@ -410,13 +406,21 @@ def sync_supplier_catalog_endpoint(
     Synchronize supermarket catalog items (T0128), detect price changes, and upsert SKU cross-reference matrix (T0125).
     """
     try:
-        response = edi_catalog_service.sync_supplier_catalog(
+        sync_res = edi_catalog_service.sync_catalog(
             partner_id=request.partner_id,
             catalog_code=request.catalog_code,
             items=request.items,
             auto_match_skus=request.auto_match_skus,
         )
-        return response
+        return EdiCatalogSyncResponse(
+            partner_id=sync_res.partner_id,
+            catalog_code=sync_res.catalog_code,
+            total_items=sync_res.total_items,
+            matched_items=sync_res.matched_items,
+            unmatched_items=sync_res.unmatched_items,
+            price_updated_items=sync_res.price_updated_items,
+            sync_status=sync_res.sync_status,
+        )
     except Exception as e:
         logger.error(f"Catalog sync error: {e}", exc_info=True)
         raise HTTPException(
@@ -497,16 +501,18 @@ def resolve_line_cross_reference(
         price_tolerance_percent=price_tolerance_percent,
     )
     return {
-        "is_matched": res.is_matched,
+        "is_matched": res.sku_resolution.is_matched if res.sku_resolution else False,
         "product_id": res.product_id,
         "product_name": res.product_name,
-        "resolved_sku": res.resolved_sku,
-        "uom_conversion_factor": res.uom_conversion_factor,
-        "internal_qty": res.internal_qty,
-        "contract_price": res.contract_price,
-        "price_discrepancy": res.price_discrepancy.model_dump() if res.price_discrepancy else None,
-        "errors": res.errors,
+        "resolved_sku": res.internal_sku,
+        "uom_conversion_factor": res.uom_factor,
+        "internal_qty": res.converted_qty,
+        "contract_price": res.expected_price,
+        "price_discrepancy": res.discrepancy_info.model_dump() if res.discrepancy_info else None,
+        "has_discrepancy": res.has_discrepancy,
+        "errors": res.sku_resolution.errors if res.sku_resolution else [],
     }
+
 
 
 @router.post("/sku-mappings/bulk-import")
@@ -592,19 +598,14 @@ def get_sscc_logistics_label(
             detail=f"Pallet SSCC '{identifier}' not found in T0127",
         )
 
-    sscc_code = pallet.get("sscc_barcode", "")
-    label_text = format_gs1_logistics_label(
-        sscc=sscc_code,
-        delivery_id=pallet.get("delivery_id"),
-        contents_summary=pallet.get("contents_summary"),
-        gross_weight=pallet.get("gross_weight_kg"),
-    )
+    label_data = format_gs1_logistics_label(pallet_data=pallet)
 
     return {
-        "sscc_barcode": sscc_code,
+        "sscc_barcode": pallet.get("sscc_barcode"),
         "pallet_number": pallet.get("pallet_number"),
         "package_type": pallet.get("package_type"),
         "status": pallet.get("status"),
         "gross_weight_kg": pallet.get("gross_weight_kg"),
-        "label_text": label_text,
+        "label": label_data,
+        "label_text": label_data.get("ascii_label", ""),
     }

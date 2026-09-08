@@ -1360,6 +1360,10 @@ class Edi850Service(CrudService):
             errors=[] if (force_confirm or xref_summary.is_clean) else xref_summary.errors,
         )
 
+    # Alias for API controllers & MCP tools
+    ingest_inbound_order = process_inbound_850
+
 
 # Global singleton instance
 edi_850_service = Edi850Service()
+

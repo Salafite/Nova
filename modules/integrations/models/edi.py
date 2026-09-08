@@ -464,7 +464,7 @@ class EdiReprocessRequest(BaseModel):
 
 
 class EdiAsnGenerateRequest(BaseModel):
-    delivery_id: int = Field(..., description="Nova delivery shipment ID (t0016)")
+    delivery_id: Optional[int] = Field(None, description="Nova delivery shipment ID (t0016)")
     partner_id: Optional[int] = Field(None, description="Partner ID override (defaults to partner linked to delivery/customer)")
     carrier_name: Optional[str] = Field(None, description="Carrier name / SCAC code")
     tracking_number: Optional[str] = Field(None, description="Bill of lading / tracking number")
@@ -486,7 +486,7 @@ class EdiAsnGenerateResponse(BaseModel):
 
 
 class EdiInvoiceTransmitRequest(BaseModel):
-    invoice_id: int = Field(..., description="Nova invoice ID (t0026)")
+    invoice_id: Optional[int] = Field(None, description="Nova invoice ID (t0026)")
     delivery_id: Optional[int] = Field(None, description="Optional delivery reference (t0016)")
     partner_id: Optional[int] = Field(None, description="Partner ID override")
     business_id: Optional[int] = Field(None, description="Tenant business ID")
