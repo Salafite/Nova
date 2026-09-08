@@ -3,7 +3,7 @@ from packages.auth.schemas import (
     LoginRequest, RefreshRequest, TokenResponse, CurrentUserResponse,
     SignupRequest, SignupResponse, InviteRequest, InviteResponse,
 )
-from packages.auth.service import login, refresh, signup, invite_user
+from packages.auth.service import login, refresh, signup, invite_user, revoke_refresh_token
 from packages.auth.deps import get_current_user
 from modules.core.services.permission_service import derive_permissions
 
@@ -24,6 +24,14 @@ def refresh_endpoint(body: RefreshRequest):
     if not result:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, 'Invalid or expired refresh token')
     return result
+
+
+@router.post('/logout')
+def logout_endpoint(body: RefreshRequest):
+    success = revoke_refresh_token(body.refresh_token)
+    if not success:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, 'Invalid or expired refresh token')
+    return {'message': 'Successfully logged out'}
 
 
 @router.get('/me', response_model=CurrentUserResponse)

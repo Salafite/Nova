@@ -178,3 +178,42 @@ class TestRegistry:
         import pytest
         with pytest.raises(ValueError, match="Prompt not found: unknown"):
             get_prompt("unknown")
+
+    def test_call_tool_permission_denied_raises_permission_error(self):
+        import pytest
+        tool = Tool(name="admin_task", description="Admin only", input_schema={}, required_permission="ADMIN_VIEW")
+        register_tool(tool, lambda: "executed")
+        with pytest.raises(PermissionError, match="Permission denied: ADMIN_VIEW required for tool 'admin_task'"):
+            call_tool("admin_task", {}, user={"id": 1, "role": "Viewer"})
+
+    def test_call_tool_permission_granted_admin(self):
+        tool = Tool(name="admin_task", description="Admin only", input_schema={}, required_permission="ADMIN_VIEW")
+        register_tool(tool, lambda: "executed_admin")
+        result = call_tool("admin_task", {}, user={"id": 1, "role": "Admin"})
+        assert result == "executed_admin"
+
+    def test_call_tool_permission_granted_explicit_permission(self):
+        tool = Tool(name="admin_task", description="Admin only", input_schema={}, required_permission="ADMIN_VIEW")
+        register_tool(tool, lambda: "executed_explicit")
+        result = call_tool("admin_task", {}, user={"id": 1, "permissions": ["ADMIN_VIEW"]})
+        assert result == "executed_explicit"
+
+    def test_propose_action_permission_denied_raises_permission_error(self):
+        import pytest
+        tool = Tool(name="delete_something", description="Delete", input_schema={}, tier="tier2", required_permission="PRODUCTS_VIEW")
+        register_tool(tool, lambda: "deleted")
+        with pytest.raises(PermissionError, match="Permission denied: PRODUCTS_VIEW required for tool 'delete_something'"):
+            propose_action("delete_something", {}, user={"id": 1, "role": "Customer"})
+
+    def test_read_resource_permission_denied_raises_permission_error(self):
+        import pytest
+        res = Resource(uri="nova://secure_data", name="Secure", description="Secure data", required_permission="FINANCE_VIEW")
+        register_resource(res, lambda: {"secret": 123})
+        with pytest.raises(PermissionError, match="Permission denied: FINANCE_VIEW required for resource 'nova://secure_data'"):
+            read_resource("nova://secure_data", user={"id": 1, "role": "Viewer"})
+
+    def test_read_resource_permission_granted(self):
+        res = Resource(uri="nova://secure_data", name="Secure", description="Secure data", required_permission="FINANCE_VIEW")
+        register_resource(res, lambda: {"secret": 123})
+        result = read_resource("nova://secure_data", user={"id": 1, "role": "Manager"})
+        assert result == {"secret": 123}

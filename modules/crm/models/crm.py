@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
 from modules.core.models.factory import crud_model
@@ -19,6 +19,13 @@ CustomerCreate, CustomerUpdate, CustomerResponse = crud_model('Customer', [
     ('min_order_amount', float, Field(0, ge=0)),
     ('order_cutoff_time', Optional[str], Field(None, max_length=10)),
     ('allow_reorders', bool, True),
+    ('is_vip', bool, False),
+    ('exclude_from_reminders', bool, False),
+    ('preferred_reminder_channel', str, 'EMAIL'),
+    ('reminder_phone', Optional[str], Field(None, max_length=50)),
+    ('reminder_email', Optional[str], Field(None, max_length=255)),
+    ('last_reminder_sent_at', Optional[datetime], None),
+    ('last_statement_sent_at', Optional[datetime], None),
 ])
 
 SupplierCreate, SupplierUpdate, SupplierResponse = crud_model('Supplier', [

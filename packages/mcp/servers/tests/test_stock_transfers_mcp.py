@@ -154,7 +154,10 @@ def clean_registry():
     _tools.clear()
     _resources.clear()
     _prompts.clear()
+    from packages.mcp.registry import _current_user
+    token = _current_user.set({"id": 1, "role": "Warehouse Manager", "business_id": 1})
     yield
+    _current_user.reset(token)
     _tools.clear()
     _resources.clear()
     _prompts.clear()
@@ -518,7 +521,7 @@ class TestInventoryMcpReplenishment:
                     "carrier": "ColdExpress",
                     "notes": "Automated replenishment batch",
                 },
-                user_id=None,
+                user_id=1,
             )
 
     def test_generate_replenishment_transfers_with_user_context(self):
@@ -564,7 +567,7 @@ class TestInventoryMcpReplenishment:
                     "carrier": None,
                     "notes": None,
                 },
-                user_id=None,
+                user_id=1,
             )
 
     def test_read_replenishment_suggestions_resource(self):

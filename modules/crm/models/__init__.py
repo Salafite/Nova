@@ -11,3 +11,9 @@ from modules.crm.models.crm_lead import (
 from modules.crm.models.product_supplier import (
     ProductSupplierCreate, ProductSupplierUpdate, ProductSupplierResponse,
 )
+from modules.crm.models.customer_communication import (
+    CustomerCommunicationCreate, CustomerCommunicationUpdate, CustomerCommunicationResponse,
+    CommunicationStatusUpdate, CustomerCommunicationTimelineQuery,
+    CustomerReminderPreferencesUpdate, CustomerReminderPreferencesResponse,
+    CUSTOMER_COMMUNICATION_REPO,
+)

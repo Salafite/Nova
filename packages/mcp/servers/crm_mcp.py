@@ -1,5 +1,10 @@
+from typing import Optional, Dict, Any, List
 from modules.core.services.base import CrudService
 from modules.core.repositories.base import CrudRepository
+from modules.crm.services.customer_communication_service import (
+    CustomerCommunicationService,
+    customer_communication_service,
+)
 from packages.mcp.registry import register_tool
 from packages.mcp.types import Tool
 
@@ -15,6 +20,8 @@ _suppliers_svc = CrudService(_suppliers_repo)
 
 _groups_repo = CrudRepository('T0102', business_columns=['id', 'name', 'is_active'])
 _groups_svc = CrudService(_groups_repo)
+
+_comm_svc = customer_communication_service
 
 
 def register_tools():
@@ -38,6 +45,24 @@ def register_tools():
     register_tool(Tool(name="list_customer_groups", description="List customer groups", input_schema={
         "type": "object", "properties": {},
     }), _list_groups)
+    register_tool(
+        Tool(
+            name="list_customer_communications",
+            description="List customer communication timeline records, dispatch logs, delivery statuses, and read receipts across Email and WhatsApp",
+            tier="tier1",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer", "description": "Optional customer ID to get customer-specific timeline"},
+                    "channel": {"type": "string", "description": "Filter by channel ('EMAIL', 'WHATSAPP')"},
+                    "status": {"type": "string", "description": "Filter by status ('PENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED')"},
+                    "communication_type": {"type": "string", "description": "Filter by communication type ('REMINDER', 'STATEMENT', 'CUSTOM')"},
+                    "limit": {"type": "integer", "description": "Max results (default 50)"},
+                },
+            },
+        ),
+        _list_customer_communications,
+    )
 
 
 def _list_leads(status: str = None, assigned_to: int = None, limit: int = 50):
@@ -59,6 +84,32 @@ def _list_suppliers(category: str = None, limit: int = 50):
 
 def _list_groups():
     return _groups_svc.list()
+
+def _list_customer_communications(
+    customer_id: Optional[int] = None,
+    channel: Optional[str] = None,
+    status: Optional[str] = None,
+    communication_type: Optional[str] = None,
+    limit: int = 50,
+):
+    if customer_id is not None:
+        return _comm_svc.get_customer_timeline(
+            customer_id=customer_id,
+            channel=channel,
+            status=status,
+            communication_type=communication_type,
+            limit=limit,
+        )
+    return _comm_svc.list_timeline(
+        filters={
+            k: v for k, v in [
+                ("channel", channel),
+                ("status", status),
+                ("communication_type", communication_type),
+            ] if v is not None
+        } or None,
+        limit=limit,
+    )
 
 
 def main():

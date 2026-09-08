@@ -272,6 +272,95 @@ class TestAccountingMcp:
         assert res["found"] is False
         assert "error" in res
 
+    def test_send_customer_reminder_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "send_customer_reminder") as mock_send:
+            mock_send.return_value = {
+                "success": True,
+                "customer_id": 10,
+                "dispatched_count": 1,
+                "results": {"EMAIL": {"success": True, "tracking_number": "TRK-EMA-12345"}},
+            }
+            res = accounting_mcp._send_customer_reminder(
+                customer_id=10,
+                rule_id=1,
+                template_id=2,
+                channel="EMAIL",
+                custom_message="Please remit asap",
+            )
+            assert res["success"] is True
+            assert res["customer_id"] == 10
+            mock_send.assert_called_once_with(
+                customer_id=10,
+                rule_id=1,
+                template_id=2,
+                channel="EMAIL",
+                custom_message="Please remit asap",
+                attach_statement_pdf=True,
+                include_payment_link=True,
+            )
+
+    def test_dispatch_customer_statement_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "dispatch_customer_statement") as mock_stmt:
+            mock_stmt.return_value = {
+                "success": True,
+                "customer_id": 15,
+                "dispatched_count": 1,
+                "results": {"EMAIL": {"success": True, "tracking_number": "TRK-EMA-99999"}},
+            }
+            res = accounting_mcp._dispatch_customer_statement(
+                customer_id=15,
+                channel="EMAIL",
+                as_of_date="2026-09-01",
+                custom_message="Monthly Account Statement",
+            )
+            assert res["success"] is True
+            assert res["customer_id"] == 15
+            mock_stmt.assert_called_once_with(
+                customer_id=15,
+                channel="EMAIL",
+                start_date=None,
+                end_date=None,
+                as_of_date="2026-09-01",
+                custom_message="Monthly Account Statement",
+            )
+
+    def test_list_reminder_rules_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "list_rules") as mock_list:
+            mock_list.return_value = [
+                {"id": 1, "rule_name": "30-Day Aging", "threshold_days": 30, "is_active": True},
+                {"id": 2, "rule_name": "60-Day Aging", "threshold_days": 60, "is_active": True},
+            ]
+            res = accounting_mcp._list_reminder_rules(is_active=True, trigger_type="AGING_THRESHOLD", limit=20)
+            assert len(res) == 2
+            assert res[0]["rule_name"] == "30-Day Aging"
+            mock_list.assert_called_once_with(
+                is_active=True,
+                trigger_type="AGING_THRESHOLD",
+                channel=None,
+                limit=20,
+            )
+
+    def test_update_reminder_rule_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "update_rule") as mock_update:
+            mock_update.return_value = {
+                "id": 1,
+                "rule_name": "Updated 30-Day Rule",
+                "threshold_days": 35,
+                "exclude_vip": True,
+            }
+            res = accounting_mcp._update_reminder_rule(
+                id=1,
+                rule_name="Updated 30-Day Rule",
+                threshold_days=35,
+                exclude_vip=True,
+            )
+            assert res["threshold_days"] == 35
+            assert res["exclude_vip"] is True
+            mock_update.assert_called_once_with(
+                rule_id=1,
+                data={"rule_name": "Updated 30-Day Rule", "threshold_days": 35, "exclude_vip": True},
+            )
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools, list_resources
@@ -290,10 +379,15 @@ class TestAccountingMcp:
         assert "confirm_batch_check_clearing" in names
         assert "process_bounced_check" in names
         assert "list_bounced_checks" in names
+        assert "send_customer_reminder" in names
+        assert "dispatch_customer_statement" in names
+        assert "list_reminder_rules" in names
+        assert "update_reminder_rule" in names
 
         uris = [r.uri for r in list_resources()]
         assert "nova://accounting/payment-terms" in uris
         assert "nova://accounting/invoices" in uris
         assert "nova://accounting/debit-memos" in uris
+
 
 
