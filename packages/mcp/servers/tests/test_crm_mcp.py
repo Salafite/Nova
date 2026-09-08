@@ -32,6 +32,40 @@ class TestCrmMcp:
             crm_mcp._groups_svc.list.return_value = [{"name": "Retail"}]
             assert crm_mcp._list_groups()[0]["name"] == "Retail"
 
+    def test_list_customer_communications_for_customer(self):
+        with _patch("_comm_svc"):
+            crm_mcp._comm_svc.get_customer_timeline.return_value = {
+                "customer_id": 5,
+                "total": 1,
+                "items": [{"id": 1, "channel": "EMAIL", "status": "DELIVERED"}],
+            }
+            res = crm_mcp._list_customer_communications(customer_id=5, channel="EMAIL")
+            assert res["customer_id"] == 5
+            assert len(res["items"]) == 1
+            crm_mcp._comm_svc.get_customer_timeline.assert_called_once_with(
+                customer_id=5,
+                channel="EMAIL",
+                status=None,
+                communication_type=None,
+                limit=50,
+            )
+
+    def test_list_customer_communications_global(self):
+        with _patch("_comm_svc"):
+            crm_mcp._comm_svc.list_timeline.return_value = {
+                "total": 2,
+                "items": [
+                    {"id": 1, "customer_id": 5, "status": "SENT"},
+                    {"id": 2, "customer_id": 6, "status": "FAILED"},
+                ],
+            }
+            res = crm_mcp._list_customer_communications(status="FAILED", limit=20)
+            assert res["total"] == 2
+            crm_mcp._comm_svc.list_timeline.assert_called_once_with(
+                filters={"status": "FAILED"},
+                limit=20,
+            )
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools
@@ -40,3 +74,5 @@ class TestCrmMcp:
         assert "list_opportunities" in names
         assert "list_suppliers" in names
         assert "list_customer_groups" in names
+        assert "list_customer_communications" in names
+

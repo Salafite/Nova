@@ -74,6 +74,11 @@ class TestMcpIntegration:
         _resources.clear()
         _prompts.clear()
         self.server = McpServer(name="IntegrationTest", version="1.0")
+        self._audit_patch = patch("packages.security.audit._audit_repo.create", return_value={"id": 1})
+        self._audit_patch.start()
+
+    def teardown_method(self):
+        self._audit_patch.stop()
 
     def _register_all(self):
         reg_db()

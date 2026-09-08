@@ -37,6 +37,12 @@ def _load_all_routers():
     except Exception:
         pass
 
+    try:
+        from modules.accounting.controllers.ar_reminder_controller import router as ar_reminder_router
+        _all_routers.append(ar_reminder_router)
+    except Exception:
+        pass
+
     return _all_routers
 
 

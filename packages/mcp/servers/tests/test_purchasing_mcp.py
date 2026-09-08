@@ -153,13 +153,14 @@ class TestPurchasingMcp:
             }
 
             # Step 1: Propose action
-            proposed = registry.propose_action("propose_draft_purchase_order", {"product_id": 101})
+            user = {"id": 1, "role": "Purchasing Manager"}
+            proposed = registry.propose_action("propose_draft_purchase_order", {"product_id": 101}, user=user)
             assert "action_id" in proposed
             assert proposed["tool"] == "propose_draft_purchase_order"
             action_id = proposed["action_id"]
 
             # Step 2: Confirm action executes the underlying handler
-            confirmed = registry.confirm_action(action_id)
+            confirmed = registry.confirm_action(action_id, user=user)
             assert confirmed["purchase_order"]["order_number"] == "PO-003"
             assert confirmed["purchase_order"]["status"] == "Pending"
 

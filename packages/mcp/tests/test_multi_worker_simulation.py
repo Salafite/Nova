@@ -51,14 +51,17 @@ class SimulatedWorkerProcess:
     def propose(self, tool_name: str, arguments: dict, user_context: dict | None = None) -> dict:
         # Simulate worker local memory isolation
         _pending_actions.clear()
-        token = None
-        if user_context is not None:
-            token = _current_user.set(user_context)
+        effective_user = user_context if user_context is not None else {
+            "id": self.worker_id + 1,
+            "username": f"worker_{self.worker_id}",
+            "role": "Admin",
+            "business_id": 1,
+        }
+        token = _current_user.set(effective_user)
         try:
             return propose_action(tool_name, arguments)
         finally:
-            if token is not None:
-                _current_user.reset(token)
+            _current_user.reset(token)
             # Ensure in-memory process dict is cleared on other workers
             _pending_actions.clear()
 

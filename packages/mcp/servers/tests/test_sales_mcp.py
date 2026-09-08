@@ -313,7 +313,8 @@ class TestCustomers:
         }
         sales_mcp._aging_svc.get_customer_aging.return_value = mock_aging
 
-        res = call_tool("get_customer_aging", {"id": 1, "as_of_date": "2026-08-25"})
+        user = {"id": 1, "role": "Sales Rep"}
+        res = call_tool("get_customer_aging", {"id": 1, "as_of_date": "2026-08-25"}, user=user)
         assert res == mock_aging
         sales_mcp._aging_svc.get_customer_aging.assert_called_with(1, as_of_date="2026-08-25")
 
@@ -444,7 +445,8 @@ class TestCheckCustomerCredit:
         }
         sales_mcp._credit_svc.evaluate_order_credit.return_value = mock_eval
 
-        result = registry.call_tool("check_customer_credit", {"customer_id": 3, "order_amount": 150.0})
+        user = {"id": 1, "role": "Sales Rep"}
+        result = registry.call_tool("check_customer_credit", {"customer_id": 3, "order_amount": 150.0}, user=user)
 
         assert result == mock_eval
         sales_mcp._credit_svc.evaluate_order_credit.assert_called_once_with(3, order_amount=150.0, as_of_date=None)
@@ -661,13 +663,14 @@ class TestPodCodTools:
         sales_mcp._deliveries_svc.log_cod_collection.return_value = {"id": 2, "payment_status": "Collected"}
         sales_mcp._deliveries_svc.get_driver_handover_report.return_value = {"driver_id": 5, "total_deliveries": 1}
 
-        res1 = registry.call_tool("capture_proof_of_delivery", {"delivery_id": 2, "signature": "data:image/png;base64,abc"})
+        user = {"id": 1, "role": "Sales Rep"}
+        res1 = registry.call_tool("capture_proof_of_delivery", {"delivery_id": 2, "signature": "data:image/png;base64,abc"}, user=user)
         assert res1 == {"id": 2, "status": "Delivered"}
 
-        res2 = registry.call_tool("log_cod_collection", {"delivery_id": 2, "cash_amount": 100.0})
+        res2 = registry.call_tool("log_cod_collection", {"delivery_id": 2, "cash_amount": 100.0}, user=user)
         assert res2 == {"id": 2, "payment_status": "Collected"}
 
-        res3 = registry.call_tool("get_driver_handover_report", {"driver_id": 5})
+        res3 = registry.call_tool("get_driver_handover_report", {"driver_id": 5}, user=user)
         assert res3 == {"driver_id": 5, "total_deliveries": 1}
 
 
