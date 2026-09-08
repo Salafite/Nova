@@ -1170,10 +1170,22 @@ class EdifactBuilder:
         )
         self._current_msg: Optional[EdiTransactionSet] = None
 
-    def start_message(self, doc_type: str, control_number: str = "1") -> "EdifactBuilder":
+    def start_message(
+        self,
+        doc_type: Optional[str] = None,
+        control_number: str = "1",
+        msg_type: Optional[str] = None,
+        version: str = "D",
+        release: str = "96A",
+        agency: str = "UN",
+        assoc_code: str = "EAN008",
+        **kwargs: Any,
+    ) -> "EdifactBuilder":
+        effective_doc_type = doc_type or msg_type or "ORDERS"
+        effective_ctrl = str(control_number or kwargs.get("message_ref", "1"))
         self._current_msg = EdiTransactionSet(
-            doc_type=doc_type,
-            control_number=control_number,
+            doc_type=effective_doc_type,
+            control_number=effective_ctrl,
             standard="EDIFACT",
         )
         self.interchange.messages.append(self._current_msg)

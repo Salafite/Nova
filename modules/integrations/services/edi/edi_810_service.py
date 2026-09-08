@@ -137,6 +137,16 @@ TAX_RATE_T0085_REPO = CrudRepository(
     ],
 )
 
+PICK_LIST_ITEM_T0102_REPO = CrudRepository(
+    'T0102',
+    business_columns=[
+        'id', 'pick_list_id', 'sales_order_line_id', 'product_id', 'product_name',
+        'qty_ordered', 'qty_picked', 'line_number', 'batch_id', 'batch_number',
+        'expiry_date', 'picked_batch_id', 'picked_batch_number',
+    ],
+)
+
+
 
 # ---------------------------------------------------------------------------
 # Sequence Helper
@@ -1335,6 +1345,10 @@ def parse_inbound_invoice_edi(
     return parse_x12_810(raw_edi)
 
 
+# Alias for unified parser naming
+parse_inbound_invoice = parse_inbound_invoice_edi
+
+
 # ---------------------------------------------------------------------------
 # Outbound EDI 810 / INVOIC Service
 # ---------------------------------------------------------------------------
@@ -1347,19 +1361,35 @@ class Edi810Service(CrudService):
     constructs standard compliant electronic invoices, and persists transmission logs in T0126.
     """
 
-    def __init__(self):
-        super().__init__(EDI_TRANSACTION_REPO)
-        self.invoice_repo = INVOICE_T0090_REPO
-        self.sales_order_repo = SALES_ORDER_T0012_REPO
-        self.sales_line_repo = SALES_LINE_T0013_REPO
-        self.delivery_repo = DELIVERY_T0077_REPO
-        self.delivery_line_repo = DELIVERY_LINE_T0078_REPO
-        self.customer_repo = CUSTOMER_T0010_REPO
-        self.product_repo = PRODUCT_T0001_REPO
-        self.partner_repo = EDI_PARTNER_REPO
-        self.sku_mapping_repo = EDI_SKU_MAPPING_REPO
-        self.payment_term_repo = PAYMENT_TERM_T0089_REPO
-        self.tax_rate_repo = TAX_RATE_T0085_REPO
+    def __init__(
+        self,
+        repo: Optional[CrudRepository] = None,
+        partner_repo: Optional[CrudRepository] = None,
+        invoice_repo: Optional[CrudRepository] = None,
+        delivery_repo: Optional[CrudRepository] = None,
+        delivery_line_repo: Optional[CrudRepository] = None,
+        sales_order_repo: Optional[CrudRepository] = None,
+        sales_line_repo: Optional[CrudRepository] = None,
+        pick_list_item_repo: Optional[CrudRepository] = None,
+        sku_mapping_repo: Optional[CrudRepository] = None,
+        customer_repo: Optional[CrudRepository] = None,
+        product_repo: Optional[CrudRepository] = None,
+        payment_term_repo: Optional[CrudRepository] = None,
+        tax_rate_repo: Optional[CrudRepository] = None,
+    ):
+        super().__init__(repo or EDI_TRANSACTION_REPO)
+        self.partner_repo = partner_repo or EDI_PARTNER_REPO
+        self.invoice_repo = invoice_repo or INVOICE_T0090_REPO
+        self.sales_order_repo = sales_order_repo or SALES_ORDER_T0012_REPO
+        self.sales_line_repo = sales_line_repo or SALES_LINE_T0013_REPO
+        self.delivery_repo = delivery_repo or DELIVERY_T0077_REPO
+        self.delivery_line_repo = delivery_line_repo or DELIVERY_LINE_T0078_REPO
+        self.pick_list_item_repo = pick_list_item_repo or PICK_LIST_ITEM_T0102_REPO
+        self.sku_mapping_repo = sku_mapping_repo or EDI_SKU_MAPPING_REPO
+        self.customer_repo = customer_repo or CUSTOMER_T0010_REPO
+        self.product_repo = product_repo or PRODUCT_T0001_REPO
+        self.payment_term_repo = payment_term_repo or PAYMENT_TERM_T0089_REPO
+        self.tax_rate_repo = tax_rate_repo or TAX_RATE_T0085_REPO
 
     def build_invoice_document(
         self,
@@ -1378,7 +1408,7 @@ class Edi810Service(CrudService):
         # 1. Fetch Invoice (T0090)
         invoice = self.invoice_repo.get(invoice_id, conn=conn)
         if not invoice:
-            raise ValueError(f"Invoice with ID {invoice_id} not found in T0090")
+            raise ValueError(f"Invoice #{invoice_id} not found in T0090")
 
         sales_order_id = invoice.get("sales_order_id")
 
@@ -1403,20 +1433,9 @@ class Edi810Service(CrudService):
                 partner = partners[0]
 
         if not partner:
-            # Fallback partner if not explicitly configured
-            partner = {
-                "id": None,
-                "partner_name": customer.get("name") if customer else "Default EDI Trading Partner",
-                "partner_code": "EDI-PARTNER",
-                "edi_standard": "ANSI_X12",
-                "interchange_sender_id": "NOVAERP",
-                "interchange_receiver_id": "RETAILHUB",
-                "sender_qualifier": "ZZ",
-                "receiver_qualifier": "ZZ",
-                "segment_terminator": "~",
-                "element_separator": "*",
-                "subelement_separator": ":",
-            }
+            raise ValueError(
+                f"No EDI Trading Partner found for Customer #{customer_id} or Partner #{partner_id}"
+            )
 
         # 5. Fetch Delivery (T0077) if available
         delivery = None
@@ -1663,6 +1682,95 @@ class Edi810Service(CrudService):
                 edi_payload=edi_payload,
             )
 
+    def resolve_partner_for_delivery(
+        self,
+        delivery: Dict[str, Any],
+        partner_id: Optional[int] = None,
+        conn=None,
+        tenant_id: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Resolves the trading partner configuration (T0124) associated with a delivery's customer.
+        """
+        kwargs = {"conn": conn} if conn is not None else {}
+        if partner_id:
+            return self.partner_repo.get(partner_id, **kwargs)
+
+        sales_order_id = delivery.get("sales_order_id")
+        if not sales_order_id:
+            return None
+
+        so = self.sales_order_repo.get(sales_order_id, **kwargs)
+        if not so or not so.get("customer_id"):
+            return None
+
+        customer_id = so["customer_id"]
+        partners = self.partner_repo.list(
+            filters={"customer_id": customer_id, "is_active": True},
+            limit=1,
+            **kwargs,
+        )
+        return partners[0] if partners else None
+
+    def transmit_invoice_for_delivery(
+        self,
+        delivery_id: int,
+        partner_id: Optional[int] = None,
+        auto_create_invoice: bool = True,
+        conn=None,
+        tenant_id: Optional[int] = None,
+    ) -> Optional[EdiInvoiceTransmitResponse]:
+        """
+        Resolves the invoice associated with a completed delivery (T0077) or sales order (T0012)
+        and transmits the outbound EDI 810 (Sales Invoice) or UN/EDIFACT INVOIC message to the trading partner.
+        If no invoice exists and auto_create_invoice is True, generates an invoice in T0090 first.
+        Returns EdiInvoiceTransmitResponse, or None if the customer is not configured as an EDI partner.
+        """
+        tenant_id = tenant_id or get_current_tenant()
+        with db_transaction(conn) as tx_conn:
+            delivery = self.delivery_repo.get(delivery_id, conn=tx_conn)
+            if not delivery:
+                raise ValueError(f"Delivery record {delivery_id} not found in T0077")
+
+            partner = self.resolve_partner_for_delivery(delivery, partner_id, conn=tx_conn, tenant_id=tenant_id)
+            if not partner:
+                logger.info(f"No active EDI Trading Partner (T0124) found for Delivery #{delivery_id}; skipping EDI invoice transmission.")
+                return None
+
+            sales_order_id = delivery.get("sales_order_id")
+            invoice = None
+            if sales_order_id:
+                invoices = self.invoice_repo.list(
+                    filters={"sales_order_id": sales_order_id},
+                    conn=tx_conn,
+                )
+                if invoices:
+                    invoice = invoices[0]
+
+            if not invoice and auto_create_invoice and sales_order_id:
+                from modules.accounting.services.invoice_service import InvoiceService
+                so = self.sales_order_repo.get(sales_order_id, conn=tx_conn)
+                if so:
+                    inv_svc = InvoiceService(
+                        repo=self.invoice_repo,
+                        customer_repo=self.customer_repo,
+                        order_repo=self.sales_order_repo,
+                        line_repo=self.sales_line_repo,
+                        payment_term_repo=self.payment_term_repo,
+                    )
+                    invoice = inv_svc.create_from_order(so, conn=tx_conn)
+
+            if not invoice:
+                raise ValueError(f"No sales invoice (T0090) found or created for delivery #{delivery_id} (Sales Order #{sales_order_id})")
+
+            return self.transmit_invoice(
+                invoice_id=invoice["id"],
+                delivery_id=delivery_id,
+                partner_id=partner.get("id"),
+                conn=tx_conn,
+                tenant_id=tenant_id,
+            )
+
     def transmit_invoice(
         self,
         invoice_id: int,
@@ -1685,4 +1793,5 @@ class Edi810Service(CrudService):
 
 # Default singleton instance
 edi_810_service = Edi810Service()
+
 
