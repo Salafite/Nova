@@ -29,6 +29,7 @@
     { "id": "payments", "icon": "payments", "label": "Payments", "label_ar": "المدفوعات", "module": "payments", "permission": "FINANCE_VIEW" },
     { "id": "payment-terms", "icon": "payments", "label": "Payment Terms", "label_ar": "شروط الدفع", "module": "payment-terms", "permission": "FINANCE_VIEW" },
     { "id": "payment-methods", "icon": "credit_card", "label": "Payment Methods", "label_ar": "طرق الدفع", "module": "payment-methods", "permission": "FINANCE_VIEW" },
+    { "id": "ar-reminders", "icon": "notifications_active", "label": "AR Reminders", "label_ar": "تذكيرات التحصيل", "module": "ar-reminders", "permission": "FINANCE_VIEW" },
     { "section": "CRM & Sales", "permission": null },
     { "id": "leads", "icon": "person_search", "label": "Leads", "label_ar": "العملاء المتوقعون", "module": "leads", "permission": "CRM_VIEW" },
     { "id": "opportunities", "icon": "trending_up", "label": "Opportunities", "label_ar": "الفرص", "module": "opportunities", "permission": "CRM_VIEW" },

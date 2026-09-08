@@ -96,7 +96,9 @@ class PickListService(CrudService):
                 'id', 'name', 'sku', 'barcode', 'description', 'type', 'price', 'cost_price',
                 'category', 'brand', 'tax_rate', 'weight', 'volume', 'image_url',
                 'is_purchasable', 'is_saleable', 'is_phantom', 'last_transaction_date', 'is_active',
-                'is_catch_weight', 'pricing_uom_id', 'nominal_weight', 'tolerance_pct', 'pricing_basis'
+                'is_catch_weight', 'pricing_uom_id', 'nominal_weight', 'tolerance_pct', 'pricing_basis',
+                'is_cold_chain', 'temp_zone_type', 'min_temperature', 'max_temperature',
+                'critical_temp_limit', 'thermal_priority_rank', 'shelf_life_days'
             ]
         )
         self.uom_repo = uom_repo or CrudRepository(
@@ -197,7 +199,27 @@ class PickListService(CrudService):
         order_lines = self.line_repo.list(filters={'sales_order_id': sales_order_id}, **_conn_kwargs(conn))
         if not order_lines:
             logger.warning(f"Sales order {sales_order_id} has no order lines when generating pick list")
-        order_lines.sort(key=lambda l: (l.get('line_number') or 0, l.get('id') or 0))
+
+        def _get_line_thermal_rank(line_obj):
+            pid = line_obj.get('product_id')
+            if pid and hasattr(self, 'product_repo') and self.product_repo:
+                try:
+                    p = self.product_repo.get(pid, **_conn_kwargs(conn))
+                    if p:
+                        if p.get('thermal_priority_rank') is not None:
+                            return int(p['thermal_priority_rank'])
+                        z = str(p.get('temp_zone_type') or 'Ambient').lower()
+                        if 'deep' in z:
+                            return 4
+                        if 'froz' in z:
+                            return 3
+                        if 'chill' in z:
+                            return 2
+                except Exception:
+                    pass
+            return 1
+
+        order_lines.sort(key=lambda l: (_get_line_thermal_rank(l), l.get('line_number') or 0, l.get('id') or 0))
 
         try:
             pl = self.create({

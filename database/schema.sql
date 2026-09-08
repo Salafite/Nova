@@ -3553,4 +3553,108 @@ CREATE INDEX IF NOT EXISTS idx_t0107_code ON "Nova".t0107(code);
 CREATE INDEX IF NOT EXISTS idx_t0107_business_id ON "Nova".t0107(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0107_business_id_id ON "Nova".t0107(business_id, id);
 
+-- Driver GPS Telemetry Table (T0124)
+CREATE TABLE IF NOT EXISTS "Nova".t0124 (
+    id                  SERIAL PRIMARY KEY,
+    run_id              INT REFERENCES "Nova".t0112(id) ON DELETE CASCADE,
+    driver_id           INT REFERENCES "Nova".t0021(id),
+    vehicle_id          INT REFERENCES "Nova".t0114(id) ON DELETE SET NULL,
+    latitude            NUMERIC(10,7) NOT NULL,
+    longitude           NUMERIC(10,7) NOT NULL,
+    speed_kmh           NUMERIC(6,2) NOT NULL DEFAULT 0.0,
+    heading             NUMERIC(6,2) NOT NULL DEFAULT 0.0,
+    accuracy_meters     NUMERIC(8,2) NOT NULL DEFAULT 5.0,
+    battery_level       NUMERIC(5,2),
+    recorded_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    is_active           BOOLEAN NOT NULL DEFAULT true,
+    business_id         INT REFERENCES "Nova".t0059(id),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by          INT,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by          INT,
+    update_number       INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0124 IS 'Driver GPS Telemetry';
+CREATE INDEX IF NOT EXISTS idx_t0124_run_id ON "Nova".t0124(run_id);
+CREATE INDEX IF NOT EXISTS idx_t0124_driver_id ON "Nova".t0124(driver_id);
+CREATE INDEX IF NOT EXISTS idx_t0124_vehicle_id ON "Nova".t0124(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_t0124_recorded_at ON "Nova".t0124(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_t0124_business_id ON "Nova".t0124(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0124_business_id_run_id ON "Nova".t0124(business_id, run_id);
+CREATE INDEX IF NOT EXISTS idx_t0124_business_id_driver_id ON "Nova".t0124(business_id, driver_id);
+CREATE INDEX IF NOT EXISTS idx_t0124_business_id_id ON "Nova".t0124(business_id, id);
+
+-- Customer Live Tracking Sessions & Tokens Table (T0125)
+CREATE TABLE IF NOT EXISTS "Nova".t0125 (
+    id                  SERIAL PRIMARY KEY,
+    run_stop_id         INT NOT NULL REFERENCES "Nova".t0113(id) ON DELETE CASCADE,
+    sales_order_id      INT REFERENCES "Nova".t0012(id),
+    customer_id         INT NOT NULL REFERENCES "Nova".t0010(id),
+    tracking_token      VARCHAR(100) NOT NULL UNIQUE,
+    token_expires_at    TIMESTAMPTZ NOT NULL,
+    notification_sent_at TIMESTAMPTZ,
+    notification_channel VARCHAR(30) NOT NULL DEFAULT 'SMS',
+    notification_status  VARCHAR(30) NOT NULL DEFAULT 'Pending',
+    is_active           BOOLEAN NOT NULL DEFAULT true,
+    business_id         INT REFERENCES "Nova".t0059(id),
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by          INT,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by          INT,
+    update_number       INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0125 IS 'Customer Live Tracking Sessions';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_t0125_tracking_token ON "Nova".t0125(tracking_token);
+CREATE INDEX IF NOT EXISTS idx_t0125_run_stop_id ON "Nova".t0125(run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0125_sales_order_id ON "Nova".t0125(sales_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0125_customer_id ON "Nova".t0125(customer_id);
+CREATE INDEX IF NOT EXISTS idx_t0125_business_id ON "Nova".t0125(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0125_business_id_run_stop ON "Nova".t0125(business_id, run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0125_business_id_id ON "Nova".t0125(business_id, id);
+
+-- Geofence Detection Events Table (T0126)
+CREATE TABLE IF NOT EXISTS "Nova".t0126 (
+    id                      SERIAL PRIMARY KEY,
+    run_stop_id             INT NOT NULL REFERENCES "Nova".t0113(id) ON DELETE CASCADE,
+    run_id                  INT NOT NULL REFERENCES "Nova".t0112(id) ON DELETE CASCADE,
+    driver_id               INT REFERENCES "Nova".t0021(id),
+    event_type              VARCHAR(50) NOT NULL,
+    distance_meters         NUMERIC(10,2) NOT NULL DEFAULT 0.0,
+    latitude                NUMERIC(10,7) NOT NULL,
+    longitude               NUMERIC(10,7) NOT NULL,
+    event_timestamp         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    dwell_duration_seconds  INT NOT NULL DEFAULT 0,
+    is_active               BOOLEAN NOT NULL DEFAULT true,
+    business_id             INT REFERENCES "Nova".t0059(id),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by              INT,
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by              INT,
+    update_number           INT NOT NULL DEFAULT 1
+);
+COMMENT ON TABLE "Nova".t0126 IS 'Geofence Detection Events';
+CREATE INDEX IF NOT EXISTS idx_t0126_run_stop_id ON "Nova".t0126(run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0126_run_id ON "Nova".t0126(run_id);
+CREATE INDEX IF NOT EXISTS idx_t0126_event_type ON "Nova".t0126(event_type);
+CREATE INDEX IF NOT EXISTS idx_t0126_event_timestamp ON "Nova".t0126(event_timestamp);
+CREATE INDEX IF NOT EXISTS idx_t0126_business_id ON "Nova".t0126(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0126_business_id_run_stop ON "Nova".t0126(business_id, run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0126_business_id_run ON "Nova".t0126(business_id, run_id);
+CREATE INDEX IF NOT EXISTS idx_t0126_business_id_id ON "Nova".t0126(business_id, id);
+
+ALTER TABLE "Nova".t0113
+    ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7),
+    ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7),
+    ADD COLUMN IF NOT EXISTS geofence_radius_meters INT NOT NULL DEFAULT 150,
+    ADD COLUMN IF NOT EXISTS geofence_arrived_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS geofence_departed_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS live_eta_timestamp TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS live_remaining_distance_km NUMERIC(8,2),
+    ADD COLUMN IF NOT EXISTS tracking_token VARCHAR(100);
+
+ALTER TABLE "Nova".t0010
+    ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7),
+    ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7),
+    ADD COLUMN IF NOT EXISTS geofence_radius_meters INT NOT NULL DEFAULT 150;
+
 COMMIT;
