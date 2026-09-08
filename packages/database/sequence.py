@@ -11,6 +11,8 @@ DOCUMENT_SEQUENCES = {
     'invoice': 'seq_invoice_number',
     'pick_list': 'seq_pick_list_number',
     'stock_transfer': 'seq_stock_transfer_number',
+    'purchase_return': 'seq_purchase_return_number',
+    'rma': 'seq_purchase_return_number',
 }
 
 # Standard document prefix mappings
@@ -18,6 +20,8 @@ DOCUMENT_PREFIXES = {
     'invoice': 'INV',
     'pick_list': 'PKL',
     'stock_transfer': 'TRF',
+    'purchase_return': 'RMA',
+    'rma': 'RMA',
 }
 
 
