@@ -424,3 +424,73 @@ def test_portal_models_and_portal_fields():
     assert session_resp.amount_cents == 19000
     assert session_resp.settlement_type == 'invoice'
 
+
+def test_edi_models_support_business_id():
+    from modules.integrations.models.edi import (
+        EdiPartnerCreate, EdiPartnerResponse,
+        EdiSkuMappingCreate, EdiSkuMappingResponse,
+        EdiTransactionCreate, EdiTransactionResponse,
+        EdiSsccPalletCreate, EdiSsccPalletResponse,
+        EdiCatalogItemCreate, EdiCatalogItemResponse,
+    )
+    partner_c = EdiPartnerCreate(
+        partner_name="Carrefour",
+        partner_code="CRF-UAE",
+        interchange_sender_id="CRF_ISA",
+        interchange_receiver_id="NOVA_ISA",
+        business_id=20,
+    )
+    assert partner_c.business_id == 20
+    partner_r = EdiPartnerResponse(
+        id=1,
+        partner_name="Carrefour",
+        partner_code="CRF-UAE",
+        edi_standard="ANSI_X12",
+        interchange_sender_id="CRF_ISA",
+        interchange_receiver_id="NOVA_ISA",
+        sender_qualifier="ZZ",
+        receiver_qualifier="ZZ",
+        communication_method="MANUAL",
+        segment_terminator="~",
+        element_separator="*",
+        subelement_separator=">",
+        auto_confirm_orders=False,
+        price_tolerance_percent=0.0,
+        is_active=True,
+        business_id=20,
+    )
+    assert partner_r.business_id == 20
+
+    sku_c = EdiSkuMappingCreate(
+        partner_id=1,
+        product_id=10,
+        partner_sku="SKU-123",
+        business_id=20,
+    )
+    assert sku_c.business_id == 20
+
+    txn_c = EdiTransactionCreate(
+        standard="ANSI_X12",
+        document_type="850",
+        direction="INBOUND",
+        raw_payload="ISA*...~",
+        business_id=20,
+    )
+    assert txn_c.business_id == 20
+
+    pallet_c = EdiSsccPalletCreate(
+        sscc_barcode="006291041000000018",
+        business_id=20,
+    )
+    assert pallet_c.business_id == 20
+
+    cat_c = EdiCatalogItemCreate(
+        partner_id=1,
+        catalog_code="CAT-01",
+        buyer_sku="BUY-1",
+        product_name="Sample Product",
+        business_id=20,
+    )
+    assert cat_c.business_id == 20
+
+
