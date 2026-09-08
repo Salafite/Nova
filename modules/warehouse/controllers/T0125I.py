@@ -26,8 +26,8 @@ bin_crud_service = CrudService(BIN_REPO)
 cold_chain_service = ColdChainService()
 
 router = create_crud_router(
-    '/api/T0133I',
-    'T0133 - Warehouse Bins & Staging Areas',
+    '/api/T0125I',
+    'T0125 - Warehouse Bins & Staging Areas',
     bin_crud_service,
     WarehouseBinCreate,
     WarehouseBinUpdate,

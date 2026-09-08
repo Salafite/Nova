@@ -8,7 +8,7 @@ from modules.core.models.base import AuditMixin, TenantMixin
 
 
 # ---------------------------------------------------------------------------
-# 1. Driver GPS Telemetry Ping Models (T0124)
+# 1. Driver GPS Telemetry Ping Models (T0137)
 # ---------------------------------------------------------------------------
 
 class GPSLocationPing(BaseModel):
@@ -84,7 +84,7 @@ class FleetLiveMapResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# 3. Geofence Detection Models (T0126)
+# 3. Geofence Detection Models (T0139)
 # ---------------------------------------------------------------------------
 
 class GeofenceCheckRequest(BaseModel):
@@ -110,7 +110,7 @@ class GeofenceEventResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# 4. Customer Live Web Tracking & Notification Models (T0125)
+# 4. Customer Live Web Tracking & Notification Models (T0138)
 # ---------------------------------------------------------------------------
 
 class CustomerNotificationPayload(BaseModel):

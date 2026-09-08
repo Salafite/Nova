@@ -25,8 +25,8 @@ log_crud_service = CrudService(LOG_REPO)
 haccp_service = HaccpAuditService()
 
 router = create_crud_router(
-    '/api/T0136I',
-    'T0136 - HACCP Checkpoint Logs',
+    '/api/T0128I',
+    'T0128 - HACCP Checkpoint Logs',
     log_crud_service,
     HACCPCheckpointLogCreate,
     HACCPCheckpointLogUpdate,

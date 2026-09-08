@@ -1,5 +1,5 @@
 ﻿"""
-Tests for Cold Chain and HACCP FastAPI controllers (T0132I, T0133I, T0134I, T0135I, T0136I).
+Tests for Cold Chain and HACCP FastAPI controllers (T0124I, T0125I, T0126I, T0127I, T0128I).
 Verifies route registration, authentication, RBAC permission enforcement, and custom endpoint handling.
 """
 from unittest.mock import patch, MagicMock
@@ -30,35 +30,35 @@ def test_cold_chain_routes_registered():
     openapi = app.openapi()
     paths = openapi.get("paths", {})
 
-    # T0132I (Temperature Zones)
-    assert "/api/T0132I/" in paths
-    assert "/api/T0132I/{id}/reading" in paths
-    assert "/api/T0132I/{id}/bins" in paths
+    # T0124I (Temperature Zones)
+    assert "/api/T0124I/" in paths
+    assert "/api/T0124I/{id}/reading" in paths
+    assert "/api/T0124I/{id}/bins" in paths
 
-    # T0133I (Warehouse Bins & Compatibility)
-    assert "/api/T0133I/" in paths
-    assert "/api/T0133I/check-compatibility" in paths
+    # T0125I (Warehouse Bins & Compatibility)
+    assert "/api/T0125I/" in paths
+    assert "/api/T0125I/check-compatibility" in paths
 
-    # T0134I (Vehicle Compartments)
-    assert "/api/T0134I/" in paths
+    # T0126I (Vehicle Compartments)
+    assert "/api/T0126I/" in paths
 
-    # T0135I (Excursion Alerts)
-    assert "/api/T0135I/" in paths
-    assert "/api/T0135I/{id}/acknowledge" in paths
-    assert "/api/T0135I/{id}/resolve" in paths
-    assert "/api/T0135I/{id}/quarantine" in paths
+    # T0127I (Excursion Alerts)
+    assert "/api/T0127I/" in paths
+    assert "/api/T0127I/{id}/acknowledge" in paths
+    assert "/api/T0127I/{id}/resolve" in paths
+    assert "/api/T0127I/{id}/quarantine" in paths
 
-    # T0136I (HACCP Checkpoints & Reports)
-    assert "/api/T0136I/" in paths
-    assert "/api/T0136I/checkpoint" in paths
-    assert "/api/T0136I/compliance-report" in paths
+    # T0128I (HACCP Checkpoints & Reports)
+    assert "/api/T0128I/" in paths
+    assert "/api/T0128I/checkpoint" in paths
+    assert "/api/T0128I/compliance-report" in paths
 
 
 def test_cold_chain_unauthenticated_rejected(client):
-    resp = client.get("/api/T0132I/")
+    resp = client.get("/api/T0124I/")
     assert resp.status_code in (401, 403)
 
-    resp = client.get("/api/T0135I/")
+    resp = client.get("/api/T0127I/")
     assert resp.status_code in (401, 403)
 
 
@@ -73,8 +73,8 @@ def test_cold_chain_authenticated_with_permission(client):
     }
 
     with patch("packages.auth.deps.get_user_by_id", return_value=mock_user), \
-         patch("modules.warehouse.controllers.T0132I.service.list", return_value=[]):
-        resp = client.get("/api/T0132I/", headers={"Authorization": f"Bearer {token}"})
+         patch("modules.warehouse.controllers.T0124I.service.list", return_value=[]):
+        resp = client.get("/api/T0124I/", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
         assert resp.json() == []
 
@@ -102,9 +102,9 @@ def test_temperature_compatibility_endpoint(client):
     )
 
     with patch("packages.auth.deps.get_user_by_id", return_value=mock_user), \
-         patch("modules.warehouse.controllers.T0133I.cold_chain_service.check_temperature_compatibility", return_value=mock_check_res):
+         patch("modules.warehouse.controllers.T0125I.cold_chain_service.check_temperature_compatibility", return_value=mock_check_res):
         resp = client.post(
-            "/api/T0133I/check-compatibility",
+            "/api/T0125I/check-compatibility",
             json={"product_id": 10, "target_zone_id": 2},
             headers={"Authorization": f"Bearer {token}"},
         )
@@ -150,9 +150,9 @@ def test_haccp_compliance_report_endpoint(client):
     )
 
     with patch("packages.auth.deps.get_user_by_id", return_value=mock_user), \
-         patch("modules.quality.controllers.T0136I.haccp_service.compile_compliance_report", return_value=mock_report):
+         patch("modules.quality.controllers.T0128I.haccp_service.compile_compliance_report", return_value=mock_report):
         resp = client.get(
-            "/api/T0136I/compliance-report?batch_number=LOT-FISH-01",
+            "/api/T0128I/compliance-report?batch_number=LOT-FISH-01",
             headers={"Authorization": f"Bearer {token}"},
         )
         assert resp.status_code == 200

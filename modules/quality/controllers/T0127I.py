@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 service = HaccpAuditService(alert_repo=ALERT_REPO)
 
 router = create_crud_router(
-    '/api/T0135I',
-    'T0135 - Temperature Excursion Alerts',
+    '/api/T0127I',
+    'T0127 - Temperature Excursion Alerts',
     service,
     ExcursionAlertCreate,
     ExcursionAlertUpdate,
@@ -52,7 +52,7 @@ def acknowledge_excursion_alert(
     _set_tenant_from_user(user)
     existing = service.get_alert(id)
     if not existing:
-        check_record_ownership(service, id, user, 'T0135', 'POST')
+        check_record_ownership(service, id, user, 'T0127', 'POST')
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Excursion alert #{id} not found")
 
     user_id = (body.user_id if body and body.user_id else None) or (user.get('id') if isinstance(user, dict) else 1)
@@ -72,7 +72,7 @@ def resolve_excursion_alert(
     _set_tenant_from_user(user)
     existing = service.get_alert(id)
     if not existing:
-        check_record_ownership(service, id, user, 'T0135', 'POST')
+        check_record_ownership(service, id, user, 'T0127', 'POST')
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Excursion alert #{id} not found")
 
     user_id = body.user_id or (user.get('id') if isinstance(user, dict) else 1)
@@ -96,7 +96,7 @@ def quarantine_excursion_lot(
     _set_tenant_from_user(user)
     existing = service.get_alert(id)
     if not existing:
-        check_record_ownership(service, id, user, 'T0135', 'POST')
+        check_record_ownership(service, id, user, 'T0127', 'POST')
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Excursion alert #{id} not found")
 
     user_id = body.user_id or (user.get('id') if isinstance(user, dict) else 1)

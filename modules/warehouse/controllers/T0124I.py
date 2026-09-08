@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 service = ColdChainService(zone_repo=ZONE_REPO, bin_repo=BIN_REPO)
 
 router = create_crud_router(
-    '/api/T0132I',
-    'T0132 - Warehouse Temperature Zones',
+    '/api/T0124I',
+    'T0124 - Warehouse Temperature Zones',
     service,
     TemperatureZoneCreate,
     TemperatureZoneUpdate,
@@ -52,7 +52,7 @@ def record_zone_temperature_reading(
     _set_tenant_from_user(user)
     zone = service.get_zone(id)
     if not zone:
-        check_record_ownership(service, id, user, 'T0132', 'POST')
+        check_record_ownership(service, id, user, 'T0124', 'POST')
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Temperature zone #{id} not found")
 
     try:
@@ -77,7 +77,7 @@ def get_zone_bins(
     _set_tenant_from_user(user)
     zone = service.get_zone(id)
     if not zone:
-        check_record_ownership(service, id, user, 'T0132', 'GET')
+        check_record_ownership(service, id, user, 'T0124', 'GET')
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Temperature zone #{id} not found")
 
     return service.list_bins(filters={'zone_id': id})

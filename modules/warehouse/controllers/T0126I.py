@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 compartment_service = CrudService(COMPARTMENT_REPO)
 
 router = create_crud_router(
-    '/api/T0134I',
-    'T0134 - Vehicle Temperature Compartments',
+    '/api/T0126I',
+    'T0126 - Vehicle Temperature Compartments',
     compartment_service,
     VehicleCompartmentCreate,
     VehicleCompartmentUpdate,
