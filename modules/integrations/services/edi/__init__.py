@@ -105,6 +105,21 @@ from modules.integrations.services.edi.edi_catalog_service import (
     edi_catalog_service,
 )
 
+from modules.integrations.services.edi.edi_856_service import (
+    EdiAsnShipmentHeader,
+    EdiAsnItemDetail,
+    EdiAsnBoxDetail,
+    EdiAsnPalletDetail,
+    EdiAsnDocument,
+    generate_x12_856,
+    generate_edifact_desadv,
+    parse_x12_856,
+    parse_edifact_desadv,
+    parse_inbound_asn,
+    Edi856Service,
+    edi_856_service,
+)
+
 __all__ = [
     "EdiDelimiters",
     "EdiSegment",
@@ -191,5 +206,17 @@ __all__ = [
     "generate_edifact_pricat",
     "EdiCatalogService",
     "edi_catalog_service",
+    "EdiAsnShipmentHeader",
+    "EdiAsnItemDetail",
+    "EdiAsnBoxDetail",
+    "EdiAsnPalletDetail",
+    "EdiAsnDocument",
+    "generate_x12_856",
+    "generate_edifact_desadv",
+    "parse_x12_856",
+    "parse_edifact_desadv",
+    "parse_inbound_asn",
+    "Edi856Service",
+    "edi_856_service",
 ]
 
