@@ -11,6 +11,11 @@ DOCUMENT_SEQUENCES = {
     'invoice': 'seq_invoice_number',
     'pick_list': 'seq_pick_list_number',
     'stock_transfer': 'seq_stock_transfer_number',
+    'temp_zone': 'seq_temp_zone_code',
+    'warehouse_bin': 'seq_warehouse_bin_code',
+    'vehicle_compartment': 'seq_vehicle_compartment_code',
+    'excursion_alert': 'seq_excursion_alert_number',
+    'haccp_log': 'seq_haccp_log_number',
 }
 
 # Standard document prefix mappings
@@ -18,6 +23,11 @@ DOCUMENT_PREFIXES = {
     'invoice': 'INV',
     'pick_list': 'PKL',
     'stock_transfer': 'TRF',
+    'temp_zone': 'ZONE',
+    'warehouse_bin': 'BIN',
+    'vehicle_compartment': 'COMP',
+    'excursion_alert': 'EXC',
+    'haccp_log': 'CCP',
 }
 
 
@@ -154,6 +164,101 @@ def generate_stock_transfer_number(
     Generate the next concurrency-safe stock transfer number (e.g. TRF-00001).
     """
     seq_name = DOCUMENT_SEQUENCES.get('stock_transfer', 'seq_stock_transfer_number')
+    return generate_document_number(
+        sequence_name=seq_name,
+        prefix=prefix,
+        padding=padding,
+        conn=conn,
+        schema=schema,
+    )
+
+
+def generate_temp_zone_code(
+    conn=None,
+    schema: Optional[str] = None,
+    prefix: str = "ZONE",
+    padding: int = 5,
+) -> str:
+    """
+    Generate the next concurrency-safe warehouse temperature zone code (e.g. ZONE-00001).
+    """
+    seq_name = DOCUMENT_SEQUENCES.get('temp_zone', 'seq_temp_zone_code')
+    return generate_document_number(
+        sequence_name=seq_name,
+        prefix=prefix,
+        padding=padding,
+        conn=conn,
+        schema=schema,
+    )
+
+
+def generate_warehouse_bin_code(
+    conn=None,
+    schema: Optional[str] = None,
+    prefix: str = "BIN",
+    padding: int = 5,
+) -> str:
+    """
+    Generate the next concurrency-safe warehouse bin code (e.g. BIN-00001).
+    """
+    seq_name = DOCUMENT_SEQUENCES.get('warehouse_bin', 'seq_warehouse_bin_code')
+    return generate_document_number(
+        sequence_name=seq_name,
+        prefix=prefix,
+        padding=padding,
+        conn=conn,
+        schema=schema,
+    )
+
+
+def generate_vehicle_compartment_code(
+    conn=None,
+    schema: Optional[str] = None,
+    prefix: str = "COMP",
+    padding: int = 5,
+) -> str:
+    """
+    Generate the next concurrency-safe vehicle compartment code (e.g. COMP-00001).
+    """
+    seq_name = DOCUMENT_SEQUENCES.get('vehicle_compartment', 'seq_vehicle_compartment_code')
+    return generate_document_number(
+        sequence_name=seq_name,
+        prefix=prefix,
+        padding=padding,
+        conn=conn,
+        schema=schema,
+    )
+
+
+def generate_excursion_alert_number(
+    conn=None,
+    schema: Optional[str] = None,
+    prefix: str = "EXC",
+    padding: int = 5,
+) -> str:
+    """
+    Generate the next concurrency-safe excursion alert number (e.g. EXC-00001).
+    """
+    seq_name = DOCUMENT_SEQUENCES.get('excursion_alert', 'seq_excursion_alert_number')
+    return generate_document_number(
+        sequence_name=seq_name,
+        prefix=prefix,
+        padding=padding,
+        conn=conn,
+        schema=schema,
+    )
+
+
+def generate_haccp_log_number(
+    conn=None,
+    schema: Optional[str] = None,
+    prefix: str = "CCP",
+    padding: int = 5,
+) -> str:
+    """
+    Generate the next concurrency-safe HACCP checkpoint log number (e.g. CCP-00001).
+    """
+    seq_name = DOCUMENT_SEQUENCES.get('haccp_log', 'seq_haccp_log_number')
     return generate_document_number(
         sequence_name=seq_name,
         prefix=prefix,

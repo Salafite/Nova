@@ -16,8 +16,8 @@ service = CrudService(FISCAL_PROFILE_REPO)
 einvoice_service = EInvoiceService(fiscal_profile_repo=FISCAL_PROFILE_REPO)
 
 router = create_crud_router(
-    '/api/T0125I',
-    'T0125 - Fiscal Authority Profiles',
+    '/api/T0130I',
+    'T0130 - Fiscal Authority Profiles',
     service,
     FiscalProfileCreate,
     FiscalProfileUpdate,

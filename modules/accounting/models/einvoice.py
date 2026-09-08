@@ -6,7 +6,7 @@ from modules.core.repositories.base import CrudRepository
 
 
 # ---------------------------------------------------------------------------
-# Fiscal Authority Profile Models (T0125)
+# Fiscal Authority Profile Models (T0130)
 # ---------------------------------------------------------------------------
 
 class FiscalProfileCreate(BaseModel):
@@ -183,13 +183,13 @@ class FiscalProfileResponse(AuditMixin):
 
 
 # ---------------------------------------------------------------------------
-# E-Invoice Clearance & Cryptographic Record Models (T0124)
+# E-Invoice Clearance & Cryptographic Record Models (T0129)
 # ---------------------------------------------------------------------------
 
 class EInvoiceCreate(BaseModel):
     """Payload for creating an e-invoice cryptographic/clearance record."""
     invoice_id: int = Field(..., description="Foreign key to sales invoice (t0090)")
-    fiscal_profile_id: Optional[int] = Field(None, description="Foreign key to fiscal profile (t0125)")
+    fiscal_profile_id: Optional[int] = Field(None, description="Foreign key to fiscal profile (t0130)")
     invoice_uuid: Optional[str] = Field(None, max_length=100, description="Standard UUID v4 for the e-invoice")
     invoice_type: Optional[str] = Field('Standard', max_length=50, description="Invoice type: Standard | Simplified | Credit | Debit")
     invoice_type_code: str = Field('388', max_length=50, description="UN/ECE 1001 invoice code (388=Tax Invoice, 381=Credit, 383=Debit)")
@@ -386,11 +386,11 @@ class QRCodeResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# CrudRepositories for T0124 and T0125
+# CrudRepositories for T0129 and T0130
 # ---------------------------------------------------------------------------
 
 EINVOICE_RECORD_REPO = CrudRepository(
-    't0124',
+    't0129',
     business_columns=[
         'id', 'invoice_id', 'fiscal_profile_id', 'invoice_uuid', 'invoice_type_code',
         'subtype', 'icv', 'pih', 'invoice_hash', 'digital_signature', 'public_key',
@@ -403,7 +403,7 @@ EINVOICE_RECORD_REPO = CrudRepository(
 EINVOICE_REPO = EINVOICE_RECORD_REPO
 
 FISCAL_PROFILE_REPO = CrudRepository(
-    't0125',
+    't0130',
     business_columns=[
         'id', 'profile_name', 'authority_code', 'seller_name', 'seller_name_ar',
         'tax_id', 'commercial_registration_number', 'building_number', 'street_name',

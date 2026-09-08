@@ -588,7 +588,7 @@ def register_tools():
                 "type": "object",
                 "properties": {
                     "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
-                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0125)"},
+                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0130)"},
                     "subtype": {"type": "string", "description": "Invoice subtype code ('0100000' for Standard B2B, '0200000' for Simplified B2C)"},
                 },
                 "required": ["invoice_id"],
@@ -605,7 +605,7 @@ def register_tools():
                 "type": "object",
                 "properties": {
                     "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
-                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0125)"},
+                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0130)"},
                 },
                 "required": ["invoice_id"],
             },
@@ -621,7 +621,7 @@ def register_tools():
                 "type": "object",
                 "properties": {
                     "invoice_id": {"type": "integer", "description": "Sales invoice ID (T0090)"},
-                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0125)"},
+                    "profile_id": {"type": "integer", "description": "Optional fiscal profile ID (T0130)"},
                     "environment": {"type": "string", "description": "Gateway environment ('Sandbox', 'Simulation', 'Production')"},
                     "auto_sign": {"type": "boolean", "description": "Automatically sign the document before submission if not yet signed (default true)"},
                 },

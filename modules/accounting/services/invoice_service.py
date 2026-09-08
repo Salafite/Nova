@@ -566,7 +566,7 @@ class InvoiceService(CrudService):
         )
 
     def get_einvoice_status(self, invoice_id: int, conn=None):
-        """Retrieve the e-invoice clearance record (T0124) for an invoice."""
+        """Retrieve the e-invoice clearance record (T0129) for an invoice."""
         if not self.einvoice_service:
             return None
         return self.einvoice_service.get_by_invoice_id(invoice_id, conn=conn)

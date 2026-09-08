@@ -69,7 +69,7 @@ class EInvoiceService(CrudService):
         profile_id: Optional[int] = None,
         conn=None,
     ) -> Dict[str, Any]:
-        """Fetch the active fiscal authority profile (T0125).
+        """Fetch the active fiscal authority profile (T0130).
 
         If profile_id is supplied, retrieves that specific profile.
         Otherwise, finds active profile marked as default, or first active profile.
@@ -109,7 +109,7 @@ class EInvoiceService(CrudService):
         }
 
     def get_by_invoice_id(self, invoice_id: int, conn=None) -> Optional[Dict[str, Any]]:
-        """Retrieve existing e-invoice clearance record (T0124) by sales invoice ID."""
+        """Retrieve existing e-invoice clearance record (T0129) by sales invoice ID."""
         try:
             records = self.repo.list(filters={"invoice_id": invoice_id}, conn=conn)
             if records:
@@ -218,7 +218,7 @@ class EInvoiceService(CrudService):
         subtype: Optional[str] = None,
         conn=None,
     ) -> str:
-        """Generate OASIS UBL 2.1 XML document for a sales invoice and persist draft T0124 record."""
+        """Generate OASIS UBL 2.1 XML document for a sales invoice and persist draft T0129 record."""
         with db_transaction(conn) as tx_conn:
             inv = self.invoice_repo.get(invoice_id, conn=tx_conn)
             if not inv:
@@ -277,7 +277,7 @@ class EInvoiceService(CrudService):
             # Compute preliminary invoice hash
             inv_hash = EInvoiceCryptoService.compute_sha256_hash(xml_content)
 
-            # Update or create T0124 record
+            # Update or create T0129 record
             record_payload = {
                 "invoice_id": invoice_id,
                 "fiscal_profile_id": profile.get("id"),
@@ -400,7 +400,7 @@ class EInvoiceService(CrudService):
                     qr_code_tlv=rec.get("qr_code_tlv"),
                 )
 
-            # Persist clearance outcome to T0124
+            # Persist clearance outcome to T0129
             update_payload = {
                 "clearance_status": result.clearance_status,
                 "clearance_id": result.clearance_id,

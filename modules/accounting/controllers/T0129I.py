@@ -23,8 +23,8 @@ service = CrudService(EINVOICE_RECORD_REPO)
 einvoice_service = EInvoiceService(repo=EINVOICE_RECORD_REPO)
 
 router = create_crud_router(
-    '/api/T0124I',
-    'T0124 - E-Invoice Clearance Records',
+    '/api/T0129I',
+    'T0129 - E-Invoice Clearance Records',
     service,
     EInvoiceCreate,
     EInvoiceUpdate,
