@@ -19,6 +19,10 @@
           <span class="material-symbols-outlined">dataset</span>
           {{ t('sku-matrix', 'SKU Matrix') }}
         </button>
+        <button class="btn-outline" @click="router.push('/integrations/edi-pallet-sscc')">
+          <span class="material-symbols-outlined">inventory_2</span>
+          {{ t('sscc-pallets', 'SSCC Pallets') }}
+        </button>
         <button class="btn-outline" @click="exportTransactions">
           <span class="material-symbols-outlined">download</span>
           {{ t('export-logs', 'Export Logs') }}

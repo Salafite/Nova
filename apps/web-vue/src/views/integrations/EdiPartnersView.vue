@@ -9,11 +9,19 @@
       <div class="header-actions">
         <button class="btn-outline" @click="router.push('/integrations/edi-gateway')">
           <span class="material-symbols-outlined">hub</span>
-          {{ t('edi-gateway', 'EDI Gateway Feed') }}
+          {{ t('edi-gateway', 'EDI Gateway') }}
         </button>
         <button class="btn-outline" @click="router.push('/integrations/edi-sku-mapping')">
           <span class="material-symbols-outlined">dataset</span>
           {{ t('sku-matrix', 'SKU Matrix') }}
+        </button>
+        <button class="btn-outline" @click="router.push('/integrations/edi-pallet-sscc')">
+          <span class="material-symbols-outlined">inventory_2</span>
+          {{ t('sscc-pallets', 'SSCC Pallets') }}
+        </button>
+        <button class="btn-outline" @click="router.push('/integrations/edi-transactions')">
+          <span class="material-symbols-outlined">receipt_long</span>
+          {{ t('edi-transactions', 'Transactions') }}
         </button>
         <button class="btn-primary" @click="openCreateModal">
           <span class="material-symbols-outlined">add</span>

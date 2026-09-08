@@ -15,6 +15,14 @@
           <span class="material-symbols-outlined">dataset</span>
           {{ t('sku-matrix', 'SKU Matrix') }}
         </button>
+        <button class="btn-outline" @click="router.push('/integrations/edi-pallet-sscc')">
+          <span class="material-symbols-outlined">inventory_2</span>
+          {{ t('sscc-pallets', 'SSCC Pallets') }}
+        </button>
+        <button class="btn-outline" @click="router.push('/integrations/edi-transactions')">
+          <span class="material-symbols-outlined">receipt_long</span>
+          {{ t('edi-transactions', 'Transactions') }}
+        </button>
         <button class="btn-primary" @click="showIngestModal = true">
           <span class="material-symbols-outlined">file_upload</span>
           {{ t('quick-ingest', 'Ingest Document') }}

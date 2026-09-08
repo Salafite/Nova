@@ -15,6 +15,14 @@
           <span class="material-symbols-outlined">corporate_fare</span>
           {{ t('trading-partners', 'Trading Partners') }}
         </button>
+        <button class="btn-outline" @click="router.push('/integrations/edi-pallet-sscc')">
+          <span class="material-symbols-outlined">inventory_2</span>
+          {{ t('sscc-pallets', 'SSCC Pallets') }}
+        </button>
+        <button class="btn-outline" @click="router.push('/integrations/edi-transactions')">
+          <span class="material-symbols-outlined">receipt_long</span>
+          {{ t('edi-transactions', 'Transactions') }}
+        </button>
         <button class="btn-outline" @click="showTester = !showTester">
           <span class="material-symbols-outlined">{{ showTester ? 'visibility_off' : 'troubleshoot' }}</span>
           {{ showTester ? t('hide-tester', 'Hide Tester') : t('live-tester', 'Live SKU Tester') }}
