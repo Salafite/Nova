@@ -810,9 +810,11 @@ CREATE INDEX IF NOT EXISTS idx_t0030_business_id_id ON "Nova".t0030(business_id,
 CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     id              SERIAL PRIMARY KEY,
     invoice_number  VARCHAR(50) NOT NULL UNIQUE,
-    invoice_type    VARCHAR(10) NOT NULL DEFAULT 'Sales',
+    invoice_type    VARCHAR(30) NOT NULL DEFAULT 'Sales',
     partner_id      INT NOT NULL,
     sales_order_id  INT REFERENCES "Nova".t0012(id),
+    purchase_order_id INT REFERENCES "Nova".t0015(id),
+    purchase_return_id INT REFERENCES "Nova".t0081(id),
     issue_date      DATE NOT NULL,
     due_date        DATE NOT NULL,
     total_amount    NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
@@ -830,11 +832,14 @@ CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
-    update_number   INT NOT NULL DEFAULT 1
+    update_number   INT NOT NULL DEFAULT 1,
+    is_active       BOOLEAN NOT NULL DEFAULT true
 );
 COMMENT ON COLUMN "Nova".t0090.freight_amount IS 'Freight / shipping charges billed on invoice';
 COMMENT ON COLUMN "Nova".t0090.discount_amount IS 'Customer discount deducted on invoice';
 COMMENT ON COLUMN "Nova".t0090.sales_rep_id IS 'Assigned sales representative (User ID)';
+COMMENT ON COLUMN "Nova".t0090.purchase_order_id IS 'Purchase order reference for purchase invoices';
+COMMENT ON COLUMN "Nova".t0090.purchase_return_id IS 'Purchase return / RMA reference for supplier debit memos';
 COMMENT ON COLUMN "Nova".t0090.business_id IS 'Tenant / business organization identifier (FK to T0059)';
 COMMENT ON COLUMN "Nova".t0090.is_catch_weight IS 'Flag indicating invoice contains catch-weight products';
 COMMENT ON COLUMN "Nova".t0090.nominal_total_weight IS 'Total nominal weight across invoiced catch-weight items';
@@ -842,6 +847,9 @@ COMMENT ON COLUMN "Nova".t0090.actual_total_weight IS 'Total actual scale weight
 COMMENT ON COLUMN "Nova".t0090.weight_adjustment_amount IS 'Net financial adjustment due to catch-weight variance vs nominal';
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id ON "Nova".t0090(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id_id ON "Nova".t0090(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0090_purchase_return_id ON "Nova".t0090(purchase_return_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_purchase_order_id ON "Nova".t0090(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_invoice_type ON "Nova".t0090(invoice_type);
 
 
 
@@ -2679,11 +2687,17 @@ CREATE TABLE IF NOT EXISTS "Nova".t0081 (
     id SERIAL PRIMARY KEY,
     return_number VARCHAR(200),
     purchase_order_id INT,
+    goods_receipt_id INT,
     supplier_id INT,
+    debit_memo_id INT,
     return_date DATE,
-    status VARCHAR(30) NOT NULL DEFAULT 'Active',
+    status VARCHAR(30) NOT NULL DEFAULT 'Draft',
     reason VARCHAR(200),
+    total_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    attachments JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
+    approved_at TIMESTAMPTZ,
+    approved_by INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2697,14 +2711,23 @@ CREATE INDEX IF NOT EXISTS idx_t0081_business_id ON "Nova".t0081(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0081_business_id_id ON "Nova".t0081(business_id, id);
 
 
-COMMENT ON TABLE "Nova".t0081 IS 'Purchase Returns';
+COMMENT ON TABLE "Nova".t0081 IS 'Purchase Returns / RMA Headers';
 COMMENT ON COLUMN "Nova".t0081.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0081.purchase_order_id IS 'Reference to Purchase_Order';
+COMMENT ON COLUMN "Nova".t0081.goods_receipt_id IS 'Reference to Goods Receipt';
 COMMENT ON COLUMN "Nova".t0081.supplier_id IS 'Reference to Supplier';
-COMMENT ON COLUMN "Nova".t0081.status IS 'Status';
+COMMENT ON COLUMN "Nova".t0081.debit_memo_id IS 'Reference to generated Debit Memo';
+COMMENT ON COLUMN "Nova".t0081.status IS 'RMA status (Draft, Approved, Returned, Cancelled)';
+COMMENT ON COLUMN "Nova".t0081.total_amount IS 'Total return credit value';
+COMMENT ON COLUMN "Nova".t0081.attachments IS 'Inspection photos and documentation metadata';
+COMMENT ON COLUMN "Nova".t0081.approved_at IS 'Timestamp of RMA approval';
+COMMENT ON COLUMN "Nova".t0081.approved_by IS 'User who approved the RMA';
 COMMENT ON COLUMN "Nova".t0081.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0081_purchase_order_id ON "Nova".t0081(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_goods_receipt_id ON "Nova".t0081(goods_receipt_id);
 CREATE INDEX IF NOT EXISTS idx_t0081_supplier_id ON "Nova".t0081(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_debit_memo_id ON "Nova".t0081(debit_memo_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_approved_by ON "Nova".t0081(approved_by);
 CREATE INDEX IF NOT EXISTS idx_t0081_status ON "Nova".t0081(status);
 CREATE INDEX IF NOT EXISTS idx_t0081_active ON "Nova".t0081(is_active);
 
@@ -2719,6 +2742,13 @@ CREATE TABLE IF NOT EXISTS "Nova".t0082 (
     line_total NUMERIC(12,2),
     uom_id INT,
     line_number INT,
+    batch_id INT,
+    batch_number VARCHAR(100),
+    expiry_date DATE,
+    reason_code VARCHAR(50),
+    photos JSONB DEFAULT '[]'::jsonb,
+    quarantine_status VARCHAR(30) DEFAULT 'Quarantine',
+    disposition VARCHAR(50) DEFAULT 'Return to Vendor',
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2732,15 +2762,26 @@ CREATE INDEX IF NOT EXISTS idx_t0082_business_id ON "Nova".t0082(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_business_id_id ON "Nova".t0082(business_id, id);
 
 
-COMMENT ON TABLE "Nova".t0082 IS 'Purchase Return Lines';
+COMMENT ON TABLE "Nova".t0082 IS 'Purchase Return Lines / RMA Line Items';
 COMMENT ON COLUMN "Nova".t0082.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0082.return_id IS 'Reference to Return';
+COMMENT ON COLUMN "Nova".t0082.return_id IS 'Reference to Return (T0081)';
 COMMENT ON COLUMN "Nova".t0082.product_id IS 'Reference to Product';
 COMMENT ON COLUMN "Nova".t0082.uom_id IS 'Reference to Uom';
+COMMENT ON COLUMN "Nova".t0082.batch_id IS 'Reference to Batch Number (T0088)';
+COMMENT ON COLUMN "Nova".t0082.batch_number IS 'Batch or lot number identifier';
+COMMENT ON COLUMN "Nova".t0082.expiry_date IS 'Batch expiration date';
+COMMENT ON COLUMN "Nova".t0082.reason_code IS 'Return reason code (damaged, expired, rejected, wrong_item, qc_failed)';
+COMMENT ON COLUMN "Nova".t0082.photos IS 'Line item inspection photos metadata';
+COMMENT ON COLUMN "Nova".t0082.quarantine_status IS 'Quarantine tracking status (Quarantine, Released, Scrapped)';
+COMMENT ON COLUMN "Nova".t0082.disposition IS 'Disposition action (Return to Vendor, Scrap, Supplier Credit)';
 COMMENT ON COLUMN "Nova".t0082.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0082_return_id ON "Nova".t0082(return_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_product_id ON "Nova".t0082(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_uom_id ON "Nova".t0082(uom_id);
+CREATE INDEX IF NOT EXISTS idx_t0082_batch_id ON "Nova".t0082(batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0082_batch_number ON "Nova".t0082(batch_number);
+CREATE INDEX IF NOT EXISTS idx_t0082_reason_code ON "Nova".t0082(reason_code);
+CREATE INDEX IF NOT EXISTS idx_t0082_quarantine_status ON "Nova".t0082(quarantine_status);
 CREATE INDEX IF NOT EXISTS idx_t0082_active ON "Nova".t0082(is_active);
 
 -- Price List Items

@@ -43,8 +43,11 @@ def mock_invoice():
 
 def test_get_invoice_qr_code(client, mock_invoice):
     """Test GET /api/T0090I/{id}/qr-code returns valid Base64 TLV QR response."""
+    mock_profile = {"id": 1, "seller_name": "Nova Enterprises", "tax_id": "300000000000003", "is_active": True}
     with patch.object(service.repo, "get", return_value=mock_invoice), \
-         patch.object(service.einvoice_service, "get_by_invoice_id", return_value=None):
+         patch.object(service.einvoice_service, "invoice_repo", service.repo), \
+         patch.object(service.einvoice_service, "get_by_invoice_id", return_value=None), \
+         patch.object(service.einvoice_service, "get_active_fiscal_profile", return_value=mock_profile):
         response = client.get("/api/T0090I/101/qr-code")
         assert response.status_code == 200
         data = response.json()
@@ -58,8 +61,11 @@ def test_get_invoice_qr_code(client, mock_invoice):
 
 def test_get_invoice_qr_alias(client, mock_invoice):
     """Test GET /api/T0090I/{id}/qr short alias."""
+    mock_profile = {"id": 1, "seller_name": "Nova Enterprises", "tax_id": "300000000000003", "is_active": True}
     with patch.object(service.repo, "get", return_value=mock_invoice), \
-         patch.object(service.einvoice_service, "get_by_invoice_id", return_value=None):
+         patch.object(service.einvoice_service, "invoice_repo", service.repo), \
+         patch.object(service.einvoice_service, "get_by_invoice_id", return_value=None), \
+         patch.object(service.einvoice_service, "get_active_fiscal_profile", return_value=mock_profile):
         response = client.get("/api/T0090I/101/qr")
         assert response.status_code == 200
         data = response.json()

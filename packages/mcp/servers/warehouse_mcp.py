@@ -59,6 +59,21 @@ def register_tools():
             "warehouse_id": {"type": "integer"}, "limit": {"type": "integer"},
         },
     }), _list_batch)
+    register_tool(Tool(name="list_quarantine_batches", description="List all product inventory batches currently in Quarantine status (e.g. from damaged goods receipt, expired lots, or vendor returns / RMA), with optional filters by product and warehouse", input_schema={
+        "type": "object", "properties": {
+            "product_id": {"type": "integer", "description": "Optional product ID filter"},
+            "warehouse_id": {"type": "integer", "description": "Optional warehouse ID filter"},
+            "limit": {"type": "integer", "description": "Maximum records to return (default 50)"},
+            "offset": {"type": "integer", "description": "Offset for pagination (default 0)"},
+        },
+    }), _list_quarantine_batches)
+    register_tool(Tool(name="check_batch_quarantine_status", description="Check if a specific batch or lot is in Quarantine status, returning quarantine state, held quantity, reason notes, and product/warehouse details", input_schema={
+        "type": "object", "properties": {
+            "batch_id": {"type": "integer", "description": "Batch record ID (T0088)"},
+            "batch_number": {"type": "string", "description": "Batch / lot number string"},
+            "product_id": {"type": "integer", "description": "Optional product ID filter"},
+        },
+    }), _check_batch_quarantine_status)
     register_tool(Tool(name="get_batch_number", description="Get details of a specific batch/lot number by ID", input_schema={
         "type": "object", "properties": {
             "id": {"type": "integer", "description": "Batch ID"},
@@ -328,6 +343,10 @@ def register_tools():
         Resource(uri="nova://warehouse/batches", name="All Batch Numbers", description="List of all product batch/lot numbers"),
         _list_batch,
     )
+    register_resource(
+        Resource(uri="nova://warehouse/quarantine-batches", name="Quarantine Batches", description="List of all product inventory batches in quarantine status"),
+        _list_quarantine_batches,
+    )
 
 
 def _list_gr(status: str = None, purchase_order_id: int = None, limit: int = 50):
@@ -349,6 +368,59 @@ def _list_batch(product_id: int = None, status: str = None, warehouse_id: int = 
     if status: filters["status"] = status
     if warehouse_id: filters["warehouse_id"] = warehouse_id
     return _batch_svc.list(filters=filters or None, limit=limit)
+
+def _list_quarantine_batches(product_id: int = None, warehouse_id: int = None, limit: int = 50, offset: int = 0):
+    filters = {"status": "Quarantine"}
+    if product_id: filters["product_id"] = product_id
+    if warehouse_id: filters["warehouse_id"] = warehouse_id
+    return _batch_svc.list(filters=filters, limit=limit, offset=offset)
+
+def _check_batch_quarantine_status(batch_id: int = None, batch_number: str = None, product_id: int = None):
+    if not batch_id and not batch_number:
+        return {"error": "Either batch_id or batch_number must be provided", "is_quarantined": False}
+    
+    batch = None
+    if batch_id is not None:
+        batch = _batch_svc.get(batch_id)
+    elif batch_number is not None:
+        filters = {"batch_number": str(batch_number).strip()}
+        if product_id is not None:
+            filters["product_id"] = product_id
+        batches = _batch_svc.list(filters=filters, limit=1)
+        if batches:
+            batch = batches[0]
+            
+    if not batch or (isinstance(batch, dict) and "error" in batch):
+        target = f"ID {batch_id}" if batch_id is not None else f"Number '{batch_number}'"
+        return {
+            "found": False,
+            "is_quarantined": False,
+            "message": f"Batch with {target} not found.",
+        }
+        
+    status = batch.get("status")
+    is_quarantined = (status == "Quarantine")
+    qty = float(batch.get("quantity") or 0.0)
+    batch_num = batch.get("batch_number", f"#{batch.get('id')}")
+    
+    return {
+        "found": True,
+        "batch_id": batch.get("id"),
+        "batch_number": batch_num,
+        "product_id": batch.get("product_id"),
+        "warehouse_id": batch.get("warehouse_id"),
+        "status": status,
+        "is_quarantined": is_quarantined,
+        "quantity": qty,
+        "expiry_date": str(batch.get("expiry_date")) if batch.get("expiry_date") else None,
+        "manufacturing_date": str(batch.get("manufacturing_date")) if batch.get("manufacturing_date") else None,
+        "notes": batch.get("notes"),
+        "message": (
+            f"Batch '{batch_num}' is currently in QUARANTINE with {qty} units held."
+            if is_quarantined
+            else f"Batch '{batch_num}' status is '{status}' (not in quarantine)."
+        ),
+    }
 
 def _get_batch_number(id: int):
     try:

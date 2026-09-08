@@ -212,6 +212,66 @@ class TestAccountingMcp:
             assert res[0]["check_number"] == "1001"
             mock_list.assert_called_once_with(customer_id=5)
 
+    def test_list_debit_memos_mcp(self):
+        with patch.multiple(accounting_mcp, _inv_svc=MagicMock()):
+            mock_memos = [
+                {
+                    "id": 10,
+                    "invoice_number": "DM-20260908-001",
+                    "invoice_type": "Debit Memo",
+                    "partner_id": 3,
+                    "purchase_return_id": 7,
+                    "total_amount": 250.0,
+                    "status": "Approved",
+                }
+            ]
+            accounting_mcp._inv_svc.get_debit_memos.return_value = mock_memos
+            res = accounting_mcp._list_debit_memos(purchase_return_id=7, partner_id=3, status="Approved", limit=20)
+            assert res == mock_memos
+            accounting_mcp._inv_svc.get_debit_memos.assert_called_once_with(
+                purchase_return_id=7,
+                partner_id=3,
+                status="Approved",
+                limit=20,
+                offset=0,
+            )
+
+    def test_get_debit_memo_for_rma_found(self):
+        with patch.multiple(accounting_mcp, _inv_svc=MagicMock()):
+            mock_memo = {
+                "id": 12,
+                "invoice_number": "DM-20260908-002",
+                "invoice_type": "Debit Memo",
+                "partner_id": 4,
+                "purchase_return_id": 9,
+                "total_amount": 180.50,
+                "status": "Applied",
+                "issue_date": "2026-09-08",
+                "notes": "RMA #9 debit memo",
+            }
+            accounting_mcp._inv_svc.get_debit_memo_by_purchase_return.return_value = mock_memo
+            res = accounting_mcp._get_debit_memo_for_rma(purchase_return_id=9)
+            assert res["found"] is True
+            assert res["debit_memo_id"] == 12
+            assert res["invoice_number"] == "DM-20260908-002"
+            assert res["total_amount"] == 180.50
+            assert res["supplier_id"] == 4
+            assert res["status"] == "Applied"
+            assert "DM-20260908-002" in res["message"]
+            accounting_mcp._inv_svc.get_debit_memo_by_purchase_return.assert_called_once_with(9)
+
+    def test_get_debit_memo_for_rma_not_found(self):
+        with patch.multiple(accounting_mcp, _inv_svc=MagicMock()):
+            accounting_mcp._inv_svc.get_debit_memo_by_purchase_return.return_value = None
+            res = accounting_mcp._get_debit_memo_for_rma(purchase_return_id=999)
+            assert res["found"] is False
+            assert "No debit memo found" in res["message"]
+
+    def test_get_debit_memo_for_rma_missing_id(self):
+        res = accounting_mcp._get_debit_memo_for_rma(purchase_return_id=None)
+        assert res["found"] is False
+        assert "error" in res
+
     def test_send_customer_reminder_mcp(self):
         with patch.object(accounting_mcp._reminder_svc, "send_customer_reminder") as mock_send:
             mock_send.return_value = {
@@ -307,6 +367,8 @@ class TestAccountingMcp:
         names = [t.name for t in get_tools()]
         assert "list_chart_of_accounts" in names
         assert "list_invoices" in names
+        assert "list_debit_memos" in names
+        assert "get_debit_memo_for_rma" in names
         assert "get_invoice" in names
         assert "list_payments" in names
         assert "list_payment_terms" in names
@@ -325,6 +387,7 @@ class TestAccountingMcp:
         uris = [r.uri for r in list_resources()]
         assert "nova://accounting/payment-terms" in uris
         assert "nova://accounting/invoices" in uris
+        assert "nova://accounting/debit-memos" in uris
 
 
 

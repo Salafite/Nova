@@ -23,6 +23,8 @@ INVOICE_REPO = CrudRepository(
         'invoice_type',
         'partner_id',
         'sales_order_id',
+        'purchase_order_id',
+        'purchase_return_id',
         'sales_rep_id',
         'payment_term_id',
         'issue_date',
@@ -40,6 +42,11 @@ INVOICE_REPO = CrudRepository(
         'nominal_total_weight',
         'actual_total_weight',
         'weight_adjustment_amount',
+        'stripe_payment_intent_id',
+        'stripe_checkout_session_id',
+        'payment_link',
+        'business_id',
+        'is_active',
     ],
 )
 
@@ -534,6 +541,81 @@ class InvoiceService(CrudService):
             'sales_order_id': sales_order_id,
             'lines': lines,
         }
+
+    def get_debit_memos(
+        self,
+        purchase_return_id: Optional[int] = None,
+        partner_id: Optional[int] = None,
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+        order_by: Optional[str] = None,
+        conn=None,
+    ) -> List[Dict[str, Any]]:
+        """
+        List/filter supplier debit memos, optionally filtered by RMA / purchase return ID, supplier, and status.
+        """
+        filters: Dict[str, Any] = {'invoice_type': 'Debit Memo'}
+        if purchase_return_id is not None:
+            filters['purchase_return_id'] = purchase_return_id
+        if partner_id is not None:
+            filters['partner_id'] = partner_id
+        if status is not None:
+            filters['status'] = status
+
+        return self.list(
+            filters=filters,
+            limit=limit,
+            offset=offset,
+            order_by=order_by,
+            conn=conn,
+        )
+
+    def count_debit_memos(
+        self,
+        purchase_return_id: Optional[int] = None,
+        partner_id: Optional[int] = None,
+        status: Optional[str] = None,
+        conn=None,
+    ) -> int:
+        """
+        Count supplier debit memos matching the specified filters.
+        """
+        filters: Dict[str, Any] = {'invoice_type': 'Debit Memo'}
+        if purchase_return_id is not None:
+            filters['purchase_return_id'] = purchase_return_id
+        if partner_id is not None:
+            filters['partner_id'] = partner_id
+        if status is not None:
+            filters['status'] = status
+
+        cnt = self.count(filters=filters, conn=conn)
+        return int(cnt) if isinstance(cnt, (int, float)) else 0
+
+    def get_debit_memo_by_purchase_return(
+        self,
+        purchase_return_id: int,
+        conn=None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve the debit memo record linked to a specific Purchase Return (RMA).
+        """
+        if not purchase_return_id:
+            return None
+        records = self.list(
+            filters={'purchase_return_id': purchase_return_id, 'invoice_type': 'Debit Memo'},
+            limit=1,
+            conn=conn,
+        )
+        if records and isinstance(records, list) and len(records) > 0:
+            return records[0]
+        # Fallback check by purchase_return_id only
+        records = self.list(
+            filters={'purchase_return_id': purchase_return_id},
+            limit=1,
+            conn=conn,
+        )
+        return records[0] if (records and isinstance(records, list) and len(records) > 0) else None
 
     def get_einvoice_qr(self, invoice_id: int, conn=None):
         """Retrieve or generate Base64 TLV QR code for an invoice."""

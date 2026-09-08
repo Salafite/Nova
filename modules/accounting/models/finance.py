@@ -72,12 +72,14 @@ class JournalLineResponse(AuditMixin):
     credit: float
 
 
-# Invoice (Accounts Receivable / Payable)
+# Invoice (Accounts Receivable / Payable / Debit Memo)
 class InvoiceCreate(BaseModel):
     invoice_number: Optional[str] = Field(None, max_length=50)
     invoice_type: str = 'Sales'
     partner_id: int
     sales_order_id: Optional[int] = None
+    purchase_order_id: Optional[int] = None
+    purchase_return_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     issue_date: date
@@ -104,6 +106,8 @@ class InvoiceUpdate(BaseModel):
     invoice_type: Optional[str] = None
     partner_id: Optional[int] = None
     sales_order_id: Optional[int] = None
+    purchase_order_id: Optional[int] = None
+    purchase_return_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     issue_date: Optional[date] = None
@@ -128,6 +132,8 @@ class InvoiceResponse(AuditMixin):
     invoice_type: str
     partner_id: int
     sales_order_id: Optional[int] = None
+    purchase_order_id: Optional[int] = None
+    purchase_return_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     issue_date: date
@@ -145,6 +151,9 @@ class InvoiceResponse(AuditMixin):
     nominal_total_weight: Optional[float] = None
     actual_total_weight: Optional[float] = None
     weight_adjustment_amount: float = 0
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
 
 
 class InvoiceCatchWeightLineBreakdown(BaseModel):

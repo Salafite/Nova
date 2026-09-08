@@ -59,10 +59,16 @@ class TestPurchasingMcp:
         assert "list_rfqs" in names
         assert "calculate_restock_forecast" in names
         assert "propose_draft_purchase_order" in names
+        assert "create_purchase_return_rma" in names
+        assert "get_purchase_return_details" in names
+        assert "approve_purchase_return" in names
 
         tools_map = {t.name: t for t in registry.get_tools()}
         assert tools_map["calculate_restock_forecast"].tier == "tier1"
         assert tools_map["propose_draft_purchase_order"].tier == "tier2"
+        assert tools_map["create_purchase_return_rma"].tier == "tier1"
+        assert tools_map["get_purchase_return_details"].tier == "tier1"
+        assert tools_map["approve_purchase_return"].tier == "tier2"
 
     def test_calculate_restock_forecast_sku(self):
         with _patch("_forecast_svc"):
@@ -214,5 +220,132 @@ class TestPurchasingMcp:
             assert result["purchase_order"]["supplier_id"] == 5
             assert len(result["lines"]) == 1
             assert result["lines"][0]["line_total"] == 200.0
+
+    def test_create_purchase_return_rma_with_lines(self):
+        with _patch("_pr_service"), _patch("_pr_line_repo"), _patch("_product_repo"):
+            purchasing_mcp._pr_service.create.return_value = {
+                "id": 101,
+                "return_number": "RMA-00001",
+                "supplier_id": 2,
+                "purchase_order_id": 10,
+                "status": "Draft",
+                "total_amount": 150.0,
+            }
+            purchasing_mcp._pr_line_repo.create.side_effect = lambda line: {"id": 1, **line}
+
+            lines = [
+                {
+                    "product_id": 5,
+                    "product_name": "Organic Apples",
+                    "qty": 10.0,
+                    "unit_price": 15.0,
+                    "batch_id": 12,
+                    "batch_number": "BAT-001",
+                    "reason_code": "damaged",
+                }
+            ]
+
+            result = purchasing_mcp._create_purchase_return_rma(
+                supplier_id=2,
+                purchase_order_id=10,
+                reason="Damaged upon receiving",
+                lines=lines,
+            )
+
+            assert result["id"] == 101
+            assert result["return_number"] == "RMA-00001"
+            assert len(result["lines"]) == 1
+            assert result["lines"][0]["line_total"] == 150.0
+            assert result["lines"][0]["reason_code"] == "damaged"
+            purchasing_mcp._pr_service.create.assert_called_once()
+            purchasing_mcp._pr_line_repo.create.assert_called_once()
+
+    def test_create_purchase_return_rma_from_goods_receipt(self):
+        with _patch("_pr_service"):
+            purchasing_mcp._pr_service.create_from_goods_receipt.return_value = {
+                "id": 102,
+                "return_number": "RMA-00002",
+                "goods_receipt_id": 25,
+                "supplier_id": 3,
+                "status": "Draft",
+            }
+
+            result = purchasing_mcp._create_purchase_return_rma(
+                supplier_id=3,
+                goods_receipt_id=25,
+                reason="Dock rejection",
+            )
+
+            assert result["id"] == 102
+            assert result["return_number"] == "RMA-00002"
+            purchasing_mcp._pr_service.create_from_goods_receipt.assert_called_once()
+
+    def test_get_purchase_return_details(self):
+        with _patch("_pr_service"):
+            purchasing_mcp._pr_service.get_return_details.return_value = {
+                "id": 101,
+                "return_number": "RMA-00001",
+                "supplier_id": 2,
+                "supplier_name": "Fresh Farms",
+                "lines": [{"id": 1, "product_name": "Apples", "qty": 10}],
+                "debit_memo_number": "DM-001",
+            }
+
+            result = purchasing_mcp._get_purchase_return_details(101)
+
+            assert result["id"] == 101
+            assert result["supplier_name"] == "Fresh Farms"
+            assert result["debit_memo_number"] == "DM-001"
+            purchasing_mcp._pr_service.get_return_details.assert_called_once_with(101)
+
+    def test_approve_purchase_return_handler(self):
+        with _patch("_pr_service"):
+            purchasing_mcp._pr_service.approve_return.return_value = {
+                "id": 101,
+                "return_number": "RMA-00001",
+                "status": "Approved",
+                "debit_memo_id": 55,
+                "approved_at": "2026-09-08T00:00:00Z",
+            }
+
+            result = purchasing_mcp._approve_purchase_return(
+                id=101,
+                approved_by=1,
+                notes="Verified damaged goods",
+            )
+
+            assert result["status"] == "Approved"
+            assert result["debit_memo_id"] == 55
+            assert "approved successfully" in result["message"]
+            purchasing_mcp._pr_service.approve_return.assert_called_once_with(
+                id_val=101,
+                approved_by=1,
+                notes="Verified damaged goods",
+                create_debit_memo=True,
+                quarantine_inventory=True,
+            )
+
+    def test_tier2_approve_purchase_return_workflow(self):
+        register_tools()
+        with _patch("_pr_service"):
+            purchasing_mcp._pr_service.approve_return.return_value = {
+                "id": 105,
+                "return_number": "RMA-00005",
+                "status": "Approved",
+                "debit_memo_id": 88,
+            }
+
+            # Step 1: Propose action
+            proposed = registry.propose_action("approve_purchase_return", {"id": 105, "notes": "Approved by AP"})
+            assert "action_id" in proposed
+            assert proposed["tool"] == "approve_purchase_return"
+            action_id = proposed["action_id"]
+
+            # Step 2: Confirm action executes the underlying handler
+            confirmed = registry.confirm_action(action_id)
+            assert confirmed["status"] == "Approved"
+            assert confirmed["debit_memo_id"] == 88
+            assert "RMA-00005" in confirmed["message"]
+
 
 

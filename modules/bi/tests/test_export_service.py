@@ -21,7 +21,6 @@ from modules.bi.models.executive_analytics import (
     WarehouseDeliveryMetricItem,
 )
 from modules.sales.models.commission import CommissionSummaryItem
-from apps.api.main import app
 
 
 @pytest.fixture
@@ -365,16 +364,18 @@ class TestExportControllerEndpoints:
 
     @pytest.fixture(autouse=True)
     def setup_client(self):
+        from apps.api.main import app
         self.client = TestClient(app)
 
     def _make_auth_header(self, user_id=1, role='Admin', permissions=None):
         from packages.auth.jwt import create_access_token
         token = create_access_token(user_id)
+        normalized_role = role.lower().replace(" ", "_")
         user_dict = {
             'id': user_id,
-            'username': f'user_{role.lower().replace(" ", "_")}_{user_id}',
+            'username': f'user_{normalized_role}_{user_id}',
             'full_name': f'Test {role}',
-            'email': f'{role.lower().replace(" ", "_")}@example.com',
+            'email': f'{normalized_role}@example.com',
             'role': role,
             'permissions': permissions,
             'status': 'Active',
