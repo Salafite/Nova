@@ -4,7 +4,7 @@
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="page-title">{{ t('edi-sku-matrix-title', 'EDI SKU Cross-Reference Matrix') }}</h1>
-        <p class="page-subtitle">{{ t('edi-sku-matrix-sub', 'Map Supermarket & B2B Buyer Part Numbers, GTIN/EAN Barcodes, UOM Multipliers & Reference Prices (T0125)') }}</p>
+        <p class="page-subtitle">{{ t('edi-sku-matrix-sub', 'Map Supermarket & B2B Buyer Part Numbers, GTIN/EAN Barcodes, UOM Multipliers & Reference Prices (T0135)') }}</p>
       </div>
       <div class="header-actions">
         <button class="btn-outline" @click="router.push('/integrations/edi-gateway')">
@@ -93,7 +93,7 @@
       </div>
       <div class="tester-body">
         <p class="text-xs text-muted mb-3">
-          {{ t('tester-desc', 'Simulate inbound EDI 850 line item resolution against T0125 SKU matrix, customer contract prices (T0122), and price lists (T0084).') }}
+          {{ t('tester-desc', 'Simulate inbound EDI 850 line item resolution against T0135 SKU matrix, customer contract prices (T0122), and price lists (T0084).') }}
         </p>
         <div class="tester-grid">
           <div class="form-group">
@@ -551,7 +551,7 @@
             v-model="bulkPayloadText"
             rows="8"
             class="form-control code-editor"
-            :placeholder="bulkFormat === 'csv' ? 'partner_sku,product_id,gtin,partner_uom,uom_conversion_factor,catalog_price\nCR-MILK-1L,1,6291041000012,CA,12,24.50' : '[\n  {\n    \"partner_sku\": \"CR-MILK-1L\",\n    \"product_id\": 1,\n    \"gtin\": \"6291041000012\",\n    \"partner_uom\": \"CA\",\n    \"uom_conversion_factor\": 12,\n    \"catalog_price\": 24.50\n  }\n]'"
+            :placeholder="bulkFormat === 'csv' ? 'partner_sku,product_id,gtin,partner_uom,uom_conversion_factor,catalog_price\nCR-MILK-1L,1,6291041000012,CA,12,24.50' : '[\n  {\n    &quot;partner_sku&quot;: &quot;CR-MILK-1L&quot;,\n    &quot;product_id&quot;: 1,\n    &quot;gtin&quot;: &quot;6291041000012&quot;,\n    &quot;partner_uom&quot;: &quot;CA&quot;,\n    &quot;uom_conversion_factor&quot;: 12,\n    &quot;catalog_price&quot;: 24.50\n  }\n]'"
           ></textarea>
 
           <!-- Bulk Result Report -->
@@ -783,8 +783,8 @@ async function loadData() {
   error.value = ''
   try {
     const [mRes, pRes, prodRes] = await Promise.allSettled([
-      api.get('/T0125I/?limit=300'),
-      api.get('/T0124I/?limit=100'),
+      api.get('/T0135I/?limit=300'),
+      api.get('/T0134I/?limit=100'),
       api.get('/T0001I/?limit=300'),
     ])
 
@@ -908,10 +908,10 @@ async function saveMapping() {
   try {
     const payload = { ...form.value }
     if (isEditing.value) {
-      await api.put(`/T0125I/${editingId.value}`, payload)
+      await api.put(`/T0135I/${editingId.value}`, payload)
       toast(t('mapping-updated', 'SKU cross-reference mapping updated successfully'))
     } else {
-      await api.post('/T0125I/', payload)
+      await api.post('/T0135I/', payload)
       toast(t('mapping-created', 'SKU cross-reference mapping created successfully'))
     }
     showFormModal.value = false
@@ -1029,7 +1029,7 @@ async function executeDelete() {
   if (!deleteTarget.value) return
   deleting.value = true
   try {
-    await api.delete(`/T0125I/${deleteTarget.value.id}`)
+    await api.delete(`/T0135I/${deleteTarget.value.id}`)
     toast(t('mapping-deleted', 'SKU mapping deleted successfully'))
     deleteTarget.value = null
     await loadData()

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from datetime import date
 from pydantic import BaseModel, Field
 from modules.core.models.base import AuditMixin
@@ -72,12 +72,14 @@ class JournalLineResponse(AuditMixin):
     credit: float
 
 
-# Invoice (Accounts Receivable / Payable)
+# Invoice (Accounts Receivable / Payable / Debit Memo)
 class InvoiceCreate(BaseModel):
     invoice_number: Optional[str] = Field(None, max_length=50)
     invoice_type: str = 'Sales'
     partner_id: int
     sales_order_id: Optional[int] = None
+    purchase_order_id: Optional[int] = None
+    purchase_return_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     issue_date: date
@@ -104,6 +106,8 @@ class InvoiceUpdate(BaseModel):
     invoice_type: Optional[str] = None
     partner_id: Optional[int] = None
     sales_order_id: Optional[int] = None
+    purchase_order_id: Optional[int] = None
+    purchase_return_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     issue_date: Optional[date] = None
@@ -128,6 +132,8 @@ class InvoiceResponse(AuditMixin):
     invoice_type: str
     partner_id: int
     sales_order_id: Optional[int] = None
+    purchase_order_id: Optional[int] = None
+    purchase_return_id: Optional[int] = None
     sales_rep_id: Optional[int] = None
     payment_term_id: Optional[int] = None
     issue_date: date
@@ -145,6 +151,55 @@ class InvoiceResponse(AuditMixin):
     nominal_total_weight: Optional[float] = None
     actual_total_weight: Optional[float] = None
     weight_adjustment_amount: float = 0
+    stripe_payment_intent_id: Optional[str] = None
+    stripe_checkout_session_id: Optional[str] = None
+    payment_link: Optional[str] = None
+
+
+class InvoiceCatchWeightLineBreakdown(BaseModel):
+    id: Optional[int] = None
+    sales_order_id: Optional[int] = None
+    product_id: Optional[int] = None
+    product_name: Optional[str] = None
+    uom_id: Optional[int] = None
+    qty: Optional[float] = None
+    unit_price: Optional[float] = None
+    discount: Optional[float] = 0
+    line_total: Optional[float] = None
+    line_number: Optional[int] = None
+    is_catch_weight: bool = False
+    pricing_uom_id: Optional[int] = None
+    unit_price_pricing_uom: Optional[float] = None
+    nominal_weight: Optional[float] = None
+    catch_weight_actual: Optional[float] = None
+    recalculated_total: Optional[float] = None
+
+
+class InvoiceCatchWeightBreakdownResponse(BaseModel):
+    invoice_id: int
+    invoice_number: Optional[str] = None
+    is_catch_weight: bool = False
+    nominal_total_weight: Optional[float] = None
+    actual_total_weight: Optional[float] = None
+    weight_adjustment_amount: float = 0.0
+    total_amount: float = 0.0
+    sales_order_id: Optional[int] = None
+    lines: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class InvoiceCatchWeightSummary(BaseModel):
+    is_catch_weight: bool = False
+    nominal_total_weight: Optional[float] = None
+    actual_total_weight: Optional[float] = None
+    weight_adjustment_amount: float = 0.0
+    original_subtotal: float = 0.0
+    recalculated_subtotal: float = 0.0
+    lines: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class InvoiceRecalculateAndCreateRequest(BaseModel):
+    order_id: int
+    update_customer_balance: bool = True
 
 
 # Payment

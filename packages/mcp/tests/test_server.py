@@ -129,3 +129,64 @@ class TestMcpServer:
             "name": "broken", "arguments": {},
         }))
         assert resp["error"]["code"] == -32603
+
+    def test_tools_call_permission_denied_returns_32003(self):
+        tool = Tool(
+            name="secure_tool",
+            description="Secure tool",
+            input_schema={},
+            required_permission="ADMIN_VIEW",
+        )
+        register_tool(tool, lambda: "secret_data")
+        # Caller without ADMIN_VIEW (e.g. Sales Rep)
+        resp = self.server.handle_request(
+            self._req("tools/call", {"name": "secure_tool", "arguments": {}}),
+            user={"id": 2, "role": "Sales Rep"},
+        )
+        assert resp["error"]["code"] == -32003
+        assert "Permission denied: ADMIN_VIEW required" in resp["error"]["message"]
+
+    def test_tools_call_permission_granted_by_role(self):
+        tool = Tool(
+            name="sales_tool",
+            description="Sales tool",
+            input_schema={},
+            required_permission="SALES_VIEW",
+        )
+        register_tool(tool, lambda: "sales_data")
+        resp = self.server.handle_request(
+            self._req("tools/call", {"name": "sales_tool", "arguments": {}}),
+            user={"id": 2, "role": "Sales Rep"},
+        )
+        assert resp.get("result") is not None
+        assert "sales_data" in resp["result"]["content"][0]["text"]
+
+    def test_resources_read_permission_denied_returns_32003(self):
+        res = Resource(
+            uri="nova://secret_resource",
+            name="Secret",
+            description="Secret resource",
+            required_permission="ADMIN_VIEW",
+        )
+        register_resource(res, lambda: {"admin_info": "classified"})
+        resp = self.server.handle_request(
+            self._req("resources/read", {"uri": "nova://secret_resource"}),
+            user={"id": 3, "role": "Viewer"},
+        )
+        assert resp["error"]["code"] == -32003
+        assert "Permission denied: ADMIN_VIEW required" in resp["error"]["message"]
+
+    def test_resources_read_permission_granted(self):
+        res = Resource(
+            uri="nova://products_resource",
+            name="Products",
+            description="Product list",
+            required_permission="PRODUCTS_VIEW",
+        )
+        register_resource(res, lambda: [{"id": 1, "name": "Widget"}])
+        resp = self.server.handle_request(
+            self._req("resources/read", {"uri": "nova://products_resource"}),
+            user={"id": 3, "role": "Viewer"},
+        )
+        assert resp.get("result") is not None
+        assert "Widget" in resp["result"]["contents"][0]["text"]

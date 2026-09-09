@@ -3,7 +3,7 @@ Nova ERP — Inbound EDI 850 (Purchase Order) & UN/EDIFACT ORDERS Ingestion Serv
 Parses inbound ANSI X12 850 and UN/EDIFACT ORDERS interchanges, extracts header and line items,
 cross-references buyer SKUs and prices with tolerance thresholds, checks customer credit limits,
 creates Nova sales orders (T0012/T0013), generates Functional Acknowledgments (997 FA / CONTRL),
-and manages transaction logs in T0126.
+and manages transaction logs in T0136.
 """
 
 import re
@@ -749,7 +749,7 @@ class Edi850Service(CrudService):
     Core Inbound EDI 850 / ORDERS Service.
     Coordinates interchange ingestion, trading partner matching, SKU & price cross-referencing,
     customer credit limit verification, sales order creation in T0012/T0013, 997/CONTRL ACK generation,
-    and audit log updates in T0126.
+    and audit log updates in T0136.
     """
 
     def __init__(
@@ -784,7 +784,7 @@ class Edi850Service(CrudService):
         conn=None,
     ) -> Optional[Dict[str, Any]]:
         """
-        Locate matching EdiPartner (T0124) configuration by partner_id, interchange_sender_id,
+        Locate matching EdiPartner (T0134) configuration by partner_id, interchange_sender_id,
         or buyer identifier.
         """
         if partner_id:
@@ -970,14 +970,14 @@ class Edi850Service(CrudService):
         Main entry point for processing an inbound EDI 850 PO or EDIFACT ORDERS message.
         
         Workflow:
-        1. Initialize transaction record in T0126.
+        1. Initialize transaction record in T0136.
         2. Parse EDI payload into structured order(s).
-        3. Match trading partner configuration (T0124).
-        4. Cross-reference SKUs, UOMs, and prices against contracts / price lists (T0125/T0128/T0122/T0084).
+        3. Match trading partner configuration (T0134).
+        4. Cross-reference SKUs, UOMs, and prices against contracts / price lists (T0135/T0138/T0122/T0084).
         5. Check customer credit standing and delinquent invoice thresholds.
         6. Create sales order in T0012 and sales line items in T0013.
         7. Generate 997 Functional Acknowledgment / EDIFACT CONTRL response.
-        8. Update and persist final transaction status and parsed data in T0126.
+        8. Update and persist final transaction status and parsed data in T0136.
         """
         if tenant_id is None:
             tenant_id = get_current_tenant()
@@ -996,7 +996,7 @@ class Edi850Service(CrudService):
         std_str = detected_std.value
         doc_type_str = "ORDERS" if detected_std == EdiStandard.EDIFACT else "850"
 
-        # 1. Create Initial Transaction Log (T0126)
+        # 1. Create Initial Transaction Log (T0136)
         tx_record = {
             'transaction_number': txn_number,
             'partner_id': partner_id,
@@ -1107,7 +1107,7 @@ class Edi850Service(CrudService):
         # Process the primary purchase order from interchange
         order = parsed_orders[0]
 
-        # 3. Match Trading Partner (T0124)
+        # 3. Match Trading Partner (T0134)
         partner = self.resolve_partner(order, partner_id=partner_id, conn=conn)
         effective_partner_id = partner.get('id') if partner else partner_id
         partner_code = partner.get('partner_code') if partner else None
@@ -1117,7 +1117,7 @@ class Edi850Service(CrudService):
 
         effective_auto_confirm = auto_confirm if auto_confirm is not None else partner_auto_confirm
 
-        # 4. Cross-Reference Lines (T0125, T0128, T0122, T0084, T0001)
+        # 4. Cross-Reference Lines (T0135, T0138, T0122, T0084, T0001)
         raw_lines = [l.model_dump() for l in order.lines]
         xref_summary = self.xref_service.cross_reference_order(
             partner_id=effective_partner_id,
@@ -1184,7 +1184,7 @@ class Edi850Service(CrudService):
             ack_control_number=ctrl_num,
         )
 
-        # 8. Update Transaction Log in T0126
+        # 8. Update Transaction Log in T0136
         err_details_list = list(xref_summary.errors)
         if credit_eval and credit_eval.get('is_hold_required'):
             err_details_list.append(f"Credit Hold: {credit_eval.get('hold_reason')}")
@@ -1247,7 +1247,7 @@ class Edi850Service(CrudService):
         tenant_id: Optional[int] = None,
     ) -> EdiIngestResult:
         """
-        Reprocess a previously held or failed EDI transaction (T0126).
+        Reprocess a previously held or failed EDI transaction (T0136).
         Allows overriding price tolerance thresholds or force-confirming sales orders.
         """
         if tenant_id is None:
@@ -1331,7 +1331,7 @@ class Edi850Service(CrudService):
 
         new_tx_status = EdiTransactionStatus.PROCESSED.value if (force_confirm or xref_summary.is_clean) else EdiTransactionStatus.PRICE_DISCREPANCY_HOLD.value
 
-        # Update transaction in T0126
+        # Update transaction in T0136
         self.tx_repo.update(
             transaction_id,
             {

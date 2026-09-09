@@ -577,7 +577,7 @@ async function loadData() {
   error.value = ''
   try {
     const [pRes, cRes, sRes] = await Promise.allSettled([
-      api.get('/T0124I/?limit=100'),
+      api.get('/T0134I/?limit=100'),
       api.get('/T0010I/?limit=100'),
       api.get('/T0014I/?limit=100')
     ])
@@ -668,10 +668,10 @@ async function savePartner() {
   saving.value = true
   try {
     if (isEditing.value && editingId.value) {
-      await api.put(`/T0124I/${editingId.value}`, form.value)
+      await api.put(`/T0134I/${editingId.value}`, form.value)
       toast(t('partner-updated', 'Trading Partner updated successfully'), 'success')
     } else {
-      await api.post('/T0124I/', form.value)
+      await api.post('/T0134I/', form.value)
       toast(t('partner-created', 'Trading Partner created successfully'), 'success')
     }
     showModal.value = false
@@ -686,7 +686,7 @@ async function savePartner() {
 
 async function toggleActive(partner) {
   try {
-    await api.put(`/T0124I/${partner.id}`, { is_active: !partner.is_active })
+    await api.put(`/T0134I/${partner.id}`, { is_active: !partner.is_active })
     toast(partner.is_active ? 'Partner deactivated' : 'Partner activated', 'success')
     await loadData()
   } catch (err) {
@@ -697,7 +697,7 @@ async function toggleActive(partner) {
 async function deletePartner(partner) {
   if (!confirm(`Are you sure you want to delete trading partner ${partner.partner_code} (${partner.partner_name})?`)) return
   try {
-    await api.delete(`/T0124I/${partner.id}`)
+    await api.delete(`/T0134I/${partner.id}`)
     toast('Trading partner deleted', 'success')
     await loadData()
   } catch (err) {

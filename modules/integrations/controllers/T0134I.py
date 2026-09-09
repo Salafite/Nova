@@ -9,8 +9,8 @@ from modules.core.controllers.base import create_crud_router
 
 service = CrudService(EDI_PARTNER_REPO)
 router = create_crud_router(
-    '/api/T0124I',
-    'T0124 - EDI Trading Partners',
+    '/api/T0134I',
+    'T0134 - EDI Trading Partners',
     service,
     EdiPartnerCreate,
     EdiPartnerUpdate,

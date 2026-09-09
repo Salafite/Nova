@@ -4,7 +4,7 @@
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="page-title">{{ t('edi-pallet-title', 'EDI SSCC Pallet Logistics') }}</h1>
-        <p class="page-subtitle">{{ t('edi-pallet-sub', 'GS1-128 / SSCC-18 Logistics Barcodes, Packaging Hierarchy (Pallet -> Box -> Item) & ASN Inspection (T0127)') }}</p>
+        <p class="page-subtitle">{{ t('edi-pallet-sub', 'GS1-128 / SSCC-18 Logistics Barcodes, Packaging Hierarchy (Pallet -> Box -> Item) & ASN Inspection (T0137)') }}</p>
       </div>
       <div class="header-actions">
         <button class="btn-outline" @click="router.push('/integrations/edi-gateway')">
@@ -1162,7 +1162,7 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.get('/T0127I/')
+    const res = await api.get('/T0137I/')
     pallets.value = res.data || []
   } catch (err) {
     console.error('Failed to load SSCC pallets:', err)
@@ -1309,10 +1309,10 @@ async function savePallet() {
     }
 
     if (isEditing.value && editingId.value) {
-      await api.put(`/T0127I/${editingId.value}`, payload)
+      await api.put(`/T0137I/${editingId.value}`, payload)
       toast(t('pallet-updated', 'Pallet record updated successfully'), 'success')
     } else {
-      await api.post('/T0127I/', payload)
+      await api.post('/T0137I/', payload)
       toast(t('pallet-created', 'Pallet registered successfully'), 'success')
     }
     showModal.value = false
@@ -1336,7 +1336,7 @@ async function applyStatusChange() {
   if (!activePallet.value) return
   saving.value = true
   try {
-    await api.put(`/T0127I/${activePallet.value.id}`, { status: quickStatus.value })
+    await api.put(`/T0137I/${activePallet.value.id}`, { status: quickStatus.value })
     toast(t('status-updated', `Status updated to ${quickStatus.value}`), 'success')
     showStatusModal.value = false
     await loadData()
@@ -1354,7 +1354,7 @@ async function confirmDelete(pallet) {
     return
   }
   try {
-    await api.delete(`/T0127I/${pallet.id}`)
+    await api.delete(`/T0137I/${pallet.id}`)
     toast(t('pallet-deleted', 'Pallet deleted'), 'success')
     await loadData()
   } catch (err) {

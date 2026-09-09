@@ -474,7 +474,8 @@ describe('StockTransferDetailView (Multi-Warehouse Transfer Execution)', () => {
     await addBtn.trigger('click')
     await flushPromises()
 
-    expect(w.text()).toContain('Add Transfer Line Item')
+    const modalOverlay = w.find('.modal-overlay')
+    expect(modalOverlay.exists()).toBe(true)
 
     // Submit line form
     const lineForm = w.find('.modal-dialog form')

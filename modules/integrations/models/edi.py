@@ -1,7 +1,7 @@
 """
 Nova ERP — B2B EDI Gateway & Supplier Catalog Sync Models
-Pydantic domain models for EDI Trading Partners (T0124), SKU Cross-Reference Matrix (T0125),
-EDI Transaction / Interchange Logs (T0126), SSCC Pallet Logistics (T0127), and Supplier Catalog Sync (T0128).
+Pydantic domain models for EDI Trading Partners (T0134), SKU Cross-Reference Matrix (T0135),
+EDI Transaction / Interchange Logs (T0136), SSCC Pallet Logistics (T0137), and Supplier Catalog Sync (T0138).
 """
 
 from typing import Optional, Any, List, Dict
@@ -86,7 +86,7 @@ class EdiCatalogSyncStatus(str, Enum):
 
 
 # ---------------------------------------------------------------------------
-# 1. EDI Trading Partners (T0124)
+# 1. EDI Trading Partners (T0134)
 # ---------------------------------------------------------------------------
 
 class EdiPartnerCreate(BaseModel):
@@ -163,11 +163,11 @@ class EdiPartner(EdiPartnerResponse):
 
 
 # ---------------------------------------------------------------------------
-# 2. EDI SKU Cross-Reference Matrix (T0125)
+# 2. EDI SKU Cross-Reference Matrix (T0135)
 # ---------------------------------------------------------------------------
 
 class EdiSkuMappingCreate(BaseModel):
-    partner_id: int = Field(..., description="Trading partner reference (t0124)")
+    partner_id: int = Field(..., description="Trading partner reference (t0134)")
     product_id: int = Field(..., description="Internal product reference (t0001)")
     partner_sku: str = Field(..., max_length=100, description="Partner SKU / Buyer Part Number")
     partner_sku_type: str = Field('BUYER_PART_NO', max_length=30, description="Identifier type: BUYER_PART_NO | GTIN | EAN | UPC | VENDOR_PART_NO")
@@ -213,12 +213,12 @@ class EdiSkuMapping(EdiSkuMappingResponse):
 
 
 # ---------------------------------------------------------------------------
-# 3. EDI Transaction / Interchange Logs (T0126)
+# 3. EDI Transaction / Interchange Logs (T0136)
 # ---------------------------------------------------------------------------
 
 class EdiTransactionCreate(BaseModel):
     transaction_number: Optional[str] = Field(None, max_length=50, description="Unique transaction number (auto-generated if omitted)")
-    partner_id: Optional[int] = Field(None, description="Trading partner reference (t0124)")
+    partner_id: Optional[int] = Field(None, description="Trading partner reference (t0134)")
     standard: str = Field(..., max_length=20, description="EDI standard: ANSI_X12 | EDIFACT")
     document_type: str = Field(..., max_length=20, description="Document type: 850, 856, 810, 832, 997, ORDERS, DESADV, INVOIC, PRICAT, CONTRL")
     direction: str = Field(..., max_length=10, description="Transmission direction: INBOUND | OUTBOUND")
@@ -281,7 +281,7 @@ class EdiTransaction(EdiTransactionResponse):
 
 
 # ---------------------------------------------------------------------------
-# 4. EDI SSCC Pallet Logistics (T0127)
+# 4. EDI SSCC Pallet Logistics (T0137)
 # ---------------------------------------------------------------------------
 
 class EdiSsccPalletCreate(BaseModel):
@@ -340,11 +340,11 @@ class EdiSsccPallet(EdiSsccPalletResponse):
 
 
 # ---------------------------------------------------------------------------
-# 5. Supplier Catalog Sync / 832 PRICAT (T0128)
+# 5. Supplier Catalog Sync / 832 PRICAT (T0138)
 # ---------------------------------------------------------------------------
 
 class EdiCatalogItemCreate(BaseModel):
-    partner_id: int = Field(..., description="Trading partner reference (t0124)")
+    partner_id: int = Field(..., description="Trading partner reference (t0134)")
     catalog_code: str = Field(..., max_length=50, description="Catalog batch/version code")
     buyer_sku: str = Field(..., max_length=100, description="Buyer / Supermarket SKU")
     supplier_sku: Optional[str] = Field(None, max_length=100, description="Supplier / Vendor SKU")
@@ -526,7 +526,7 @@ class EdiCatalogSyncResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 EDI_PARTNER_REPO = CrudRepository(
-    'T0124',
+    'T0134',
     business_columns=[
         'id', 'partner_name', 'partner_code', 'edi_standard',
         'interchange_sender_id', 'interchange_receiver_id',
@@ -539,7 +539,7 @@ EDI_PARTNER_REPO = CrudRepository(
 )
 
 EDI_SKU_MAPPING_REPO = CrudRepository(
-    'T0125',
+    'T0135',
     business_columns=[
         'id', 'partner_id', 'product_id', 'partner_sku', 'partner_sku_type',
         'gtin', 'partner_uom', 'internal_uom', 'uom_conversion_factor',
@@ -548,7 +548,7 @@ EDI_SKU_MAPPING_REPO = CrudRepository(
 )
 
 EDI_TRANSACTION_REPO = CrudRepository(
-    'T0126',
+    'T0136',
     business_columns=[
         'id', 'transaction_number', 'partner_id', 'standard', 'document_type',
         'direction', 'control_number', 'status', 'sales_order_id',
@@ -558,7 +558,7 @@ EDI_TRANSACTION_REPO = CrudRepository(
 )
 
 EDI_SSCC_PALLET_REPO = CrudRepository(
-    'T0127',
+    'T0137',
     business_columns=[
         'id', 'sscc_barcode', 'delivery_id', 'sales_order_id', 'pallet_number',
         'package_type', 'parent_sscc_id', 'gross_weight_kg', 'net_weight_kg',
@@ -567,7 +567,7 @@ EDI_SSCC_PALLET_REPO = CrudRepository(
 )
 
 EDI_CATALOG_ITEM_REPO = CrudRepository(
-    'T0128',
+    'T0138',
     business_columns=[
         'id', 'partner_id', 'catalog_code', 'buyer_sku', 'supplier_sku',
         'gtin', 'product_name', 'product_description', 'category', 'brand',

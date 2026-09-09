@@ -16,6 +16,7 @@ from modules.inventory.models.warehouse import (
 )
 from modules.inventory.models.stock_level import (
     StockLevelCreate, StockLevelUpdate, StockLevelResponse,
+    DualBalanceResponse, InventoryValuationItem, InventoryValuationSummary,
 )
 from modules.inventory.models.stock_transfer import (
     StockTransferLineCreate, StockTransferLineUpdate, StockTransferLineResponse,
@@ -24,4 +25,17 @@ from modules.inventory.models.stock_transfer import (
     StockTransferLossDetail, StockTransferReceiveLine, StockTransferReceive,
     ReplenishmentSuggestionItem, ReplenishmentSuggestionResponse,
     ReplenishmentGenerateItem, ReplenishmentGenerateRequest, ReplenishmentGenerateResponse,
+)
+from modules.inventory.models.predictive_demand import (
+    ConfidenceInterval, WeeklyForecastPoint, WeeklyDemandProjection,
+    HistoricalSalesAggregation, SeasonalTrendAdjustment,
+    SKUForecastParameters, DemandForecastResponse,
+)
+from modules.inventory.models.predictive_forecast import (
+    ConfidenceInterval as ConfidenceInterval_PF,
+)
+from modules.inventory.models.spoilage_prevention import (
+    BatchShelfLifeMetrics, SpoilageSeverityEnum, BatchSpoilageItem, SpoilageRiskAlert,
+    SpoilageRiskReport, SpoilageRiskSummaryResponse, PromotionRecommendation,
+    BatchDiscountPromotionProposal, ApplyPromotionRequest, ApplyPromotionResponse,
 )

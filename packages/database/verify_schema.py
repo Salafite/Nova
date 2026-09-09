@@ -57,7 +57,7 @@ def verify_schema(conn=None) -> dict:
         ORDER BY table_name
     """)
     tables = [r[0] for r in cur.fetchall()]
-    edi_tables = ['t0124', 't0125', 't0126', 't0127', 't0128']
+    edi_tables = ['t0134', 't0135', 't0136', 't0137', 't0138']
     expected_tables = [f"t{i:04d}" for i in range(1, 110)] + edi_tables
     missing_tables = [t for t in expected_tables if t not in tables]
     if missing_tables:
@@ -252,7 +252,7 @@ def print_verification_report(results: dict):
     print(f"  - Single Indexes:           {results['tenant_single_indexes_count']}/{results['business_tables_count']} on business_id")
     print(f"  - Composite Indexes:        {results['tenant_composite_indexes_count']}/{results['business_tables_count']} on (business_id, id)")
     print("------------------------------------------------------------")
-    print(" B2B EDI Gateway & Supplier Catalog Status (T0124-T0128):")
+    print(" B2B EDI Gateway & Supplier Catalog Status (T0134-T0138):")
     edi_count = len(results.get('edi_tables_present', []))
     print(f"  - EDI Tables Present:        {edi_count}/5 ({', '.join(results.get('edi_tables_present', []))})")
     print("------------------------------------------------------------")

@@ -53,9 +53,9 @@ def test_normalize_sku_type():
 # 2. SKU Resolution Tests
 # ===========================================================================
 
-def test_resolve_sku_via_t0125_mapping():
+def test_resolve_sku_via_t0135_mapping():
     """
-    Test resolving buyer SKU via EDI SKU Cross-Reference Matrix (T0125).
+    Test resolving buyer SKU via EDI SKU Cross-Reference Matrix (T0135).
     """
     mock_sku_repo = MagicMock()
     mock_product_repo = MagicMock()
@@ -100,13 +100,13 @@ def test_resolve_sku_via_t0125_mapping():
     assert res.internal_uom == 'EA'
     assert res.uom_conversion_factor == 4.0
     assert res.catalog_price == 120.0
-    assert res.match_source == 'CROSS_REFERENCE_MATRIX_T0125'
+    assert res.match_source == 'CROSS_REFERENCE_MATRIX_T0135'
     assert res.mapping_id == 10
 
 
-def test_resolve_sku_via_t0128_catalog():
+def test_resolve_sku_via_t0138_catalog():
     """
-    Test resolving buyer SKU via Supplier Catalog Sync (T0128) when T0125 mapping is absent.
+    Test resolving buyer SKU via Supplier Catalog Sync (T0138) when T0135 mapping is absent.
     """
     mock_sku_repo = MagicMock()
     mock_catalog_repo = MagicMock()
@@ -151,7 +151,7 @@ def test_resolve_sku_via_t0128_catalog():
     assert res.partner_uom == 'CASE'
     assert res.uom_conversion_factor == 12.0
     assert res.catalog_price == 48.0
-    assert res.match_source == 'CATALOG_SYNC_T0128'
+    assert res.match_source == 'CATALOG_SYNC_T0138'
 
 
 def test_resolve_sku_via_internal_product_sku():

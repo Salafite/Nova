@@ -1,11 +1,11 @@
 """
-Nova ERP — Unit & Integration Tests for B2B EDI Gateway & T-Code Controllers (T0124I-T0128I)
+Nova ERP — Unit & Integration Tests for B2B EDI Gateway & T-Code Controllers (T0134I-T0138I)
 Tests endpoints in:
-- modules/integrations/controllers/T0124I.py (Trading Partners)
-- modules/integrations/controllers/T0125I.py (SKU Cross-Reference Matrix)
-- modules/integrations/controllers/T0126I.py (EDI Transactions)
-- modules/integrations/controllers/T0127I.py (SSCC Pallet Logistics)
-- modules/integrations/controllers/T0128I.py (Supplier Catalog Sync)
+- modules/integrations/controllers/T0134I.py (Trading Partners)
+- modules/integrations/controllers/T0135I.py (SKU Cross-Reference Matrix)
+- modules/integrations/controllers/T0136I.py (EDI Transactions)
+- modules/integrations/controllers/T0137I.py (SSCC Pallet Logistics)
+- modules/integrations/controllers/T0138I.py (Supplier Catalog Sync)
 - modules/integrations/controllers/edi_controller.py (EDI Gateway API)
 """
 
@@ -16,11 +16,11 @@ from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
 from packages.auth.deps import get_current_user
-from modules.integrations.controllers.T0124I import router as t0124_router
-from modules.integrations.controllers.T0125I import router as t0125_router
-from modules.integrations.controllers.T0126I import router as t0126_router
-from modules.integrations.controllers.T0127I import router as t0127_router
-from modules.integrations.controllers.T0128I import router as t0128_router
+from modules.integrations.controllers.T0134I import router as t0134_router
+from modules.integrations.controllers.T0135I import router as t0135_router
+from modules.integrations.controllers.T0136I import router as t0136_router
+from modules.integrations.controllers.T0137I import router as t0137_router
+from modules.integrations.controllers.T0138I import router as t0138_router
 from modules.integrations.controllers.edi_controller import (
     router as edi_router,
     edi_850_service,
@@ -52,53 +52,53 @@ app.dependency_overrides[get_current_user] = lambda: {
     "business_id": 10,
 }
 
-app.include_router(t0124_router)
-app.include_router(t0125_router)
-app.include_router(t0126_router)
-app.include_router(t0127_router)
-app.include_router(t0128_router)
+app.include_router(t0134_router)
+app.include_router(t0135_router)
+app.include_router(t0136_router)
+app.include_router(t0137_router)
+app.include_router(t0138_router)
 app.include_router(edi_router)
 
 client = TestClient(app)
 
 
 class TestTCodeCrudControllers:
-    """Test suite for T-Code CRUD controllers (T0124I - T0128I)."""
+    """Test suite for T-Code CRUD controllers (T0134I - T0138I)."""
 
-    def test_t0124i_router_routes(self):
-        """Verify T0124I router prefix and routes."""
-        assert t0124_router.prefix == "/api/T0124I"
-        route_paths = [r.path for r in t0124_router.routes]
-        assert "/api/T0124I/" in route_paths
-        assert "/api/T0124I/{id}" in route_paths
+    def test_t0134i_router_routes(self):
+        """Verify T0134I router prefix and routes."""
+        assert t0134_router.prefix == "/api/T0134I"
+        route_paths = [r.path for r in t0134_router.routes]
+        assert "/api/T0134I/" in route_paths
+        assert "/api/T0134I/{id}" in route_paths
 
-    def test_t0125i_router_routes(self):
-        """Verify T0125I router prefix and routes."""
-        assert t0125_router.prefix == "/api/T0125I"
-        route_paths = [r.path for r in t0125_router.routes]
-        assert "/api/T0125I/" in route_paths
-        assert "/api/T0125I/{id}" in route_paths
+    def test_t0135i_router_routes(self):
+        """Verify T0135I router prefix and routes."""
+        assert t0135_router.prefix == "/api/T0135I"
+        route_paths = [r.path for r in t0135_router.routes]
+        assert "/api/T0135I/" in route_paths
+        assert "/api/T0135I/{id}" in route_paths
 
-    def test_t0126i_router_routes(self):
-        """Verify T0126I router prefix and routes."""
-        assert t0126_router.prefix == "/api/T0126I"
-        route_paths = [r.path for r in t0126_router.routes]
-        assert "/api/T0126I/" in route_paths
-        assert "/api/T0126I/{id}" in route_paths
+    def test_t0136i_router_routes(self):
+        """Verify T0136I router prefix and routes."""
+        assert t0136_router.prefix == "/api/T0136I"
+        route_paths = [r.path for r in t0136_router.routes]
+        assert "/api/T0136I/" in route_paths
+        assert "/api/T0136I/{id}" in route_paths
 
-    def test_t0127i_router_routes(self):
-        """Verify T0127I router prefix and routes."""
-        assert t0127_router.prefix == "/api/T0127I"
-        route_paths = [r.path for r in t0127_router.routes]
-        assert "/api/T0127I/" in route_paths
-        assert "/api/T0127I/{id}" in route_paths
+    def test_t0137i_router_routes(self):
+        """Verify T0137I router prefix and routes."""
+        assert t0137_router.prefix == "/api/T0137I"
+        route_paths = [r.path for r in t0137_router.routes]
+        assert "/api/T0137I/" in route_paths
+        assert "/api/T0137I/{id}" in route_paths
 
-    def test_t0128i_router_routes(self):
-        """Verify T0128I router prefix and routes."""
-        assert t0128_router.prefix == "/api/T0128I"
-        route_paths = [r.path for r in t0128_router.routes]
-        assert "/api/T0128I/" in route_paths
-        assert "/api/T0128I/{id}" in route_paths
+    def test_t0138i_router_routes(self):
+        """Verify T0138I router prefix and routes."""
+        assert t0138_router.prefix == "/api/T0138I"
+        route_paths = [r.path for r in t0138_router.routes]
+        assert "/api/T0138I/" in route_paths
+        assert "/api/T0138I/{id}" in route_paths
 
 
 class TestEdiGatewayController:

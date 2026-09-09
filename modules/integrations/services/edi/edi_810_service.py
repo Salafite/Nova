@@ -1351,8 +1351,8 @@ class Edi810Service(CrudService):
     """
     High-level Outbound EDI 810 (Sales Invoice) & EDIFACT INVOIC Service.
     Retrieves completed sales invoices (T0090), linked deliveries (T0077),
-    sales orders (T0012/T0013), and trading partner configurations (T0124/T0125),
-    constructs standard compliant electronic invoices, and persists transmission logs in T0126.
+    sales orders (T0012/T0013), and trading partner configurations (T0134/T0135),
+    constructs standard compliant electronic invoices, and persists transmission logs in T0136.
     """
 
     def __init__(
@@ -1394,7 +1394,7 @@ class Edi810Service(CrudService):
         tenant_id: Optional[int] = None,
     ) -> Tuple[EdiInvoiceDocument, Dict[str, Any]]:
         """
-        Builds a structured EdiInvoiceDocument from Nova ERP entities (T0090, T0012, T0013, T0077, T0124, T0125).
+        Builds a structured EdiInvoiceDocument from Nova ERP entities (T0090, T0012, T0013, T0077, T0134, T0135).
         Returns tuple of (EdiInvoiceDocument, partner_dict).
         """
         tenant_id = tenant_id or get_current_tenant()
@@ -1413,7 +1413,7 @@ class Edi810Service(CrudService):
         customer_id = invoice.get("partner_id") or (so.get("customer_id") if so else None)
         customer = self.customer_repo.get(customer_id, conn=conn) if customer_id else None
 
-        # 4. Resolve Trading Partner (T0124)
+        # 4. Resolve Trading Partner (T0134)
         partner = None
         if partner_id:
             partner = self.partner_repo.get(partner_id, conn=conn)
@@ -1459,7 +1459,7 @@ class Edi810Service(CrudService):
             )
         del_by_sol = {dl.get("sales_order_line_id"): dl for dl in del_lines if dl.get("sales_order_line_id")}
 
-        # 7. Fetch SKU Cross-Reference Matrix (T0125)
+        # 7. Fetch SKU Cross-Reference Matrix (T0135)
         sku_mappings = []
         if partner.get("id"):
             sku_mappings = self.sku_mapping_repo.list(
@@ -1684,7 +1684,7 @@ class Edi810Service(CrudService):
         tenant_id: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """
-        Resolves the trading partner configuration (T0124) associated with a delivery's customer.
+        Resolves the trading partner configuration (T0134) associated with a delivery's customer.
         """
         kwargs = {"conn": conn} if conn is not None else {}
         if partner_id:
@@ -1728,7 +1728,7 @@ class Edi810Service(CrudService):
 
             partner = self.resolve_partner_for_delivery(delivery, partner_id, conn=tx_conn, tenant_id=tenant_id)
             if not partner:
-                logger.info(f"No active EDI Trading Partner (T0124) found for Delivery #{delivery_id}; skipping EDI invoice transmission.")
+                logger.info(f"No active EDI Trading Partner (T0134) found for Delivery #{delivery_id}; skipping EDI invoice transmission.")
                 return None
 
             sales_order_id = delivery.get("sales_order_id")

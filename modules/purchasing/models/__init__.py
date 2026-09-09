@@ -11,4 +11,12 @@ from modules.purchasing.models.purchase import (
 from modules.purchasing.models.purchase_return import (
     PurchaseReturnCreate, PurchaseReturnUpdate, PurchaseReturnResponse,
     PurchaseReturnLineCreate, PurchaseReturnLineUpdate, PurchaseReturnLineResponse,
+    PurchaseReturnDetailResponse,
+    RMAReasonCode, RMAStatus, QuarantineStatus, RMADisposition,
+    InspectionAttachment, AttachmentUploadRequest,
+    DockRejectionLineItem, ReceivingRejectionCreate, RMAApprovalRequest,
+    ReturnSlipLineData, ReturnSlipData,
+    BulkReturnLinesCreate, QuarantineStatusUpdateRequest,
 )
+
+

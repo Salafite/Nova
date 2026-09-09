@@ -109,7 +109,7 @@ def register_tools() -> None:
                 "properties": {
                     "id": {
                         "type": "integer",
-                        "description": "Trading partner database ID (T0124)",
+                        "description": "Trading partner database ID (T0134)",
                     },
                     "partner_code": {
                         "type": "string",
@@ -202,7 +202,7 @@ def register_tools() -> None:
                 "properties": {
                     "id": {
                         "type": "integer",
-                        "description": "EDI transaction log ID (T0126)",
+                        "description": "EDI transaction log ID (T0136)",
                     },
                 },
                 "required": ["id"],
@@ -310,14 +310,14 @@ def register_tools() -> None:
     register_tool(
         Tool(
             name="sync_supplier_catalog",
-            description="Synchronize supermarket / retail partner catalog items in T0128, detect price changes, and upsert SKU cross-reference matrix (T0125)",
+            description="Synchronize supermarket / retail partner catalog items in T0138, detect price changes, and upsert SKU cross-reference matrix (T0135)",
             tier="tier1",
             input_schema={
                 "type": "object",
                 "properties": {
                     "partner_id": {
                         "type": "integer",
-                        "description": "Trading partner ID (T0124)",
+                        "description": "Trading partner ID (T0134)",
                     },
                     "catalog_code": {
                         "type": "string",

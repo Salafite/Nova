@@ -789,8 +789,8 @@ async function loadData() {
   error.value = ''
   try {
     const [txRes, ptRes] = await Promise.all([
-      api.get('/T0126I/?limit=100'),
-      api.get('/T0124I/?limit=100')
+      api.get('/T0136I/?limit=100'),
+      api.get('/T0134I/?limit=100')
     ])
     transactions.value = Array.isArray(txRes.data) ? txRes.data : (txRes.data?.items || [])
     partners.value = Array.isArray(ptRes.data) ? ptRes.data : (ptRes.data?.items || [])

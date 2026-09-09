@@ -979,7 +979,7 @@ def parse_edi_ack(raw_ack: str) -> ParsedAckReport:
 class EdiAckService(CrudService):
     """
     Service managing generation, persistence, and correlation of EDI Functional Acknowledgments.
-    Integrates with table T0126 (EDI Transactions) and supports multi-tenant scoping.
+    Integrates with table T0136 (EDI Transactions) and supports multi-tenant scoping.
     """
 
     def __init__(self, repo=None, partner_repo=None):
@@ -1031,11 +1031,11 @@ class EdiAckService(CrudService):
     ) -> Dict[str, Any]:
         """
         Generates a Functional Acknowledgment (997 FA or CONTRL) for an inbound EDI transaction record,
-        updates the inbound transaction's ack_status and ack_payload in table T0126, and logs the outbound
+        updates the inbound transaction's ack_status and ack_payload in table T0136, and logs the outbound
         ACK transaction.
         
         Args:
-            transaction_id: Inbound EDI transaction ID from table T0126.
+            transaction_id: Inbound EDI transaction ID from table T0136.
             is_accepted: Acceptance flag.
             errors: Optional syntax or business rule error details.
             conn: Optional database connection.
@@ -1081,7 +1081,7 @@ class EdiAckService(CrudService):
         }
         updated_inbound = self.repo.update(transaction_id, update_data, **kwargs)
 
-        # Record outbound ACK transaction in T0126
+        # Record outbound ACK transaction in T0136
         std_str = summary["standard"]
         doc_type = summary["document_type"]
         outbound_ack_record = {
@@ -1100,7 +1100,7 @@ class EdiAckService(CrudService):
         try:
             self.repo.create(outbound_ack_record, **kwargs)
         except Exception as e:
-            logger.warning(f"Failed to record outbound ACK transaction in T0126: {e}")
+            logger.warning(f"Failed to record outbound ACK transaction in T0136: {e}")
 
         return {
             "inbound_transaction_id": transaction_id,
@@ -1122,7 +1122,7 @@ class EdiAckService(CrudService):
         """
         Parses an incoming 997 FA or CONTRL acknowledgment from an external partner,
         matches it to the original outbound transaction via control number, and updates
-        the transaction status in table T0126.
+        the transaction status in table T0136.
         """
         if tenant_id is None:
             tenant_id = get_current_tenant()

@@ -338,3 +338,161 @@ class TestSalesDualUOMIntegration:
         assert inv['total_amount'] == 1190.0
         assert inv['weight_adjustment_amount'] == -60.0
         assert 'Catch-weight adjustment: -60.00' in inv['notes']
+
+    def test_deliver_order_controller_endpoint_blocks_on_unapproved_discrepancy(self, monkeypatch):
+        """Controller endpoint POST /api/T0012I/{id}/deliver raises HTTP 400 when unapproved discrepancy exists."""
+        order = self.order_repo.create({
+            'id': 103,
+            'order_number': 'SO-103',
+            'customer_id': 200,
+            'warehouse_id': 1,
+            'status': 'Shipped',
+            'subtotal': 600.0,
+            'grand_total': 600.0,
+            'order_date': date(2026, 8, 24),
+        })
+        self.pl_repo.create({
+            'id': 503,
+            'sales_order_id': 103,
+            'status': 'In Progress',
+        })
+        self.pli_repo.create({
+            'id': 703,
+            'pick_list_id': 503,
+            'product_name': 'Parmigiano Reggiano Wheel',
+            'nominal_weight': 40.0,
+            'catch_weight_actual': 50.0,  # +25% out of tolerance
+            'tolerance_pct': 5.0,
+            'tolerance_status': 'Out of Tolerance',
+            'supervisor_approved': False,
+        })
+
+        monkeypatch.setattr(T0012I, 'service', self.service)
+        mock_user = {'id': 1, 'username': 'admin', 'role': 'Admin'}
+
+        with pytest.raises(HTTPException) as exc_info:
+            T0012I.deliver_order(id=103, user=mock_user)
+
+        assert exc_info.value.status_code == 400
+        assert "Unapproved catch-weight tolerance discrepancies exist" in exc_info.value.detail
+        assert "Parmigiano Reggiano Wheel" in exc_info.value.detail
+        assert self.order_repo.get(103)['status'] == 'Shipped'
+
+    def test_deliver_order_controller_endpoint_succeeds_when_approved(self, monkeypatch):
+        """Controller endpoint POST /api/T0012I/{id}/deliver succeeds when discrepancies are approved."""
+        order = self.order_repo.create({
+            'id': 104,
+            'order_number': 'SO-104',
+            'customer_id': 200,
+            'warehouse_id': 1,
+            'status': 'Shipped',
+            'subtotal': 600.0,
+            'grand_total': 600.0,
+            'order_date': date(2026, 8, 24),
+        })
+        self.pl_repo.create({
+            'id': 504,
+            'sales_order_id': 104,
+            'status': 'Completed',
+        })
+        self.pli_repo.create({
+            'id': 704,
+            'pick_list_id': 504,
+            'product_name': 'Parmigiano Reggiano Wheel',
+            'nominal_weight': 40.0,
+            'catch_weight_actual': 42.0,
+            'tolerance_pct': 5.0,
+            'tolerance_status': 'Approved',
+            'supervisor_approved': True,
+        })
+
+        monkeypatch.setattr(T0012I, 'service', self.service)
+        mock_user = {'id': 1, 'username': 'admin', 'role': 'Admin'}
+
+        with patch.object(self.service, '_generate_invoice_number', return_value='INV-90004'):
+            result = T0012I.deliver_order(id=104, user=mock_user)
+
+        assert result['status'] == 'Delivered'
+        assert self.order_repo.get(104)['status'] == 'Delivered'
+
+    def test_delivery_blocked_when_one_of_multiple_pick_lists_has_unapproved_discrepancy(self):
+        """When multiple pick lists exist, any unapproved item on ANY pick list blocks delivery."""
+        order = self.order_repo.create({
+            'id': 105,
+            'order_number': 'SO-105',
+            'customer_id': 200,
+            'warehouse_id': 1,
+            'status': 'Shipped',
+            'subtotal': 1800.0,
+            'grand_total': 1800.0,
+            'order_date': date(2026, 8, 24),
+        })
+        # Pick list 1: approved
+        self.pl_repo.create({
+            'id': 505,
+            'sales_order_id': 105,
+            'status': 'Completed',
+        })
+        self.pli_repo.create({
+            'id': 705,
+            'pick_list_id': 505,
+            'product_name': 'Parmigiano Wheel',
+            'tolerance_status': 'Approved',
+            'supervisor_approved': True,
+        })
+        # Pick list 2: unapproved discrepancy
+        self.pl_repo.create({
+            'id': 506,
+            'sales_order_id': 105,
+            'status': 'In Progress',
+        })
+        self.pli_repo.create({
+            'id': 706,
+            'pick_list_id': 506,
+            'product_name': 'Gouda Cheese Wheel',
+            'tolerance_status': 'Out of Tolerance',
+            'supervisor_approved': False,
+        })
+
+        with pytest.raises(HTTPException) as exc_info:
+            self.service.update(105, {'status': 'Delivered'})
+
+        assert exc_info.value.status_code == 400
+        assert "Unapproved catch-weight tolerance discrepancies exist" in exc_info.value.detail
+        assert "Gouda Cheese Wheel" in exc_info.value.detail
+        assert self.order_repo.get(105)['status'] == 'Shipped'
+
+    def test_delivery_succeeds_when_within_tolerance(self):
+        """When items are within tolerance (Within Tolerance), delivery proceeds without supervisor approval."""
+        order = self.order_repo.create({
+            'id': 106,
+            'order_number': 'SO-106',
+            'customer_id': 200,
+            'warehouse_id': 1,
+            'status': 'Shipped',
+            'subtotal': 600.0,
+            'grand_total': 600.0,
+            'order_date': date(2026, 8, 24),
+        })
+        self.pl_repo.create({
+            'id': 507,
+            'sales_order_id': 106,
+            'status': 'Completed',
+        })
+        self.pli_repo.create({
+            'id': 707,
+            'pick_list_id': 507,
+            'product_name': 'Parmigiano Wheel',
+            'nominal_weight': 40.0,
+            'catch_weight_actual': 40.5,  # +1.25% (within 5% tolerance)
+            'tolerance_pct': 5.0,
+            'tolerance_status': 'Within Tolerance',
+            'supervisor_approved': False,  # Not needed for within tolerance
+        })
+
+        with patch.object(self.service, '_generate_invoice_number', return_value='INV-90006'):
+            result = self.service.update(106, {'status': 'Delivered'})
+
+        assert result['status'] == 'Delivered'
+        assert self.order_repo.get(106)['status'] == 'Delivered'
+

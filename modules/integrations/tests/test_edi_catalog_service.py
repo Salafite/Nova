@@ -3,7 +3,7 @@ Unit tests for Supplier Catalog Sync (EDI 832 / PRICAT) Engine
 (modules/integrations/services/edi/edi_catalog_service.py).
 Tests X12 832 parsing, UN/EDIFACT PRICAT parsing, universal inbound parser,
 outbound X12/EDIFACT generation, product/GTIN matching, price change detection,
-T0128 catalog item sync, T0125 SKU matrix upsert, and transaction audit logging.
+T0138 catalog item sync, T0135 SKU matrix upsert, and transaction audit logging.
 """
 
 import pytest
@@ -316,8 +316,8 @@ def test_generate_edifact_pricat_document():
 # 5. Product & SKU Matching Tests
 # ===========================================================================
 
-def test_match_catalog_item_via_t0125_matrix():
-    """Test matching catalog item against EDI SKU matrix (T0125)."""
+def test_match_catalog_item_via_t0135_matrix():
+    """Test matching catalog item against EDI SKU matrix (T0135)."""
     mock_sku_repo = MagicMock()
     mock_sku_repo.list.return_value = [
         {"id": 101, "partner_id": 1, "product_id": 42, "partner_sku": "BUYER-MILK-1L", "gtin": "6291041000101", "is_active": True}
@@ -334,7 +334,7 @@ def test_match_catalog_item_via_t0125_matrix():
 
     prod_id, source = service.match_catalog_item(item, partner_id=1)
     assert prod_id == 42
-    assert source == "CROSS_REFERENCE_MATRIX_T0125"
+    assert source == "CROSS_REFERENCE_MATRIX_T0135"
 
 
 def test_match_catalog_item_via_gtin_barcode():
@@ -385,7 +385,7 @@ def test_match_catalog_item_via_supplier_sku():
 # ===========================================================================
 
 def test_sync_catalog_price_change_and_matrix_upsert():
-    """Test catalog synchronization detects price changes and updates T0125 matrix."""
+    """Test catalog synchronization detects price changes and updates T0135 matrix."""
     mock_catalog_repo = MagicMock()
     # Existing item had list_price = 10.00
     mock_catalog_repo.list.return_value = [
@@ -435,9 +435,9 @@ def test_sync_catalog_price_change_and_matrix_upsert():
     assert detail.price_changed is True
     assert detail.sync_status == EdiCatalogSyncStatus.PRICE_CHANGED.value
 
-    # Verify T0128 update called
+    # Verify T0138 update called
     mock_catalog_repo.update.assert_called_once()
-    # Verify T0125 matrix update called with new price
+    # Verify T0135 matrix update called with new price
     mock_sku_repo.update.assert_called_once()
 
 
@@ -527,7 +527,7 @@ def test_ingest_catalog_document_end_to_end():
     assert ingest_result["document_type"] == "832"
     assert ingest_result["sync_result"]["total_items"] == 2
 
-    # Check that T0126 transaction log was created
+    # Check that T0136 transaction log was created
     mock_tx_repo.create.assert_called_once()
     call_args = mock_tx_repo.create.call_args[0][0]
     assert call_args["direction"] == EdiDirection.INBOUND.value

@@ -132,6 +132,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0003 (
     is_purchasable BOOLEAN NOT NULL DEFAULT true,
     is_saleable    BOOLEAN NOT NULL DEFAULT true,
     is_phantom     BOOLEAN NOT NULL DEFAULT false,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    pricing_uom_id INT REFERENCES "Nova".t0001(id),
+    nominal_weight NUMERIC(12,4) DEFAULT NULL,
+    tolerance_pct NUMERIC(6,2) DEFAULT NULL,
+    pricing_basis VARCHAR(20) DEFAULT 'weight',
     last_transaction_date TIMESTAMPTZ,
     is_active   BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
@@ -142,8 +147,15 @@ CREATE TABLE IF NOT EXISTS "Nova".t0003 (
     update_number INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0003.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0003.is_catch_weight IS 'Flag indicating product is sold/priced by catch-weight (variable physical weight)';
+COMMENT ON COLUMN "Nova".t0003.pricing_uom_id IS 'Unit of Measure used for pricing/billing (e.g. Kilograms, Pounds)';
+COMMENT ON COLUMN "Nova".t0003.nominal_weight IS 'Expected nominal weight per stocking unit (e.g. kg per case)';
+COMMENT ON COLUMN "Nova".t0003.tolerance_pct IS 'Allowable weight variance percentage (+/- %) without requiring supervisor approval';
+COMMENT ON COLUMN "Nova".t0003.pricing_basis IS 'Pricing basis: weight (actual weighed amount) or unit (fixed per piece/case)';
 CREATE INDEX IF NOT EXISTS idx_t0003_business_id ON "Nova".t0003(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0003_business_id_id ON "Nova".t0003(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0003_is_catch_weight ON "Nova".t0003(is_catch_weight);
+CREATE INDEX IF NOT EXISTS idx_t0003_pricing_uom_id ON "Nova".t0003(pricing_uom_id);
 
 
 
@@ -219,6 +231,11 @@ CREATE TABLE IF NOT EXISTS "Nova".t0007 (
     sales_uom_id    INT REFERENCES "Nova".t0001(id),
     purchase_factor NUMERIC(12,6) NOT NULL DEFAULT 1,
     sales_factor    NUMERIC(12,6) NOT NULL DEFAULT 1,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    pricing_uom_id  INT REFERENCES "Nova".t0001(id),
+    nominal_weight  NUMERIC(12,4) DEFAULT NULL,
+    tolerance_pct   NUMERIC(6,2) DEFAULT NULL,
+    pricing_basis   VARCHAR(20) DEFAULT 'weight',
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
@@ -227,8 +244,14 @@ CREATE TABLE IF NOT EXISTS "Nova".t0007 (
     update_number   INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0007.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0007.is_catch_weight IS 'Flag indicating dual UOM catch-weight applies to this product UOM configuration';
+COMMENT ON COLUMN "Nova".t0007.pricing_uom_id IS 'Pricing unit of measure reference';
+COMMENT ON COLUMN "Nova".t0007.nominal_weight IS 'Nominal weight per stocking unit';
+COMMENT ON COLUMN "Nova".t0007.tolerance_pct IS 'Tolerance percentage (+/-)';
+COMMENT ON COLUMN "Nova".t0007.pricing_basis IS 'Pricing basis: weight or unit';
 CREATE INDEX IF NOT EXISTS idx_t0007_business_id ON "Nova".t0007(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0007_business_id_id ON "Nova".t0007(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0007_pricing_uom_id ON "Nova".t0007(pricing_uom_id);
 
 
 
@@ -256,7 +279,12 @@ CREATE TABLE IF NOT EXISTS "Nova".t0009 (
     warehouse_id   INT NOT NULL REFERENCES "Nova".t0008(id),
     qty            NUMERIC(12,2) NOT NULL DEFAULT 0,
     reserved_qty   NUMERIC(12,2) NOT NULL DEFAULT 0,
+    in_transit_qty NUMERIC(12,2) NOT NULL DEFAULT 0,
     reorder_level  NUMERIC(12,2) NOT NULL DEFAULT 0,
+    weight_qty     NUMERIC(12,4) NOT NULL DEFAULT 0,
+    reserved_weight_qty   NUMERIC(12,4) NOT NULL DEFAULT 0,
+    in_transit_weight_qty NUMERIC(12,4) NOT NULL DEFAULT 0,
+    weight_uom     VARCHAR(50),
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by     INT,
@@ -265,8 +293,13 @@ CREATE TABLE IF NOT EXISTS "Nova".t0009 (
     update_number  INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0009.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0009.weight_qty IS 'Total on-hand physical net weight across packages';
+COMMENT ON COLUMN "Nova".t0009.reserved_weight_qty IS 'Reserved physical weight for confirmed orders';
+COMMENT ON COLUMN "Nova".t0009.in_transit_weight_qty IS 'In-transit physical weight between warehouses';
+COMMENT ON COLUMN "Nova".t0009.weight_uom IS 'Unit of measure for weight quantities (e.g. kg, lbs)';
 CREATE INDEX IF NOT EXISTS idx_t0009_business_id ON "Nova".t0009(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0009_business_id_id ON "Nova".t0009(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0009_weight_qty ON "Nova".t0009(weight_qty);
 
 
 
@@ -385,6 +418,12 @@ CREATE TABLE IF NOT EXISTS "Nova".t0013 (
     discount        NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_total      NUMERIC(12,2) NOT NULL DEFAULT 0,
     line_number     INT NOT NULL DEFAULT 1,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    pricing_uom_id INT REFERENCES "Nova".t0001(id),
+    unit_price_pricing_uom NUMERIC(12,4) DEFAULT NULL,
+    nominal_weight NUMERIC(12,4) DEFAULT NULL,
+    catch_weight_actual NUMERIC(12,4) DEFAULT NULL,
+    recalculated_total NUMERIC(12,2) DEFAULT NULL,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
@@ -395,8 +434,15 @@ CREATE TABLE IF NOT EXISTS "Nova".t0013 (
 COMMENT ON COLUMN "Nova".t0013.cost_price IS 'Unit cost price / COGS at time of order';
 COMMENT ON COLUMN "Nova".t0013.discount IS 'Line-level discount amount';
 COMMENT ON COLUMN "Nova".t0013.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0013.is_catch_weight IS 'Flag indicating order line uses catch-weight pricing';
+COMMENT ON COLUMN "Nova".t0013.pricing_uom_id IS 'Pricing unit of measure (e.g. kg)';
+COMMENT ON COLUMN "Nova".t0013.unit_price_pricing_uom IS 'Price per pricing UOM unit (e.g. price per kg)';
+COMMENT ON COLUMN "Nova".t0013.nominal_weight IS 'Nominal weight for ordered quantity';
+COMMENT ON COLUMN "Nova".t0013.catch_weight_actual IS 'Actual weighed catch weight from warehouse fulfillment';
+COMMENT ON COLUMN "Nova".t0013.recalculated_total IS 'Final recalculated line total based on actual catch-weight';
 CREATE INDEX IF NOT EXISTS idx_t0013_business_id ON "Nova".t0013(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0013_business_id_id ON "Nova".t0013(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0013_pricing_uom_id ON "Nova".t0013(pricing_uom_id);
 
 
 
@@ -768,30 +814,46 @@ CREATE INDEX IF NOT EXISTS idx_t0030_business_id_id ON "Nova".t0030(business_id,
 CREATE TABLE IF NOT EXISTS "Nova".t0090 (
     id              SERIAL PRIMARY KEY,
     invoice_number  VARCHAR(50) NOT NULL UNIQUE,
-    invoice_type    VARCHAR(10) NOT NULL DEFAULT 'Sales',
+    invoice_type    VARCHAR(30) NOT NULL DEFAULT 'Sales',
     partner_id      INT NOT NULL,
     sales_order_id  INT REFERENCES "Nova".t0012(id),
+    purchase_order_id INT REFERENCES "Nova".t0015(id),
+    purchase_return_id INT REFERENCES "Nova".t0081(id),
     issue_date      DATE NOT NULL,
     due_date        DATE NOT NULL,
     total_amount    NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
     freight_amount  NUMERIC(12,2) NOT NULL DEFAULT 0,
     discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
     sales_rep_id    INT REFERENCES "Nova".t0021(id),
-    status          VARCHAR(20) NOT NULL DEFAULT 'Draft',
+    status          VARCHAR(20) NOT NULL DEFAULT 'Unpaid',
     notes           TEXT,
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    nominal_total_weight NUMERIC(12,4) DEFAULT NULL,
+    actual_total_weight NUMERIC(12,4) DEFAULT NULL,
+    weight_adjustment_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by      INT,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by      INT,
-    update_number   INT NOT NULL DEFAULT 1
+    update_number   INT NOT NULL DEFAULT 1,
+    is_active       BOOLEAN NOT NULL DEFAULT true
 );
 COMMENT ON COLUMN "Nova".t0090.freight_amount IS 'Freight / shipping charges billed on invoice';
 COMMENT ON COLUMN "Nova".t0090.discount_amount IS 'Customer discount deducted on invoice';
 COMMENT ON COLUMN "Nova".t0090.sales_rep_id IS 'Assigned sales representative (User ID)';
+COMMENT ON COLUMN "Nova".t0090.purchase_order_id IS 'Purchase order reference for purchase invoices';
+COMMENT ON COLUMN "Nova".t0090.purchase_return_id IS 'Purchase return / RMA reference for supplier debit memos';
 COMMENT ON COLUMN "Nova".t0090.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0090.is_catch_weight IS 'Flag indicating invoice contains catch-weight products';
+COMMENT ON COLUMN "Nova".t0090.nominal_total_weight IS 'Total nominal weight across invoiced catch-weight items';
+COMMENT ON COLUMN "Nova".t0090.actual_total_weight IS 'Total actual scale weight across invoiced catch-weight items';
+COMMENT ON COLUMN "Nova".t0090.weight_adjustment_amount IS 'Net financial adjustment due to catch-weight variance vs nominal';
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id ON "Nova".t0090(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0090_business_id_id ON "Nova".t0090(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0090_purchase_return_id ON "Nova".t0090(purchase_return_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_purchase_order_id ON "Nova".t0090(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0090_invoice_type ON "Nova".t0090(invoice_type);
 
 
 
@@ -2007,6 +2069,10 @@ CREATE TABLE IF NOT EXISTS "Nova".t0064 (
     reference_id INT,
     qty_change NUMERIC(12,2),
     balance_after NUMERIC(12,2),
+    is_catch_weight BOOLEAN NOT NULL DEFAULT false,
+    weight_change NUMERIC(12,4),
+    weight_balance_after NUMERIC(12,4),
+    weight_uom VARCHAR(50),
     description TEXT,
     movement_date TIMESTAMPTZ NOT NULL DEFAULT now(),
     is_active BOOLEAN NOT NULL DEFAULT true,
@@ -2018,8 +2084,13 @@ CREATE TABLE IF NOT EXISTS "Nova".t0064 (
     update_number INT NOT NULL DEFAULT 1
 );
 COMMENT ON COLUMN "Nova".t0064.business_id IS 'Tenant / business organization identifier (FK to T0059)';
+COMMENT ON COLUMN "Nova".t0064.is_catch_weight IS 'Flag indicating movement is for a catch-weight product';
+COMMENT ON COLUMN "Nova".t0064.weight_change IS 'Net scale weight change (+ for stock in, - for stock out)';
+COMMENT ON COLUMN "Nova".t0064.weight_balance_after IS 'Net weight balance after this transaction';
+COMMENT ON COLUMN "Nova".t0064.weight_uom IS 'Weight unit of measure (e.g. kg, lbs)';
 CREATE INDEX IF NOT EXISTS idx_t0064_business_id ON "Nova".t0064(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0064_business_id_id ON "Nova".t0064(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0064_is_catch_weight ON "Nova".t0064(is_catch_weight);
 
 
 COMMENT ON TABLE "Nova".t0064 IS 'Stock Movements';
@@ -2457,6 +2528,16 @@ CREATE TABLE IF NOT EXISTS "Nova".t0077 (
     actual_delivery_date DATE,
     status VARCHAR(30) NOT NULL DEFAULT 'Active',
     notes TEXT,
+    recipient_signature TEXT,
+    delivery_photo_url TEXT,
+    pod_timestamp TIMESTAMPTZ,
+    delivery_location VARCHAR(255),
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    cod_cash_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+    cod_check_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+    cod_check_number VARCHAR(100),
+    cod_check_bank VARCHAR(100),
+    driver_id INT REFERENCES "Nova".t0021(id),
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2478,6 +2559,17 @@ COMMENT ON COLUMN "Nova".t0077.freight_cost IS 'Actual freight / transport cost 
 COMMENT ON COLUMN "Nova".t0077.delivery_route IS 'Assigned delivery route / zone';
 COMMENT ON COLUMN "Nova".t0077.actual_delivery_date IS 'Actual date order delivery completed';
 COMMENT ON COLUMN "Nova".t0077.status IS 'Status';
+COMMENT ON COLUMN "Nova".t0077.notes IS 'Notes';
+COMMENT ON COLUMN "Nova".t0077.recipient_signature IS 'Base64 image data or URI of recipient digital signature';
+COMMENT ON COLUMN "Nova".t0077.delivery_photo_url IS 'URI/URL to photo proof of delivery';
+COMMENT ON COLUMN "Nova".t0077.pod_timestamp IS 'Timestamp when proof of delivery was submitted/captured';
+COMMENT ON COLUMN "Nova".t0077.delivery_location IS 'GPS coordinates or delivery location description';
+COMMENT ON COLUMN "Nova".t0077.payment_status IS 'COD payment status (e.g. Pending, Collected, In Transit, Reconciled)';
+COMMENT ON COLUMN "Nova".t0077.cod_cash_amount IS 'Cash amount collected by driver at delivery time';
+COMMENT ON COLUMN "Nova".t0077.cod_check_amount IS 'Check amount collected by driver at delivery time';
+COMMENT ON COLUMN "Nova".t0077.cod_check_number IS 'Check identifier/number for COD payment';
+COMMENT ON COLUMN "Nova".t0077.cod_check_bank IS 'Bank name associated with COD check payment';
+COMMENT ON COLUMN "Nova".t0077.driver_id IS 'Assigned delivery driver (FK to T0021 user table)';
 COMMENT ON COLUMN "Nova".t0077.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0077_sales_order_id ON "Nova".t0077(sales_order_id);
 CREATE INDEX IF NOT EXISTS idx_t0077_warehouse_id ON "Nova".t0077(warehouse_id);
@@ -2485,6 +2577,8 @@ CREATE INDEX IF NOT EXISTS idx_t0077_status ON "Nova".t0077(status);
 CREATE INDEX IF NOT EXISTS idx_t0077_active ON "Nova".t0077(is_active);
 CREATE INDEX IF NOT EXISTS idx_t0077_delivery_route ON "Nova".t0077(delivery_route);
 CREATE INDEX IF NOT EXISTS idx_t0077_actual_delivery_date ON "Nova".t0077(actual_delivery_date);
+CREATE INDEX IF NOT EXISTS idx_t0077_driver_id ON "Nova".t0077(driver_id);
+CREATE INDEX IF NOT EXISTS idx_t0077_payment_status ON "Nova".t0077(payment_status);
 
 -- Sales Delivery Lines
 CREATE TABLE IF NOT EXISTS "Nova".t0078 (
@@ -2597,11 +2691,17 @@ CREATE TABLE IF NOT EXISTS "Nova".t0081 (
     id SERIAL PRIMARY KEY,
     return_number VARCHAR(200),
     purchase_order_id INT,
+    goods_receipt_id INT,
     supplier_id INT,
+    debit_memo_id INT,
     return_date DATE,
-    status VARCHAR(30) NOT NULL DEFAULT 'Active',
+    status VARCHAR(30) NOT NULL DEFAULT 'Draft',
     reason VARCHAR(200),
+    total_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    attachments JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
+    approved_at TIMESTAMPTZ,
+    approved_by INT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2615,14 +2715,23 @@ CREATE INDEX IF NOT EXISTS idx_t0081_business_id ON "Nova".t0081(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0081_business_id_id ON "Nova".t0081(business_id, id);
 
 
-COMMENT ON TABLE "Nova".t0081 IS 'Purchase Returns';
+COMMENT ON TABLE "Nova".t0081 IS 'Purchase Returns / RMA Headers';
 COMMENT ON COLUMN "Nova".t0081.id IS 'Primary key';
 COMMENT ON COLUMN "Nova".t0081.purchase_order_id IS 'Reference to Purchase_Order';
+COMMENT ON COLUMN "Nova".t0081.goods_receipt_id IS 'Reference to Goods Receipt';
 COMMENT ON COLUMN "Nova".t0081.supplier_id IS 'Reference to Supplier';
-COMMENT ON COLUMN "Nova".t0081.status IS 'Status';
+COMMENT ON COLUMN "Nova".t0081.debit_memo_id IS 'Reference to generated Debit Memo';
+COMMENT ON COLUMN "Nova".t0081.status IS 'RMA status (Draft, Approved, Returned, Cancelled)';
+COMMENT ON COLUMN "Nova".t0081.total_amount IS 'Total return credit value';
+COMMENT ON COLUMN "Nova".t0081.attachments IS 'Inspection photos and documentation metadata';
+COMMENT ON COLUMN "Nova".t0081.approved_at IS 'Timestamp of RMA approval';
+COMMENT ON COLUMN "Nova".t0081.approved_by IS 'User who approved the RMA';
 COMMENT ON COLUMN "Nova".t0081.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0081_purchase_order_id ON "Nova".t0081(purchase_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_goods_receipt_id ON "Nova".t0081(goods_receipt_id);
 CREATE INDEX IF NOT EXISTS idx_t0081_supplier_id ON "Nova".t0081(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_debit_memo_id ON "Nova".t0081(debit_memo_id);
+CREATE INDEX IF NOT EXISTS idx_t0081_approved_by ON "Nova".t0081(approved_by);
 CREATE INDEX IF NOT EXISTS idx_t0081_status ON "Nova".t0081(status);
 CREATE INDEX IF NOT EXISTS idx_t0081_active ON "Nova".t0081(is_active);
 
@@ -2637,6 +2746,13 @@ CREATE TABLE IF NOT EXISTS "Nova".t0082 (
     line_total NUMERIC(12,2),
     uom_id INT,
     line_number INT,
+    batch_id INT,
+    batch_number VARCHAR(100),
+    expiry_date DATE,
+    reason_code VARCHAR(50),
+    photos JSONB DEFAULT '[]'::jsonb,
+    quarantine_status VARCHAR(30) DEFAULT 'Quarantine',
+    disposition VARCHAR(50) DEFAULT 'Return to Vendor',
     is_active BOOLEAN NOT NULL DEFAULT true,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2650,15 +2766,26 @@ CREATE INDEX IF NOT EXISTS idx_t0082_business_id ON "Nova".t0082(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_business_id_id ON "Nova".t0082(business_id, id);
 
 
-COMMENT ON TABLE "Nova".t0082 IS 'Purchase Return Lines';
+COMMENT ON TABLE "Nova".t0082 IS 'Purchase Return Lines / RMA Line Items';
 COMMENT ON COLUMN "Nova".t0082.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0082.return_id IS 'Reference to Return';
+COMMENT ON COLUMN "Nova".t0082.return_id IS 'Reference to Return (T0081)';
 COMMENT ON COLUMN "Nova".t0082.product_id IS 'Reference to Product';
 COMMENT ON COLUMN "Nova".t0082.uom_id IS 'Reference to Uom';
+COMMENT ON COLUMN "Nova".t0082.batch_id IS 'Reference to Batch Number (T0088)';
+COMMENT ON COLUMN "Nova".t0082.batch_number IS 'Batch or lot number identifier';
+COMMENT ON COLUMN "Nova".t0082.expiry_date IS 'Batch expiration date';
+COMMENT ON COLUMN "Nova".t0082.reason_code IS 'Return reason code (damaged, expired, rejected, wrong_item, qc_failed)';
+COMMENT ON COLUMN "Nova".t0082.photos IS 'Line item inspection photos metadata';
+COMMENT ON COLUMN "Nova".t0082.quarantine_status IS 'Quarantine tracking status (Quarantine, Released, Scrapped)';
+COMMENT ON COLUMN "Nova".t0082.disposition IS 'Disposition action (Return to Vendor, Scrap, Supplier Credit)';
 COMMENT ON COLUMN "Nova".t0082.is_active IS 'Active status flag';
 CREATE INDEX IF NOT EXISTS idx_t0082_return_id ON "Nova".t0082(return_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_product_id ON "Nova".t0082(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0082_uom_id ON "Nova".t0082(uom_id);
+CREATE INDEX IF NOT EXISTS idx_t0082_batch_id ON "Nova".t0082(batch_id);
+CREATE INDEX IF NOT EXISTS idx_t0082_batch_number ON "Nova".t0082(batch_number);
+CREATE INDEX IF NOT EXISTS idx_t0082_reason_code ON "Nova".t0082(reason_code);
+CREATE INDEX IF NOT EXISTS idx_t0082_quarantine_status ON "Nova".t0082(quarantine_status);
 CREATE INDEX IF NOT EXISTS idx_t0082_active ON "Nova".t0082(is_active);
 
 -- Price List Items
@@ -3038,6 +3165,16 @@ CREATE TABLE IF NOT EXISTS "Nova".t0102 (
     expiry_date       DATE,
     picked_batch_id   INT REFERENCES "Nova".t0088(id),
     picked_batch_number VARCHAR(255),
+    catch_weight_actual NUMERIC(12,4) DEFAULT NULL,
+    catch_weight_uom    VARCHAR(50) DEFAULT NULL,
+    nominal_weight      NUMERIC(12,4) DEFAULT NULL,
+    tolerance_pct       NUMERIC(6,2) DEFAULT NULL,
+    tolerance_variance_pct NUMERIC(6,2) DEFAULT NULL,
+    tolerance_status    VARCHAR(30) DEFAULT 'Not Applicable',
+    supervisor_approved BOOLEAN NOT NULL DEFAULT false,
+    supervisor_approved_by INT REFERENCES "Nova".t0021(id),
+    supervisor_approved_at TIMESTAMPTZ DEFAULT NULL,
+    supervisor_notes    TEXT DEFAULT NULL,
     business_id   INT REFERENCES "Nova".t0059(id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by        INT,
@@ -3058,11 +3195,23 @@ COMMENT ON COLUMN "Nova".t0102.batch_number IS 'Suggested lot number';
 COMMENT ON COLUMN "Nova".t0102.expiry_date IS 'Expiration date of suggested lot';
 COMMENT ON COLUMN "Nova".t0102.picked_batch_id IS 'Actual picked lot ID (if different from suggested)';
 COMMENT ON COLUMN "Nova".t0102.picked_batch_number IS 'Actual picked lot number';
+COMMENT ON COLUMN "Nova".t0102.catch_weight_actual IS 'Actual physical scale weight measured during warehouse picking';
+COMMENT ON COLUMN "Nova".t0102.catch_weight_uom IS 'Unit of measure for the actual scale weight (e.g. kg, lbs)';
+COMMENT ON COLUMN "Nova".t0102.nominal_weight IS 'Nominal expected weight for the picked quantity';
+COMMENT ON COLUMN "Nova".t0102.tolerance_pct IS 'Allowed tolerance percentage (+/-) from nominal weight';
+COMMENT ON COLUMN "Nova".t0102.tolerance_variance_pct IS 'Actual weight variance percentage vs nominal';
+COMMENT ON COLUMN "Nova".t0102.tolerance_status IS 'Status: Within Tolerance | Out of Tolerance | Approved | Pending Approval | Not Applicable';
+COMMENT ON COLUMN "Nova".t0102.supervisor_approved IS 'Whether out-of-tolerance discrepancy was approved by a supervisor';
+COMMENT ON COLUMN "Nova".t0102.supervisor_approved_by IS 'Supervisor user who approved tolerance variance';
+COMMENT ON COLUMN "Nova".t0102.supervisor_approved_at IS 'Timestamp of supervisor approval';
+COMMENT ON COLUMN "Nova".t0102.supervisor_notes IS 'Supervisor comments/reasons on approval';
 CREATE INDEX IF NOT EXISTS idx_t0102_pick_list_id ON "Nova".t0102(pick_list_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_product_id ON "Nova".t0102(product_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_batch_id ON "Nova".t0102(batch_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_picked_batch_id ON "Nova".t0102(picked_batch_id);
 CREATE INDEX IF NOT EXISTS idx_t0102_batch_number ON "Nova".t0102(batch_number);
+CREATE INDEX IF NOT EXISTS idx_t0102_tolerance_status ON "Nova".t0102(tolerance_status);
+CREATE INDEX IF NOT EXISTS idx_t0102_supervisor_approved ON "Nova".t0102(supervisor_approved);
 
 -- ============================================================
 -- PRODUCT-SUPPLIER LINKING
@@ -3164,7 +3313,8 @@ CREATE INDEX IF NOT EXISTS idx_t0104_items_batch_target ON "Nova".t0104_items(ba
 CREATE INDEX IF NOT EXISTS idx_t0104_items_business_id ON "Nova".t0104_items(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0104_items_business_id_id ON "Nova".t0104_items(business_id, id);
 
--- =====================================================-- SALES COMMISSION CONFIGURATION & PAYOUTS
+-- ============================================================
+-- SALES COMMISSION CONFIGURATION & PAYOUTS
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS "Nova".t0109 (
@@ -3449,11 +3599,11 @@ CREATE INDEX IF NOT EXISTS idx_t0107_business_id ON "Nova".t0107(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0107_business_id_id ON "Nova".t0107(business_id, id);
 
 -- ============================================================
--- B2B EDI GATEWAY & SUPPLIER CATALOG SYNC (T0124 - T0128)
+-- B2B EDI GATEWAY & SUPPLIER CATALOG SYNC (T0134 - T0138)
 -- ============================================================
 
--- EDI Trading Partners (T0124)
-CREATE TABLE IF NOT EXISTS "Nova".t0124 (
+-- EDI Trading Partners (T0134)
+CREATE TABLE IF NOT EXISTS "Nova".t0134 (
     id                      SERIAL PRIMARY KEY,
     partner_name            VARCHAR(255) NOT NULL,
     partner_code            VARCHAR(50) NOT NULL UNIQUE,
@@ -3482,38 +3632,38 @@ CREATE TABLE IF NOT EXISTS "Nova".t0124 (
     update_number           INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0124 IS 'EDI Trading Partners — Profiles and delimiter/protocol configurations for B2B electronic trading partners';
-COMMENT ON COLUMN "Nova".t0124.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0124.partner_name IS 'Trading partner company name (e.g. Carrefour Hypermarkets, Lulu Group)';
-COMMENT ON COLUMN "Nova".t0124.partner_code IS 'Unique trading partner code (e.g. CRF-UAE, LULU-HQ)';
-COMMENT ON COLUMN "Nova".t0124.edi_standard IS 'EDI standard format: ANSI_X12 | EDIFACT';
-COMMENT ON COLUMN "Nova".t0124.interchange_sender_id IS 'Interchange Sender ID (ISA06 / UNB 0004)';
-COMMENT ON COLUMN "Nova".t0124.interchange_receiver_id IS 'Interchange Receiver ID (ISA08 / UNB 0010)';
-COMMENT ON COLUMN "Nova".t0124.sender_qualifier IS 'Sender Qualifier (ISA05 / UNB 0007, e.g. ZZ, 01, 14)';
-COMMENT ON COLUMN "Nova".t0124.receiver_qualifier IS 'Receiver Qualifier (ISA07 / UNB 0007, e.g. ZZ, 01, 14)';
-COMMENT ON COLUMN "Nova".t0124.communication_method IS 'Data transfer protocol: MANUAL | API | AS2 | SFTP';
-COMMENT ON COLUMN "Nova".t0124.endpoint_url IS 'AS2 / SFTP / Webhook endpoint URL';
-COMMENT ON COLUMN "Nova".t0124.customer_id IS 'Linked Customer account for Sales EDI 850/856/810 (FK to t0010)';
-COMMENT ON COLUMN "Nova".t0124.supplier_id IS 'Linked Supplier account for Catalog Sync 832 (FK to t0014)';
-COMMENT ON COLUMN "Nova".t0124.segment_terminator IS 'Segment delimiter character (e.g. ~ or '' or \n)';
-COMMENT ON COLUMN "Nova".t0124.element_separator IS 'Data element delimiter character (e.g. * or +)';
-COMMENT ON COLUMN "Nova".t0124.subelement_separator IS 'Subelement/Component separator (e.g. > or :)';
-COMMENT ON COLUMN "Nova".t0124.release_character IS 'Release/escape character for EDIFACT (e.g. ?)';
-COMMENT ON COLUMN "Nova".t0124.auto_confirm_orders IS 'Whether clean 850 PO orders are automatically confirmed';
-COMMENT ON COLUMN "Nova".t0124.price_tolerance_percent IS 'Allowed price discrepancy threshold percentage before placing order on hold';
-COMMENT ON COLUMN "Nova".t0124.gs1_company_prefix IS 'GS1 Company Prefix used for SSCC-18 pallet barcode calculation';
-COMMENT ON COLUMN "Nova".t0124.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0134 IS 'EDI Trading Partners — Profiles and delimiter/protocol configurations for B2B electronic trading partners';
+COMMENT ON COLUMN "Nova".t0134.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0134.partner_name IS 'Trading partner company name (e.g. Carrefour Hypermarkets, Lulu Group)';
+COMMENT ON COLUMN "Nova".t0134.partner_code IS 'Unique trading partner code (e.g. CRF-UAE, LULU-HQ)';
+COMMENT ON COLUMN "Nova".t0134.edi_standard IS 'EDI standard format: ANSI_X12 | EDIFACT';
+COMMENT ON COLUMN "Nova".t0134.interchange_sender_id IS 'Interchange Sender ID (ISA06 / UNB 0004)';
+COMMENT ON COLUMN "Nova".t0134.interchange_receiver_id IS 'Interchange Receiver ID (ISA08 / UNB 0010)';
+COMMENT ON COLUMN "Nova".t0134.sender_qualifier IS 'Sender Qualifier (ISA05 / UNB 0007, e.g. ZZ, 01, 14)';
+COMMENT ON COLUMN "Nova".t0134.receiver_qualifier IS 'Receiver Qualifier (ISA07 / UNB 0007, e.g. ZZ, 01, 14)';
+COMMENT ON COLUMN "Nova".t0134.communication_method IS 'Data transfer protocol: MANUAL | API | AS2 | SFTP';
+COMMENT ON COLUMN "Nova".t0134.endpoint_url IS 'AS2 / SFTP / Webhook endpoint URL';
+COMMENT ON COLUMN "Nova".t0134.customer_id IS 'Linked Customer account for Sales EDI 850/856/810 (FK to t0010)';
+COMMENT ON COLUMN "Nova".t0134.supplier_id IS 'Linked Supplier account for Catalog Sync 832 (FK to t0014)';
+COMMENT ON COLUMN "Nova".t0134.segment_terminator IS 'Segment delimiter character (e.g. ~ or '' or \n)';
+COMMENT ON COLUMN "Nova".t0134.element_separator IS 'Data element delimiter character (e.g. * or +)';
+COMMENT ON COLUMN "Nova".t0134.subelement_separator IS 'Subelement/Component separator (e.g. > or :)';
+COMMENT ON COLUMN "Nova".t0134.release_character IS 'Release/escape character for EDIFACT (e.g. ?)';
+COMMENT ON COLUMN "Nova".t0134.auto_confirm_orders IS 'Whether clean 850 PO orders are automatically confirmed';
+COMMENT ON COLUMN "Nova".t0134.price_tolerance_percent IS 'Allowed price discrepancy threshold percentage before placing order on hold';
+COMMENT ON COLUMN "Nova".t0134.gs1_company_prefix IS 'GS1 Company Prefix used for SSCC-18 pallet barcode calculation';
+COMMENT ON COLUMN "Nova".t0134.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0124_partner_code ON "Nova".t0124(partner_code);
-CREATE INDEX IF NOT EXISTS idx_t0124_customer_id ON "Nova".t0124(customer_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_supplier_id ON "Nova".t0124(supplier_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_business_id ON "Nova".t0124(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_business_id_id ON "Nova".t0124(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0134_partner_code ON "Nova".t0134(partner_code);
+CREATE INDEX IF NOT EXISTS idx_t0134_customer_id ON "Nova".t0134(customer_id);
+CREATE INDEX IF NOT EXISTS idx_t0134_supplier_id ON "Nova".t0134(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_t0134_business_id ON "Nova".t0134(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0134_business_id_id ON "Nova".t0134(business_id, id);
 
--- EDI SKU Cross-Reference Matrix (T0125)
-CREATE TABLE IF NOT EXISTS "Nova".t0125 (
+-- EDI SKU Cross-Reference Matrix (T0135)
+CREATE TABLE IF NOT EXISTS "Nova".t0135 (
     id                      SERIAL PRIMARY KEY,
-    partner_id              INT NOT NULL REFERENCES "Nova".t0124(id) ON DELETE CASCADE,
+    partner_id              INT NOT NULL REFERENCES "Nova".t0134(id) ON DELETE CASCADE,
     product_id              INT NOT NULL REFERENCES "Nova".t0001(id) ON DELETE CASCADE,
     partner_sku             VARCHAR(100) NOT NULL,
     partner_sku_type        VARCHAR(30) NOT NULL DEFAULT 'BUYER_PART_NO',
@@ -3531,32 +3681,32 @@ CREATE TABLE IF NOT EXISTS "Nova".t0125 (
     update_number           INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0125 IS 'EDI SKU Cross-Reference Matrix — Maps trading partner SKUs, GTIN barcodes, and UOMs to internal Nova products';
-COMMENT ON COLUMN "Nova".t0125.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0125.partner_id IS 'Trading partner reference (FK to t0124)';
-COMMENT ON COLUMN "Nova".t0125.product_id IS 'Internal product item reference (FK to t0001)';
-COMMENT ON COLUMN "Nova".t0125.partner_sku IS 'Partner SKU / Buyer Part Number / Vendor Item Code';
-COMMENT ON COLUMN "Nova".t0125.partner_sku_type IS 'SKU identifier type: BUYER_PART_NO | GTIN | EAN | UPC | VENDOR_PART_NO';
-COMMENT ON COLUMN "Nova".t0125.gtin IS 'Global Trade Item Number / EAN / UPC barcode';
-COMMENT ON COLUMN "Nova".t0125.partner_uom IS 'Unit of measure used in partner EDI documents (e.g. CA, EA, BX, PL)';
-COMMENT ON COLUMN "Nova".t0125.internal_uom IS 'Unit of measure used internally in Nova (e.g. CASE, PCS, KG)';
-COMMENT ON COLUMN "Nova".t0125.uom_conversion_factor IS 'Multiplier to convert partner UOM quantity to internal base quantity';
-COMMENT ON COLUMN "Nova".t0125.catalog_price IS 'Contractual or agreed catalog reference price for partner';
-COMMENT ON COLUMN "Nova".t0125.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0135 IS 'EDI SKU Cross-Reference Matrix — Maps trading partner SKUs, GTIN barcodes, and UOMs to internal Nova products';
+COMMENT ON COLUMN "Nova".t0135.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0135.partner_id IS 'Trading partner reference (FK to t0134)';
+COMMENT ON COLUMN "Nova".t0135.product_id IS 'Internal product item reference (FK to t0001)';
+COMMENT ON COLUMN "Nova".t0135.partner_sku IS 'Partner SKU / Buyer Part Number / Vendor Item Code';
+COMMENT ON COLUMN "Nova".t0135.partner_sku_type IS 'SKU identifier type: BUYER_PART_NO | GTIN | EAN | UPC | VENDOR_PART_NO';
+COMMENT ON COLUMN "Nova".t0135.gtin IS 'Global Trade Item Number / EAN / UPC barcode';
+COMMENT ON COLUMN "Nova".t0135.partner_uom IS 'Unit of measure used in partner EDI documents (e.g. CA, EA, BX, PL)';
+COMMENT ON COLUMN "Nova".t0135.internal_uom IS 'Unit of measure used internally in Nova (e.g. CASE, PCS, KG)';
+COMMENT ON COLUMN "Nova".t0135.uom_conversion_factor IS 'Multiplier to convert partner UOM quantity to internal base quantity';
+COMMENT ON COLUMN "Nova".t0135.catalog_price IS 'Contractual or agreed catalog reference price for partner';
+COMMENT ON COLUMN "Nova".t0135.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0125_partner_id ON "Nova".t0125(partner_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_product_id ON "Nova".t0125(product_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_partner_sku ON "Nova".t0125(partner_sku);
-CREATE INDEX IF NOT EXISTS idx_t0125_gtin ON "Nova".t0125(gtin);
-CREATE INDEX IF NOT EXISTS idx_t0125_lookup ON "Nova".t0125(partner_id, partner_sku);
-CREATE INDEX IF NOT EXISTS idx_t0125_business_id ON "Nova".t0125(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_business_id_id ON "Nova".t0125(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0135_partner_id ON "Nova".t0135(partner_id);
+CREATE INDEX IF NOT EXISTS idx_t0135_product_id ON "Nova".t0135(product_id);
+CREATE INDEX IF NOT EXISTS idx_t0135_partner_sku ON "Nova".t0135(partner_sku);
+CREATE INDEX IF NOT EXISTS idx_t0135_gtin ON "Nova".t0135(gtin);
+CREATE INDEX IF NOT EXISTS idx_t0135_lookup ON "Nova".t0135(partner_id, partner_sku);
+CREATE INDEX IF NOT EXISTS idx_t0135_business_id ON "Nova".t0135(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0135_business_id_id ON "Nova".t0135(business_id, id);
 
--- EDI Transaction / Interchange Logs (T0126)
-CREATE TABLE IF NOT EXISTS "Nova".t0126 (
+-- EDI Transaction / Interchange Logs (T0136)
+CREATE TABLE IF NOT EXISTS "Nova".t0136 (
     id                  SERIAL PRIMARY KEY,
     transaction_number  VARCHAR(50) NOT NULL UNIQUE,
-    partner_id          INT REFERENCES "Nova".t0124(id) ON DELETE SET NULL,
+    partner_id          INT REFERENCES "Nova".t0134(id) ON DELETE SET NULL,
     standard            VARCHAR(20) NOT NULL,
     document_type       VARCHAR(20) NOT NULL,
     direction           VARCHAR(10) NOT NULL,
@@ -3579,47 +3729,47 @@ CREATE TABLE IF NOT EXISTS "Nova".t0126 (
     update_number       INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0126 IS 'EDI Transaction / Interchange Logs — Audit trail and raw interchange content for all inbound/outbound EDI documents';
-COMMENT ON COLUMN "Nova".t0126.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0126.transaction_number IS 'Unique EDI transaction reference (e.g. EDI-TXN-2026-00001)';
-COMMENT ON COLUMN "Nova".t0126.partner_id IS 'Trading partner reference (FK to t0124)';
-COMMENT ON COLUMN "Nova".t0126.standard IS 'EDI standard format: ANSI_X12 | EDIFACT';
-COMMENT ON COLUMN "Nova".t0126.document_type IS 'EDI document transaction set: 850 | 856 | 810 | 832 | 997 | ORDERS | DESADV | INVOIC | PRICAT | CONTRL';
-COMMENT ON COLUMN "Nova".t0126.direction IS 'Transmission direction: INBOUND | OUTBOUND';
-COMMENT ON COLUMN "Nova".t0126.control_number IS 'Interchange control number (ISA13 / UNB 0020)';
-COMMENT ON COLUMN "Nova".t0126.status IS 'Processing status: PENDING | PROCESSED | FAILED | PRICE_DISCREPANCY_HOLD | ACKNOWLEDGED';
-COMMENT ON COLUMN "Nova".t0126.sales_order_id IS 'Linked Nova sales order reference (FK to t0012)';
-COMMENT ON COLUMN "Nova".t0126.delivery_id IS 'Linked Nova delivery dispatch reference (FK to t0016)';
-COMMENT ON COLUMN "Nova".t0126.invoice_id IS 'Linked Nova sales invoice reference (FK to t0026)';
-COMMENT ON COLUMN "Nova".t0126.raw_payload IS 'Raw unparsed EDI message interchange text';
-COMMENT ON COLUMN "Nova".t0126.parsed_data IS 'Structured JSON representation of segments and parsed loops';
-COMMENT ON COLUMN "Nova".t0126.ack_status IS 'Functional acknowledgment state: PENDING | ACCEPTED | REJECTED | ACCEPTED_WITH_ERRORS';
-COMMENT ON COLUMN "Nova".t0126.ack_payload IS 'Generated or received 997 FA / CONTRL payload text';
-COMMENT ON COLUMN "Nova".t0126.error_details IS 'Validation or ingestion error messages';
-COMMENT ON COLUMN "Nova".t0126.processed_at IS 'Timestamp when document processing completed';
-COMMENT ON COLUMN "Nova".t0126.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0136 IS 'EDI Transaction / Interchange Logs — Audit trail and raw interchange content for all inbound/outbound EDI documents';
+COMMENT ON COLUMN "Nova".t0136.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0136.transaction_number IS 'Unique EDI transaction reference (e.g. EDI-TXN-2026-00001)';
+COMMENT ON COLUMN "Nova".t0136.partner_id IS 'Trading partner reference (FK to t0134)';
+COMMENT ON COLUMN "Nova".t0136.standard IS 'EDI standard format: ANSI_X12 | EDIFACT';
+COMMENT ON COLUMN "Nova".t0136.document_type IS 'EDI document transaction set: 850 | 856 | 810 | 832 | 997 | ORDERS | DESADV | INVOIC | PRICAT | CONTRL';
+COMMENT ON COLUMN "Nova".t0136.direction IS 'Transmission direction: INBOUND | OUTBOUND';
+COMMENT ON COLUMN "Nova".t0136.control_number IS 'Interchange control number (ISA13 / UNB 0020)';
+COMMENT ON COLUMN "Nova".t0136.status IS 'Processing status: PENDING | PROCESSED | FAILED | PRICE_DISCREPANCY_HOLD | ACKNOWLEDGED';
+COMMENT ON COLUMN "Nova".t0136.sales_order_id IS 'Linked Nova sales order reference (FK to t0012)';
+COMMENT ON COLUMN "Nova".t0136.delivery_id IS 'Linked Nova delivery dispatch reference (FK to t0016)';
+COMMENT ON COLUMN "Nova".t0136.invoice_id IS 'Linked Nova sales invoice reference (FK to t0026)';
+COMMENT ON COLUMN "Nova".t0136.raw_payload IS 'Raw unparsed EDI message interchange text';
+COMMENT ON COLUMN "Nova".t0136.parsed_data IS 'Structured JSON representation of segments and parsed loops';
+COMMENT ON COLUMN "Nova".t0136.ack_status IS 'Functional acknowledgment state: PENDING | ACCEPTED | REJECTED | ACCEPTED_WITH_ERRORS';
+COMMENT ON COLUMN "Nova".t0136.ack_payload IS 'Generated or received 997 FA / CONTRL payload text';
+COMMENT ON COLUMN "Nova".t0136.error_details IS 'Validation or ingestion error messages';
+COMMENT ON COLUMN "Nova".t0136.processed_at IS 'Timestamp when document processing completed';
+COMMENT ON COLUMN "Nova".t0136.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0126_transaction_number ON "Nova".t0126(transaction_number);
-CREATE INDEX IF NOT EXISTS idx_t0126_partner_id ON "Nova".t0126(partner_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_document_type ON "Nova".t0126(document_type);
-CREATE INDEX IF NOT EXISTS idx_t0126_direction ON "Nova".t0126(direction);
-CREATE INDEX IF NOT EXISTS idx_t0126_status ON "Nova".t0126(status);
-CREATE INDEX IF NOT EXISTS idx_t0126_control_number ON "Nova".t0126(control_number);
-CREATE INDEX IF NOT EXISTS idx_t0126_sales_order_id ON "Nova".t0126(sales_order_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_delivery_id ON "Nova".t0126(delivery_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_invoice_id ON "Nova".t0126(invoice_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_business_id ON "Nova".t0126(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_business_id_id ON "Nova".t0126(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0136_transaction_number ON "Nova".t0136(transaction_number);
+CREATE INDEX IF NOT EXISTS idx_t0136_partner_id ON "Nova".t0136(partner_id);
+CREATE INDEX IF NOT EXISTS idx_t0136_document_type ON "Nova".t0136(document_type);
+CREATE INDEX IF NOT EXISTS idx_t0136_direction ON "Nova".t0136(direction);
+CREATE INDEX IF NOT EXISTS idx_t0136_status ON "Nova".t0136(status);
+CREATE INDEX IF NOT EXISTS idx_t0136_control_number ON "Nova".t0136(control_number);
+CREATE INDEX IF NOT EXISTS idx_t0136_sales_order_id ON "Nova".t0136(sales_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0136_delivery_id ON "Nova".t0136(delivery_id);
+CREATE INDEX IF NOT EXISTS idx_t0136_invoice_id ON "Nova".t0136(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_t0136_business_id ON "Nova".t0136(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0136_business_id_id ON "Nova".t0136(business_id, id);
 
--- EDI SSCC Pallet Logistics (T0127)
-CREATE TABLE IF NOT EXISTS "Nova".t0127 (
+-- EDI SSCC Pallet Logistics (T0137)
+CREATE TABLE IF NOT EXISTS "Nova".t0137 (
     id                  SERIAL PRIMARY KEY,
     sscc_barcode        VARCHAR(20) NOT NULL UNIQUE,
     delivery_id         INT REFERENCES "Nova".t0016(id) ON DELETE CASCADE,
     sales_order_id      INT REFERENCES "Nova".t0012(id) ON DELETE SET NULL,
     pallet_number       VARCHAR(50),
     package_type        VARCHAR(30) NOT NULL DEFAULT 'PALLET',
-    parent_sscc_id      INT REFERENCES "Nova".t0127(id) ON DELETE SET NULL,
+    parent_sscc_id      INT REFERENCES "Nova".t0137(id) ON DELETE SET NULL,
     gross_weight_kg     NUMERIC(10,3),
     net_weight_kg       NUMERIC(10,3),
     tare_weight_kg      NUMERIC(10,3),
@@ -3635,35 +3785,35 @@ CREATE TABLE IF NOT EXISTS "Nova".t0127 (
     update_number       INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0127 IS 'EDI SSCC Pallet Logistics — GS1 SSCC-18 shipping container codes and hierarchical packaging for ASN';
-COMMENT ON COLUMN "Nova".t0127.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0127.sscc_barcode IS '18-digit Serial Shipping Container Code (GS1 SSCC-18)';
-COMMENT ON COLUMN "Nova".t0127.delivery_id IS 'Delivery shipment reference (FK to t0016)';
-COMMENT ON COLUMN "Nova".t0127.sales_order_id IS 'Sales order reference (FK to t0012)';
-COMMENT ON COLUMN "Nova".t0127.pallet_number IS 'Human-readable pallet identifier (e.g. PLT-001)';
-COMMENT ON COLUMN "Nova".t0127.package_type IS 'Packaging container level: PALLET | BOX | CONTAINER | CASE';
-COMMENT ON COLUMN "Nova".t0127.parent_sscc_id IS 'Parent packaging SSCC reference for nested hierarchies (FK to t0127)';
-COMMENT ON COLUMN "Nova".t0127.gross_weight_kg IS 'Total gross weight including pallet/packaging in KG';
-COMMENT ON COLUMN "Nova".t0127.net_weight_kg IS 'Net weight of goods in KG';
-COMMENT ON COLUMN "Nova".t0127.tare_weight_kg IS 'Weight of empty pallet/container in KG';
-COMMENT ON COLUMN "Nova".t0127.volume_cbm IS 'Volume in cubic meters';
-COMMENT ON COLUMN "Nova".t0127.items_count IS 'Total unit count packed inside this container';
-COMMENT ON COLUMN "Nova".t0127.contents_summary IS 'JSON summary of product items, batch numbers, and quantities packed';
-COMMENT ON COLUMN "Nova".t0127.status IS 'Pallet lifecycle status: CREATED | PACKED | STAGED | DISPATCHED | DELIVERED';
-COMMENT ON COLUMN "Nova".t0127.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0137 IS 'EDI SSCC Pallet Logistics — GS1 SSCC-18 shipping container codes and hierarchical packaging for ASN';
+COMMENT ON COLUMN "Nova".t0137.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0137.sscc_barcode IS '18-digit Serial Shipping Container Code (GS1 SSCC-18)';
+COMMENT ON COLUMN "Nova".t0137.delivery_id IS 'Delivery shipment reference (FK to t0016)';
+COMMENT ON COLUMN "Nova".t0137.sales_order_id IS 'Sales order reference (FK to t0012)';
+COMMENT ON COLUMN "Nova".t0137.pallet_number IS 'Human-readable pallet identifier (e.g. PLT-001)';
+COMMENT ON COLUMN "Nova".t0137.package_type IS 'Packaging container level: PALLET | BOX | CONTAINER | CASE';
+COMMENT ON COLUMN "Nova".t0137.parent_sscc_id IS 'Parent packaging SSCC reference for nested hierarchies (FK to t0137)';
+COMMENT ON COLUMN "Nova".t0137.gross_weight_kg IS 'Total gross weight including pallet/packaging in KG';
+COMMENT ON COLUMN "Nova".t0137.net_weight_kg IS 'Net weight of goods in KG';
+COMMENT ON COLUMN "Nova".t0137.tare_weight_kg IS 'Weight of empty pallet/container in KG';
+COMMENT ON COLUMN "Nova".t0137.volume_cbm IS 'Volume in cubic meters';
+COMMENT ON COLUMN "Nova".t0137.items_count IS 'Total unit count packed inside this container';
+COMMENT ON COLUMN "Nova".t0137.contents_summary IS 'JSON summary of product items, batch numbers, and quantities packed';
+COMMENT ON COLUMN "Nova".t0137.status IS 'Pallet lifecycle status: CREATED | PACKED | STAGED | DISPATCHED | DELIVERED';
+COMMENT ON COLUMN "Nova".t0137.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0127_sscc_barcode ON "Nova".t0127(sscc_barcode);
-CREATE INDEX IF NOT EXISTS idx_t0127_delivery_id ON "Nova".t0127(delivery_id);
-CREATE INDEX IF NOT EXISTS idx_t0127_sales_order_id ON "Nova".t0127(sales_order_id);
-CREATE INDEX IF NOT EXISTS idx_t0127_parent_sscc_id ON "Nova".t0127(parent_sscc_id);
-CREATE INDEX IF NOT EXISTS idx_t0127_status ON "Nova".t0127(status);
-CREATE INDEX IF NOT EXISTS idx_t0127_business_id ON "Nova".t0127(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0127_business_id_id ON "Nova".t0127(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0137_sscc_barcode ON "Nova".t0137(sscc_barcode);
+CREATE INDEX IF NOT EXISTS idx_t0137_delivery_id ON "Nova".t0137(delivery_id);
+CREATE INDEX IF NOT EXISTS idx_t0137_sales_order_id ON "Nova".t0137(sales_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0137_parent_sscc_id ON "Nova".t0137(parent_sscc_id);
+CREATE INDEX IF NOT EXISTS idx_t0137_status ON "Nova".t0137(status);
+CREATE INDEX IF NOT EXISTS idx_t0137_business_id ON "Nova".t0137(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0137_business_id_id ON "Nova".t0137(business_id, id);
 
--- Supplier Catalog Sync / 832 PRICAT (T0128)
-CREATE TABLE IF NOT EXISTS "Nova".t0128 (
+-- Supplier Catalog Sync / 832 PRICAT (T0138)
+CREATE TABLE IF NOT EXISTS "Nova".t0138 (
     id                  SERIAL PRIMARY KEY,
-    partner_id          INT NOT NULL REFERENCES "Nova".t0124(id) ON DELETE CASCADE,
+    partner_id          INT NOT NULL REFERENCES "Nova".t0134(id) ON DELETE CASCADE,
     catalog_code        VARCHAR(50) NOT NULL,
     buyer_sku           VARCHAR(100) NOT NULL,
     supplier_sku        VARCHAR(100),
@@ -3689,34 +3839,34 @@ CREATE TABLE IF NOT EXISTS "Nova".t0128 (
     update_number       INT NOT NULL DEFAULT 1
 );
 
-COMMENT ON TABLE "Nova".t0128 IS 'Supplier Catalog Sync / 832 PRICAT — Electronic product catalog and wholesale price list synchronizations';
-COMMENT ON COLUMN "Nova".t0128.id IS 'Primary key';
-COMMENT ON COLUMN "Nova".t0128.partner_id IS 'Trading partner reference (FK to t0124)';
-COMMENT ON COLUMN "Nova".t0128.catalog_code IS 'Catalog identifier / revision batch (e.g. CAT-2026-Q1)';
-COMMENT ON COLUMN "Nova".t0128.buyer_sku IS 'Supermarket / Buyer item code';
-COMMENT ON COLUMN "Nova".t0128.supplier_sku IS 'Supplier / Manufacturer SKU';
-COMMENT ON COLUMN "Nova".t0128.gtin IS 'Global Trade Item Number / EAN barcode';
-COMMENT ON COLUMN "Nova".t0128.product_name IS 'Item description / product name';
-COMMENT ON COLUMN "Nova".t0128.product_description IS 'Detailed product specs / dimensions';
-COMMENT ON COLUMN "Nova".t0128.category IS 'Product category taxonomy';
-COMMENT ON COLUMN "Nova".t0128.brand IS 'Product brand name';
-COMMENT ON COLUMN "Nova".t0128.uom IS 'Unit of measure';
-COMMENT ON COLUMN "Nova".t0128.pack_size IS 'Units per retail packaging';
-COMMENT ON COLUMN "Nova".t0128.list_price IS 'Catalog wholesale price';
-COMMENT ON COLUMN "Nova".t0128.currency IS 'Currency code (e.g. USD, EUR, AED)';
-COMMENT ON COLUMN "Nova".t0128.effective_start_date IS 'Price validity start date';
-COMMENT ON COLUMN "Nova".t0128.effective_end_date IS 'Price validity expiration date';
-COMMENT ON COLUMN "Nova".t0128.matched_product_id IS 'Matched internal Nova product reference (FK to t0001)';
-COMMENT ON COLUMN "Nova".t0128.sync_status IS 'Catalog sync status: SYNCED | PENDING | UNMATCHED | PRICE_CHANGED';
-COMMENT ON COLUMN "Nova".t0128.business_id IS 'Tenant / business organization identifier (FK to t0059)';
+COMMENT ON TABLE "Nova".t0138 IS 'Supplier Catalog Sync / 832 PRICAT — Electronic product catalog and wholesale price list synchronizations';
+COMMENT ON COLUMN "Nova".t0138.id IS 'Primary key';
+COMMENT ON COLUMN "Nova".t0138.partner_id IS 'Trading partner reference (FK to t0134)';
+COMMENT ON COLUMN "Nova".t0138.catalog_code IS 'Catalog identifier / revision batch (e.g. CAT-2026-Q1)';
+COMMENT ON COLUMN "Nova".t0138.buyer_sku IS 'Supermarket / Buyer item code';
+COMMENT ON COLUMN "Nova".t0138.supplier_sku IS 'Supplier / Manufacturer SKU';
+COMMENT ON COLUMN "Nova".t0138.gtin IS 'Global Trade Item Number / EAN barcode';
+COMMENT ON COLUMN "Nova".t0138.product_name IS 'Item description / product name';
+COMMENT ON COLUMN "Nova".t0138.product_description IS 'Detailed product specs / dimensions';
+COMMENT ON COLUMN "Nova".t0138.category IS 'Product category taxonomy';
+COMMENT ON COLUMN "Nova".t0138.brand IS 'Product brand name';
+COMMENT ON COLUMN "Nova".t0138.uom IS 'Unit of measure';
+COMMENT ON COLUMN "Nova".t0138.pack_size IS 'Units per retail packaging';
+COMMENT ON COLUMN "Nova".t0138.list_price IS 'Catalog wholesale price';
+COMMENT ON COLUMN "Nova".t0138.currency IS 'Currency code (e.g. USD, EUR, AED)';
+COMMENT ON COLUMN "Nova".t0138.effective_start_date IS 'Price validity start date';
+COMMENT ON COLUMN "Nova".t0138.effective_end_date IS 'Price validity expiration date';
+COMMENT ON COLUMN "Nova".t0138.matched_product_id IS 'Matched internal Nova product reference (FK to t0001)';
+COMMENT ON COLUMN "Nova".t0138.sync_status IS 'Catalog sync status: SYNCED | PENDING | UNMATCHED | PRICE_CHANGED';
+COMMENT ON COLUMN "Nova".t0138.business_id IS 'Tenant / business organization identifier (FK to t0059)';
 
-CREATE INDEX IF NOT EXISTS idx_t0128_partner_id ON "Nova".t0128(partner_id);
-CREATE INDEX IF NOT EXISTS idx_t0128_catalog_code ON "Nova".t0128(catalog_code);
-CREATE INDEX IF NOT EXISTS idx_t0128_buyer_sku ON "Nova".t0128(buyer_sku);
-CREATE INDEX IF NOT EXISTS idx_t0128_gtin ON "Nova".t0128(gtin);
-CREATE INDEX IF NOT EXISTS idx_t0128_matched_product_id ON "Nova".t0128(matched_product_id);
-CREATE INDEX IF NOT EXISTS idx_t0128_sync_status ON "Nova".t0128(sync_status);
-CREATE INDEX IF NOT EXISTS idx_t0128_business_id ON "Nova".t0128(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0128_business_id_id ON "Nova".t0128(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0138_partner_id ON "Nova".t0138(partner_id);
+CREATE INDEX IF NOT EXISTS idx_t0138_catalog_code ON "Nova".t0138(catalog_code);
+CREATE INDEX IF NOT EXISTS idx_t0138_buyer_sku ON "Nova".t0138(buyer_sku);
+CREATE INDEX IF NOT EXISTS idx_t0138_gtin ON "Nova".t0138(gtin);
+CREATE INDEX IF NOT EXISTS idx_t0138_matched_product_id ON "Nova".t0138(matched_product_id);
+CREATE INDEX IF NOT EXISTS idx_t0138_sync_status ON "Nova".t0138(sync_status);
+CREATE INDEX IF NOT EXISTS idx_t0138_business_id ON "Nova".t0138(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0138_business_id_id ON "Nova".t0138(business_id, id);
 
 COMMIT;

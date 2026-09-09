@@ -9,8 +9,8 @@ from modules.core.controllers.base import create_crud_router
 
 service = CrudService(EDI_CATALOG_ITEM_REPO)
 router = create_crud_router(
-    '/api/T0128I',
-    'T0128 - Supplier Catalog Sync',
+    '/api/T0138I',
+    'T0138 - Supplier Catalog Sync',
     service,
     EdiCatalogItemCreate,
     EdiCatalogItemUpdate,

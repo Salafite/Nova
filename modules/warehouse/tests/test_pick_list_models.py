@@ -2,9 +2,19 @@ from datetime import datetime, date, timezone
 import pytest
 from pydantic import ValidationError
 from modules.warehouse.models.pick_list import (
+    PickListCreate,
+    PickListUpdate,
+    PickListResponse,
     PickListItemCreate,
     PickListItemUpdate,
     PickListItemResponse,
+    PickItemRequest,
+    PickItemWeightCaptureRequest,
+    ToleranceApprovalRequest,
+    ToleranceApprovalResponse,
+    DiscrepancyItemResponse,
+    PickListDiscrepancyResponse,
+    PickListDetailResponse,
 )
 
 
@@ -153,3 +163,141 @@ def test_pick_list_item_response_catch_weight():
     assert resp.supervisor_approved_by == 2
     assert resp.supervisor_approved_at == approved_time
     assert resp.supervisor_notes == "Scale calibrated"
+
+
+def test_pick_item_request_model():
+    req = PickItemRequest(
+        qty_picked=2.0,
+        picked_batch_id=10,
+        picked_batch_number="LOT-001",
+        catch_weight_actual=78.5,
+        catch_weight_uom="kg",
+        nominal_weight=80.0,
+        tolerance_pct=5.0,
+        barcode="GS1-12345678",
+    )
+    assert req.qty_picked == 2.0
+    assert req.picked_batch_id == 10
+    assert req.catch_weight_actual == 78.5
+    assert req.catch_weight_uom == "kg"
+    assert req.nominal_weight == 80.0
+    assert req.tolerance_pct == 5.0
+    assert req.barcode == "GS1-12345678"
+
+    # Negative validation
+    with pytest.raises(ValidationError):
+        PickItemRequest(qty_picked=-1.0)
+
+    with pytest.raises(ValidationError):
+        PickItemRequest(qty_picked=1.0, catch_weight_actual=-5.0)
+
+    with pytest.raises(ValidationError):
+        PickItemRequest(qty_picked=1.0, tolerance_pct=150.0)
+
+
+def test_pick_item_weight_capture_request_alias():
+    req = PickItemWeightCaptureRequest(
+        qty_picked=1.0,
+        catch_weight_actual=39.5,
+        catch_weight_uom="kg",
+    )
+    assert req.qty_picked == 1.0
+    assert req.catch_weight_actual == 39.5
+
+
+def test_tolerance_approval_request_models():
+    # Single item
+    req1 = ToleranceApprovalRequest(
+        item_id=12,
+        supervisor_id=5,
+        supervisor_notes="Approved variance within operational limits",
+    )
+    assert req1.item_id == 12
+    assert req1.supervisor_id == 5
+    assert req1.supervisor_notes == "Approved variance within operational limits"
+
+    # Multi item with aliases
+    req2 = ToleranceApprovalRequest(
+        item_ids=[12, 13, 14],
+        approved_by=8,
+        notes="Batch approval for cheese pallet",
+    )
+    assert req2.item_ids == [12, 13, 14]
+    assert req2.approved_by == 8
+    assert req2.notes == "Batch approval for cheese pallet"
+
+
+def test_tolerance_approval_response_model():
+    resp = ToleranceApprovalResponse(
+        approved_count=3,
+        item_ids=[10, 11, 12],
+        status="Approved",
+        message="All items approved successfully",
+    )
+    assert resp.approved_count == 3
+    assert resp.item_ids == [10, 11, 12]
+    assert resp.status == "Approved"
+    assert resp.message == "All items approved successfully"
+
+
+def test_discrepancy_models():
+    disc = DiscrepancyItemResponse(
+        item_id=101,
+        product_id=20,
+        product_name="Provolone Dolce Wheel",
+        line_number=1,
+        qty_ordered=2.0,
+        qty_picked=2.0,
+        nominal_weight=40.0,
+        catch_weight_actual=44.0,
+        catch_weight_uom="kg",
+        tolerance_pct=5.0,
+        tolerance_variance_pct=10.0,
+        tolerance_status="Out of Tolerance",
+        supervisor_approved=False,
+    )
+    assert disc.item_id == 101
+    assert disc.tolerance_variance_pct == 10.0
+    assert disc.tolerance_status == "Out of Tolerance"
+    assert disc.supervisor_approved is False
+
+    summary = PickListDiscrepancyResponse(
+        pick_list_id=15,
+        has_discrepancies=True,
+        unapproved_count=1,
+        discrepancies=[disc],
+    )
+    assert summary.pick_list_id == 15
+    assert summary.has_discrepancies is True
+    assert summary.unapproved_count == 1
+    assert len(summary.discrepancies) == 1
+
+
+def test_pick_list_detail_response():
+    item_resp = PickListItemResponse(
+        id=1,
+        pick_list_id=10,
+        product_id=5,
+        product_name="Gouda Wheel 10kg",
+        qty_ordered=1.0,
+        qty_picked=1.0,
+        line_number=1,
+        catch_weight_actual=10.2,
+        catch_weight_uom="kg",
+        nominal_weight=10.0,
+        tolerance_pct=5.0,
+        tolerance_variance_pct=2.0,
+        tolerance_status="Within Tolerance",
+    )
+    detail = PickListDetailResponse(
+        id=10,
+        pick_list_number="PL-2026-0001",
+        sales_order_id=100,
+        warehouse_id=1,
+        status="In Progress",
+        items=[item_resp],
+    )
+    assert detail.id == 10
+    assert len(detail.items) == 1
+    assert detail.items[0].catch_weight_actual == 10.2
+

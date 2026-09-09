@@ -41,7 +41,14 @@
           </thead>
           <tbody>
             <tr v-for="item in items" :key="item.id">
-              <td class="cell-order"><a class="order-link" @click="router.push(`/sales/${item.id}`)">{{ item.order_number }}</a></td>
+              <td class="cell-order">
+                <div class="flex items-center gap-2">
+                  <a class="order-link" @click="router.push(`/sales/${item.id}`)">{{ item.order_number }}</a>
+                  <span v-if="item.is_catch_weight" class="badge badge-cw" :title="t('catch-weight', 'Catch-Weight Dual UOM')">
+                    <span class="material-symbols-outlined icon-xs">scale</span> CW
+                  </span>
+                </div>
+              </td>
               <td>{{ customerName(item.customer_id) }}</td>
               <td>
                 <span v-if="item.payment_term_id" class="font-medium text-primary">{{ getPaymentTermName(item.payment_term_id) }}</span>
@@ -352,6 +359,8 @@ onMounted(() => { load() })
 .badge-warning { background: #fef3c7; color: #d97706; }
 .badge-info { background: #e0f2fe; color: #0284c7; }
 .badge-inactive { background: #f3f4f6; color: #888; }
+.badge-cw { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+.icon-xs { font-size: 13px; }
 
 .btn-primary { display: inline-flex; align-items: center; gap: 6px; background: #5d3fd3; color: #fff; padding: 8px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-primary:hover { background: #4a32b0; }

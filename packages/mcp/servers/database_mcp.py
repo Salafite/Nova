@@ -11,31 +11,46 @@ SCHEMA = "Nova"
 
 def register_tools():
     register_tool(
-        Tool(name="list_tables", description="List all tables in the Nova schema", input_schema={
-            "type": "object",
-            "properties": {},
-        }),
+        Tool(
+            name="list_tables",
+            description="List all tables in the Nova schema",
+            input_schema={
+                "type": "object",
+                "properties": {},
+            },
+            required_permission="ADMIN_VIEW",
+        ),
         _list_tables,
     )
     register_tool(
-        Tool(name="describe_table", description="Get column information for a table", input_schema={
-            "type": "object",
-            "properties": {
-                "table_name": {"type": "string", "description": "Table name (e.g., T0001, T0001I, products)"},
+        Tool(
+            name="describe_table",
+            description="Get column information for a table",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "table_name": {"type": "string", "description": "Table name (e.g., T0001, T0001I, products)"},
+                },
+                "required": ["table_name"],
             },
-            "required": ["table_name"],
-        }),
+            required_permission="ADMIN_VIEW",
+        ),
         _describe_table,
     )
     register_tool(
-        Tool(name="execute_read_query", description="Execute a read-only SQL query (SELECT only)", input_schema={
-            "type": "object",
-            "properties": {
-                "sql": {"type": "string", "description": "SELECT SQL query to execute"},
-                "limit": {"type": "integer", "description": "Max rows to return (default 100)"},
+        Tool(
+            name="execute_read_query",
+            description="Execute a read-only SQL query (SELECT only)",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "sql": {"type": "string", "description": "SELECT SQL query to execute"},
+                    "limit": {"type": "integer", "description": "Max rows to return (default 100)"},
+                },
+                "required": ["sql"],
             },
-            "required": ["sql"],
-        }),
+            required_permission="ADMIN_VIEW",
+        ),
         _execute_read_query,
     )
     register_resource(

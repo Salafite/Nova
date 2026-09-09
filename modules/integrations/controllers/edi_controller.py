@@ -66,7 +66,7 @@ def ingest_edi_document(
     """
     Ingest and process an inbound EDI document (ANSI X12 850/832 or UN/EDIFACT ORDERS/PRICAT).
     Automatically matches trading partner, resolves SKU mappings, validates pricing against contracts,
-    creates Nova sales orders (T0012/T0013) or catalog items (T0128), and generates functional ACK (997/CONTRL).
+    creates Nova sales orders (T0012/T0013) or catalog items (T0138), and generates functional ACK (997/CONTRL).
     """
     raw_payload = request.raw_payload.strip() if request.raw_payload else ""
     if not raw_payload:
@@ -270,7 +270,7 @@ def get_transaction_raw_payload(
     user: dict = Depends(get_current_user),
 ):
     """
-    Retrieve raw EDI interchange payload for an EDI transaction (T0126).
+    Retrieve raw EDI interchange payload for an EDI transaction (T0136).
     """
     tx = EDI_TRANSACTION_REPO.get(id)
     if not tx:
@@ -403,7 +403,7 @@ def sync_supplier_catalog_endpoint(
     user: dict = Depends(get_current_user),
 ):
     """
-    Synchronize supermarket catalog items (T0128), detect price changes, and upsert SKU cross-reference matrix (T0125).
+    Synchronize supermarket catalog items (T0138), detect price changes, and upsert SKU cross-reference matrix (T0135).
     """
     try:
         sync_res = edi_catalog_service.sync_catalog(
@@ -532,7 +532,7 @@ def bulk_import_sku_mappings(
     user: dict = Depends(get_current_user),
 ):
     """
-    Bulk import SKU / GTIN cross-reference mappings for a trading partner (T0125).
+    Bulk import SKU / GTIN cross-reference mappings for a trading partner (T0135).
     """
     if not mappings:
         raise HTTPException(
@@ -563,7 +563,7 @@ def generate_sscc_barcode_endpoint(
     user: dict = Depends(get_current_user),
 ):
     """
-    Generate a unique GS1 SSCC-18 (Serial Shipping Container Code) with Modulo-10 check digit and register pallet in T0127.
+    Generate a unique GS1 SSCC-18 (Serial Shipping Container Code) with Modulo-10 check digit and register pallet in T0137.
     """
     sscc_18 = generate_sscc18(company_prefix=company_prefix)
     record = {
@@ -604,7 +604,7 @@ def get_sscc_logistics_label(
     if not pallet:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pallet SSCC '{identifier}' not found in T0127",
+            detail=f"Pallet SSCC '{identifier}' not found in T0137",
         )
 
     label_data = format_gs1_logistics_label(pallet_data=pallet)

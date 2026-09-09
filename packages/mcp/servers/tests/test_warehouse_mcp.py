@@ -293,6 +293,76 @@ class TestWarehouseMcp:
                 qty_needed=10.0,
             )
 
+    def test_list_quarantine_batches(self):
+        mod = warehouse_mcp
+        mock_batches = [
+            {"id": 1, "batch_number": "BATCH-QUAR-01", "status": "Quarantine", "quantity": 25.0, "product_id": 10}
+        ]
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.list.return_value = mock_batches
+            result = mod._list_quarantine_batches(product_id=10, warehouse_id=1, limit=10)
+            assert result == mock_batches
+            mock.list.assert_called_once_with(
+                filters={"status": "Quarantine", "product_id": 10, "warehouse_id": 1},
+                limit=10,
+                offset=0,
+            )
+
+    def test_check_batch_quarantine_status_by_id_quarantined(self):
+        mod = warehouse_mcp
+        mock_batch = {
+            "id": 5,
+            "batch_number": "LOT-DAMAGED-99",
+            "product_id": 12,
+            "warehouse_id": 2,
+            "status": "Quarantine",
+            "quantity": 15.0,
+            "expiry_date": "2026-10-15",
+            "notes": "Damaged on dock receiving",
+        }
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.get.return_value = mock_batch
+            result = mod._check_batch_quarantine_status(batch_id=5)
+            assert result["found"] is True
+            assert result["is_quarantined"] is True
+            assert result["status"] == "Quarantine"
+            assert result["quantity"] == 15.0
+            assert "QUARANTINE" in result["message"]
+            mock.get.assert_called_once_with(5)
+
+    def test_check_batch_quarantine_status_by_number_available(self):
+        mod = warehouse_mcp
+        mock_batch = {
+            "id": 8,
+            "batch_number": "LOT-CLEAN-01",
+            "product_id": 12,
+            "warehouse_id": 1,
+            "status": "Available",
+            "quantity": 50.0,
+        }
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.list.return_value = [mock_batch]
+            result = mod._check_batch_quarantine_status(batch_number="LOT-CLEAN-01", product_id=12)
+            assert result["found"] is True
+            assert result["is_quarantined"] is False
+            assert result["status"] == "Available"
+            assert "not in quarantine" in result["message"]
+            mock.list.assert_called_once_with(filters={"batch_number": "LOT-CLEAN-01", "product_id": 12}, limit=1)
+
+    def test_check_batch_quarantine_status_not_found(self):
+        mod = warehouse_mcp
+        with patch.object(mod, "_batch_svc", MagicMock()) as mock:
+            mock.get.return_value = None
+            result = mod._check_batch_quarantine_status(batch_id=999)
+            assert result["found"] is False
+            assert result["is_quarantined"] is False
+
+    def test_check_batch_quarantine_status_missing_args(self):
+        mod = warehouse_mcp
+        result = mod._check_batch_quarantine_status()
+        assert "error" in result
+        assert result["is_quarantined"] is False
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools, list_resources
@@ -300,6 +370,8 @@ class TestWarehouseMcp:
         assert "list_goods_receipts" in names
         assert "list_serial_numbers" in names
         assert "list_batch_numbers" in names
+        assert "list_quarantine_batches" in names
+        assert "check_batch_quarantine_status" in names
         assert "get_batch_number" in names
         assert "allocate_fefo_lots" in names
         assert "list_pick_lists" in names
@@ -317,4 +389,5 @@ class TestWarehouseMcp:
         assert "nova://warehouse/pick-lists" in uris
         assert "nova://warehouse/stock-transfers" in uris
         assert "nova://warehouse/batches" in uris
+        assert "nova://warehouse/quarantine-batches" in uris
 

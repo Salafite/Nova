@@ -7,6 +7,7 @@ class Tool(BaseModel):
     description: str
     input_schema: dict
     tier: str = "tier1"
+    required_permission: str | None = None
 
 
 class Resource(BaseModel):
@@ -14,6 +15,7 @@ class Resource(BaseModel):
     name: str
     description: str
     mime_type: str = "application/json"
+    required_permission: str | None = None
 
 
 class PromptArg(BaseModel):

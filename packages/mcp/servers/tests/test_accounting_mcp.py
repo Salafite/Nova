@@ -212,12 +212,163 @@ class TestAccountingMcp:
             assert res[0]["check_number"] == "1001"
             mock_list.assert_called_once_with(customer_id=5)
 
+    def test_list_debit_memos_mcp(self):
+        with patch.multiple(accounting_mcp, _inv_svc=MagicMock()):
+            mock_memos = [
+                {
+                    "id": 10,
+                    "invoice_number": "DM-20260908-001",
+                    "invoice_type": "Debit Memo",
+                    "partner_id": 3,
+                    "purchase_return_id": 7,
+                    "total_amount": 250.0,
+                    "status": "Approved",
+                }
+            ]
+            accounting_mcp._inv_svc.get_debit_memos.return_value = mock_memos
+            res = accounting_mcp._list_debit_memos(purchase_return_id=7, partner_id=3, status="Approved", limit=20)
+            assert res == mock_memos
+            accounting_mcp._inv_svc.get_debit_memos.assert_called_once_with(
+                purchase_return_id=7,
+                partner_id=3,
+                status="Approved",
+                limit=20,
+                offset=0,
+            )
+
+    def test_get_debit_memo_for_rma_found(self):
+        with patch.multiple(accounting_mcp, _inv_svc=MagicMock()):
+            mock_memo = {
+                "id": 12,
+                "invoice_number": "DM-20260908-002",
+                "invoice_type": "Debit Memo",
+                "partner_id": 4,
+                "purchase_return_id": 9,
+                "total_amount": 180.50,
+                "status": "Applied",
+                "issue_date": "2026-09-08",
+                "notes": "RMA #9 debit memo",
+            }
+            accounting_mcp._inv_svc.get_debit_memo_by_purchase_return.return_value = mock_memo
+            res = accounting_mcp._get_debit_memo_for_rma(purchase_return_id=9)
+            assert res["found"] is True
+            assert res["debit_memo_id"] == 12
+            assert res["invoice_number"] == "DM-20260908-002"
+            assert res["total_amount"] == 180.50
+            assert res["supplier_id"] == 4
+            assert res["status"] == "Applied"
+            assert "DM-20260908-002" in res["message"]
+            accounting_mcp._inv_svc.get_debit_memo_by_purchase_return.assert_called_once_with(9)
+
+    def test_get_debit_memo_for_rma_not_found(self):
+        with patch.multiple(accounting_mcp, _inv_svc=MagicMock()):
+            accounting_mcp._inv_svc.get_debit_memo_by_purchase_return.return_value = None
+            res = accounting_mcp._get_debit_memo_for_rma(purchase_return_id=999)
+            assert res["found"] is False
+            assert "No debit memo found" in res["message"]
+
+    def test_get_debit_memo_for_rma_missing_id(self):
+        res = accounting_mcp._get_debit_memo_for_rma(purchase_return_id=None)
+        assert res["found"] is False
+        assert "error" in res
+
+    def test_send_customer_reminder_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "send_customer_reminder") as mock_send:
+            mock_send.return_value = {
+                "success": True,
+                "customer_id": 10,
+                "dispatched_count": 1,
+                "results": {"EMAIL": {"success": True, "tracking_number": "TRK-EMA-12345"}},
+            }
+            res = accounting_mcp._send_customer_reminder(
+                customer_id=10,
+                rule_id=1,
+                template_id=2,
+                channel="EMAIL",
+                custom_message="Please remit asap",
+            )
+            assert res["success"] is True
+            assert res["customer_id"] == 10
+            mock_send.assert_called_once_with(
+                customer_id=10,
+                rule_id=1,
+                template_id=2,
+                channel="EMAIL",
+                custom_message="Please remit asap",
+                attach_statement_pdf=True,
+                include_payment_link=True,
+            )
+
+    def test_dispatch_customer_statement_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "dispatch_customer_statement") as mock_stmt:
+            mock_stmt.return_value = {
+                "success": True,
+                "customer_id": 15,
+                "dispatched_count": 1,
+                "results": {"EMAIL": {"success": True, "tracking_number": "TRK-EMA-99999"}},
+            }
+            res = accounting_mcp._dispatch_customer_statement(
+                customer_id=15,
+                channel="EMAIL",
+                as_of_date="2026-09-01",
+                custom_message="Monthly Account Statement",
+            )
+            assert res["success"] is True
+            assert res["customer_id"] == 15
+            mock_stmt.assert_called_once_with(
+                customer_id=15,
+                channel="EMAIL",
+                start_date=None,
+                end_date=None,
+                as_of_date="2026-09-01",
+                custom_message="Monthly Account Statement",
+            )
+
+    def test_list_reminder_rules_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "list_rules") as mock_list:
+            mock_list.return_value = [
+                {"id": 1, "rule_name": "30-Day Aging", "threshold_days": 30, "is_active": True},
+                {"id": 2, "rule_name": "60-Day Aging", "threshold_days": 60, "is_active": True},
+            ]
+            res = accounting_mcp._list_reminder_rules(is_active=True, trigger_type="AGING_THRESHOLD", limit=20)
+            assert len(res) == 2
+            assert res[0]["rule_name"] == "30-Day Aging"
+            mock_list.assert_called_once_with(
+                is_active=True,
+                trigger_type="AGING_THRESHOLD",
+                channel=None,
+                limit=20,
+            )
+
+    def test_update_reminder_rule_mcp(self):
+        with patch.object(accounting_mcp._reminder_svc, "update_rule") as mock_update:
+            mock_update.return_value = {
+                "id": 1,
+                "rule_name": "Updated 30-Day Rule",
+                "threshold_days": 35,
+                "exclude_vip": True,
+            }
+            res = accounting_mcp._update_reminder_rule(
+                id=1,
+                rule_name="Updated 30-Day Rule",
+                threshold_days=35,
+                exclude_vip=True,
+            )
+            assert res["threshold_days"] == 35
+            assert res["exclude_vip"] is True
+            mock_update.assert_called_once_with(
+                rule_id=1,
+                data={"rule_name": "Updated 30-Day Rule", "threshold_days": 35, "exclude_vip": True},
+            )
+
     def test_register_tools(self):
         register_tools()
         from packages.mcp.registry import get_tools, list_resources
         names = [t.name for t in get_tools()]
         assert "list_chart_of_accounts" in names
         assert "list_invoices" in names
+        assert "list_debit_memos" in names
+        assert "get_debit_memo_for_rma" in names
         assert "get_invoice" in names
         assert "list_payments" in names
         assert "list_payment_terms" in names
@@ -228,9 +379,15 @@ class TestAccountingMcp:
         assert "confirm_batch_check_clearing" in names
         assert "process_bounced_check" in names
         assert "list_bounced_checks" in names
+        assert "send_customer_reminder" in names
+        assert "dispatch_customer_statement" in names
+        assert "list_reminder_rules" in names
+        assert "update_reminder_rule" in names
 
         uris = [r.uri for r in list_resources()]
         assert "nova://accounting/payment-terms" in uris
         assert "nova://accounting/invoices" in uris
+        assert "nova://accounting/debit-memos" in uris
+
 
 

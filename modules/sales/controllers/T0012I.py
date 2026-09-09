@@ -6,7 +6,12 @@ from modules.sales.services.sales_service import SalesOrderService
 from modules.sales.services.enhanced_sales_order_service import EnhancedSalesOrderService
 from modules.core.repositories.base import CrudRepository
 from modules.core.controllers.base import create_crud_router, check_record_ownership
-from modules.sales.models import SalesOrderCreate, SalesOrderUpdate, SalesOrderResponse
+from modules.sales.models import (
+    SalesOrderCreate,
+    SalesOrderUpdate,
+    SalesOrderResponse,
+    SalesOrderRecalculateResponse,
+)
 from packages.auth.deps import get_current_user
 from packages.ws.broadcast import order_status_changed
 
@@ -145,7 +150,7 @@ def cancel_order(id: int, user: dict = Depends(get_current_user)):
     except Exception as e:
         _server_error(e, 'cancel order')
 
-@router.post('/{id}/recalculate-catch-weight')
+@router.post('/{id}/recalculate-catch-weight', response_model=SalesOrderRecalculateResponse)
 def recalculate_order_catch_weight(id: int):
     """Recalculate sales order lines and totals based on actual catch-weights from warehouse picking."""
     order = service.get(id)
@@ -159,14 +164,14 @@ def recalculate_order_catch_weight(id: int):
     except Exception as e:
         _server_error(e, 'recalculate order catch weight')
 
-@router.get('/{id}/recalculate-preview')
+@router.get('/{id}/recalculate-preview', response_model=SalesOrderRecalculateResponse)
 def preview_order_catch_weight_recalculation(id: int):
     """Preview sales order recalculation without persisting changes."""
     order = service.get(id)
     if not order:
         raise HTTPException(404, 'Order not found')
     try:
-        result = service.recalculate_order_catch_weight(id)
+        result = service.recalculate_order_catch_weight(id, preview=True)
         return result
     except HTTPException:
         raise

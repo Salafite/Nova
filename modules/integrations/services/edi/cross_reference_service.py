@@ -2,7 +2,7 @@
 Nova ERP — B2B EDI Gateway: SKU & Price Cross-Referencing Engine
 Resolves buyer part numbers, GTINs, and vendor SKUs to Nova product IDs (T0001),
 converts partner units of measure (UOM), and verifies buyer order prices against
-customer contracts (T0122), price lists (T0083/T0084/T0120), and reference catalogs (T0125/T0128)
+customer contracts (T0122), price lists (T0083/T0084/T0120), and reference catalogs (T0135/T0138)
 with configurable discrepancy tolerance thresholds.
 """
 
@@ -87,7 +87,7 @@ class SkuResolutionResult(BaseModel):
     internal_uom: str = 'EA'
     uom_conversion_factor: float = 1.0
     catalog_price: Optional[float] = None
-    match_source: str = 'UNMATCHED'  # CROSS_REFERENCE_MATRIX_T0125, CATALOG_SYNC_T0128, PRODUCT_SKU_T0001, PRODUCT_BARCODE_T0004, UNMATCHED
+    match_source: str = 'UNMATCHED'  # CROSS_REFERENCE_MATRIX_T0135, CATALOG_SYNC_T0138, PRODUCT_SKU_T0001, PRODUCT_BARCODE_T0004, UNMATCHED
     mapping_id: Optional[int] = None
     error_message: Optional[str] = None
 
@@ -114,7 +114,7 @@ class PriceVerificationResult(BaseModel):
     discrepancy_percent: float = 0.0
     tolerance_percent: float = 0.0
     tolerance_exceeded: bool = False
-    price_source: str = 'PRODUCT_BASE_T0001'  # CUSTOMER_CONTRACT_T0122, PRICE_LIST_T0084, VOLUME_TIER_T0120, CATALOG_PRICE_T0125, CATALOG_SYNC_T0128, PRODUCT_BASE_T0001, DEFAULT_ZERO
+    price_source: str = 'PRODUCT_BASE_T0001'  # CUSTOMER_CONTRACT_T0122, PRICE_LIST_T0084, VOLUME_TIER_T0120, CATALOG_PRICE_T0135, CATALOG_SYNC_T0138, PRODUCT_BASE_T0001, DEFAULT_ZERO
     contract_number: Optional[str] = None
     contract_id: Optional[int] = None
     price_list_id: Optional[int] = None
@@ -257,8 +257,8 @@ class CrossReferenceService:
         Resolve a buyer part number, GTIN barcode, or vendor SKU to an internal Nova product ID (T0001).
 
         Resolution Hierarchy:
-        1. EDI SKU Cross-Reference Matrix table (T0125) for (partner_id, partner_sku) or GTIN.
-        2. EDI Supplier Catalog table (T0128) with matched_product_id for (partner_id, buyer_sku/gtin).
+        1. EDI SKU Cross-Reference Matrix table (T0135) for (partner_id, partner_sku) or GTIN.
+        2. EDI Supplier Catalog table (T0138) with matched_product_id for (partner_id, buyer_sku/gtin).
         3. Internal Products catalog (T0001/T0003) by matching SKU or Barcode.
         4. Barcodes table (T0004) by matching Barcode to GTIN/EAN.
         """
@@ -274,7 +274,7 @@ class CrossReferenceService:
         canon_sku_type = normalize_sku_type(partner_sku_type)
 
         # -------------------------------------------------------------------
-        # Step 1: Check EDI SKU Cross-Reference Matrix (T0125)
+        # Step 1: Check EDI SKU Cross-Reference Matrix (T0135)
         # -------------------------------------------------------------------
         if partner_id and self.sku_mapping_repo:
             # Try by partner_sku
@@ -307,12 +307,12 @@ class CrossReferenceService:
                     internal_uom=m.get('internal_uom') or 'EA',
                     uom_conversion_factor=float(m.get('uom_conversion_factor') or 1.0),
                     catalog_price=float(m.get('catalog_price')) if m.get('catalog_price') is not None else None,
-                    match_source='CROSS_REFERENCE_MATRIX_T0125',
+                    match_source='CROSS_REFERENCE_MATRIX_T0135',
                     mapping_id=m.get('id'),
                 )
 
         # -------------------------------------------------------------------
-        # Step 2: Check EDI Supplier Catalog Sync (T0128)
+        # Step 2: Check EDI Supplier Catalog Sync (T0138)
         # -------------------------------------------------------------------
         if partner_id and self.catalog_repo:
             cat_filters = {'partner_id': partner_id, 'buyer_sku': clean_sku, 'is_active': True}
@@ -343,7 +343,7 @@ class CrossReferenceService:
                     internal_uom='EA',
                     uom_conversion_factor=float(c.get('pack_size') or 1.0),
                     catalog_price=float(c.get('list_price')) if c.get('list_price') is not None else None,
-                    match_source='CATALOG_SYNC_T0128',
+                    match_source='CATALOG_SYNC_T0138',
                     mapping_id=c.get('id'),
                 )
 
@@ -591,8 +591,8 @@ class CrossReferenceService:
         Determine the expected contract/sales price following ERP pricing hierarchy:
         1. Customer Contract (T0122)
         2. Customer / Partner Price List (T0084) & Volume Tier Breaks (T0120)
-        3. EDI SKU Mapping Catalog Price (T0125)
-        4. Supplier Catalog Price (T0128)
+        3. EDI SKU Mapping Catalog Price (T0135)
+        4. Supplier Catalog Price (T0138)
         5. Base Product Price (T0001)
 
         Returns: (expected_unit_price, price_source_tag, metadata_dict)
@@ -629,7 +629,7 @@ class CrossReferenceService:
                 meta['tier_source'] = pl_result.get('source')
                 return (round(pl_result['price'], 4), pl_result.get('source', 'PRICE_LIST_T0084'), meta)
 
-        # 3. EDI SKU Mapping Catalog Price (T0125)
+        # 3. EDI SKU Mapping Catalog Price (T0135)
         if partner_id and self.sku_mapping_repo:
             try:
                 mappings = self.sku_mapping_repo.list(
@@ -641,11 +641,11 @@ class CrossReferenceService:
                     cat_p = float(mappings[0]['catalog_price'])
                     if cat_p > 0:
                         meta['mapping_id'] = mappings[0].get('id')
-                        return (round(cat_p, 4), 'CATALOG_PRICE_T0125', meta)
+                        return (round(cat_p, 4), 'CATALOG_PRICE_T0135', meta)
             except Exception:
                 pass
 
-        # 4. Supplier Catalog Item Price (T0128)
+        # 4. Supplier Catalog Item Price (T0138)
         if partner_id and self.catalog_repo:
             try:
                 cat_items = self.catalog_repo.list(
@@ -657,7 +657,7 @@ class CrossReferenceService:
                     lp = float(cat_items[0]['list_price'])
                     if lp > 0:
                         meta['catalog_item_id'] = cat_items[0].get('id')
-                        return (round(lp, 4), 'CATALOG_SYNC_T0128', meta)
+                        return (round(lp, 4), 'CATALOG_SYNC_T0138', meta)
             except Exception:
                 pass
 
@@ -1047,7 +1047,7 @@ class CrossReferenceService:
         conn=None,
     ) -> Dict[str, Any]:
         """
-        Create or update an entry in the EDI SKU Cross-Reference Matrix (T0125).
+        Create or update an entry in the EDI SKU Cross-Reference Matrix (T0135).
         """
         clean_sku = partner_sku.strip()
         canon_type = normalize_sku_type(partner_sku_type)

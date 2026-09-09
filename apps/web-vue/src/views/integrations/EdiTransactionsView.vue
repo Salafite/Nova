@@ -4,7 +4,7 @@
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="page-title">{{ t('edi-transactions-title', 'EDI Transactions & Interchange Logs') }}</h1>
-        <p class="page-subtitle">{{ t('edi-transactions-sub', 'Live Electronic Data Interchange Audit Log, Raw Payload Inspection, Functional ACK (997/CONTRL) & Reprocessing (T0126)') }}</p>
+        <p class="page-subtitle">{{ t('edi-transactions-sub', 'Live Electronic Data Interchange Audit Log, Raw Payload Inspection, Functional ACK (997/CONTRL) & Reprocessing (T0136)') }}</p>
       </div>
       <div class="header-actions">
         <button class="btn-outline" @click="router.push('/integrations/edi-gateway')">
@@ -625,8 +625,8 @@ async function loadData() {
   error.value = ''
   try {
     const [txRes, pRes] = await Promise.allSettled([
-      api.get('/T0126I/?limit=300'),
-      api.get('/T0124I/?limit=100'),
+      api.get('/T0136I/?limit=300'),
+      api.get('/T0134I/?limit=100'),
     ])
 
     if (txRes.status === 'fulfilled') {

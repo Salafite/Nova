@@ -298,7 +298,7 @@ def test_edi_856_service_generate_asn_lifecycle():
     """
     Test Edi856Service.generate_asn_for_delivery with mock repositories:
     Verifies partner resolution, SKU mapping, batch lookup, SSCC pallet generation,
-    T0126 transaction persistence, and pallet status update.
+    T0136 transaction persistence, and pallet status update.
     """
     mock_tx_repo = MagicMock()
     mock_partner_repo = MagicMock()

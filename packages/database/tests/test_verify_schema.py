@@ -12,7 +12,7 @@ def generate_mock_db(
     credit_hold_enum_present=True,
     credit_hold_cols_present=True,
 ):
-    edi_tables = ['t0124', 't0125', 't0126', 't0127', 't0128']
+    edi_tables = ['t0134', 't0135', 't0136', 't0137', 't0138']
     expected_tables = [f"t{i:04d}" for i in range(1, 110)] + edi_tables
     tables = expected_tables if all_tables_present else expected_tables[:50]
     

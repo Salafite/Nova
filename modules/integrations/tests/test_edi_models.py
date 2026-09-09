@@ -1,5 +1,5 @@
 """
-Unit tests for EDI domain models (T0124-T0128) and multi-tenant validation.
+Unit tests for EDI domain models (T0134-T0138) and multi-tenant validation.
 """
 
 import pytest
@@ -330,22 +330,22 @@ def test_edi_workflow_request_response_models():
 
 
 def test_edi_crud_repositories():
-    assert EDI_PARTNER_REPO.table_name == "t0124"
+    assert EDI_PARTNER_REPO.table_name == "t0134"
     assert "partner_code" in EDI_PARTNER_REPO.business_columns
     assert "edi_standard" in EDI_PARTNER_REPO.business_columns
 
-    assert EDI_SKU_MAPPING_REPO.table_name == "t0125"
+    assert EDI_SKU_MAPPING_REPO.table_name == "t0135"
     assert "partner_sku" in EDI_SKU_MAPPING_REPO.business_columns
     assert "product_id" in EDI_SKU_MAPPING_REPO.business_columns
 
-    assert EDI_TRANSACTION_REPO.table_name == "t0126"
+    assert EDI_TRANSACTION_REPO.table_name == "t0136"
     assert "transaction_number" in EDI_TRANSACTION_REPO.business_columns
     assert "raw_payload" in EDI_TRANSACTION_REPO.business_columns
 
-    assert EDI_SSCC_PALLET_REPO.table_name == "t0127"
+    assert EDI_SSCC_PALLET_REPO.table_name == "t0137"
     assert "sscc_barcode" in EDI_SSCC_PALLET_REPO.business_columns
     assert "package_type" in EDI_SSCC_PALLET_REPO.business_columns
 
-    assert EDI_CATALOG_ITEM_REPO.table_name == "t0128"
+    assert EDI_CATALOG_ITEM_REPO.table_name == "t0138"
     assert "catalog_code" in EDI_CATALOG_ITEM_REPO.business_columns
     assert "buyer_sku" in EDI_CATALOG_ITEM_REPO.business_columns

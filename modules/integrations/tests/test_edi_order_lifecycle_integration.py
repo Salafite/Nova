@@ -7,7 +7,7 @@ Verifies the complete automated digital document supply chain lifecycle:
    -> Partner resolution, SKU/GTIN cross-referencing, price verification, credit check
    -> Automated Nova Sales Order creation (T0012/T0013) & 997/CONTRL Functional ACK
 2. Warehouse Fulfillment & Truck Dispatch
-   -> Delivery creation (T0077/T0078), Batch allocation (T0102), GS1 SSCC-18 generation (T0127)
+   -> Delivery creation (T0077/T0078), Batch allocation (T0102), GS1 SSCC-18 generation (T0137)
    -> Outbound EDI 856 (ASN) / EDIFACT DESADV with 5-level Hierarchical Level (HL) packaging
 3. Proof of Delivery (POD) & Electronic Invoicing
    -> POD capture (signature, photos, timestamps -> 'Delivered')
@@ -619,7 +619,7 @@ class TestAnsiX12FullOrderLifecycle:
             assert parsed_inv.header.invoice_number == "INV-2026-00701"
             assert len(parsed_inv.lines) == 2
 
-            # Step 6: Verify Transaction Logs in T0126
+            # Step 6: Verify Transaction Logs in T0136
             recorded_txs = list(tx_saved_records.values())
             doc_types = [tx.get("document_type") for tx in recorded_txs]
             assert "850" in doc_types

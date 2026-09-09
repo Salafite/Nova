@@ -6,6 +6,10 @@
         <p class="page-subtitle">{{ t('gr-sub', 'Record and manage goods received with lot & expiration tracking') }}</p>
       </div>
       <div class="flex gap-2 items-center">
+        <router-link to="/purchasing/returns" class="btn-outline flex items-center gap-1" :title="t('view-returns-rma', 'View Vendor Returns & Debit Memos')">
+          <span class="material-symbols-outlined icon-xs">assignment_return</span>
+          {{ t('returns-title', 'Returns (RMA)') }}
+        </router-link>
         <button
           class="btn-secondary flex items-center gap-1"
           @click="showCameraScanner = true"
@@ -18,6 +22,34 @@
           <span class="material-symbols-outlined">add</span> {{ t('new-gr', 'New Receipt') }}
         </button>
       </div>
+    </div>
+
+    <!-- Navigation Hub -->
+    <div class="nav-cards mb-6">
+      <router-link to="/purchasing/requisitions" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">receipt_long</span>
+        <span class="nav-label">{{ t('pr-title', 'Requisitions') }}</span>
+      </router-link>
+      <router-link to="/purchasing/rfqs" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">request_quote</span>
+        <span class="nav-label">{{ t('rfq-title', 'RFQs') }}</span>
+      </router-link>
+      <router-link to="/purchasing" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">receipt</span>
+        <span class="nav-label">{{ t('purchase-orders', 'Purchase Orders') }}</span>
+      </router-link>
+      <router-link to="/purchasing/goods-receipt" class="nav-card nav-card-active">
+        <span class="material-symbols-outlined nav-icon">inventory_2</span>
+        <span class="nav-label">{{ t('goods-receipt-title', 'Goods Receipt') }}</span>
+      </router-link>
+      <router-link to="/purchasing/returns" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">assignment_return</span>
+        <span class="nav-label">{{ t('returns-title', 'Returns (RMA)') }}</span>
+      </router-link>
+      <router-link to="/purchasing/restock-suggestions" class="nav-card">
+        <span class="material-symbols-outlined nav-icon">smart_toy</span>
+        <span class="nav-label">{{ t('ai-restock', 'AI Restock') }}</span>
+      </router-link>
     </div>
 
     <!-- Quick Barcode Scanner Card for Inbound Receiving Verification -->
@@ -140,6 +172,14 @@
                 </td>
                 <td class="text-center">
                   <div class="actions-group">
+                    <button
+                      class="btn-icon btn-icon-rma"
+                      @click="openDockRejectForReceipt(item)"
+                      :title="t('reject-create-rma', 'Reject & Create RMA')"
+                      :aria-label="t('reject-create-rma', 'Reject & Create RMA')"
+                    >
+                      <span class="material-symbols-outlined text-amber">assignment_return</span>
+                    </button>
                     <button class="btn-icon" @click="editItem(item)" :title="t('edit', 'Edit')">
                       <span class="material-symbols-outlined">edit</span>
                     </button>
@@ -160,9 +200,19 @@
                         <strong>{{ t('receipt-lines', 'Receipt Line Items & Lot Details') }}</strong>
                         <span class="badge badge-subtle">{{ item.lines?.length || 0 }} {{ t('lines', 'lines') }}</span>
                       </div>
-                      <button v-if="!isCompleted(item.status)" class="btn-outline btn-sm" @click="editItem(item)">
-                        <span class="material-symbols-outlined">edit_note</span> {{ t('edit-lines', 'Edit Lines') }}
-                      </button>
+                      <div class="flex items-center gap-2">
+                        <button
+                          class="btn-outline-danger btn-sm"
+                          @click="openDockRejectForReceipt(item)"
+                          :title="t('reject-grn-desc', 'Record receiving rejection and create RMA for this goods receipt')"
+                        >
+                          <span class="material-symbols-outlined icon-xs">assignment_return</span>
+                          {{ t('dock-reject-all', 'Reject & Create RMA') }}
+                        </button>
+                        <button v-if="!isCompleted(item.status)" class="btn-outline btn-sm" @click="editItem(item)">
+                          <span class="material-symbols-outlined">edit_note</span> {{ t('edit-lines', 'Edit Lines') }}
+                        </button>
+                      </div>
                     </div>
 
                     <table v-if="item.lines && item.lines.length" class="data-table lines-table">
@@ -175,6 +225,7 @@
                           <th>{{ t('batch-lot', 'Batch / Lot #') }}</th>
                           <th>{{ t('mfg-date', 'Manufacturing Date') }}</th>
                           <th>{{ t('exp-date', 'Expiration Date') }}</th>
+                          <th class="text-center col-action-th">{{ t('dock-actions', 'Dock Actions') }}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -201,6 +252,17 @@
                             </span>
                             <span v-else class="text-muted text-xs">-</span>
                           </td>
+                          <td class="text-center">
+                            <button
+                              type="button"
+                              class="btn-reject-line"
+                              @click="openDockRejectForLine(item, line)"
+                              :title="t('reject-item-rma-tooltip', 'Reject this item/batch and create an RMA claim')"
+                            >
+                              <span class="material-symbols-outlined icon-xs">assignment_return</span>
+                              <span>{{ t('reject-rma', 'Reject & RMA') }}</span>
+                            </button>
+                          </td>
                         </tr>
                       </tbody>
                     </table>
@@ -213,6 +275,246 @@
             </template>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Dock-side Receiving Rejection & RMA Creation Modal -->
+    <div v-if="showDockRejectModal" class="modal-overlay" @click.self="closeDockRejectModal">
+      <div class="modal modal-lg">
+        <div class="modal-header modal-header-dock">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber">assignment_return</span>
+            <div>
+              <h3>{{ t('dock-rejection-title', 'Dock-Side Receiving Rejection & RMA') }}</h3>
+              <p class="modal-subtext">
+                {{ t('dock-rejection-sub', 'Pre-fills receiving details to file an RMA claim, quarantine damaged batches, and post supplier debit memos before driver departs.') }}
+              </p>
+            </div>
+          </div>
+          <button class="btn-icon" @click="closeDockRejectModal"><span class="material-symbols-outlined">close</span></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Context Reference Bar -->
+          <div class="dock-context-bar mb-4">
+            <div class="context-item">
+              <span class="context-label">{{ t('gr-number', 'Goods Receipt') }}</span>
+              <span class="context-value font-mono">GRN #{{ dockRejectForm.goods_receipt_id }} ({{ dockRejectForm.receipt_number }})</span>
+            </div>
+            <div class="context-item">
+              <span class="context-label">{{ t('supplier', 'Supplier') }}</span>
+              <span class="context-value">{{ supplierName(dockRejectForm.supplier_id) }}</span>
+            </div>
+            <div class="context-item">
+              <span class="context-label">{{ t('po-ref', 'Purchase Order') }}</span>
+              <span class="context-value font-mono">{{ dockRejectForm.purchase_order_id ? `#${dockRejectForm.purchase_order_id}` : '-' }}</span>
+            </div>
+            <div class="context-item">
+              <span class="context-label">{{ t('rejection-date', 'Rejection Date') }}</span>
+              <input type="date" v-model="dockRejectForm.rejection_date" class="form-input form-input-sm font-mono" />
+            </div>
+          </div>
+
+          <!-- Reason & Description -->
+          <div class="form-group mb-4">
+            <label>{{ t('overall-rejection-reason', 'Overall Reason / Discrepancy Summary') }} <span class="text-red-500">*</span></label>
+            <input
+              type="text"
+              v-model="dockRejectForm.reason"
+              class="form-input"
+              :placeholder="t('dock-reason-placeholder', 'e.g. Broken packaging, temperature excursion, expired pallets on truck arrival')"
+            />
+          </div>
+
+          <!-- Line Items Being Rejected -->
+          <div class="dock-lines-section mb-5">
+            <div class="flex justify-between items-center mb-2">
+              <h4 class="section-title flex items-center gap-1">
+                <span class="material-symbols-outlined icon-xs text-purple">list_alt</span>
+                {{ t('rejected-items-batches', 'Rejected Products & Batch Details') }} ({{ dockRejectForm.lines.length }})
+              </h4>
+              <button type="button" class="btn-outline btn-xs" @click="addDockRejectLine">
+                <span class="material-symbols-outlined icon-xs">add</span> {{ t('add-item', 'Add Item') }}
+              </button>
+            </div>
+
+            <div class="lines-editor-table-wrap">
+              <table class="lines-editor-table">
+                <thead>
+                  <tr>
+                    <th style="width: 25%">{{ t('product', 'Product') }} <span class="text-red-500">*</span></th>
+                    <th style="width: 18%">{{ t('batch-lot', 'Batch / Lot #') }}</th>
+                    <th style="width: 14%">{{ t('exp-date', 'Expiry Date') }}</th>
+                    <th style="width: 10%">{{ t('qty-reject', 'Reject Qty') }} <span class="text-red-500">*</span></th>
+                    <th style="width: 11%">{{ t('unit-price', 'Unit Price ($)') }}</th>
+                    <th style="width: 18%">{{ t('reason-code', 'Reason Code') }}</th>
+                    <th style="width: 4%"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(line, idx) in dockRejectForm.lines" :key="idx">
+                    <td>
+                      <select v-model="line.product_id" class="form-input form-input-sm" @change="onDockProductChange(line)">
+                        <option value="">-- {{ t('select-product', 'Select Product') }} --</option>
+                        <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name || p.sku }}</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        v-model="line.batch_number"
+                        class="form-input form-input-sm font-mono text-purple"
+                        placeholder="LOT-2026-A1"
+                      />
+                    </td>
+                    <td>
+                      <input type="date" v-model="line.expiry_date" class="form-input form-input-sm date-input font-mono" />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0.01"
+                        v-model.number="line.qty_rejected"
+                        class="form-input form-input-sm font-bold text-red-500"
+                        placeholder="1"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        v-model.number="line.unit_price"
+                        class="form-input form-input-sm font-mono"
+                        placeholder="0.00"
+                      />
+                    </td>
+                    <td>
+                      <select v-model="line.reason_code" class="form-input form-input-sm">
+                        <option value="damaged">{{ t('reason-damaged', 'Damaged Goods') }}</option>
+                        <option value="expired">{{ t('reason-expired', 'Expired Product') }}</option>
+                        <option value="qc_failed">{{ t('reason-qc-failed', 'QC Failed') }}</option>
+                        <option value="rejected">{{ t('reason-rejected', 'Receiving Rejected') }}</option>
+                        <option value="wrong_item">{{ t('reason-wrong-item', 'Wrong Item') }}</option>
+                        <option value="defective">{{ t('reason-defective', 'Defective') }}</option>
+                        <option value="over_delivery">{{ t('reason-over-delivery', 'Over Delivery') }}</option>
+                        <option value="other">{{ t('reason-other', 'Other') }}</option>
+                      </select>
+                    </td>
+                    <td class="text-center">
+                      <button
+                        v-if="dockRejectForm.lines.length > 1"
+                        type="button"
+                        class="btn-icon btn-icon-danger btn-xs"
+                        @click="removeDockRejectLine(idx)"
+                        :title="t('remove', 'Remove')"
+                      >
+                        <span class="material-symbols-outlined icon-xs">delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex justify-between items-center mt-2 px-1 text-xs">
+              <span class="text-muted">
+                {{ t('disposition-label', 'Default Disposition:') }} <strong>Return to Vendor</strong>
+              </span>
+              <div class="font-mono">
+                <span class="text-muted">{{ t('total-claim-est', 'Estimated Claim Total:') }} </span>
+                <strong class="text-purple font-bold text-sm">${{ dockRejectTotalAmount.toFixed(2) }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inspection Photos & Evidence -->
+          <div class="dock-photos-section mb-4">
+            <label class="section-title flex items-center gap-1 mb-2">
+              <span class="material-symbols-outlined icon-xs text-purple">photo_camera</span>
+              {{ t('dock-photos-label', 'Inspection Photos / Proof of Damage (Optional)') }}
+            </label>
+            <div class="photo-uploader-box">
+              <div class="flex items-center gap-3">
+                <label class="btn-secondary btn-sm cursor-pointer flex items-center gap-1">
+                  <span class="material-symbols-outlined icon-xs">upload_file</span>
+                  {{ t('upload-photos', 'Choose Photos') }}
+                  <input type="file" multiple accept="image/*" class="hidden-file-input" @change="handleDockFileUpload" />
+                </label>
+                <div class="flex-1 flex gap-2">
+                  <input
+                    type="text"
+                    v-model="newDockPhotoUrl"
+                    class="form-input form-input-sm flex-1"
+                    :placeholder="t('or-photo-url', 'Or paste image URL...')"
+                    @keydown.enter.prevent="addDockPhotoByUrl"
+                  />
+                  <button type="button" class="btn-outline btn-sm" @click="addDockPhotoByUrl">
+                    {{ t('add', 'Add') }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Thumbnails Preview Grid -->
+              <div v-if="dockRejectForm.attachments.length" class="dock-photos-grid mt-3">
+                <div v-for="(att, pIdx) in dockRejectForm.attachments" :key="att.id || pIdx" class="dock-photo-item">
+                  <img
+                    v-if="att.url || att.data_base64"
+                    :src="att.url || (att.data_base64 ? `data:${att.content_type || 'image/jpeg'};base64,${att.data_base64}` : '')"
+                    class="dock-photo-img"
+                    alt="Dock Photo"
+                  />
+                  <div v-else class="dock-photo-placeholder">
+                    <span class="material-symbols-outlined icon-xs">image</span>
+                  </div>
+                  <button type="button" class="btn-photo-remove" @click="removeDockAttachment(pIdx)" :title="t('remove-photo', 'Remove photo')">
+                    <span class="material-symbols-outlined icon-xs">close</span>
+                  </button>
+                  <div class="dock-photo-name">{{ att.filename || 'Photo ' + (pIdx + 1) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dock Supervisor Notes -->
+          <div class="form-group mb-4">
+            <label>{{ t('dock-notes-label', 'Dock Supervisor / Driver Observation Notes') }}</label>
+            <textarea
+              v-model="dockRejectForm.notes"
+              class="form-input"
+              rows="2"
+              :placeholder="t('dock-notes-placeholder', 'Driver signature acknowledged, carrier bill of lading annotated, temperature reading...')"
+            ></textarea>
+          </div>
+
+          <!-- Automated Lifecycle Options -->
+          <div class="workflow-options-box">
+            <label class="checkbox-row">
+              <input type="checkbox" v-model="dockRejectForm.auto_approve" />
+              <div>
+                <strong>{{ t('auto-approve-chk', 'Auto-Approve RMA & Post Supplier Debit Memo immediately') }}</strong>
+                <span class="text-xs text-muted block">{{ t('auto-approve-desc', 'Creates Debit Memo in Accounting (T0090) so credit is deducted on next payment run.') }}</span>
+              </div>
+            </label>
+            <label class="checkbox-row mt-2">
+              <input type="checkbox" v-model="dockRejectForm.quarantine_inventory" />
+              <div>
+                <strong>{{ t('quarantine-inventory-chk', 'Quarantine batch & write down salable inventory') }}</strong>
+                <span class="text-xs text-muted block">{{ t('quarantine-desc', 'Updates batch status to Quarantine and isolates returned stock movements.') }}</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="closeDockRejectModal">{{ t('cancel', 'Cancel') }}</button>
+          <button class="btn-primary btn-reject-action" :disabled="dockRejecting" @click="executeDockReject">
+            <span v-if="dockRejecting" class="material-symbols-outlined spin">progress_activity</span>
+            <span v-else class="material-symbols-outlined">assignment_return</span>
+            {{ dockRejecting ? t('processing', 'Creating RMA...') : (dockRejectForm.auto_approve ? t('submit-post-debit', 'Create RMA & Post Debit Memo') : t('create-draft-rma', 'Create Draft RMA')) }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -426,6 +728,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../../api/client.js'
 import { useToast } from '../../composables/useToast.js'
 import { useI18n } from '../../composables/useI18n.js'
@@ -437,6 +740,7 @@ import { useScanFeedback } from '../../composables/useScanFeedback.js'
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal.vue'
 import { parseBarcode, formatGS1Date } from '../../utils/barcodeParser.js'
 
+const router = useRouter()
 const { show: toast } = useToast()
 const { t, dir } = useI18n()
 
@@ -471,6 +775,25 @@ const expandedId = ref(null)
 const confirmTarget = ref(null)
 const deletedLineIds = ref([])
 
+// Dock-side Rejection & RMA State
+const showDockRejectModal = ref(false)
+const dockRejecting = ref(false)
+const newDockPhotoUrl = ref('')
+const dockRejectForm = ref({
+  goods_receipt_id: null,
+  receipt_number: '',
+  purchase_order_id: null,
+  supplier_id: '',
+  warehouse_id: '',
+  rejection_date: new Date().toISOString().slice(0, 10),
+  reason: '',
+  notes: '',
+  auto_approve: true,
+  quarantine_inventory: true,
+  lines: [],
+  attachments: []
+})
+
 const form = ref({
   receipt_number: '',
   purchase_order_id: null,
@@ -492,6 +815,14 @@ const trackedBatchesCount = computed(() => {
     count += getBatches(item).length
   }
   return count
+})
+
+const dockRejectTotalAmount = computed(() => {
+  return (dockRejectForm.value.lines || []).reduce((sum, line) => {
+    const qty = Number(line.qty_rejected) || 0
+    const price = Number(line.unit_price) || 0
+    return sum + (qty * price)
+  }, 0)
 })
 
 function isCompleted(status) {
@@ -523,19 +854,19 @@ function getExpiryClass(d) {
 
 function supplierName(id) {
   if (!id) return '-'
-  const s = suppliers.value.find(x => x.id === id)
+  const s = suppliers.value.find(x => x.id === Number(id))
   return s ? (s.name || s.company_name) : `#${id}`
 }
 
 function warehouseName(id) {
   if (!id) return '-'
-  const w = warehouses.value.find(x => x.id === id)
+  const w = warehouses.value.find(x => x.id === Number(id))
   return w ? w.name : `#${id}`
 }
 
 function productName(id) {
   if (!id) return '-'
-  const p = products.value.find(x => x.id === id)
+  const p = products.value.find(x => x.id === Number(id))
   return p ? (p.name || p.sku) : `#${id}`
 }
 
@@ -583,6 +914,235 @@ async function load() {
     error.value = t('failed-load', 'Failed to load goods receipts')
   } finally {
     loading.value = false
+  }
+}
+
+// ----------------------------------------------------
+// Dock-Side Rejection & RMA Creation Methods
+// ----------------------------------------------------
+function openDockRejectForLine(receipt, line) {
+  const p = products.value.find(x => x.id === Number(line.product_id))
+  const defaultPrice = p ? Number(p.cost_price || p.price || 0) : 0
+
+  dockRejectForm.value = {
+    goods_receipt_id: receipt.id,
+    receipt_number: receipt.receipt_number || `GRN-${receipt.id}`,
+    purchase_order_id: receipt.purchase_order_id || null,
+    supplier_id: receipt.supplier_id || '',
+    warehouse_id: receipt.warehouse_id || '',
+    rejection_date: new Date().toISOString().slice(0, 10),
+    reason: `Dock rejection for ${receipt.receipt_number || `GRN-${receipt.id}`}: ${line.product_name || productName(line.product_id)} (Batch: ${line.batch_number || 'N/A'})`,
+    notes: '',
+    auto_approve: true,
+    quarantine_inventory: true,
+    lines: [
+      {
+        product_id: line.product_id || '',
+        product_name: line.product_name || productName(line.product_id),
+        batch_number: line.batch_number || '',
+        expiry_date: line.expiry_date ? line.expiry_date.slice(0, 10) : '',
+        qty_received: Number(line.qty_received) || 1,
+        qty_rejected: Number(line.qty_received) || 1,
+        unit_price: defaultPrice,
+        reason_code: isExpired(line.expiry_date) ? 'expired' : 'damaged',
+        reason_details: '',
+        disposition: 'Return to Vendor'
+      }
+    ],
+    attachments: []
+  }
+  newDockPhotoUrl.value = ''
+  showDockRejectModal.value = true
+}
+
+function openDockRejectForReceipt(receipt) {
+  const receiptLines = (receipt.lines || []).map(line => {
+    const p = products.value.find(x => x.id === Number(line.product_id))
+    const defaultPrice = p ? Number(p.cost_price || p.price || 0) : 0
+    return {
+      product_id: line.product_id || '',
+      product_name: line.product_name || productName(line.product_id),
+      batch_number: line.batch_number || '',
+      expiry_date: line.expiry_date ? line.expiry_date.slice(0, 10) : '',
+      qty_received: Number(line.qty_received) || 1,
+      qty_rejected: Number(line.qty_received) || 1,
+      unit_price: defaultPrice,
+      reason_code: isExpired(line.expiry_date) ? 'expired' : 'damaged',
+      reason_details: '',
+      disposition: 'Return to Vendor'
+    }
+  })
+
+  dockRejectForm.value = {
+    goods_receipt_id: receipt.id,
+    receipt_number: receipt.receipt_number || `GRN-${receipt.id}`,
+    purchase_order_id: receipt.purchase_order_id || null,
+    supplier_id: receipt.supplier_id || '',
+    warehouse_id: receipt.warehouse_id || '',
+    rejection_date: new Date().toISOString().slice(0, 10),
+    reason: `Dock-side quality rejection for Goods Receipt ${receipt.receipt_number || `GRN-${receipt.id}`}`,
+    notes: '',
+    auto_approve: true,
+    quarantine_inventory: true,
+    lines: receiptLines.length ? receiptLines : [
+      {
+        product_id: '',
+        product_name: '',
+        batch_number: '',
+        expiry_date: '',
+        qty_received: 1,
+        qty_rejected: 1,
+        unit_price: 0,
+        reason_code: 'damaged',
+        reason_details: '',
+        disposition: 'Return to Vendor'
+      }
+    ],
+    attachments: []
+  }
+  newDockPhotoUrl.value = ''
+  showDockRejectModal.value = true
+}
+
+function closeDockRejectModal() {
+  showDockRejectModal.value = false
+}
+
+function addDockRejectLine() {
+  dockRejectForm.value.lines.push({
+    product_id: '',
+    product_name: '',
+    batch_number: '',
+    expiry_date: '',
+    qty_received: 1,
+    qty_rejected: 1,
+    unit_price: 0,
+    reason_code: 'damaged',
+    reason_details: '',
+    disposition: 'Return to Vendor'
+  })
+}
+
+function removeDockRejectLine(index) {
+  dockRejectForm.value.lines.splice(index, 1)
+}
+
+function onDockProductChange(line) {
+  if (!line.product_id) return
+  const p = products.value.find(x => x.id === Number(line.product_id))
+  if (p) {
+    line.product_name = p.name || p.sku || `Product #${p.id}`
+    if (!line.unit_price || line.unit_price === 0) {
+      line.unit_price = Number(p.cost_price || p.price || 0)
+    }
+  }
+}
+
+function handleDockFileUpload(e) {
+  const files = e.target?.files
+  if (!files || !files.length) return
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const result = event.target?.result
+      if (!result) return
+      const base64Data = result.split(',')[1] || result
+      dockRejectForm.value.attachments.push({
+        id: `dock_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        filename: file.name,
+        content_type: file.type || 'image/jpeg',
+        size_bytes: file.size,
+        data_base64: base64Data,
+        description: 'Dock Inspection Photo'
+      })
+    }
+    reader.readAsDataURL(file)
+  }
+  e.target.value = ''
+}
+
+function addDockPhotoByUrl() {
+  if (!newDockPhotoUrl.value.trim()) return
+  dockRejectForm.value.attachments.push({
+    id: `dock_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    filename: newDockPhotoUrl.value.split('/').pop() || 'dock_photo.jpg',
+    url: newDockPhotoUrl.value.trim(),
+    content_type: 'image/jpeg',
+    description: 'Dock Inspection Photo'
+  })
+  newDockPhotoUrl.value = ''
+}
+
+function removeDockAttachment(index) {
+  dockRejectForm.value.attachments.splice(index, 1)
+}
+
+async function executeDockReject() {
+  if (!dockRejectForm.value.goods_receipt_id) {
+    toast(t('grn-required', 'Goods Receipt reference is missing'), 'error')
+    return
+  }
+
+  const validLines = dockRejectForm.value.lines.filter(l => l.product_id || (l.product_name && l.product_name.trim()))
+  if (!validLines.length) {
+    toast(t('at-least-one-rejected-item', 'Please select at least one item to reject'), 'error')
+    return
+  }
+
+  dockRejecting.value = true
+  try {
+    const payload = {
+      goods_receipt_id: Number(dockRejectForm.value.goods_receipt_id),
+      purchase_order_id: dockRejectForm.value.purchase_order_id ? Number(dockRejectForm.value.purchase_order_id) : null,
+      supplier_id: dockRejectForm.value.supplier_id ? Number(dockRejectForm.value.supplier_id) : null,
+      rejection_date: dockRejectForm.value.rejection_date || new Date().toISOString().slice(0, 10),
+      reason: dockRejectForm.value.reason || `Dock rejection for GRN #${dockRejectForm.value.goods_receipt_id}`,
+      notes: dockRejectForm.value.notes || null,
+      attachments: dockRejectForm.value.attachments || [],
+      lines: validLines.map(l => ({
+        product_id: l.product_id ? Number(l.product_id) : null,
+        product_name: l.product_name || productName(l.product_id),
+        qty_rejected: Number(l.qty_rejected) || 1,
+        unit_price: Number(l.unit_price) || 0,
+        batch_number: l.batch_number ? String(l.batch_number).trim() : null,
+        expiry_date: l.expiry_date || null,
+        reason_code: l.reason_code || 'damaged',
+        reason_details: l.reason_details || null,
+        disposition: l.disposition || 'Return to Vendor'
+      }))
+    }
+
+    const res = await api.post(`/T0081I/from-goods-receipt/${dockRejectForm.value.goods_receipt_id}`, payload)
+    const createdRma = res.data
+
+    // If auto-approve is checked, trigger immediate approval with Debit Memo posting & Quarantine isolation
+    if (dockRejectForm.value.auto_approve && createdRma && createdRma.id) {
+      await api.post(`/T0081I/${createdRma.id}/approve`, {
+        create_debit_memo: true,
+        quarantine_inventory: dockRejectForm.value.quarantine_inventory,
+        notes: `Auto-approved dock rejection from Goods Receipt ${dockRejectForm.value.receipt_number}`
+      })
+      toast(
+        t('dock-rma-approved-msg', `RMA #${createdRma.return_number || createdRma.id} created & Debit Memo posted ($${dockRejectTotalAmount.value.toFixed(2)})`),
+        'success'
+      )
+    } else {
+      toast(
+        t('dock-rma-created-msg', `Draft RMA #${createdRma?.return_number || createdRma?.id} generated successfully`),
+        'success'
+      )
+    }
+
+    closeDockRejectModal()
+    await load()
+  } catch (err) {
+    console.error('Error recording dock rejection:', err)
+    const detailMsg = err.response?.data?.detail || err.message || 'Failed to record dock rejection'
+    toast(detailMsg, 'error')
+  } finally {
+    dockRejecting.value = false
   }
 }
 
@@ -980,6 +1540,14 @@ onMounted(() => {
 .block { display: block; }
 .w-8 { width: 32px; }
 
+/* Navigation Hub Cards */
+.nav-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.nav-card { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; color: #475569; font-size: 12px; font-weight: 600; transition: all 0.15s ease; }
+.nav-card:hover { border-color: #5d3fd3; color: #5d3fd3; background: #faf9fe; transform: translateY(-1px); }
+.nav-card-active { background: #5d3fd3 !important; color: #fff !important; border-color: #5d3fd3 !important; box-shadow: 0 2px 8px rgba(93,63,211,0.25); }
+.nav-card-active .nav-icon { color: #fff !important; }
+.nav-icon { font-size: 18px; color: #64748b; }
+
 /* Stats Row */
 .stats-row { display: flex; gap: 16px; }
 .stat-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 14px 20px; flex: 1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
@@ -998,7 +1566,7 @@ onMounted(() => {
 .badge-batch-completed { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
 .badge-tag-danger { display: inline-block; margin-left: 6px; padding: 1px 4px; font-size: 9px; background: #fee2e2; color: #b91c1c; border-radius: 4px; font-weight: 700; }
 
-.icon-xs { font-size: 13px !important; vertical-align: middle; }
+.icon-xs { font-size: 14px !important; vertical-align: middle; }
 
 /* Buttons */
 .btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; background: #5d3fd3; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
@@ -1007,16 +1575,26 @@ onMounted(() => {
 .btn-primary .material-symbols-outlined { font-size: 18px; }
 .btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; background: #f0f0f4; color: #333; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-secondary:hover { background: #e0e0e0; }
-.btn-outline { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; background: transparent; color: #5d3fd3; border: 1px solid #ddd6fe; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-outline { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; background: transparent; color: #5d3fd3; border: 1px solid #ddd6fe; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; }
 .btn-outline:hover { background: #f5f3ff; }
+.btn-outline-danger { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fff; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-outline-danger:hover { background: #fef2f2; border-color: #ef4444; }
 .btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-xs { padding: 2px 6px; font-size: 10px; border-radius: 4px; }
 .btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; border-radius: 6px; background: none; cursor: pointer; color: #666; transition: background 0.15s; }
 .btn-icon:hover { background: #f0f0f4; }
 .btn-icon-danger:hover { background: #fee2e2; color: #dc2626; }
+.btn-icon-rma:hover { background: #fef3c7; color: #d97706; }
 .btn-icon .material-symbols-outlined { font-size: 18px; }
 .btn-toggle { color: #5d3fd3; }
 
+.btn-reject-line { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.btn-reject-line:hover { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+.btn-reject-action { background: #ea580c !important; }
+.btn-reject-action:hover:not(:disabled) { background: #c2410c !important; }
+
 .actions-group { display: inline-flex; align-items: center; gap: 2px; }
+.col-action-th { width: 120px; }
 
 /* Lines View */
 .expand-row td { padding: 0 !important; }
@@ -1032,11 +1610,35 @@ onMounted(() => {
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .modal { background: #fff; border-radius: 14px; width: 500px; max-width: 92vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
-.modal-lg { width: 840px; }
+.modal-lg { width: 880px; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #eee; }
+.modal-header-dock { background: #fffaf0; border-bottom: 1px solid #fef3c7; }
 .modal-header h3 { margin: 0; font-size: 16px; font-weight: 700; color: #1a1a2e; }
+.modal-subtext { margin: 2px 0 0; font-size: 11px; color: #64748b; }
 .modal-body { padding: 24px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #eee; background: #fafafa; border-radius: 0 0 14px 14px; }
+
+/* Dock Modal Context Bar */
+.dock-context-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; }
+.context-item { display: flex; flex-direction: column; }
+.context-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+.context-value { font-size: 12px; font-weight: 600; color: #1e293b; margin-top: 2px; }
+
+/* Photo Uploader in Dock Rejection */
+.photo-uploader-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; }
+.hidden-file-input { display: none; }
+.cursor-pointer { cursor: pointer; }
+.dock-photos-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.dock-photo-item { position: relative; width: 72px; height: 72px; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0; background: #fff; }
+.dock-photo-img { width: 100%; height: 100%; object-fit: cover; }
+.dock-photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; }
+.btn-photo-remove { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.dock-photo-name { position: absolute; bottom: 0; inset-x: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 9px; padding: 1px 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+
+/* Automated Workflow Checkboxes */
+.workflow-options-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px; }
+.checkbox-row { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 12px; }
+.checkbox-row input[type="checkbox"] { margin-top: 2px; }
 
 /* Form Controls */
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -1067,11 +1669,21 @@ select.form-input { appearance: auto; }
 .flex { display: flex; }
 .justify-between { justify-content: space-between; }
 .items-center { align-items: center; }
+.gap-1 { gap: 4px; }
 .gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
 .gap-4 { gap: 16px; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
 .mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-5 { margin-bottom: 20px; }
 .mb-6 { margin-bottom: 24px; }
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
 .mt-4 { margin-top: 16px; }
+.px-1 { padding-left: 4px; padding-right: 4px; }
 
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

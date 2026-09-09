@@ -628,7 +628,7 @@ def format_gs1_logistics_label(
 
 class SsccService(CrudService):
     """
-    Business service managing SSCC-18 pallet generation, hierarchical logistics persistence (T0127),
+    Business service managing SSCC-18 pallet generation, hierarchical logistics persistence (T0137),
     and multi-tenant isolation.
     """
 
@@ -644,7 +644,7 @@ class SsccService(CrudService):
         tenant_id: Optional[int] = None,
     ) -> str:
         """
-        Retrieves the GS1 Company Prefix configured for a trading partner (T0124)
+        Retrieves the GS1 Company Prefix configured for a trading partner (T0134)
         or falls back to the system default prefix.
         """
         if not partner_id:
@@ -735,7 +735,7 @@ class SsccService(CrudService):
         tenant_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        Generates an SSCC-18 barcode and creates a new packaging record in table T0127.
+        Generates an SSCC-18 barcode and creates a new packaging record in table T0137.
         """
         if tenant_id is None:
             tenant_id = get_current_tenant()
@@ -777,7 +777,7 @@ class SsccService(CrudService):
         tenant_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Persists a full packaging hierarchy (Pallet -> Box -> Item) into table T0127 within a single transaction.
+        Persists a full packaging hierarchy (Pallet -> Box -> Item) into table T0137 within a single transaction.
         Generates SSCC-18 barcodes for any containers lacking one.
         """
         if isinstance(hierarchy, dict):
@@ -881,7 +881,7 @@ class SsccService(CrudService):
         tenant_id: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """
-        Queries table T0127 by 18-digit SSCC barcode.
+        Queries table T0137 by 18-digit SSCC barcode.
         """
         clean_sscc = parse_sscc_gs1_128(sscc_barcode)
         kwargs = {"conn": conn} if conn is not None else {}

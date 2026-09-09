@@ -3,6 +3,7 @@ import os
 from openai import OpenAI
 from packages.mcp.registry import get_tools, call_tool, propose_action
 from modules.core.context import get_current_tenant, tenant_context
+from packages.security.audit import record_mcp_tool_execution
 
 
 _SYSTEM_PROMPT = """You are an AI assistant for Nova ERP, an enterprise resource planning system.
@@ -121,8 +122,29 @@ def stream_chat(history, message, user: dict | None = None):
                 yield f"data: {json.dumps({'type': 'tool_start'})}\n\n"
                 for tc in tool_calls.values():
                     name = tc["function"]["name"]
+                    user_id = user.get("id") if isinstance(user, dict) else getattr(user, "id", None) if user else None
+                    user_role = user.get("role") if isinstance(user, dict) else getattr(user, "role", None) if user else None
                     try:
                         args = json.loads(tc["function"]["arguments"]) if tc["function"]["arguments"] else {}
+                    except Exception as parse_err:
+                        record_mcp_tool_execution(
+                            tool_name=name,
+                            arguments={"raw": tc["function"].get("arguments")},
+                            status="ERROR",
+                            user_id=user_id,
+                            business_id=tenant_id,
+                            role=user_role,
+                            error=f"Invalid arguments JSON: {parse_err}",
+                        )
+                        result = {"error": f"Invalid arguments JSON: {parse_err}"}
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc["id"],
+                            "content": json.dumps(result, default=str),
+                        })
+                        continue
+
+                    try:
                         tier = tool_tier_map.get(name, "tier1")
                         if tier == "tier2":
                             proposal = propose_action(name, args, user=user)

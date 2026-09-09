@@ -697,3 +697,185 @@ describe('GoodsReceiptView - Camera Scanner, Sound Toggle, Manual Scan & Saving 
 })
 
 
+describe('GoodsReceiptView - Dock-Side Receiving Rejection & RMA Creation (Subtask 6-3 & 8-4)', () => {
+  let pinia
+  let wrapper
+
+  const sampleProducts = [
+    { id: 101, name: 'Wireless Barcode Scanner', sku: 'SKU-SCAN-01', cost_price: 120.00 }
+  ]
+
+  const sampleSuppliers = [
+    { id: 1, name: 'Apex Tech Solutions', company_name: 'Apex Tech' }
+  ]
+
+  const sampleReceipts = [
+    {
+      id: 1,
+      receipt_number: 'GRN-2026-001',
+      purchase_order_id: 501,
+      supplier_id: 1,
+      warehouse_id: 1,
+      receipt_date: '2026-09-02',
+      status: 'Draft',
+      notes: 'Initial test draft receipt',
+      lines: [
+        {
+          id: 1,
+          receipt_id: 1,
+          product_id: 101,
+          product_name: 'Wireless Barcode Scanner',
+          qty_ordered: 10,
+          qty_received: 2,
+          batch_number: 'LOT-2026-01',
+          expiry_date: '2027-12-31',
+          line_number: 1
+        }
+      ]
+    }
+  ]
+
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+    vi.clearAllMocks()
+
+    api.get.mockImplementation((url) => {
+      if (url.includes('/T0075I/')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(sampleReceipts)) })
+      }
+      if (url.includes('/T0103I/') || url.includes('/T0011I/')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(sampleSuppliers)) })
+      }
+      if (url.includes('/T0003I/')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(sampleProducts)) })
+      }
+      if (url.includes('/T0076I/')) {
+        return Promise.resolve({ data: JSON.parse(JSON.stringify(sampleReceipts[0].lines)) })
+      }
+      return Promise.resolve({ data: [] })
+    })
+
+    api.post.mockResolvedValue({
+      data: {
+        id: 77,
+        return_number: 'RMA-DOCK-77',
+        status: 'Draft',
+        total_amount: 240.00
+      }
+    })
+  })
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+      wrapper = null
+    }
+    document.body.innerHTML = ''
+  })
+
+  function createWrapper() {
+    wrapper = mount(GoodsReceiptView, {
+      attachTo: document.body,
+      global: {
+        plugins: [pinia]
+      }
+    })
+    return wrapper
+  }
+
+  it('renders Reject & Create RMA button on expanded receipt header and Reject & RMA button on line items', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    // Expand first receipt row
+    const expandBtn = w.find('.btn-toggle')
+    await expandBtn.trigger('click')
+    await flushPromises()
+
+    expect(w.text()).toContain('Reject & Create RMA')
+    expect(w.text()).toContain('Reject & RMA')
+  })
+
+  it('opens dock rejection modal for entire receipt with pre-populated line items', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    // Expand first receipt row
+    await w.find('.btn-toggle').trigger('click')
+    await flushPromises()
+
+    // Click "Reject & Create RMA" header button
+    const rejectAllBtn = w.find('.btn-outline-danger')
+    await rejectAllBtn.trigger('click')
+    await flushPromises()
+
+    expect(w.find('.modal-header-dock').exists()).toBe(true)
+    expect(w.text()).toContain('Dock-Side Receiving Rejection & RMA')
+    expect(w.text()).toContain('GRN #1')
+    expect(w.text()).toContain('Wireless Barcode Scanner')
+    expect(w.text()).toContain('LOT-2026-01')
+  })
+
+  it('opens dock rejection modal for a specific line item', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    await w.find('.btn-toggle').trigger('click')
+    await flushPromises()
+
+    // Click "Reject & RMA" line button
+    const rejectLineBtn = w.find('.btn-reject-line')
+    await rejectLineBtn.trigger('click')
+    await flushPromises()
+
+    expect(w.find('.modal-header-dock').exists()).toBe(true)
+    expect(w.text()).toContain('Dock-Side Receiving Rejection & RMA')
+    expect(w.text()).toContain('Wireless Barcode Scanner')
+  })
+
+  it('submits dock rejection payload to /T0081I/from-goods-receipt/{grn_id} with auto-approve debit memo workflow', async () => {
+    const w = createWrapper()
+    await flushPromises()
+
+    await w.find('.btn-toggle').trigger('click')
+    await flushPromises()
+
+    // Open dock rejection modal
+    await w.find('.btn-outline-danger').trigger('click')
+    await flushPromises()
+
+    // Click Confirm Rejection & File RMA button
+    const confirmBtn = w.find('.btn-reject-action')
+    await confirmBtn.trigger('click')
+    await flushPromises()
+
+    // Endpoint POST called with from-goods-receipt
+    expect(api.post).toHaveBeenCalledWith('/T0081I/from-goods-receipt/1', expect.objectContaining({
+      goods_receipt_id: 1,
+      supplier_id: 1,
+      purchase_order_id: 501,
+      lines: expect.arrayContaining([
+        expect.objectContaining({
+          product_id: 101,
+          batch_number: 'LOT-2026-01',
+          qty_rejected: 2
+        })
+      ])
+    }))
+
+    // Auto-approve was checked so /T0081I/77/approve was called
+    expect(api.post).toHaveBeenCalledWith('/T0081I/77/approve', expect.objectContaining({
+      create_debit_memo: true,
+      quarantine_inventory: true
+    }))
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.stringContaining('RMA created & approved'),
+      'success'
+    )
+  })
+})
+
+
+

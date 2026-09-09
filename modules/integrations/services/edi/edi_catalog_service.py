@@ -3,7 +3,7 @@ Nova ERP — Supplier Catalog Sync & EDI 832 / PRICAT Engine
 Provides parsing, synchronization, and outbound generation of electronic product catalogs
 and wholesale price lists (ANSI X12 832 Price/Sales Catalog & UN/EDIFACT PRICAT).
 Automates SKU/GTIN cross-referencing, price change detection, packaging dimension capture,
-and synchronization into the EDI SKU Cross-Reference Matrix (T0125) and Catalog Items (T0128).
+and synchronization into the EDI SKU Cross-Reference Matrix (T0135) and Catalog Items (T0138).
 """
 
 import re
@@ -1047,7 +1047,7 @@ class EdiCatalogService:
     """
     B2B EDI Catalog Service Engine.
     Handles electronic catalog parsing, product/GTIN matching, price change detection,
-    database synchronization in T0128, automated SKU cross-reference matrix updates in T0125,
+    database synchronization in T0138, automated SKU cross-reference matrix updates in T0135,
     and outbound EDI 832 / PRICAT catalog export.
     """
 
@@ -1084,7 +1084,7 @@ class EdiCatalogService:
         """
         Attempt to resolve an incoming catalog item to an existing Nova product (T0001).
         Matching strategy hierarchy:
-          1. Check active mapping in EDI SKU Matrix (T0125) for this partner by buyer_sku or GTIN.
+          1. Check active mapping in EDI SKU Matrix (T0135) for this partner by buyer_sku or GTIN.
           2. Check GTIN barcode in Barcodes (T0004) or Product Master (T0001).
           3. Check supplier_sku / vendor SKU against Product Master sku (T0001).
           4. Check buyer_sku against Product Master sku (T0001).
@@ -1101,7 +1101,7 @@ class EdiCatalogService:
         gtin = str(raw_gtin).strip() if raw_gtin else ""
         product_name = str(raw_product_name).strip() if raw_product_name else ""
 
-        # Step 1: Check T0125 SKU Cross-Reference Matrix for partner
+        # Step 1: Check T0135 SKU Cross-Reference Matrix for partner
         try:
             mappings = self.sku_mapping_repo.list(
                 filters={"partner_id": partner_id, "is_active": True},
@@ -1111,9 +1111,9 @@ class EdiCatalogService:
                 m_sku = str(m.get("partner_sku", "")).strip().upper()
                 m_gtin = str(m.get("gtin", "")).strip().upper() if m.get("gtin") else ""
                 if buyer_sku and m_sku == buyer_sku.upper():
-                    return (m.get("product_id"), "CROSS_REFERENCE_MATRIX_T0125")
+                    return (m.get("product_id"), "CROSS_REFERENCE_MATRIX_T0135")
                 if gtin and m_gtin and m_gtin == gtin.upper():
-                    return (m.get("product_id"), "CROSS_REFERENCE_MATRIX_T0125")
+                    return (m.get("product_id"), "CROSS_REFERENCE_MATRIX_T0135")
         except Exception as e:
             logger.warning(f"Error querying SKU mapping repo: {e}")
 
@@ -1176,9 +1176,9 @@ class EdiCatalogService:
         business_id: Optional[int] = None,
     ) -> CatalogSyncResult:
         """
-        Synchronize catalog items into table T0128.
+        Synchronize catalog items into table T0138.
         Detects price changes vs existing catalog versions, automatically resolves
-        matched product IDs (T0001), and updates the EDI SKU Cross-Reference Matrix (T0125).
+        matched product IDs (T0001), and updates the EDI SKU Cross-Reference Matrix (T0135).
         """
         tenant_id = business_id or get_current_tenant()
         details: List[CatalogItemSyncDetail] = []
@@ -1356,7 +1356,7 @@ class EdiCatalogService:
         list_price: float,
         tenant_id: Optional[int] = None,
     ) -> Optional[int]:
-        """Upsert a row in table T0125 for partner and buyer SKU."""
+        """Upsert a row in table T0135 for partner and buyer SKU."""
         try:
             existing = self.sku_mapping_repo.list(
                 filters={"partner_id": partner_id, "partner_sku": buyer_sku},
@@ -1430,14 +1430,14 @@ class EdiCatalogService:
     ) -> CatalogExportResult:
         """
         Generate and export an outbound EDI catalog document (ANSI X12 832 or UN/EDIFACT PRICAT).
-        Extracts items from T0128 or price list T0084 / product catalog T0001,
-        builds standard-compliant EDI text, and records transaction in T0126.
+        Extracts items from T0138 or price list T0084 / product catalog T0001,
+        builds standard-compliant EDI text, and records transaction in T0136.
         """
         tenant_id = business_id or get_current_tenant()
 
         partner_rec = self.partner_repo.get(partner_id)
         if not partner_rec:
-            raise ValueError(f"Trading partner #{partner_id} not found in T0124")
+            raise ValueError(f"Trading partner #{partner_id} not found in T0134")
 
         standard = format_override or partner_rec.get("edi_standard", "ANSI_X12")
         delims = EdiDelimiters.from_partner(partner_rec)
@@ -1565,8 +1565,8 @@ class EdiCatalogService:
     ) -> Dict[str, Any]:
         """
         Ingest an inbound EDI 832 / PRICAT document.
-        Parses interchange, resolves trading partner, synchronizes catalog items into T0128,
-        updates SKU matrix T0125, and records an audit log transaction in T0126.
+        Parses interchange, resolves trading partner, synchronizes catalog items into T0138,
+        updates SKU matrix T0135, and records an audit log transaction in T0136.
         """
         tenant_id = business_id or get_current_tenant()
         now = datetime.now(timezone.utc)

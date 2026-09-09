@@ -1111,7 +1111,7 @@ class Edi856Service(CrudService):
         tenant_id: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """
-        Resolves the trading partner configuration (T0124) associated with a delivery's customer.
+        Resolves the trading partner configuration (T0134) associated with a delivery's customer.
         """
         kwargs = {"conn": conn} if conn is not None else {}
         if partner_id:
@@ -1167,7 +1167,7 @@ class Edi856Service(CrudService):
             partner = self.resolve_partner_for_delivery(delivery, partner_id, conn=tx_conn, tenant_id=tenant_id)
             if not partner:
                 raise ValueError(
-                    f"No active EDI Trading Partner (T0124) found for Delivery #{delivery_id} "
+                    f"No active EDI Trading Partner (T0134) found for Delivery #{delivery_id} "
                     f"(Customer #{customer.get('id') if customer else 'None'})"
                 )
 
@@ -1212,7 +1212,7 @@ class Edi856Service(CrudService):
 
             pick_by_sol = {p["sales_order_line_id"]: p for p in pick_items if p.get("sales_order_line_id")}
 
-            # 3. Gather or Generate SSCC Pallets (T0127)
+            # 3. Gather or Generate SSCC Pallets (T0137)
             existing_pallets = self.sscc_svc.get_pallets_for_delivery(delivery_id, conn=tx_conn, tenant_id=tenant_id)
             if not existing_pallets and auto_generate_sscc:
                 company_prefix = partner.get("gs1_company_prefix") or DEFAULT_GS1_COMPANY_PREFIX
@@ -1259,7 +1259,7 @@ class Edi856Service(CrudService):
                     tenant_id=tenant_id,
                 )
 
-            # 4. Resolve SKU cross-references for Trading Partner (T0125)
+            # 4. Resolve SKU cross-references for Trading Partner (T0135)
             sku_mappings = self.sku_mapping_repo.list(
                 filters={"partner_id": partner["id"], "is_active": True},
                 conn=tx_conn,

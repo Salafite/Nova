@@ -212,6 +212,51 @@ class TestRecalculateCatchWeight:
         assert result == recalc_result
         sales_mcp._orders_svc.recalculate_order_catch_weight.assert_called_once_with(1)
 
+    def test_recalculate_via_registry(self, clear_registry, mock_svc):
+        register_tools()
+        recalc_result = {
+            "order_id": 1,
+            "is_catch_weight": True,
+            "original_subtotal": 500.0,
+            "recalculated_subtotal": 524.0,
+            "weight_adjustment_amount": 24.0,
+            "nominal_total_weight": 25.0,
+            "actual_total_weight": 26.2,
+            "grand_total": 550.2,
+        }
+        sales_mcp._orders_svc.recalculate_order_catch_weight.return_value = recalc_result
+        user = {"id": 1, "role": "Admin", "permissions": ["SALES_VIEW"]}
+        res = registry.call_tool("recalculate_order_catch_weight", {"id": 1}, user=user)
+        assert res == recalc_result
+        sales_mcp._orders_svc.recalculate_order_catch_weight.assert_called_once_with(1)
+
+    def test_create_order_line_via_registry(self, clear_registry, mock_svc):
+        register_tools()
+        mock_line = {
+            "id": 1,
+            "sales_order_id": 1,
+            "product_name": "Parmesan",
+            "qty": 2,
+            "unit_price": 50.0,
+            "is_catch_weight": True,
+            "pricing_uom_id": 2,
+            "unit_price_pricing_uom": 10.0,
+            "nominal_weight": 10.0,
+        }
+        sales_mcp._lines_svc.create.return_value = mock_line
+        user = {"id": 1, "role": "Admin", "permissions": ["SALES_VIEW"]}
+        res = registry.call_tool("create_order_line", {
+            "sales_order_id": 1,
+            "product_name": "Parmesan",
+            "qty": 2,
+            "unit_price": 50.0,
+            "is_catch_weight": True,
+            "pricing_uom_id": 2,
+            "unit_price_pricing_uom": 10.0,
+            "nominal_weight": 10.0,
+        }, user=user)
+        assert res == mock_line
+
 
 class TestUpdateOrderStatus:
     def test_updates(self, mock_svc):
@@ -313,7 +358,8 @@ class TestCustomers:
         }
         sales_mcp._aging_svc.get_customer_aging.return_value = mock_aging
 
-        res = call_tool("get_customer_aging", {"id": 1, "as_of_date": "2026-08-25"})
+        user = {"id": 1, "role": "Sales Rep"}
+        res = call_tool("get_customer_aging", {"id": 1, "as_of_date": "2026-08-25"}, user=user)
         assert res == mock_aging
         sales_mcp._aging_svc.get_customer_aging.assert_called_with(1, as_of_date="2026-08-25")
 
@@ -444,7 +490,8 @@ class TestCheckCustomerCredit:
         }
         sales_mcp._credit_svc.evaluate_order_credit.return_value = mock_eval
 
-        result = registry.call_tool("check_customer_credit", {"customer_id": 3, "order_amount": 150.0})
+        user = {"id": 1, "role": "Sales Rep"}
+        result = registry.call_tool("check_customer_credit", {"customer_id": 3, "order_amount": 150.0}, user=user)
 
         assert result == mock_eval
         sales_mcp._credit_svc.evaluate_order_credit.assert_called_once_with(3, order_amount=150.0, as_of_date=None)
@@ -661,13 +708,14 @@ class TestPodCodTools:
         sales_mcp._deliveries_svc.log_cod_collection.return_value = {"id": 2, "payment_status": "Collected"}
         sales_mcp._deliveries_svc.get_driver_handover_report.return_value = {"driver_id": 5, "total_deliveries": 1}
 
-        res1 = registry.call_tool("capture_proof_of_delivery", {"delivery_id": 2, "signature": "data:image/png;base64,abc"})
+        user = {"id": 1, "role": "Sales Rep"}
+        res1 = registry.call_tool("capture_proof_of_delivery", {"delivery_id": 2, "signature": "data:image/png;base64,abc"}, user=user)
         assert res1 == {"id": 2, "status": "Delivered"}
 
-        res2 = registry.call_tool("log_cod_collection", {"delivery_id": 2, "cash_amount": 100.0})
+        res2 = registry.call_tool("log_cod_collection", {"delivery_id": 2, "cash_amount": 100.0}, user=user)
         assert res2 == {"id": 2, "payment_status": "Collected"}
 
-        res3 = registry.call_tool("get_driver_handover_report", {"driver_id": 5})
+        res3 = registry.call_tool("get_driver_handover_report", {"driver_id": 5}, user=user)
         assert res3 == {"driver_id": 5, "total_deliveries": 1}
 
 

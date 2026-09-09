@@ -53,12 +53,16 @@ from modules.administration.controllers.admin_preferences import router as admin
 from modules.portal.controllers.portal_orders_controller import router as portal_orders_router
 from modules.portal.controllers.portal_invoices_controller import router as portal_invoices_router
 from modules.inventory.controllers.replenishment_controller import router as replenishment_router
+from modules.inventory.controllers.predictive_inventory_controller import router as predictive_inventory_router
 from modules.purchasing.controllers.restock_controller import router as restock_router
 from modules.bi.controllers.executive_analytics_controller import router as executive_analytics_router
 from modules.bi.controllers.executive_export_controller import router as executive_export_router
 from modules.sales.controllers.commission_controller import router as commission_router
 from modules.sales.controllers.delivery_routes_controller import router as delivery_routes_router, alias_router as delivery_routes_alias_router
+from modules.sales.controllers.delivery_tracking_controller import router as delivery_tracking_router
+from modules.sales.controllers.public_tracking_controller import router as public_tracking_router
 from modules.sales.controllers.T0077I import handover_router
+from modules.accounting.controllers.ar_reminder_controller import router as ar_reminder_router
 
 from contextlib import asynccontextmanager
 
@@ -108,12 +112,15 @@ app.include_router(admin_preferences_router)
 app.include_router(portal_orders_router)
 app.include_router(portal_invoices_router)
 app.include_router(replenishment_router)
+app.include_router(predictive_inventory_router)
 app.include_router(restock_router)
 app.include_router(executive_analytics_router)
 app.include_router(executive_export_router)
 app.include_router(commission_router)
 app.include_router(delivery_routes_router)
 app.include_router(delivery_routes_alias_router)
+app.include_router(delivery_tracking_router)
+app.include_router(public_tracking_router)
 app.include_router(handover_router)
 
 mcp_server = McpServer(name="NovaERP", version="1.0")
