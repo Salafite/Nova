@@ -1,7 +1,7 @@
 """
 Nova ERP — Driver GPS Tracking & Telemetry Repository
-Handles database operations for Driver GPS Telemetry (T0137), Customer Live Tracking Sessions (T0138),
-and Geofence Detection Events (T0139).
+Handles database operations for Driver GPS Telemetry (T0124), Customer Live Tracking Sessions (T0125),
+and Geofence Detection Events (T0126).
 """
 import os
 import logging
@@ -25,7 +25,7 @@ class DriverTrackingRepository:
     def __init__(self):
         self.schema = os.getenv('DB_SCHEMA', 'Nova')
         self.telemetry_repo = CrudRepository(
-            'T0137',
+            'T0124',
             pk='id',
             business_columns=[
                 'id', 'run_id', 'driver_id', 'vehicle_id', 'latitude', 'longitude',
@@ -34,7 +34,7 @@ class DriverTrackingRepository:
             ]
         )
         self.session_repo = CrudRepository(
-            'T0138',
+            'T0125',
             pk='id',
             business_columns=[
                 'id', 'run_stop_id', 'sales_order_id', 'customer_id',
@@ -43,7 +43,7 @@ class DriverTrackingRepository:
             ]
         )
         self.geofence_repo = CrudRepository(
-            'T0139',
+            'T0126',
             pk='id',
             business_columns=[
                 'id', 'run_stop_id', 'run_id', 'driver_id', 'event_type',
@@ -94,11 +94,11 @@ class DriverTrackingRepository:
         )
 
     # -----------------------------------------------------------------------
-    # 1. GPS Telemetry Pings (T0137)
+    # 1. GPS Telemetry Pings (T0124)
     # -----------------------------------------------------------------------
 
     def save_gps_ping(self, ping_data: Dict[str, Any], conn=None) -> Dict[str, Any]:
-        """Save a single GPS ping record into T0137."""
+        """Save a single GPS ping record into T0124."""
         tenant_id = get_current_tenant()
         data = dict(ping_data)
         if tenant_id is not None and 'business_id' not in data:
@@ -108,7 +108,7 @@ class DriverTrackingRepository:
         return self.telemetry_repo.create(data, conn=conn)
 
     def save_gps_pings_batch(self, pings: List[Dict[str, Any]], conn=None) -> int:
-        """Batch save multiple GPS pings into T0137."""
+        """Batch save multiple GPS pings into T0124."""
         if not pings:
             return 0
         should_release = False
@@ -119,7 +119,7 @@ class DriverTrackingRepository:
             tenant_id = get_current_tenant()
             schema = self.schema
             query = f"""
-                INSERT INTO "{schema}".t0137 (
+                INSERT INTO "{schema}".t0124 (
                     run_id, driver_id, vehicle_id, latitude, longitude,
                     speed_kmh, heading, accuracy_meters, battery_level,
                     recorded_at, business_id
@@ -170,7 +170,7 @@ class DriverTrackingRepository:
             query = f"""
                 SELECT id, run_id, driver_id, vehicle_id, latitude, longitude,
                        speed_kmh, heading, accuracy_meters, battery_level, recorded_at, business_id
-                FROM "{schema}".t0137
+                FROM "{schema}".t0124
                 WHERE {where_sql}
                 ORDER BY recorded_at DESC, id DESC
                 LIMIT 1
@@ -201,7 +201,7 @@ class DriverTrackingRepository:
             query = f"""
                 SELECT id, run_id, driver_id, vehicle_id, latitude, longitude,
                        speed_kmh, heading, accuracy_meters, battery_level, recorded_at, business_id
-                FROM "{schema}".t0137
+                FROM "{schema}".t0124
                 WHERE {where_sql}
                 ORDER BY recorded_at DESC, id DESC
                 LIMIT 1
@@ -233,7 +233,7 @@ class DriverTrackingRepository:
             query = f"""
                 SELECT id, run_id, driver_id, vehicle_id, latitude, longitude,
                        speed_kmh, heading, accuracy_meters, battery_level, recorded_at
-                FROM "{schema}".t0137
+                FROM "{schema}".t0124
                 WHERE {where_sql}
                 ORDER BY recorded_at ASC, id ASC
                 LIMIT %s
@@ -505,7 +505,7 @@ class DriverTrackingRepository:
                     u.full_name AS driver_name,
                     r.vehicle_id,
                     v.vehicle_code
-                FROM "{schema}".t0138 s
+                FROM "{schema}".t0125 s
                 JOIN "{schema}".t0113 st ON s.run_stop_id = st.id
                 LEFT JOIN "{schema}".t0010 c ON s.customer_id = c.id
                 LEFT JOIN "{schema}".t0012 so ON s.sales_order_id = so.id
