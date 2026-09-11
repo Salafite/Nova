@@ -3829,8 +3829,8 @@ CREATE TABLE IF NOT EXISTS "Nova".t0138 (
     effective_end_date  DATE,
     matched_product_id  INT REFERENCES "Nova".t0001(id) ON DELETE SET NULL,
     sync_status         VARCHAR(30) NOT NULL DEFAULT 'SYNCED',
--- Driver GPS Telemetry Table (T0124)
-CREATE TABLE IF NOT EXISTS "Nova".t0124 (
+-- Driver GPS Telemetry Table (T0129)
+CREATE TABLE IF NOT EXISTS "Nova".t0129 (
     id                  SERIAL PRIMARY KEY,
     run_id              INT REFERENCES "Nova".t0112(id) ON DELETE CASCADE,
     driver_id           INT REFERENCES "Nova".t0021(id),
@@ -3881,17 +3881,17 @@ CREATE INDEX IF NOT EXISTS idx_t0138_sync_status ON "Nova".t0138(sync_status);
 CREATE INDEX IF NOT EXISTS idx_t0138_business_id ON "Nova".t0138(business_id);
 CREATE INDEX IF NOT EXISTS idx_t0138_business_id_id ON "Nova".t0138(business_id, id);
 COMMENT ON TABLE "Nova".t0134 IS 'Driver GPS Telemetry';
-CREATE INDEX IF NOT EXISTS idx_t0124_run_id ON "Nova".t0124(run_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_driver_id ON "Nova".t0124(driver_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_vehicle_id ON "Nova".t0124(vehicle_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_recorded_at ON "Nova".t0124(recorded_at);
-CREATE INDEX IF NOT EXISTS idx_t0124_business_id ON "Nova".t0124(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_business_id_run_id ON "Nova".t0124(business_id, run_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_business_id_driver_id ON "Nova".t0124(business_id, driver_id);
-CREATE INDEX IF NOT EXISTS idx_t0124_business_id_id ON "Nova".t0124(business_id, id);
+CREATE INDEX IF NOT EXISTS idx_t0129_run_id ON "Nova".t0129(run_id);
+CREATE INDEX IF NOT EXISTS idx_t0129_driver_id ON "Nova".t0129(driver_id);
+CREATE INDEX IF NOT EXISTS idx_t0129_vehicle_id ON "Nova".t0129(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_t0129_recorded_at ON "Nova".t0129(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_t0129_business_id ON "Nova".t0129(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0129_business_id_run_id ON "Nova".t0129(business_id, run_id);
+CREATE INDEX IF NOT EXISTS idx_t0129_business_id_driver_id ON "Nova".t0129(business_id, driver_id);
+CREATE INDEX IF NOT EXISTS idx_t0129_business_id_id ON "Nova".t0129(business_id, id);
 
--- Customer Live Tracking Sessions & Tokens Table (T0125)
-CREATE TABLE IF NOT EXISTS "Nova".t0125 (
+-- Customer Live Tracking Sessions & Tokens Table (T0130)
+CREATE TABLE IF NOT EXISTS "Nova".t0130 (
     id                  SERIAL PRIMARY KEY,
     run_stop_id         INT NOT NULL REFERENCES "Nova".t0113(id) ON DELETE CASCADE,
     sales_order_id      INT REFERENCES "Nova".t0012(id),
@@ -3909,17 +3909,17 @@ CREATE TABLE IF NOT EXISTS "Nova".t0125 (
     updated_by          INT,
     update_number       INT NOT NULL DEFAULT 1
 );
-COMMENT ON TABLE "Nova".t0125 IS 'Customer Live Tracking Sessions';
-CREATE UNIQUE INDEX IF NOT EXISTS idx_t0125_tracking_token ON "Nova".t0125(tracking_token);
-CREATE INDEX IF NOT EXISTS idx_t0125_run_stop_id ON "Nova".t0125(run_stop_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_sales_order_id ON "Nova".t0125(sales_order_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_customer_id ON "Nova".t0125(customer_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_business_id ON "Nova".t0125(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_business_id_run_stop ON "Nova".t0125(business_id, run_stop_id);
-CREATE INDEX IF NOT EXISTS idx_t0125_business_id_id ON "Nova".t0125(business_id, id);
+COMMENT ON TABLE "Nova".t0130 IS 'Customer Live Tracking Sessions';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_t0130_tracking_token ON "Nova".t0130(tracking_token);
+CREATE INDEX IF NOT EXISTS idx_t0130_run_stop_id ON "Nova".t0130(run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0130_sales_order_id ON "Nova".t0130(sales_order_id);
+CREATE INDEX IF NOT EXISTS idx_t0130_customer_id ON "Nova".t0130(customer_id);
+CREATE INDEX IF NOT EXISTS idx_t0130_business_id ON "Nova".t0130(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0130_business_id_run_stop ON "Nova".t0130(business_id, run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0130_business_id_id ON "Nova".t0130(business_id, id);
 
--- Geofence Detection Events Table (T0126)
-CREATE TABLE IF NOT EXISTS "Nova".t0126 (
+-- Geofence Detection Events Table (T0131)
+CREATE TABLE IF NOT EXISTS "Nova".t0131 (
     id                      SERIAL PRIMARY KEY,
     run_stop_id             INT NOT NULL REFERENCES "Nova".t0113(id) ON DELETE CASCADE,
     run_id                  INT NOT NULL REFERENCES "Nova".t0112(id) ON DELETE CASCADE,
@@ -3938,15 +3938,15 @@ CREATE TABLE IF NOT EXISTS "Nova".t0126 (
     updated_by              INT,
     update_number           INT NOT NULL DEFAULT 1
 );
-COMMENT ON TABLE "Nova".t0126 IS 'Geofence Detection Events';
-CREATE INDEX IF NOT EXISTS idx_t0126_run_stop_id ON "Nova".t0126(run_stop_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_run_id ON "Nova".t0126(run_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_event_type ON "Nova".t0126(event_type);
-CREATE INDEX IF NOT EXISTS idx_t0126_event_timestamp ON "Nova".t0126(event_timestamp);
-CREATE INDEX IF NOT EXISTS idx_t0126_business_id ON "Nova".t0126(business_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_business_id_run_stop ON "Nova".t0126(business_id, run_stop_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_business_id_run ON "Nova".t0126(business_id, run_id);
-CREATE INDEX IF NOT EXISTS idx_t0126_business_id_id ON "Nova".t0126(business_id, id);
+COMMENT ON TABLE "Nova".t0131 IS 'Geofence Detection Events';
+CREATE INDEX IF NOT EXISTS idx_t0131_run_stop_id ON "Nova".t0131(run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0131_run_id ON "Nova".t0131(run_id);
+CREATE INDEX IF NOT EXISTS idx_t0131_event_type ON "Nova".t0131(event_type);
+CREATE INDEX IF NOT EXISTS idx_t0131_event_timestamp ON "Nova".t0131(event_timestamp);
+CREATE INDEX IF NOT EXISTS idx_t0131_business_id ON "Nova".t0131(business_id);
+CREATE INDEX IF NOT EXISTS idx_t0131_business_id_run_stop ON "Nova".t0131(business_id, run_stop_id);
+CREATE INDEX IF NOT EXISTS idx_t0131_business_id_run ON "Nova".t0131(business_id, run_id);
+CREATE INDEX IF NOT EXISTS idx_t0131_business_id_id ON "Nova".t0131(business_id, id);
 
 ALTER TABLE "Nova".t0113
     ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7),
