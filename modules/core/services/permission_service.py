@@ -119,14 +119,19 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0121': 'SALES_VIEW',         # Customer Group Price Lists
     'T0122': 'SALES_VIEW',         # Customer Contracts
     'T0123': 'SALES_VIEW',         # Promotional Campaign Rules
-    'T0137': 'SALES_VIEW',         # Driver GPS Telemetry
-    'T0138': 'SALES_VIEW',         # Customer Live Tracking Sessions
-    'T0139': 'SALES_VIEW',         # Geofence Detection Events
-    'T0124': 'WAREHOUSE_VIEW',     # Warehouse Temperature Zones
-    'T0125': 'WAREHOUSE_VIEW',     # Warehouse Bins & Staging Areas
-    'T0126': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments
-    'T0127': 'QUALITY_VIEW',       # Temperature Excursion Alerts
-    'T0128': 'QUALITY_VIEW',       # HACCP Checkpoint Logs & Compliance Reports
+    'T0124': 'WAREHOUSE_VIEW',     # Temperature Zones (Cold Chain)
+    'T0125': 'WAREHOUSE_VIEW',     # Warehouse Bins & Compatibility (Cold Chain)
+    'T0126': 'WAREHOUSE_VIEW',     # Vehicle Compartments (Cold Chain)
+    'T0127': 'QUALITY_VIEW',       # Temperature Excursion Alerts (Cold Chain)
+    'T0128': 'QUALITY_VIEW',       # HACCP Checkpoint Logs (Cold Chain)
+    'T0134': 'WAREHOUSE_VIEW',     # Warehouse Temperature Zones (EDI)
+    'T0135': 'WAREHOUSE_VIEW',     # Warehouse Bins & Staging Areas (EDI)
+    'T0136': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments (EDI)
+    'T0137': 'QUALITY_VIEW',       # Temperature Excursion Alerts (EDI)
+    'T0138': 'QUALITY_VIEW',       # HACCP Checkpoint Logs & Compliance Reports (EDI)
+    'T0139': 'SALES_VIEW',         # Driver GPS Telemetry
+    'T0140': 'SALES_VIEW',         # Customer Live Tracking Sessions
+    'T0141': 'SALES_VIEW',         # Geofence Detection Events
     'T0129': 'FINANCE_VIEW',       # E-Invoice Clearance Records
     'T0130': 'FINANCE_VIEW',       # Fiscal Authority Profiles
 }

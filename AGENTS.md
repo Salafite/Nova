@@ -9,9 +9,9 @@ Nova ERP serves two protocols side by side:
 | **REST API** (`/api/*`) | Vue 3 SPA | UI rendering, CRUD, auth |
 | **MCP** (stdio/SSE) | AI agents | Natural language tool calling |
 
-All 15 MCP server modules live under `packages/mcp/servers/`. Each module corresponds to an ERP domain and registers tools via the global registry (`packages/mcp/registry.py`).
+All 16 MCP server modules live under `packages/mcp/servers/`. Each module corresponds to an ERP domain and registers tools via the global registry (`packages/mcp/registry.py`).
 
-## Full Module Map (63 sub-modules)
+## Full Module Map (64 sub-modules)
 
 | Module | Sub-modules | Frontend | Backend (T-code) | MCP |
 |--------|-------------|----------|-----------------|-----|
@@ -26,10 +26,10 @@ All 15 MCP server modules live under `packages/mcp/servers/`. Each module corres
 | **Manufacturing** (3) | Manufacturing, Quality, Shopfloor | 4 views | T0018I–T0020I, T0065I, T0066I | manufacturing |
 | **Planning** (2) | Planning, Resource Planning | 2 views | T0024I | — |
 | **Mobile** (2) | Mobile Foundation, Mobile POS | — | — | — |
-| **Integrations** (3) | E-commerce, Third-Party, API Platform | 3 views | T0056I–T0058I | — |
+| **Integrations** (4) | E-commerce, Third-Party, API Platform, EDI & B2B Gateway | 6 views | T0056I–T0058I, T0124I–T0128I | integrations |
 | **Service & Projects** (5) | Service, Projects, Maintenance, Contracts & SLAs, Documents | 8 views | T0041I–T0050I, T0063I | projects, maintenance |
 
-**Total: 13 modules, 63 sub-modules, ~80 view files, ~90 T-code controllers, 15 MCP servers**
+**Total: 13 modules, 64 sub-modules, ~85 view files, ~95 T-code controllers, 16 MCP servers**
 
 ## MCP Server List
 
@@ -49,6 +49,7 @@ All 15 MCP server modules live under `packages/mcp/servers/`. Each module corres
 | manufacturing | `packages.mcp.servers.manufacturing_mcp` | `list_manufacturing_orders`, `list_boms`, `list_qc_inspections`, `list_shop_jobs` |
 | maintenance | `packages.mcp.servers.maintenance_mcp` | `list_assets`, `list_maintenance_schedules`, `list_work_orders` |
 | notifications | `packages.mcp.servers.notifications_mcp` | `list_user_notifications`, `mark_notification_read`, `mark_all_notifications_read` |
+| integrations | `packages.mcp.servers.integrations_mcp` | `list_edi_partners`, `get_edi_partner`, `ingest_edi_document`, `list_edi_transactions`, `get_edi_transaction`, `reprocess_edi_transaction`, `generate_edi_asn`, `transmit_edi_invoice`, `sync_supplier_catalog` |
 
 ## Running MCP Servers
 
@@ -135,12 +136,12 @@ Every MCP tool call is logged via `packages/mcp/registry.call_tool()` with:
 
 ## Tool Safety Tiers
 
-All 82 MCP tools are classified into two tiers:
+All 91 MCP tools are classified into two tiers:
 
 | Tier | Policy | Count | Examples |
 |------|--------|-------|---------|
-| **Tier 1** | Direct execution (audit-logged) | 76 | All `list_*`, `get_*`, `check_*`, `search_*`, `create_*`, `update_*`, `calculate_restock_forecast`, `mark_notification_read`, `get_field_sales_catalog`, `sync_offline_orders`, `check_offline_order_conflicts` |
-| **Tier 2** | Requires propose/confirm | 6 | `delete_product`, `confirm_order`, `cancel_order`, `convert_quotation_to_order`, `propose_draft_purchase_order`, `mark_all_notifications_read` |
+| **Tier 1** | Direct execution (audit-logged) | 84 | All `list_*`, `get_*`, `check_*`, `search_*`, `create_*`, `update_*`, `calculate_restock_forecast`, `mark_notification_read`, `get_field_sales_catalog`, `sync_offline_orders`, `check_offline_order_conflicts`, `ingest_edi_document`, `reprocess_edi_transaction`, `generate_edi_asn`, `sync_supplier_catalog` |
+| **Tier 2** | Requires propose/confirm | 7 | `delete_product`, `confirm_order`, `cancel_order`, `convert_quotation_to_order`, `propose_draft_purchase_order`, `mark_all_notifications_read`, `transmit_edi_invoice` |
 
 **Tier 2 behavior:** When the AI assistant calls a Tier 2 tool, it routes through `propose_action()` which returns an `action_id` and preview instead of executing. The UI shows the preview and requires user confirmation before `confirm_action(action_id)` executes the operation.
 
@@ -154,6 +155,7 @@ All 82 MCP tools are classified into two tiers:
 | `convert_quotation_to_order` | sales | Irreversible status change |
 | `propose_draft_purchase_order` | purchasing | Financial commitment/PO draft creation |
 | `mark_all_notifications_read` | notifications | Bulk irreversible state change |
+| `transmit_edi_invoice` | integrations | Electronic tax invoice transmission |
 
 ### Propose/Confirm Flow
 
@@ -177,7 +179,7 @@ The AI assistant is integrated into the Nova ERP web UI:
 
 - **Endpoint**: `POST /api/ai/chat` (SSE streaming, auth-protected)
 - **LLM**: OpenAI GPT-4o (configurable via `OPENAI_MODEL`)
-- **Tools**: All 82 MCP tools are exposed as OpenAI function definitions (Tier 2 tools marked `[REQUIRES CONFIRMATION]` in descriptions)
+- **Tools**: All 91 MCP tools are exposed as OpenAI function definitions (Tier 2 tools marked `[REQUIRES CONFIRMATION]` in descriptions)
 - **Frontend**: `apps/web-vue/src/components/AiAssistant.vue` — chat panel with FAB toggle
 - **Store**: `apps/web-vue/src/stores/ai.js` — Pinia store with SSE reader
 

@@ -109,6 +109,7 @@ class DeliveryService(CrudService):
         result = super().create(payload, **({'conn': conn} if conn is not None else {}))
         if result and payload.get('status') == 'Shipped':
             self._record_stock_movements(result['id'])
+            self._trigger_edi_asn(result['id'], conn=conn)
         return result
 
     def update(self, id_val, payload: dict, conn=None):
@@ -120,6 +121,7 @@ class DeliveryService(CrudService):
         result = super().update(id_val, payload, **kwargs)
         if old and payload.get('status') == 'Shipped' and old.get('status') != 'Shipped':
             self._record_stock_movements(id_val)
+            self._trigger_edi_asn(id_val, conn=conn)
         return result
 
     def _record_stock_movements(self, delivery_id):
@@ -135,6 +137,22 @@ class DeliveryService(CrudService):
                     reference_id=delivery_id,
                     description=f'Delivery: {line.get("product_name", "")}',
                 )
+
+    def _trigger_edi_asn(self, delivery_id: int, conn=None):
+        """Optionally trigger outbound EDI 856 (ASN) / DESADV generation if customer is an EDI partner."""
+        try:
+            from modules.integrations.services.edi import edi_856_service
+            edi_856_service.generate_asn_for_delivery(delivery_id=delivery_id, conn=conn)
+        except Exception as e:
+            logger.debug(f"EDI 856 ASN trigger skipped for delivery #{delivery_id}: {e}")
+
+    def _trigger_edi_invoice(self, delivery_id: int, conn=None):
+        """Optionally trigger outbound EDI 810 (Invoice) / INVOIC generation if customer is an EDI partner."""
+        try:
+            from modules.integrations.services.edi import edi_810_service
+            edi_810_service.transmit_invoice_for_delivery(delivery_id=delivery_id, conn=conn)
+        except Exception as e:
+            logger.debug(f"EDI 810 invoice trigger skipped for delivery #{delivery_id}: {e}")
 
     def capture_pod(
         self,
@@ -180,7 +198,9 @@ class DeliveryService(CrudService):
         if location is not None:
             payload['delivery_location'] = location
 
-        return self.update(delivery_id, payload, conn=conn)
+        updated = self.update(delivery_id, payload, conn=conn)
+        self._trigger_edi_invoice(delivery_id, conn=conn)
+        return updated
 
     def log_cod_collection(
         self,

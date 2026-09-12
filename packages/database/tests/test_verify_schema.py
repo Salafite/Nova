@@ -12,7 +12,8 @@ def generate_mock_db(
     credit_hold_enum_present=True,
     credit_hold_cols_present=True,
 ):
-    expected_tables = [f"t{i:04d}" for i in range(1, 110)]
+    edi_tables = ['t0134', 't0135', 't0136', 't0137', 't0138']
+    expected_tables = [f"t{i:04d}" for i in range(1, 110)] + edi_tables
     tables = expected_tables if all_tables_present else expected_tables[:50]
     
     # business tables (all except t0059)
@@ -89,11 +90,12 @@ def test_verify_schema_success():
     conn, cur = generate_mock_db()
     res = verify_schema(conn)
     assert res["success"] is True
-    assert res["total_tables"] == 109
-    assert res["tables_with_business_id"] == 108
-    assert res["tenant_fks_count"] == 108
-    assert res["tenant_single_indexes_count"] == 108
-    assert res["tenant_composite_indexes_count"] == 108
+    assert res["total_tables"] == 114
+    assert res["tables_with_business_id"] == 113
+    assert res["tenant_fks_count"] == 113
+    assert res["tenant_single_indexes_count"] == 113
+    assert res["tenant_composite_indexes_count"] == 113
+    assert len(res["edi_tables_present"]) == 5
     assert res["credit_hold_enum_present"] is True
     assert len(res["t0012_hold_columns_present"]) == 4
     assert len(res["errors"]) == 0

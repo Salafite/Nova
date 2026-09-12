@@ -44,8 +44,16 @@ def _load_all_routers():
         pass
 
     try:
+        from modules.integrations.controllers.edi_controller import router as edi_router
+        _all_routers.append(edi_router)
+    except Exception:
+        pass
+
+    try:
         from modules.accounting.controllers.ar_reminder_controller import router as ar_reminder_router
         _all_routers.append(ar_reminder_router)
+    except Exception:
+        pass
     except Exception:
         pass
 

@@ -50,6 +50,7 @@ from packages.mcp.servers import (
     crm_mcp,
     database_mcp,
     hr_mcp,
+    integrations_mcp,
     inventory_mcp,
     maintenance_mcp,
     manufacturing_mcp,
@@ -989,6 +990,67 @@ class TestCrossServerDomainTenantIsolation:
             )
             assert res["business_id"] == 150
 
+        # 16. integrations_mcp
+        integrations_mcp.register_tools()
+        with patch.object(integrations_mcp._partner_svc, "list") as mock_svc:
+            mock_svc.side_effect = lambda *a, **k: [{"tenant": get_current_tenant()}]
+            res = call_tool("list_edi_partners", {}, user={"business_id": 160})
+            assert res == [{"tenant": 160}]
+
+    def test_integrations_mcp_full_tenant_isolation_lifecycle(self):
+        """Verify EDI document processing, ASN generation, and invoicing tools enforce tenant boundary isolation."""
+        integrations_mcp.register_tools()
+
+        # Ingest EDI Document with Tenant 801
+        with patch.object(integrations_mcp._edi_850_svc, "ingest_inbound_order") as mock_ingest:
+            mock_ingest.side_effect = lambda **k: MagicMock(
+                model_dump=lambda: {"transaction_id": 1, "status": "PROCESSED", "tenant": get_current_tenant()}
+            )
+            res = call_tool(
+                "ingest_edi_document",
+                {"raw_payload": "ISA*00*...~ST*850*0001~SE*3*0001~IEA*1*1~"},
+                user={"business_id": 801},
+            )
+            assert res["tenant"] == 801
+
+        # Reprocess Transaction with Tenant 802
+        with patch.object(integrations_mcp._edi_850_svc, "reprocess_transaction") as mock_reprocess:
+            mock_reprocess.side_effect = lambda **k: MagicMock(
+                model_dump=lambda: {"transaction_id": 2, "status": "CONFIRMED", "tenant": get_current_tenant()}
+            )
+            res = call_tool(
+                "reprocess_edi_transaction",
+                {"id": 2, "force_confirm": True},
+                user={"business_id": 802},
+            )
+            assert res["tenant"] == 802
+
+        # Generate ASN with Tenant 803
+        with patch.object(integrations_mcp._edi_856_svc, "generate_asn_for_delivery") as mock_asn:
+            mock_asn.side_effect = lambda **k: MagicMock(
+                model_dump=lambda: {"delivery_id": 50, "document_type": "856", "tenant": get_current_tenant()}
+            )
+            res = call_tool(
+                "generate_edi_asn",
+                {"delivery_id": 50, "carrier_name": "FedEx"},
+                user={"business_id": 803},
+            )
+            assert res["tenant"] == 803
+
+        # Transmit Invoice (Tier 2) propose and confirm with Tenant 804
+        with patch.object(integrations_mcp._edi_810_svc, "transmit_invoice") as mock_inv:
+            mock_inv.side_effect = lambda req: MagicMock(
+                model_dump=lambda: {"invoice_id": 99, "document_type": "810", "tenant": get_current_tenant()}
+            )
+            proposal = propose_action(
+                "transmit_edi_invoice",
+                {"invoice_id": 99},
+                user={"business_id": 804},
+            )
+            assert proposal["tool"] == "transmit_edi_invoice"
+            conf_res = confirm_action(proposal["action_id"])
+            assert conf_res["tenant"] == 804
+
     def test_inventory_search_products_sql_tenant_scoping(self):
         """Verify custom raw SQL in _search_products queries with business_id = %s parameter."""
         mock_conn = MagicMock()
@@ -1012,3 +1074,4 @@ class TestCrossServerDomainTenantIsolation:
         assert "business_id = %s" in sql
         assert 333 in params
         assert res[0]["business_id"] == 333
+

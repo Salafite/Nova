@@ -35,6 +35,7 @@ SERVERS = {
     "notifications": "packages.mcp.servers.notifications_mcp",
     "pos": "packages.mcp.servers.pos_mcp",
     "migration": "packages.mcp.servers.migration_mcp",
+    "integrations": "packages.mcp.servers.integrations_mcp",
 }
 
 
