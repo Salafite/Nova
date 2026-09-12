@@ -119,9 +119,9 @@ T_CODE_PERMISSIONS: dict[str, str] = {
     'T0121': 'SALES_VIEW',         # Customer Group Price Lists
     'T0122': 'SALES_VIEW',         # Customer Contracts
     'T0123': 'SALES_VIEW',         # Promotional Campaign Rules
-    'T0129': 'SALES_VIEW',         # Driver GPS Telemetry
-    'T0130': 'SALES_VIEW',         # Customer Live Tracking Sessions
-    'T0131': 'SALES_VIEW',         # Geofence Detection Events
+    'T0139': 'SALES_VIEW',         # Driver GPS Telemetry
+    'T0140': 'SALES_VIEW',         # Customer Live Tracking Sessions
+    'T0141': 'SALES_VIEW',         # Geofence Detection Events
     'T0134': 'WAREHOUSE_VIEW',     # Warehouse Temperature Zones
     'T0135': 'WAREHOUSE_VIEW',     # Warehouse Bins & Staging Areas
     'T0136': 'WAREHOUSE_VIEW',     # Vehicle Temperature Compartments
